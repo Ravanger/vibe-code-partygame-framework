@@ -39,6 +39,8 @@ Thumbs.db
 
 # Plans
 docs/superpowers/plans/
+.AGENTS/*.md
+.AGENTS/*.pdf
 
 # Local files
 *.log
