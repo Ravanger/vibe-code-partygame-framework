@@ -1,1 +1,0 @@
-{"version":3,"file":"svelte-state.test.js","sourceRoot":"","sources":["svelte-state.test.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,MAAM,EAAE,EAAE,EAAE,MAAM,QAAQ,CAAC;AACpC,qDAAqD;AACrD,EAAE,CAAC,qBAAqB,EAAE,KAAK,IAAI,EAAE;IACnC,MAAM,KAAK,GAAG,MAAM,MAAM,CAAC,wBAAwB,CAAC,CAAC;IACrD,MAAM,CAAC,KAAK,CAAC,CAAC,WAAW,EAAE,CAAC;AAC9B,CAAC,CAAC,CAAC"}

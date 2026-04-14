@@ -3,7 +3,7 @@ import { PromptPhase } from "@partygame/core";
 import { VotePhase } from "@partygame/core";
 
 const promptPhase = new PromptPhase();
-const votePhase = new VotePhase();
+export const votePhase = new VotePhase();
 
 export const WitClashGame = defineGame({
   name: "WitClash",
