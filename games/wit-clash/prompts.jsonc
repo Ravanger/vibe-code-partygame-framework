@@ -1,0 +1,12 @@
+{
+  "version": "1.0",
+  // Standard prompts for the prompt phase
+  "prompts": [
+    { "id": "p1", "text": "What is the best way to spend a rainy Sunday?" },
+    { "id": "p2", "text": "What would be the worst name for a new planet?" }
+  ],
+  // Tie-breaker prompts (optional)
+  "tieBreakers": [
+    { "id": "t1", "text": "What is the secret ingredient to a perfect nap?" }
+  ]
+}

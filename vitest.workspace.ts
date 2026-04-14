@@ -3,4 +3,5 @@ export default [
   'packages/core',
   'packages/server',
   'packages/shared',
+  'games/wit-clash',
 ];
