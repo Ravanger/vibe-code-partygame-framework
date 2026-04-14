@@ -51,3 +51,5 @@ Thumbs.db
 
 # Gemini
 .gemini
+coverage/
+**/coverage/
