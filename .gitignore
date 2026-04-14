@@ -39,6 +39,8 @@ Thumbs.db
 
 # Agent internal files
 .AGENTS/plans/
+.AGENTS/docs/
+.AGENTS/specs/
 .AGENTS/checklist.md
 .AGENTS/session_logs/
 .AGENTS/partygame-framework-plan_v2.md
