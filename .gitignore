@@ -37,5 +37,8 @@ Thumbs.db
 # Turborepo
 .turbo
 
+# Plans
+docs/superpowers/plans/
+
 # Local files
 *.log
