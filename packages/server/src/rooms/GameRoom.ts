@@ -4,7 +4,7 @@ import { GameStateSchema } from "../schema/GameStateSchema.js";
 import { buildXStateMachine } from "@partygame/core";
 import { type GameDefinition } from "@partygame/core";
 import { type Client, Room } from "colyseus";
-import { PromptPhase } from "@partygame/core/phases";
+import { PromptPhase } from "@partygame/core";
 
 export class GameRoom<TState = unknown> extends Room<GameStateSchema> {
   private machine!: AnyActorRef;

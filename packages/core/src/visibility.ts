@@ -1,11 +1,9 @@
 import { GameVisibilityConfig } from "./types.js";
-import { PlayerSchema } from "../../server/src/schema/PlayerSchema.js";
-import { GameStateSchema } from "../../server/src/schema/GameStateSchema.js";
 
 /**
  * Utility to enforce visibility rules based on predicates.
  */
-export function enforceVisibility(state: GameStateSchema, viewer: PlayerSchema, config: GameVisibilityConfig): Partial<GameStateSchema> {
+export function enforceVisibility<TState, TPlayer>(state: TState, viewer: TPlayer, config: GameVisibilityConfig<TState, TPlayer>): Partial<TState> {
   const filteredState = { ...state } as any;
 
   for (const [key, predicate] of Object.entries(config)) {
@@ -14,5 +12,5 @@ export function enforceVisibility(state: GameStateSchema, viewer: PlayerSchema, 
     }
   }
 
-  return filteredState as Partial<GameStateSchema>;
+  return filteredState as Partial<TState>;
 }

@@ -7,19 +7,17 @@
  */
 export type PlayerRole = "host" | "player" | "audience";
 
-import { PlayerSchema } from "../../server/src/schema/PlayerSchema.js";
-import { GameStateSchema } from "../../server/src/schema/GameStateSchema.js";
-
 /**
  * Predicate type for visibility filtering.
+ * TState and TPlayer are generics to avoid server dependency.
  */
-export type VisibilityPredicate = (state: GameStateSchema, viewer: PlayerSchema) => boolean;
+export type VisibilityPredicate<TState, TPlayer> = (state: TState, viewer: TPlayer) => boolean;
 
 /**
  * Visibility configuration for the game.
  */
-export interface GameVisibilityConfig {
-  [key: string]: VisibilityPredicate;
+export interface GameVisibilityConfig<TState, TPlayer> {
+  [key: string]: VisibilityPredicate<TState, TPlayer>;
 }
 
 /**
@@ -41,11 +39,12 @@ export interface PhaseDefinition<TState> {
 /**
  * The primary definition interface for creating a new game.
  */
-export interface GameDefinition<TState> {
+export interface GameDefinition<TState, TPlayer = any> {
   name: string;
   minPlayers: number;
   maxPlayers: number;
   initialState: () => TState;
   phases: Record<string, PhaseDefinition<TState>>;
-  visibility?: GameVisibilityConfig;
+  visibility?: GameVisibilityConfig<TState, TPlayer>;
 }
+

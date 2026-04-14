@@ -12,6 +12,6 @@ export class RoleBasedStateView extends StateView {
     // Colyseus StateView uses `.add` to define what to sync.
     // enforceVisibility returns a filtered object.
     const visibleState = enforceVisibility(state, viewer, config);
-    this.add(visibleState, 1);
+    this.add(visibleState as any, 1);
   }
 }
