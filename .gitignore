@@ -37,8 +37,10 @@ Thumbs.db
 # Turborepo
 .turbo
 
-# Plans
-docs/superpowers/plans/
+# Agent internal files
+.AGENTS/plans/
+.AGENTS/checklist.md
+.AGENTS/session_logs/
 .AGENTS/partygame-framework-plan_v2.md
 .AGENTS/partygame-framework-plan_v3.pdf
 
