@@ -17,6 +17,7 @@
     "xstate": "^5.0.0"
   },
   "devDependencies": {
+    "@colyseus/testing": "^0.17.11",
     "typescript": "^5.5.0",
     "vitest": "^2.0.0"
   }
