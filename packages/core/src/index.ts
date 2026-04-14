@@ -6,7 +6,7 @@ export { enforceVisibility } from "./visibility.js";
 export function defineGame<TState>(config: GameDefinition<TState>): GameDefinition<TState> {
   return config;
 }
-...
+
 export function createAction<TState, TPayload>(config: ActionDefinition<TState, TPayload>): ActionDefinition<TState, TPayload> {
   return config;
 }
