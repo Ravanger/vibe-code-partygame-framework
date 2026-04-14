@@ -5,5 +5,7 @@ export class GameStateSchema extends Schema {
   @type("string") phase: string = "lobby";
   @type("string") publicData: string = "{}";
   @type("string") roomCode: string = "";
+  @type(["string"]) currentVotingOptions: string[] = [];
+  @type("string") selectedCategory: string = "";
   @type({ map: PlayerSchema }) players = new MapSchema<PlayerSchema>();
 }
