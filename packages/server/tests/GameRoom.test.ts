@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, vi } from "vitest"
 import { GameRoom } from "../src/rooms/GameRoom.js"
-import { GameStateSchema } from "../src/schema/GameStateSchema.js"
+import { PlayerSchema } from "../src/schema/PlayerSchema.js"
 import { defineGame, createPhase, createAction } from "@partygame/core"
 
 describe("GameRoom Action Routing", () => {
@@ -9,10 +9,11 @@ describe("GameRoom Action Routing", () => {
       name: "role-test",
       minPlayers: 1,
       maxPlayers: 2,
+      initialState: () => ({}),
       phases: {
-        lobby: phase({
+        lobby: createPhase({
           actions: {
-            hostAction: action({
+            hostAction: createAction({
               from: "host",
               handler: () => {}
             })
@@ -23,13 +24,21 @@ describe("GameRoom Action Routing", () => {
 
     const room = new GameRoom()
     room.setDefinition(game)
+    room.onCreate()
     
-    // Minimal mock for room setup
-    // We want to test the Action routing, not the transport layer.
-    // This is a unit-ish test of the GameRoom.
+    const player = new PlayerSchema()
+    player.role = "player"
+    room.state.players.set("player-id", player)
     
-    // Manually trigger the message handler
-    // ...
-    expect(true).toBe(false) // Forcing failure for TDD
+    // Mock the machine send
+    // @ts-ignore
+    room.machine = { send: () => {} }
+    const sendSpy = vi.spyOn(room.machine, "send")
+    
+    const client = { sessionId: "player-id" }
+    // @ts-ignore
+    room.onMessage("ACTION", client, { name: "hostAction", data: {} })
+    
+    expect(sendSpy).not.toHaveBeenCalled()
   })
 })

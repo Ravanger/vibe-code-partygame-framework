@@ -16,8 +16,9 @@ build
 dist
 
 # Testing
-coverage
 .vitest
+coverage
+**/coverage
 
 # IDEs
 .vscode
@@ -38,21 +39,11 @@ Thumbs.db
 .turbo
 
 # Agent internal files
-.AGENTS/plans/
-.AGENTS/docs/
-.AGENTS/specs/
-.AGENTS/checklist.md
-.AGENTS/session_logs/
-.AGENTS/partygame-framework-plan_v2.md
-.AGENTS/partygame-framework-plan_v3.pdf
+.AGENTS
+!.AGENTS/GEMINI.md
 
 # Local files
 *.log
 
 # Gemini
 .gemini
-coverage/
-**/coverage/
-
-# Explicitly unignore GEMINI.md
-!.AGENTS/GEMINI.md
