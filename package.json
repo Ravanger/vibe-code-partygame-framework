@@ -1,6 +1,7 @@
 {
   "name": "partygame",
   "private": true,
+  "packageManager": "bun@1.1.0",
   "workspaces": [
     "packages/*",
     "games/*"
