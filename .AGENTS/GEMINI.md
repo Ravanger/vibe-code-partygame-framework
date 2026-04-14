@@ -52,7 +52,7 @@
 
 - [x] Phase 0: Monorepo Scaffold & Tooling
 - [x] Phase 1: Core DSL (`defineGame`, `phase`, `action`)
-- [x] Phase 2: Server-side Room Logic [ ] Phase 2: Server-side Room Logic & State Machine Sync State Machine Sync
+- [x] Phase 2: Server-side Room Logic & State Machine Sync
 - [x] Phase 3: Role-based State Visibility (StateView)
-- [ ] Phase 4: Svelte 5 Client SDK
+- [x] Phase 4: Svelte 5 Client SDK
 - [ ] Phase 5: Reference Game Implementation (Quiplash-style)

@@ -1,37 +1,37 @@
-# Design Spec: Svelte 5 Client SDK
+# Svelte 5 Reactive Client SDK Design
 
-## 1. Overview
-The Client SDK provides a high-level, Svelte 5-native API for interacting with the `vibe-coded` server, abstracting Colyseus complexity behind reactive proxies.
+## Overview
+A reactive, service-oriented architecture for the `vibe-coded` client, leveraging Svelte 5 Runes and Context API to provide a seamless developer experience.
 
-## 2. Architecture
-- **`GameClient` (SDK Entrypoint):** Manages connection, authentication (via room joining), and action dispatching.
-- **`ReactiveState` (Proxy Layer):** Uses Svelte 5 Runes to mirror the server's `GameStateSchema`.
-- **Visibility Awareness:** Because the server sends filtered state, the SDK treats received state as the absolute truth for the current client's role.
+## Components
 
-## 3. Data Flow
-1. **Action:** Component calls `game.send('action_name', payload)`.
-2. **Transport:** `colyseus.js` sends message to `GameRoom`.
-3. **Response:** Server broadcasts schema change (if state changes).
-4. **Reactivity:** SDK updates local runes, Svelte components re-render automatically.
+### 1. `GameRoomState` (in `state.svelte.ts`)
+This class will be a Svelte 5 state class (runes). It will represent the client-side view of the game state.
+- **Responsibilities**: Stores reactive state properties, defines methods for state mutations (if applicable).
+- **Mapping**: Will feature a `sync(serverState: any)` method to map Colyseus schema types to local Rune-based state.
 
-## 4. API (Proposed DX)
-```typescript
-// Component usage
-const game = createGameClient({ roomCode: 'ABCD' });
+### 2. Service Provider (`context.ts`)
+- `provideGameClient(client: GameClient)`: Uses `setContext` to make the client instance available to the component tree.
+- `useGameClient()`: Uses `getContext` to retrieve the client instance, ensuring type safety.
 
-// Native Svelte 5 Reactivity
-$effect(() => {
-  console.log("Current Phase:", game.state.phase);
-});
+### 3. `GameClient`
+- **Responsibilities**: Manages the Colyseus connection lifecycle.
+- **Integration**: Holds the `GameRoomState` instance and updates it reactively on Colyseus `onStateChange` events.
 
-// Action Dispatching
-game.send('vote', { target: 'player1' });
-```
+## Data Flow
+1. **Connection**: `GameClient` establishes a Colyseus connection.
+2. **Subscription**: `GameClient` subscribes to `onStateChange`.
+3. **Synchronization**: On every state change, `GameClient` calls `state.sync(serverState)`.
+4. **Reactivity**: Svelte 5 runes update the UI automatically.
 
-## 5. Error Handling
-- SDK will provide a `connectionStatus` state rune (e.g., `'connecting' | 'connected' | 'error'`).
-- Actions will support optional promise-based feedback for UI loading states.
+## Error Handling
+- The `connectionStatus` rune in `GameClient` will track `connecting`, `connected`, `error`, and `disconnected` states.
+- UI components can reactively check this status to show loaders or error messages.
 
-## 6. Testing Strategy
-- Mock Colyseus Room/Client to verify SDK state updates on message reception.
-- Integration tests simulating server-push state changes.
+## Testing Strategy
+- **Unit**: Test `GameRoomState` sync logic with mock server states.
+- **Integration**: Mock `GameClient` to verify context injection works in components.
+- **E2E**: Verify connectivity and state updates in `tests/`.
+
+---
+*Does this design look right to you?*

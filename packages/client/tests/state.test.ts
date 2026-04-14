@@ -1,8 +1,21 @@
-import { expect, it } from 'vitest';
-import { GameRoomState } from '../src/state.svelte.js';
+import { expect, it, describe, vi } from 'vitest';
+import { GameClient } from '../src/GameClient.js';
 
-it('should sync state from server', () => {
-  const state = new GameRoomState();
-  state.sync({ count: 10 });
-  expect(state.count).toBe(10);
+describe('GameClient', () => {
+  it('should initialize with correct roomCode and default connection status', () => {
+    const client = new GameClient({ roomCode: 'TEST' });
+    expect(client.connectionStatus).toBe('connecting');
+    expect(client.state).toBeDefined();
+  });
+
+  it('should sync state when onStateChange is called', () => {
+    const client = new GameClient({ roomCode: 'TEST' });
+    const spy = vi.spyOn(client.state, 'sync');
+    const mockState = { count: 5 };
+    
+    client.onStateChange(mockState);
+    
+    expect(spy).toHaveBeenCalledWith(mockState);
+    expect(client.state.count).toBe(5);
+  });
 });
