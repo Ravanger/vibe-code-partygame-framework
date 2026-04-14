@@ -55,4 +55,4 @@
 - [x] Phase 2: Server-side Room Logic & State Machine Sync
 - [x] Phase 3: Role-based State Visibility (StateView)
 - [x] Phase 4: Svelte 5 Client SDK
-- [ ] Phase 5: Reference Game Implementation (Quiplash-style)
+- [x] Phase 5: Reference Game Implementation (WitClash)
