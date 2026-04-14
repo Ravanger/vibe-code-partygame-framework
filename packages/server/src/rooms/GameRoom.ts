@@ -1,12 +1,8 @@
 import { Room } from "colyseus";
-import { Schema, type } from "@colyseus/schema";
+import { GameStateSchema } from "../schema/GameStateSchema.js";
 
-class GameState extends Schema {
-  @type("string") status: string = "lobby";
-}
-
-export class GameRoom extends Room<GameState> {
+export class GameRoom extends Room<GameStateSchema> {
   onCreate() {
-    this.setState(new GameState());
+    this.setState(new GameStateSchema());
   }
 }
