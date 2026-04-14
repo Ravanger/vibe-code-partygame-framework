@@ -39,8 +39,8 @@ Thumbs.db
 
 # Plans
 docs/superpowers/plans/
-.AGENTS/*.md
-.AGENTS/*.pdf
+.AGENTS/partygame-framework-plan_v2.md
+.AGENTS/partygame-framework-plan_v3.pdf
 
 # Local files
 *.log
