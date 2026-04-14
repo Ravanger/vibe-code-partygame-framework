@@ -1,0 +1,21 @@
+{
+  "name": "@partygame/client",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@partygame/shared": "workspace:*",
+    "svelte": "5.0.0-next.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0",
+    "@sveltejs/vite-plugin-svelte": "^3.1.1",
+    "@partygame/core": "workspace:*"
+  }
+}

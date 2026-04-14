@@ -13,6 +13,7 @@
 - **Horizontal Scalability:** Redis adapter pattern for multi-node support.
 - **Documentation First:** All public-facing APIs MUST have clear, DX-friendly documentation (JSDoc, API reference site, usage examples) established BEFORE implementation. Documentation is a living design document.
 - **Directory Mandates:** ALL agent-related files (checklists, logs, internal plans) MUST reside in `.AGENTS/`. The `docs/` directory is reserved for developer-facing and user-facing documentation only.
+- **Agent Maintenance:** Agents MUST maintain compact, up-to-date session logs and checklists in the `.AGENTS/` directory as work progresses. Summarize periodically to prevent file bloat.
 
 ## Project Structure (Monorepo)
 
@@ -49,8 +50,8 @@
 
 ## MVP Checklist
 
-- [ ] Phase 0: Monorepo Scaffold & Tooling
-- [ ] Phase 1: Core DSL (`defineGame`, `phase`, `action`)
+- [x] Phase 0: Monorepo Scaffold & Tooling
+- [x] Phase 1: Core DSL (`defineGame`, `phase`, `action`)
 - [ ] Phase 2: Server-side Room Logic & State Machine Sync
 - [ ] Phase 3: Role-based State Visibility (StateView)
 - [ ] Phase 4: Svelte 5 Client SDK
