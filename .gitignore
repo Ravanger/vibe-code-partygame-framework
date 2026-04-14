@@ -41,9 +41,11 @@ Thumbs.db
 # Agent internal files
 .AGENTS
 !.AGENTS/GEMINI.md
+!.AGENTS/docs
 
 # Local files
 *.log
 
 # Gemini
 .gemini
+.worktrees/
