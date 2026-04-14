@@ -18,8 +18,6 @@ describe('VotePhase', () => {
   });
 
   it('should prevent self-voting', () => {
-    // Need to mock or set up state to know who owns a1
-    // For now, this will fail until implemented
     expect(() => phase.handleAction('p1', { type: 'CastVote', answerId: 'p1_answer' })).toThrow('Cannot vote for self');
   });
 });
