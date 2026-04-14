@@ -1,4 +1,4 @@
-import { StateView } from "@colyseus/schema";
+import { RoleBasedStateView } from "./RoleBasedStateView.js";
 import { type AnyActorRef, createActor } from "xstate";
 import { GameStateSchema } from "../schema/GameStateSchema.js";
 import { buildXStateMachine } from "@partygame/core";
@@ -46,7 +46,9 @@ export class GameRoom<TState = unknown> extends Room<GameStateSchema> {
   }
 
   onJoin(client: Client) {
-    client.view = new StateView();
-    client.view.add(this.state, 1);
+    const player = this.state.players.get(client.sessionId);
+    if (!player) return;
+    
+    client.view = new RoleBasedStateView(this.state, player, this.gameDefinition.visibility || {});
   }
 }
