@@ -1,0 +1,41 @@
+# Node.js
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-debug.log*
+
+# Bun
+bun.lockb
+.bun
+
+# SvelteKit
+.svelte-kit
+build
+dist
+
+# Testing
+coverage
+.vitest
+
+# IDEs
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Turborepo
+.turbo
+
+# Local files
+*.log
