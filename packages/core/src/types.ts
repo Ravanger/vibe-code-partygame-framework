@@ -7,6 +7,21 @@
  */
 export type PlayerRole = "host" | "player" | "audience";
 
+import { PlayerSchema } from "../../server/src/schema/PlayerSchema.js";
+import { GameStateSchema } from "../../server/src/schema/GameStateSchema.js";
+
+/**
+ * Predicate type for visibility filtering.
+ */
+export type VisibilityPredicate = (state: GameStateSchema, viewer: PlayerSchema) => boolean;
+
+/**
+ * Visibility configuration for the game.
+ */
+export interface GameVisibilityConfig {
+  [key: string]: VisibilityPredicate;
+}
+
 /**
  * Definition of an action that can be performed in the game.
  */
@@ -32,4 +47,5 @@ export interface GameDefinition<TState> {
   maxPlayers: number;
   initialState: () => TState;
   phases: Record<string, PhaseDefinition<TState>>;
+  visibility?: GameVisibilityConfig;
 }

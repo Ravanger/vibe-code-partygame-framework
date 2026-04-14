@@ -1,5 +1,5 @@
 import { GameDefinition, ActionDefinition, PhaseDefinition } from "./types.js";
-export { GameDefinition, ActionDefinition, PhaseDefinition } from "./types.js";
+export { GameDefinition, ActionDefinition, PhaseDefinition, VisibilityPredicate, GameVisibilityConfig } from "./types.js";
 export { buildXStateMachine } from "./machine.js";
 
 export function defineGame<TState>(config: GameDefinition<TState>): GameDefinition<TState> {
