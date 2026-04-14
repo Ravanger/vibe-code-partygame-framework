@@ -2,6 +2,9 @@ import { defineGame, createPhase } from "@partygame/core";
 import { PromptPhase } from "@partygame/core";
 import { VotePhase } from "@partygame/core";
 
+const promptPhase = new PromptPhase();
+const votePhase = new VotePhase();
+
 export const WitClashGame = defineGame({
   name: "WitClash",
   minPlayers: 3,
@@ -9,6 +12,7 @@ export const WitClashGame = defineGame({
   initialState: () => ({
     scores: {},
     prompts: {},
+    votes: {},
   }),
   phases: {
     prompting: createPhase({
@@ -16,7 +20,7 @@ export const WitClashGame = defineGame({
         SubmitAnswer: {
           from: "player",
           handler: (ctx) => {
-            // Implementation for prompt phase
+            promptPhase.handleAction(ctx.clientId, ctx.data as any);
           }
         }
       }
@@ -26,7 +30,7 @@ export const WitClashGame = defineGame({
         CastVote: {
           from: "player",
           handler: (ctx) => {
-            // Implementation for voting phase
+            votePhase.handleAction(ctx.clientId, ctx.data as any);
           }
         }
       }
