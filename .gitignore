@@ -53,3 +53,6 @@ Thumbs.db
 .gemini
 coverage/
 **/coverage/
+
+# Explicitly unignore GEMINI.md
+!.AGENTS/GEMINI.md
