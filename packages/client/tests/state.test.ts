@@ -52,7 +52,7 @@ describe("GameClient", () => {
 
   it("should handle join error", async () => {
     const mockJoinOrCreate = vi.fn().mockRejectedValue(new Error("Join failed"));
-    vi.mocked(Client).mockImplementationOnce(() => ({
+    (Client as any).mockImplementationOnce(() => ({
       joinOrCreate: mockJoinOrCreate,
     } as any));
     

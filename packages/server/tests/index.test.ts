@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 describe("Server Entry Point", () => {
   it("should create and start the game server", async () => {
-    vi.resetModules();
+    vi.restoreAllMocks();
 
     const define = vi.fn();
     const listen = vi.fn();

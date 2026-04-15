@@ -15,7 +15,7 @@ describe("Context", () => {
     provideGameClient(client);
     expect(setContext).toHaveBeenCalled();
 
-    vi.mocked(getContext).mockReturnValue(client);
+    (getContext as any).mockReturnValue(client);
 
     const retrieved = useGameClient();
     expect(retrieved).toBe(client);
