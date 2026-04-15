@@ -49,6 +49,7 @@ Thumbs.db
 
 # Local files
 *.log
+*.tsbuildinfo
 
 # Gemini
 .gemini

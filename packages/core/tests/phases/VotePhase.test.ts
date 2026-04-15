@@ -1,3 +1,4 @@
+import type { GameAction } from "@partygame/shared";
 import { describe, expect, it } from "vitest";
 import { VotePhase } from "../../src/phases/VotePhase.js";
 
@@ -10,12 +11,16 @@ describe("VotePhase", () => {
 
   it("should throw for self-voting", () => {
     const phase = new VotePhase();
-    expect(() => phase.handleAction("p1", { type: "CastVote", answerId: "p1_a1" })).toThrow("Cannot vote for self");
+    expect(() => phase.handleAction("p1", { type: "CastVote", answerId: "p1_a1" })).toThrow(
+      "Cannot vote for self",
+    );
   });
 
   it("should throw for invalid action type", () => {
     const phase = new VotePhase();
-    expect(() => phase.handleAction("p1", { type: "Invalid", answerId: "p2" } as any)).toThrow("Invalid Action");
+    expect(() =>
+      phase.handleAction("p1", { type: "Invalid", answerId: "p2" } as GameAction),
+    ).toThrow("Invalid Action");
   });
 
   it("should compute visibility", () => {

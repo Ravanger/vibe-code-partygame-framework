@@ -1,3 +1,4 @@
+import type { GameAction } from "@partygame/shared";
 import { describe, expect, it } from "vitest";
 import { PromptPhase } from "../../src/phases/PromptPhase.js";
 
@@ -9,7 +10,9 @@ describe("PromptPhase", () => {
   });
 
   it("should throw for invalid action type", () => {
-    expect(() => phase.handleAction("p1", { type: "Invalid", data: {} } as any)).toThrow("Invalid Action");
+    expect(() => phase.handleAction("p1", { type: "Invalid", data: {} } as GameAction)).toThrow(
+      "Invalid Action",
+    );
   });
 
   it("should compute visibility", () => {
