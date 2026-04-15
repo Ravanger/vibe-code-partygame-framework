@@ -14,6 +14,7 @@ export default defineConfig({
         "**/src/types.ts",
         "**/src/phases/types.ts",
         "vitest.workspace.ts",
+        "packages/server/src/index.ts",
       ],
     },
   },

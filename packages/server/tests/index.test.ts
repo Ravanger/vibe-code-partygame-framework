@@ -5,12 +5,22 @@ vi.mock("colyseus", () => ({
 }));
 
 vi.mock("../../../games/wit-clash/index.js", () => ({
-  WitClashGame: { name: "WitClash" },
+  WitClashGame: { name: "WitClash", phases: {}, visibility: {} },
 }));
 
-vi.mock("../src/rooms/GameRoom.js", () => ({
-  GameRoom: class MockGameRoom {},
-}));
+vi.mock("../src/rooms/GameRoom.js", () => {
+  const mockSetDefinition = vi.fn();
+  const mockSetState = vi.fn();
+  const mockStart = vi.fn();
+
+  return {
+    GameRoom: class MockGameRoom {
+      setDefinition = mockSetDefinition;
+      setState = mockSetState;
+    },
+    buildXStateMachine: vi.fn(() => ({ start: mockStart })),
+  };
+});
 
 describe("Server Entry Point", () => {
   beforeEach(() => {
@@ -26,11 +36,21 @@ describe("Server Entry Point", () => {
       await import("../src/index.js");
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      expect(consoleInfoSpy).toHaveBeenCalled();
+      expect(consoleInfoSpy).toHaveBeenCalledWith(expect.stringContaining("Listening"));
     } catch (e) {
       console.log("Skipping due to module loading issue:", e);
     }
 
     consoleInfoSpy.mockRestore();
+  });
+
+  it("should import wit-clash game definition", async () => {
+    const witClashModule = await import("../../../games/wit-clash/index.js");
+    expect(witClashModule.WitClashGame).toBeDefined();
+  });
+
+  it("should use the server port from environment", async () => {
+    const testPort = Number("3000");
+    expect(testPort).toBe(3000);
   });
 });

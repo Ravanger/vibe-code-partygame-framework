@@ -32,4 +32,31 @@ describe("GameClient", () => {
     await client.join("room1");
     expect(client.playerId).toBe("session1");
   });
+
+  it("should sync state when onStateChange is called", async () => {
+    const client = new GameClient({ endpoint: "http://localhost:3000" });
+    await client.join("room1");
+
+    const mockRoom = client.room;
+    if (!mockRoom) return;
+    const stateChangeCallback = (mockRoom.onStateChange as ReturnType<typeof vi.fn>).mock
+      .calls[0][0];
+    stateChangeCallback({ phase: "Voting", publicData: '{"key":"value"}', roomCode: "TEST123" });
+
+    expect(client.state.phase).toBe("Voting");
+    expect(client.state.publicData).toBe('{"key":"value"}');
+    expect(client.state.roomCode).toBe("TEST123");
+  });
+
+  it("should set disconnected status on leave", async () => {
+    const client = new GameClient({ endpoint: "http://localhost:3000" });
+    await client.join("room1");
+
+    const mockRoom = client.room;
+    if (!mockRoom) return;
+    const leaveCallback = (mockRoom.onLeave as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    leaveCallback(1000);
+
+    expect(client.connectionStatus).toBe("disconnected");
+  });
 });

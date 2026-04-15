@@ -3,6 +3,11 @@ import { describe, expect, it } from "vitest";
 import { VotePhase } from "../../src/phases/VotePhase.js";
 
 describe("VotePhase", () => {
+  it("should create instance via constructor", () => {
+    const phase = new VotePhase();
+    expect(phase).toBeDefined();
+  });
+
   it("should handle CastVote and increment votes", () => {
     const phase = new VotePhase();
     phase.handleAction("p1", { type: "CastVote", answerId: "p2_a1" });
@@ -42,5 +47,10 @@ describe("VotePhase", () => {
     phase.handleAction("p3", { type: "CastVote", answerId: "p4_a1" });
     expect(phase.getVotes()["p2_a1"]).toBe(1);
     expect(phase.getVotes()["p4_a1"]).toBe(1);
+  });
+
+  it("should return empty votes initially", () => {
+    const phase = new VotePhase();
+    expect(Object.keys(phase.getVotes()).length).toBe(0);
   });
 });
