@@ -1,5 +1,11 @@
-import { GameDefinition, ActionDefinition, PhaseDefinition } from "./types.js";
-export { GameDefinition, ActionDefinition, PhaseDefinition, VisibilityPredicate, GameVisibilityConfig } from "./types.js";
+import type { ActionDefinition, GameDefinition, PhaseDefinition } from "./types.js";
+export {
+  GameDefinition,
+  ActionDefinition,
+  PhaseDefinition,
+  VisibilityPredicate,
+  GameVisibilityConfig,
+} from "./types.js";
 export { enforceVisibility } from "./visibility.js";
 export * from "./phases/types.js";
 export * from "./phases/PromptPhase.js";
@@ -10,7 +16,9 @@ export function defineGame<TState>(config: GameDefinition<TState>): GameDefiniti
   return config;
 }
 
-export function createAction<TState, TPayload>(config: ActionDefinition<TState, TPayload>): ActionDefinition<TState, TPayload> {
+export function createAction<TState, TPayload>(
+  config: ActionDefinition<TState, TPayload>,
+): ActionDefinition<TState, TPayload> {
   return config;
 }
 

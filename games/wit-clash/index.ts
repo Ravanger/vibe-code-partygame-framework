@@ -1,11 +1,14 @@
-import { defineGame, createPhase } from "@partygame/core";
-import { PromptPhase } from "@partygame/core";
-import { VotePhase } from "@partygame/core";
+import { createPhase, defineGame } from "@partygame/core";
 
-const promptPhase = new PromptPhase();
-export const votePhase = new VotePhase();
+export interface WitClashState {
+  scores: Record<string, number>;
+  prompts: Record<string, string>;
+  votes: Record<string, number>;
+  category: string;
+  phase: string;
+}
 
-export const WitClashGame = defineGame({
+export const WitClashGame = defineGame<WitClashState>({
   name: "WitClash",
   minPlayers: 3,
   maxPlayers: 8,
@@ -13,30 +16,64 @@ export const WitClashGame = defineGame({
     scores: {},
     prompts: {},
     votes: {},
+    category: "",
+    phase: "Lobby",
   }),
   phases: {
-    prompting: createPhase({
+    Lobby: createPhase({
       actions: {
-        SubmitAnswer: {
-          from: "player",
+        START_GAME: {
+          from: "player", // Host check happens at the framework level usually, or here
           handler: (ctx) => {
-            promptPhase.handleAction(ctx.clientId, ctx.data as any);
-          }
-        }
-      }
+            ctx.state.phase = "CategorySelection";
+          },
+        },
+      },
     }),
-    voting: createPhase({
+    CategorySelection: createPhase({
       actions: {
-        CastVote: {
+        SELECT_CATEGORY: {
           from: "player",
           handler: (ctx) => {
-            votePhase.handleAction(ctx.clientId, ctx.data as any);
-          }
-        }
-      }
-    })
+            ctx.state.category = (ctx.data as any).category;
+            ctx.state.phase = "Prompting";
+          },
+        },
+      },
+    }),
+    Prompting: createPhase({
+      actions: {
+        SUBMIT_ANSWER: {
+          from: "player",
+          handler: (ctx) => {
+            ctx.state.prompts[ctx.clientId] = (ctx.data as any).text;
+            // Transition logic would be in the framework/machine, but we'll mock it here
+          },
+        },
+      },
+    }),
+    Voting: createPhase({
+      actions: {
+        VOTE: {
+          from: "player",
+          handler: (ctx) => {
+            const answerId = (ctx.data as any).answerId;
+            ctx.state.votes[answerId] = (ctx.state.votes[answerId] || 0) + 1;
+          },
+        },
+      },
+    }),
+    Results: createPhase({
+      actions: {
+        PLAY_AGAIN: {
+          from: "player",
+          handler: (ctx) => {
+            ctx.state.phase = "Lobby";
+            ctx.state.prompts = {};
+            ctx.state.votes = {};
+          },
+        },
+      },
+    }),
   },
-  visibility: {
-    // Visibility rules go here
-  }
 });

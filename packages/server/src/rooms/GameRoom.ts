@@ -1,10 +1,10 @@
-import { RoleBasedStateView } from "./RoleBasedStateView.js";
+import { buildXStateMachine } from "@partygame/core";
+import type { GameDefinition, GameVisibilityConfig } from "@partygame/core";
+import { type Client, Room } from "colyseus";
 import { type AnyActorRef, createActor } from "xstate";
 import { GameStateSchema } from "../schema/GameStateSchema.js";
-import { buildXStateMachine } from "@partygame/core";
-import { type GameDefinition } from "@partygame/core";
-import { type Client, Room } from "colyseus";
-import { PromptPhase } from "@partygame/core";
+import type { PlayerSchema } from "../schema/PlayerSchema.js";
+import { RoleBasedStateView } from "./RoleBasedStateView.js";
 
 export class GameRoom<TState = unknown> extends Room<GameStateSchema> {
   private machine!: AnyActorRef;
@@ -49,7 +49,10 @@ export class GameRoom<TState = unknown> extends Room<GameStateSchema> {
   onJoin(client: Client) {
     const player = this.state.players.get(client.sessionId);
     if (!player) return;
-    
-    client.view = new RoleBasedStateView(this.state, player, this.gameDefinition.visibility || {});
+
+    const visibilityConfig = (this.gameDefinition.visibility ||
+      {}) as unknown as GameVisibilityConfig<GameStateSchema, PlayerSchema>;
+
+    client.view = new RoleBasedStateView(this.state, player, visibilityConfig);
   }
 }

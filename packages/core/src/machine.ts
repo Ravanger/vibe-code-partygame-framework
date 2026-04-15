@@ -1,5 +1,5 @@
-import { createMachine, assign } from "xstate";
-import { GameDefinition } from "./types.js";
+import { createMachine } from "xstate";
+import type { GameDefinition } from "./types.js";
 
 export function buildXStateMachine<TState>(gameDef: GameDefinition<TState>) {
   return createMachine({

@@ -6,7 +6,5 @@
     { "id": "p2", "text": "What would be the worst name for a new planet?" }
   ],
   // Tie-breaker prompts (optional)
-  "tieBreakers": [
-    { "id": "t1", "text": "What is the secret ingredient to a perfect nap?" }
-  ]
+  "tieBreakers": [{ "id": "t1", "text": "What is the secret ingredient to a perfect nap?" }]
 }

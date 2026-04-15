@@ -5,6 +5,18 @@
   "dependencies": {
     "@partygame/core": "workspace:*",
     "@partygame/shared": "workspace:*",
+    "@partygame/client": "workspace:*",
+    "@partygame/server": "workspace:*",
+    "colyseus": "^0.16.0",
     "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@colyseus/testing": "^0.17.11",
+    "@sveltejs/vite-plugin-svelte": "^7.0.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/svelte": "^5.3.1",
+    "@testing-library/user-event": "^14.6.1",
+    "jsdom": "^29.0.2",
+    "vitest": "^2.0.0"
   }
 }

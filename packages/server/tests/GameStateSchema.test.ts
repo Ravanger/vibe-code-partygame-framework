@@ -1,8 +1,11 @@
-import { GameStateSchema } from '../src/schema/GameStateSchema';
-import { test, expect } from 'vitest';
+import { ArraySchema } from "@colyseus/schema";
+import { expect, test } from "vitest";
+import { GameStateSchema } from "../src/schema/GameStateSchema";
 
-test('schema includes new fields', () => {
+test("schema includes new fields", () => {
   const state = new GameStateSchema();
-  expect(state.currentVotingOptions).toBeDefined();
-  expect(state.selectedCategory).toBeDefined();
+
+  expect(state.currentVotingOptions).toBeInstanceOf(ArraySchema);
+  expect([...state.currentVotingOptions]).toEqual([]);
+  expect(state.selectedCategory).toBe("");
 });

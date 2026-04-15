@@ -14,11 +14,14 @@ bun.lockb
 .svelte-kit
 build
 dist
+**/dist/
 
 # Testing
 .vitest
 coverage
 **/coverage
+*.timestamp-*.mjs
+*.timestamp-*.js
 
 # IDEs
 .vscode
@@ -38,15 +41,11 @@ Thumbs.db
 # Turborepo
 .turbo
 
-# Agent internal files
-.AGENTS/*
+# Agent files
+.AGENTS/**/*
 !.AGENTS/GEMINI.md
 !.AGENTS/docs/
-!.AGENTS/checklist.md
-!.AGENTS/session_logs
-!.AGENTS/session_logs/**
-!.AGENTS/superpowers
-!.AGENTS/superpowers/**
+!.AGENTS/docs/**
 
 # Local files
 *.log

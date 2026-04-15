@@ -1,17 +1,46 @@
-import { GameRoomState } from './state.svelte.js';
-import type { ConnectionStatus } from './types.js';
+import { Client, Room } from "colyseus.js";
+import { GameRoomState, type ServerGameRoomState } from "./state.svelte.js";
+import type { ConnectionStatus } from "./types.js";
 
 export class GameClient {
-  public connectionStatus: ConnectionStatus = 'connecting';
+  public connectionStatus: ConnectionStatus = "disconnected";
   public state = new GameRoomState();
-  private roomCode: string;
+  public room?: Room<any>;
+  private client: Client;
 
-  constructor(options: { roomCode: string }) {
-    this.roomCode = options.roomCode;
+  constructor(options: { endpoint: string }) {
+    this.client = new Client(options.endpoint);
   }
 
-  // Hook for Colyseus room
-  onStateChange(serverState: any) {
-    this.state.sync(serverState);
+  async join(roomName: string, options: any = {}) {
+    this.connectionStatus = "connecting";
+    try {
+      this.room = await this.client.joinOrCreate(roomName, options);
+      this.connectionStatus = "connected";
+
+      this.room.onStateChange((serverState) => {
+        this.state.sync(serverState);
+      });
+
+      this.room.onLeave((code) => {
+        this.connectionStatus = "disconnected";
+      });
+
+      return this.room;
+    } catch (e) {
+      this.connectionStatus = "error";
+      throw e;
+    }
+  }
+
+  send(type: string | number, message?: any) {
+    if (!this.room) {
+      throw new Error("Cannot send message: Not connected to a room.");
+    }
+    this.room.send(type, message);
+  }
+
+  get playerId() {
+    return this.room?.sessionId;
   }
 }

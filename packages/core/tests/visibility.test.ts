@@ -1,7 +1,7 @@
-import { describe, it, expect, vi } from "vitest";
-import { enforceVisibility } from "../src/visibility.js";
+import { describe, expect, it } from "vitest";
 import { GameStateSchema } from "../../server/src/schema/GameStateSchema.js";
 import { PlayerSchema } from "../../server/src/schema/PlayerSchema.js";
+import { enforceVisibility } from "../src/visibility.js";
 
 describe("enforceVisibility", () => {
   it("filters state based on predicates", () => {
@@ -14,7 +14,7 @@ describe("enforceVisibility", () => {
 
     const config = {
       publicData: () => true,
-      roomCode: (s: GameStateSchema, v: PlayerSchema) => v.role === "host",
+      roomCode: (_s: GameStateSchema, v: PlayerSchema) => v.role === "host",
     };
 
     const result = enforceVisibility(state, player, config);

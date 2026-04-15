@@ -1,14 +1,18 @@
-import { it, expect, describe } from 'vitest';
-import { PromptPhase } from '../../src/phases/PromptPhase.js';
+import { describe, expect, it } from "vitest";
+import { PromptPhase } from "../../src/phases/PromptPhase.js";
 
-describe('PromptPhase', () => {
-  it('should reject non-SubmitAnswer actions', () => {
-    const phase = new PromptPhase();
-    expect(() => phase.handleAction('p1', { type: 'CastVote', answerId: '1' })).toThrow('Invalid Action');
+describe("PromptPhase", () => {
+  const phase = new PromptPhase();
+
+  it("should handle SubmitAnswer action", () => {
+    expect(() => phase.handleAction("p1", { type: "SubmitAnswer", data: {} })).not.toThrow();
   });
 
-  it('should return correct visibility phase', () => {
-    const phase = new PromptPhase();
-    expect(phase.computeVisibility()).toEqual({ phase: 'Prompting' });
+  it("should throw for invalid action type", () => {
+    expect(() => phase.handleAction("p1", { type: "Invalid" as any, data: {} })).toThrow("Invalid Action");
+  });
+
+  it("should compute visibility", () => {
+    expect(phase.computeVisibility()).toEqual({ phase: "Prompting" });
   });
 });

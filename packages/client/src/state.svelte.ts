@@ -1,9 +1,23 @@
-export class GameRoomState {
-  count = $state(0);
+export interface ServerGameRoomState {
+  phase: string;
+  publicData: string;
+  roomCode: string;
+}
 
-  sync(serverState: any) {
-    if (serverState.count !== undefined) {
-      this.count = serverState.count;
+export class GameRoomState {
+  phase = "lobby";
+  publicData = "{}";
+  roomCode = "";
+
+  sync(serverState: ServerGameRoomState) {
+    if (serverState.phase !== undefined) {
+      this.phase = serverState.phase;
+    }
+    if (serverState.publicData !== undefined) {
+      this.publicData = serverState.publicData;
+    }
+    if (serverState.roomCode !== undefined) {
+      this.roomCode = serverState.roomCode;
     }
   }
 }

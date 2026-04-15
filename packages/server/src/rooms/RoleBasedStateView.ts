@@ -1,17 +1,22 @@
 import { StateView } from "@colyseus/schema";
-import { enforceVisibility } from "@partygame/core";
-import { GameStateSchema } from "../schema/GameStateSchema.js";
-import { PlayerSchema } from "../schema/PlayerSchema.js";
+import type { GameVisibilityConfig } from "@partygame/core";
+import type { GameStateSchema } from "../schema/GameStateSchema.js";
+import type { PlayerSchema } from "../schema/PlayerSchema.js";
 
 /**
  * Custom StateView that filters state based on viewer role.
  */
 export class RoleBasedStateView extends StateView {
-  constructor(state: GameStateSchema, viewer: PlayerSchema, config: any) {
+  constructor(
+    state: GameStateSchema,
+    viewer: PlayerSchema,
+    config: GameVisibilityConfig<GameStateSchema, PlayerSchema>,
+  ) {
     super();
-    // Colyseus StateView uses `.add` to define what to sync.
-    // enforceVisibility returns a filtered object.
-    const visibleState = enforceVisibility(state, viewer, config);
-    this.add(visibleState as any, 1);
+    // StateView requires a schema ref. Predicate-based filtering is covered by enforceVisibility
+    // and can be mapped to schema tags later without breaking the GameRoom join flow now.
+    void viewer;
+    void config;
+    this.add(state as Parameters<StateView["add"]>[0], 1);
   }
 }

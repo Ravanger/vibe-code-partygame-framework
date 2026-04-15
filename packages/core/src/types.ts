@@ -33,13 +33,13 @@ export interface ActionDefinition<TState, TPayload> {
  */
 export interface PhaseDefinition<TState> {
   duration?: number;
-  actions: Record<string, ActionDefinition<TState, any>>;
+  actions: Record<string, ActionDefinition<TState, unknown>>;
 }
 
 /**
  * The primary definition interface for creating a new game.
  */
-export interface GameDefinition<TState, TPlayer = any> {
+export interface GameDefinition<TState, TPlayer = unknown> {
   name: string;
   minPlayers: number;
   maxPlayers: number;
@@ -47,4 +47,3 @@ export interface GameDefinition<TState, TPlayer = any> {
   phases: Record<string, PhaseDefinition<TState>>;
   visibility?: GameVisibilityConfig<TState, TPlayer>;
 }
-

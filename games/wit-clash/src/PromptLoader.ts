@@ -1,6 +1,6 @@
-import { z } from 'zod';
-import { readFile } from 'fs/promises';
-import fs from 'node:fs';
+import fs from "node:fs";
+import { readFile } from "node:fs/promises";
+import { z } from "zod";
 
 export const PromptSchema = z.object({
   id: z.string(),
@@ -20,9 +20,10 @@ export class PromptLoader {
   private categories: string[] = [];
 
   constructor(private promptPath: string) {
-    this.categories = fs.readdirSync(promptPath)
-      .filter(file => file.endsWith('.json'))
-      .map(file => file.replace('.json', ''));
+    this.categories = fs
+      .readdirSync(promptPath)
+      .filter((file) => file.endsWith(".json"))
+      .map((file) => file.replace(".json", ""));
   }
 
   getAvailableCategories() {
@@ -30,9 +31,9 @@ export class PromptLoader {
   }
 
   static async load(filePath: string): Promise<PromptFile> {
-    const raw = await readFile(filePath, 'utf-8');
+    const raw = await readFile(filePath, "utf-8");
     // Strip comments to support JSONC
-    const json = JSON.parse(raw.replace(/\/\/.*|\/\*[\s\S]*?\*\//g, ''));
+    const json = JSON.parse(raw.replace(/\/\/.*|\/\*[\s\S]*?\*\//g, ""));
     return PromptFileSchema.parse(json);
   }
 

@@ -1,23 +1,40 @@
-import { describe, it, expect } from 'vitest';
-import { WitClashGame, votePhase } from '../index.js';
+import { describe, expect, it } from "vitest";
+import { WitClashGame } from "../index.js";
 
-describe('WitClash Full Game Cycle', () => {
-  it('should complete a full round of Prompting -> Voting', () => {
+describe("WitClash Full Game Cycle", () => {
+  it("should complete a full round of Prompting -> Voting", () => {
     const state = WitClashGame.initialState();
-    const { prompting, voting } = WitClashGame.phases;
+    const { Prompting, Voting } = WitClashGame.phases;
 
-    const p1Ctx = { state, clientId: 'p1', data: { type: 'SubmitAnswer', answer: 'Answer 1' } };
-    const p2Ctx = { state, clientId: 'p2', data: { type: 'SubmitAnswer', answer: 'Answer 2' } };
-    
-    prompting.actions.SubmitAnswer.handler(p1Ctx as any);
-    prompting.actions.SubmitAnswer.handler(p2Ctx as any);
-    
-    const v1Ctx = { state, clientId: 'p1', data: { type: 'CastVote', answerId: 'p2_a1' } };
-    const v2Ctx = { state, clientId: 'p2', data: { type: 'CastVote', answerId: 'p1_a1' } };
-    
-    voting.actions.CastVote.handler(v1Ctx as any);
-    voting.actions.CastVote.handler(v2Ctx as any);
+    const p1Ctx = {
+      state,
+      clientId: "p1",
+      data: { text: "Answer 1" },
+    };
+    const p2Ctx = {
+      state,
+      clientId: "p2",
+      data: { text: "Answer 2" },
+    };
 
-    expect(votePhase.getVotes()).toEqual({ 'p2_a1': 1, 'p1_a1': 1 });
+    Prompting.actions.SUBMIT_ANSWER.handler(p1Ctx);
+    Prompting.actions.SUBMIT_ANSWER.handler(p2Ctx);
+
+    const v1Ctx = {
+      state,
+      clientId: "p1",
+      data: { answerId: "p2" },
+    };
+    const v2Ctx = {
+      state,
+      clientId: "p2",
+      data: { answerId: "p1" },
+    };
+
+    Voting.actions.VOTE.handler(v1Ctx);
+    Voting.actions.VOTE.handler(v2Ctx);
+
+    expect(state.votes["p2"]).toBe(1);
+    expect(state.votes["p1"]).toBe(1);
   });
 });

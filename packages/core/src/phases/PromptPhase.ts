@@ -1,11 +1,13 @@
-import type { PhaseHandler } from './types.js';
-import type { GameAction } from '@partygame/shared';
+import type { GameAction } from "@partygame/shared";
+import type { PhaseHandler } from "./types.js";
 
 export class PromptPhase implements PhaseHandler {
-  handleAction(player: string, action: GameAction) {
-    if (action.type !== 'SubmitAnswer') {
-      throw new Error('Invalid Action');
+  handleAction(_player: string, action: GameAction) {
+    if (action.type !== "SubmitAnswer") {
+      throw new Error("Invalid Action");
     }
   }
-  computeVisibility() { return { phase: 'Prompting' }; }
+  computeVisibility() {
+    return { phase: "Prompting" };
+  }
 }
