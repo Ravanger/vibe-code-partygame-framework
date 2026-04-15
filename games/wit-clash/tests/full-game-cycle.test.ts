@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { WitClashGame } from "../index.js";
+import { WitClashGame } from "../index";
 
 describe("WitClash Full Game Cycle", () => {
   it("should complete a full round of Prompting -> Voting", () => {

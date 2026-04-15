@@ -27,4 +27,20 @@ describe("VotePhase", () => {
     const phase = new VotePhase();
     expect(phase.computeVisibility()).toEqual({ phase: "Voting" });
   });
+
+  it("should handle multiple votes for same answer", () => {
+    const phase = new VotePhase();
+    phase.handleAction("p1", { type: "CastVote", answerId: "p2_a1" });
+    phase.handleAction("p3", { type: "CastVote", answerId: "p2_a1" });
+    phase.handleAction("p4", { type: "CastVote", answerId: "p2_a1" });
+    expect(phase.getVotes()["p2_a1"]).toBe(3);
+  });
+
+  it("should handle votes for different answers", () => {
+    const phase = new VotePhase();
+    phase.handleAction("p1", { type: "CastVote", answerId: "p2_a1" });
+    phase.handleAction("p3", { type: "CastVote", answerId: "p4_a1" });
+    expect(phase.getVotes()["p2_a1"]).toBe(1);
+    expect(phase.getVotes()["p4_a1"]).toBe(1);
+  });
 });

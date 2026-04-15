@@ -14,6 +14,8 @@ export default defineConfig({
         "**/vitest.config.*",
         "**/src/types.ts",
         "**/src/phases/types.ts",
+        "dist/**",
+        "node_modules/**",
       ],
     },
   },

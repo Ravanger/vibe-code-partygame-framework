@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createAction, createPhase, defineGame } from "../src/index.js";
+import { createAction, createPhase, defineGame } from "../dist/index.js";
 
 describe("DSL builders", () => {
   it("createAction should return the config passed to it", () => {
