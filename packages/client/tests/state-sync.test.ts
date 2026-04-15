@@ -18,9 +18,9 @@ describe("GameRoomState Sync", () => {
   it("should ignore undefined fields during sync", () => {
     const state = new GameRoomState();
     state.phase = "original";
-    
-    state.sync({} as any);
-    
+
+    state.sync({});
+
     expect(state.phase).toBe("original");
   });
 });

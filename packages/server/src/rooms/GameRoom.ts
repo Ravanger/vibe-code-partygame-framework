@@ -26,10 +26,11 @@ export class GameRoom<TState = unknown> extends Room {
     this.machine.start();
 
     this.onMessage("ACTION", (client, message: { name: string; data: unknown }) => {
-      const player = (this.state as GameStateSchema).players.get(client.sessionId);
+      const state = this.state as GameStateSchema;
+      const player = state.players.get(client.sessionId);
       if (!player) return;
 
-      const phase = this.gameDefinition.phases[(this.state as GameStateSchema).phase];
+      const phase = this.gameDefinition.phases[state.phase];
       if (!phase) return;
       const actionDef = phase.actions[message.name];
       if (!actionDef) return;
@@ -41,7 +42,7 @@ export class GameRoom<TState = unknown> extends Room {
 
       this.machine.send({
         type: "ACTION",
-        phase: (this.state as GameStateSchema).phase,
+        phase: state.phase,
         name: message.name,
         clientId: client.sessionId,
         role: player.role,
@@ -52,13 +53,14 @@ export class GameRoom<TState = unknown> extends Room {
   }
 
   onJoin(client: Client) {
-    const player = (this.state as GameStateSchema).players.get(client.sessionId);
+    const state = this.state as GameStateSchema;
+    const player = state.players.get(client.sessionId);
     if (!player) return;
 
     const visibilityConfig = (this.gameDefinition.visibility ||
       {}) as unknown as GameVisibilityConfig<GameStateSchema, PlayerSchema>;
 
-    client.view = new RoleBasedStateView(this.state as GameStateSchema, player, visibilityConfig);
+    client.view = new RoleBasedStateView(state, player, visibilityConfig);
   }
 }
 

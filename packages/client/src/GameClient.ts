@@ -5,17 +5,17 @@ import type { ConnectionStatus } from "./types.js";
 export class GameClient {
   public connectionStatus: ConnectionStatus = "disconnected";
   public state = new GameRoomState();
-  public room?: Room<any>;
+  public room?: Room<ServerGameRoomState>;
   private client: Client;
 
   constructor(options: { endpoint: string }) {
     this.client = new Client(options.endpoint);
   }
 
-  async join(roomName: string, options: any = {}) {
+  async join(roomName: string, options: Record<string, unknown> = {}) {
     this.connectionStatus = "connecting";
     try {
-      this.room = await this.client.joinOrCreate(roomName, options);
+      this.room = await this.client.joinOrCreate<ServerGameRoomState>(roomName, options);
       this.connectionStatus = "connected";
 
       this.room.onStateChange((serverState) => {
@@ -33,7 +33,7 @@ export class GameClient {
     }
   }
 
-  send(type: string | number, message?: any) {
+  send(type: string | number, message?: unknown) {
     if (!this.room) {
       throw new Error("Cannot send message: Not connected to a room.");
     }
