@@ -8,6 +8,18 @@ export interface WitClashState {
   phase: string;
 }
 
+interface SelectCategoryPayload {
+  category: string;
+}
+
+interface SubmitAnswerPayload {
+  text: string;
+}
+
+interface VotePayload {
+  answerId: string;
+}
+
 export const WitClashGame = defineGame<WitClashState>({
   name: "WitClash",
   minPlayers: 3,
@@ -34,8 +46,8 @@ export const WitClashGame = defineGame<WitClashState>({
       actions: {
         SELECT_CATEGORY: {
           from: "player",
-          handler: (ctx) => {
-            ctx.state.category = (ctx.data as any).category;
+          handler: (ctx: { state: WitClashState; data: SelectCategoryPayload }) => {
+            ctx.state.category = ctx.data.category;
             ctx.state.phase = "Prompting";
           },
         },
@@ -45,8 +57,8 @@ export const WitClashGame = defineGame<WitClashState>({
       actions: {
         SUBMIT_ANSWER: {
           from: "player",
-          handler: (ctx) => {
-            ctx.state.prompts[ctx.clientId] = (ctx.data as any).text;
+          handler: (ctx: { state: WitClashState; clientId: string; data: SubmitAnswerPayload }) => {
+            ctx.state.prompts[ctx.clientId] = ctx.data.text;
             // Transition logic would be in the framework/machine, but we'll mock it here
           },
         },
@@ -56,8 +68,8 @@ export const WitClashGame = defineGame<WitClashState>({
       actions: {
         VOTE: {
           from: "player",
-          handler: (ctx) => {
-            const answerId = (ctx.data as any).answerId;
+          handler: (ctx: { state: WitClashState; data: VotePayload }) => {
+            const answerId = ctx.data.answerId;
             ctx.state.votes[answerId] = (ctx.state.votes[answerId] || 0) + 1;
           },
         },

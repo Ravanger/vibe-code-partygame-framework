@@ -1,5 +1,5 @@
 import { getContext, setContext } from "svelte";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, type Mock } from "vitest";
 import { GameClient } from "../src/GameClient.js";
 import { provideGameClient, useGameClient } from "../src/context.js";
 
@@ -15,7 +15,7 @@ describe("Context", () => {
     provideGameClient(client);
     expect(setContext).toHaveBeenCalled();
 
-    (getContext as any).mockReturnValue(client);
+    (getContext as Mock).mockReturnValue(client);
 
     const retrieved = useGameClient();
     expect(retrieved).toBe(client);

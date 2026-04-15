@@ -15,7 +15,7 @@ describe("VotePhase", () => {
 
   it("should throw for invalid action type", () => {
     const phase = new VotePhase();
-    expect(() => phase.handleAction("p1", { type: "Invalid" as any, answerId: "p2" })).toThrow("Invalid Action");
+    expect(() => phase.handleAction("p1", { type: "Invalid", answerId: "p2" } as any)).toThrow("Invalid Action");
   });
 
   it("should compute visibility", () => {

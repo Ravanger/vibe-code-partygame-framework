@@ -5,11 +5,11 @@ describe("PromptPhase", () => {
   const phase = new PromptPhase();
 
   it("should handle SubmitAnswer action", () => {
-    expect(() => phase.handleAction("p1", { type: "SubmitAnswer", data: {} })).not.toThrow();
+    expect(() => phase.handleAction("p1", { type: "SubmitAnswer", answer: "test" })).not.toThrow();
   });
 
   it("should throw for invalid action type", () => {
-    expect(() => phase.handleAction("p1", { type: "Invalid" as any, data: {} })).toThrow("Invalid Action");
+    expect(() => phase.handleAction("p1", { type: "Invalid", data: {} } as any)).toThrow("Invalid Action");
   });
 
   it("should compute visibility", () => {

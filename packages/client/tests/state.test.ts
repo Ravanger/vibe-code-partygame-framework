@@ -52,10 +52,10 @@ describe("GameClient", () => {
 
   it("should handle join error", async () => {
     const mockJoinOrCreate = vi.fn().mockRejectedValue(new Error("Join failed"));
-    (Client as any).mockImplementationOnce(() => ({
+    (Client as Mock).mockImplementationOnce(() => ({
       joinOrCreate: mockJoinOrCreate,
-    } as any));
-    
+    } as unknown as Client));
+
     const failClient = new GameClient({ endpoint: "ws://localhost" });
     await expect(failClient.join("fail")).rejects.toThrow("Join failed");
     expect(failClient.connectionStatus).toBe("error");
