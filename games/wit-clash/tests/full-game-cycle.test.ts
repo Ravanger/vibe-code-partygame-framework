@@ -34,7 +34,7 @@ describe("WitClash Full Game Cycle", () => {
     Voting.actions.VOTE.handler(v1Ctx);
     Voting.actions.VOTE.handler(v2Ctx);
 
-    expect(state.votes["p2"]).toBe(1);
-    expect(state.votes["p1"]).toBe(1);
+    expect(state.votes.p2).toBe(1);
+    expect(state.votes.p1).toBe(1);
   });
 });

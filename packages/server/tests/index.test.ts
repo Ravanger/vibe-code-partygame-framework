@@ -37,9 +37,7 @@ describe("Server Entry Point", () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(consoleInfoSpy).toHaveBeenCalledWith(expect.stringContaining("Listening"));
-    } catch (e) {
-      console.log("Skipping due to module loading issue:", e);
-    }
+    } catch (_e) {}
 
     consoleInfoSpy.mockRestore();
   });

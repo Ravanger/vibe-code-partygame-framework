@@ -1,12 +1,12 @@
 import { buildXStateMachine } from "@partygame/core";
 import type { GameDefinition, GameVisibilityConfig } from "@partygame/core";
-import { type Client, Room, type RoomOptions } from "colyseus";
+import { type Client, Room } from "colyseus";
 import { type AnyActorRef, createActor } from "xstate";
 import { GameStateSchema } from "../schema/GameStateSchema.js";
 import type { PlayerSchema } from "../schema/PlayerSchema.js";
 import { RoleBasedStateView } from "./RoleBasedStateView.js";
 
-const CloseCode = {
+const _CloseCode = {
   CONSENTED: 4000,
   WITH_ERROR: 4001,
 } as const;
@@ -63,4 +63,3 @@ export class GameRoom<TState = unknown> extends Room {
     client.view = new RoleBasedStateView(state, player, visibilityConfig);
   }
 }
-

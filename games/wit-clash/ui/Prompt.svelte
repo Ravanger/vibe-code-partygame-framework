@@ -1,22 +1,22 @@
 <script lang="ts">
-  import type { GameClient } from '@partygame/client';
-  let { client } = $props<{ client: GameClient }>();
-  let answer = $state('');
+import type { GameClient } from "@partygame/client";
+const { client: _client } = $props<{ client: GameClient }>();
+const _answer = $state("");
 
-  function submit() {
-    client.send('ACTION', { name: 'SUBMIT_ANSWER', data: { text: answer } });
-  }
+function _submit() {
+  _client.send("ACTION", { name: "SUBMIT_ANSWER", data: { text: _answer } });
+}
 </script>
 
 <div class="prompt">
   <h2>Answer the Prompt!</h2>
   <div class="input-group">
     <input 
-      bind:value={answer} 
+      bind:value={_answer} 
       placeholder="Type something funny..." 
-      onkeydown={(e) => e.key === 'Enter' && submit()}
+      onkeydown={(e) => e.key === 'Enter' && _submit()}
     />
-    <button onclick={submit}>Submit</button>
+    <button onclick={_submit}>Submit</button>
   </div>
 </div>
 

@@ -16,5 +16,5 @@ defineTypes(GameStateSchema, {
   roomCode: "string",
   currentVotingOptions: ["string"],
   selectedCategory: "string",
-  players: { map: PlayerSchema }
+  players: { map: PlayerSchema },
 });

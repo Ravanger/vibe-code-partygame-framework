@@ -1,6 +1,6 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { Client } from "colyseus.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GameClient } from "../src/GameClient.js";
-import { Client, Room } from "colyseus.js";
 
 vi.mock("colyseus.js", () => {
   const Room = vi.fn(() => ({
@@ -52,9 +52,12 @@ describe("GameClient", () => {
 
   it("should handle join error", async () => {
     const mockJoinOrCreate = vi.fn().mockRejectedValue(new Error("Join failed"));
-    (Client as Mock).mockImplementationOnce(() => ({
-      joinOrCreate: mockJoinOrCreate,
-    } as unknown as Client));
+    (Client as Mock).mockImplementationOnce(
+      () =>
+        ({
+          joinOrCreate: mockJoinOrCreate,
+        }) as unknown as Client,
+    );
 
     const failClient = new GameClient({ endpoint: "ws://localhost" });
     await expect(failClient.join("fail")).rejects.toThrow("Join failed");

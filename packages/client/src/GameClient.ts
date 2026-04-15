@@ -1,4 +1,4 @@
-import { Client, Room } from "colyseus.js";
+import { Client, type Room } from "colyseus.js";
 import { GameRoomState, type ServerGameRoomState } from "./state.svelte.js";
 import type { ConnectionStatus } from "./types.js";
 
@@ -22,7 +22,7 @@ export class GameClient {
         this.state.sync(serverState);
       });
 
-      this.room.onLeave((code) => {
+      this.room.onLeave((_code) => {
         this.connectionStatus = "disconnected";
       });
 

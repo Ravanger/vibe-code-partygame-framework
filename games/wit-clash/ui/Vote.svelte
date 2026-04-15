@@ -1,9 +1,9 @@
 <script lang="ts">
-  import type { GameClient } from '@partygame/client';
-  let { client } = $props<{ client: GameClient }>();
-  
-  // In a real app, this would come from visibility-filtered state
-  let options = $derived(JSON.parse(client.state.publicData).votingOptions || []);
+import type { GameClient } from "@partygame/client";
+const { client } = $props<{ client: GameClient }>();
+
+// In a real app, this would come from visibility-filtered state
+const _options = $derived(JSON.parse(client.state.publicData).votingOptions || []);
 </script>
 
 <div class="vote">

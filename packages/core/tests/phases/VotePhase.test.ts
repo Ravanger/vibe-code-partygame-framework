@@ -11,7 +11,7 @@ describe("VotePhase", () => {
   it("should handle CastVote and increment votes", () => {
     const phase = new VotePhase();
     phase.handleAction("p1", { type: "CastVote", answerId: "p2_a1" });
-    expect(phase.getVotes()["p2_a1"]).toBe(1);
+    expect(phase.getVotes().p2_a1).toBe(1);
   });
 
   it("should throw for self-voting", () => {
@@ -38,15 +38,15 @@ describe("VotePhase", () => {
     phase.handleAction("p1", { type: "CastVote", answerId: "p2_a1" });
     phase.handleAction("p3", { type: "CastVote", answerId: "p2_a1" });
     phase.handleAction("p4", { type: "CastVote", answerId: "p2_a1" });
-    expect(phase.getVotes()["p2_a1"]).toBe(3);
+    expect(phase.getVotes().p2_a1).toBe(3);
   });
 
   it("should handle votes for different answers", () => {
     const phase = new VotePhase();
     phase.handleAction("p1", { type: "CastVote", answerId: "p2_a1" });
     phase.handleAction("p3", { type: "CastVote", answerId: "p4_a1" });
-    expect(phase.getVotes()["p2_a1"]).toBe(1);
-    expect(phase.getVotes()["p4_a1"]).toBe(1);
+    expect(phase.getVotes().p2_a1).toBe(1);
+    expect(phase.getVotes().p4_a1).toBe(1);
   });
 
   it("should return empty votes initially", () => {

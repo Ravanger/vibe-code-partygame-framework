@@ -22,7 +22,7 @@ describe("WitClashGame Full Round", () => {
     };
     Voting.actions.VOTE.handler(ctxVote);
 
-    expect(state.prompts["p1"]).toBe("test");
-    expect(state.votes["p1"]).toBe(1);
+    expect(state.prompts.p1).toBe("test");
+    expect(state.votes.p1).toBe(1);
   });
 });

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { GameClient } from '@partygame/client';
-  let { client } = $props<{ client: GameClient }>();
+import type { GameClient } from "@partygame/client";
+const { client: _client } = $props<{ client: GameClient }>();
 </script>
 
 <div class="results">

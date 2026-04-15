@@ -1,12 +1,8 @@
 <script lang="ts">
-  import type { GameClient } from '@partygame/client';
-  import Lobby from './Lobby.svelte';
-  import Prompt from './Prompt.svelte';
-  import Vote from './Vote.svelte';
-  import Results from './Results.svelte';
+import type { GameClient } from "@partygame/client";
 
-  let { client } = $props<{ client: GameClient }>();
-  let state = $derived(client.state);
+const { client } = $props<{ client: GameClient }>();
+const _state = $derived(client.state);
 </script>
 
 <main>
