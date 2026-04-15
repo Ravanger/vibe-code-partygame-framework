@@ -16,6 +16,11 @@ describe("Server Entry Point", () => {
     vi.doMock("colyseus", () => ({
       Server: serverFactory,
     }));
+    
+    // We mock the dynamic import call
+    vi.doMock("../../../games/wit-clash/index.js", () => ({
+        WitClashGame: { name: "WitClash" }
+    }));
     vi.doMock("node:http", () => ({
       createServer,
     }));
