@@ -3,6 +3,8 @@
 > **Goal:** A flexible, modern, TypeScript-first framework for building immersive, multi-device social party games.
 > **Status:** Initial Setup (Phase 0)
 
+## !Note: Internal agent files (checklists, logs, notes, memories, etc.) should go in the `.AGENTS/` directory
+
 ## Core Mandates
 
 - **Terminology:** DO NOT mention "Jackbox" in any documentation, code, or communication.
@@ -27,7 +29,7 @@
 ## Development Workflow
 
 1. **Research & Plan:** Use `writing-plans` to define tasks.
-2. **TDD Cycle:** 
+2. **TDD Cycle:**
    - Write failing test (RED).
    - Verify failure.
    - Write minimal implementation (GREEN).
@@ -37,16 +39,16 @@
 
 ## Tech Stack Details
 
-| Layer | Technology |
-|-------|------------|
-| Runtime | Bun |
-| Multiplayer | Colyseus 0.16 |
-| State Machine | XState v5 |
-| Validation | Zod |
-| Frontend | Svelte 5 (Runes) |
-| Testing | Vitest + fast-check |
-| Linting/Formatting | Biome |
-| Logging | Pino |
+| Layer              | Technology          |
+| ------------------ | ------------------- |
+| Runtime            | Bun                 |
+| Multiplayer        | Colyseus 0.16       |
+| State Machine      | XState v5           |
+| Validation         | Zod                 |
+| Frontend           | Svelte 5 (Runes)    |
+| Testing            | Vitest + fast-check |
+| Linting/Formatting | Biome               |
+| Logging            | Pino                |
 
 ## MVP Checklist
 
