@@ -10,10 +10,11 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@colyseus/core": "^0.17.41",
+    "@colyseus/schema": "^3.0.0",
     "@partygame/core": "workspace:*",
     "@partygame/shared": "workspace:*",
-    "colyseus": "^0.16.0",
-    "@colyseus/schema": "^3.0.0",
+    "colyseus": "^0.17.9",
     "xstate": "^5.0.0"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
 import { buildXStateMachine } from "@partygame/core";
 import type { GameDefinition, GameVisibilityConfig } from "@partygame/core";
-import { type Client, Room } from "colyseus";
+import { type Client, Room, type RoomOptions } from "colyseus";
 import { type AnyActorRef, createActor } from "xstate";
 import { GameStateSchema } from "../schema/GameStateSchema.js";
 import type { PlayerSchema } from "../schema/PlayerSchema.js";
@@ -11,7 +11,7 @@ const CloseCode = {
   WITH_ERROR: 4001,
 } as const;
 
-export class GameRoom<TState = unknown> extends Room<GameStateSchema> {
+export class GameRoom<TState = unknown> extends Room {
   private machine!: AnyActorRef;
   private gameDefinition!: GameDefinition<TState>;
 
@@ -26,10 +26,10 @@ export class GameRoom<TState = unknown> extends Room<GameStateSchema> {
     this.machine.start();
 
     this.onMessage("ACTION", (client, message: { name: string; data: unknown }) => {
-      const player = this.state.players.get(client.sessionId);
+      const player = (this.state as GameStateSchema).players.get(client.sessionId);
       if (!player) return;
 
-      const phase = this.gameDefinition.phases[this.state.phase];
+      const phase = this.gameDefinition.phases[(this.state as GameStateSchema).phase];
       if (!phase) return;
       const actionDef = phase.actions[message.name];
       if (!actionDef) return;
@@ -41,7 +41,7 @@ export class GameRoom<TState = unknown> extends Room<GameStateSchema> {
 
       this.machine.send({
         type: "ACTION",
-        phase: this.state.phase,
+        phase: (this.state as GameStateSchema).phase,
         name: message.name,
         clientId: client.sessionId,
         role: player.role,
@@ -52,12 +52,13 @@ export class GameRoom<TState = unknown> extends Room<GameStateSchema> {
   }
 
   onJoin(client: Client) {
-    const player = this.state.players.get(client.sessionId);
+    const player = (this.state as GameStateSchema).players.get(client.sessionId);
     if (!player) return;
 
     const visibilityConfig = (this.gameDefinition.visibility ||
       {}) as unknown as GameVisibilityConfig<GameStateSchema, PlayerSchema>;
 
-    client.view = new RoleBasedStateView(this.state, player, visibilityConfig);
+    client.view = new RoleBasedStateView(this.state as GameStateSchema, player, visibilityConfig);
   }
 }
+
