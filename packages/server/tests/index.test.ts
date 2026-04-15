@@ -7,7 +7,10 @@ describe("Server Entry Point", () => {
     const define = vi.fn();
     const listen = vi.fn();
     const serverFactory = vi.fn(() => ({ define, listen }));
-    const createServer = vi.fn(() => ({ tag: "http-server" }));
+    const createServer = vi.fn(() => ({ 
+        tag: "http-server",
+        on: vi.fn(),
+    }));
     const info = vi.spyOn(console, "info").mockImplementation(() => {});
 
     vi.doMock("colyseus", () => ({
@@ -23,8 +26,14 @@ describe("Server Entry Point", () => {
     await import("../src/index.js");
 
     expect(createServer).toHaveBeenCalled();
-    expect(serverFactory).toHaveBeenCalledWith({ server: { tag: "http-server" } });
-    expect(define).toHaveBeenCalledWith("game", expect.any(Function));
+    expect(serverFactory).toHaveBeenCalledWith(
+        expect.objectContaining({
+            transport: expect.objectContaining({
+                server: expect.objectContaining({ tag: "http-server" })
+            })
+        })
+    );
+    expect(define).toHaveBeenCalledWith("wit_clash", expect.any(Function));
     expect(listen).toHaveBeenCalledWith(2567);
     expect(info).toHaveBeenCalledWith("[GameServer] Listening on port 2567");
 

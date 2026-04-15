@@ -1,6 +1,7 @@
 import { buildXStateMachine } from "@partygame/core";
 import type { GameDefinition, GameVisibilityConfig } from "@partygame/core";
-import { type Client, Room, CloseCode } from "colyseus";
+import { type Client, Room } from "colyseus";
+import { CloseCode } from "@colyseus/core";
 import { type AnyActorRef, createActor } from "xstate";
 import { GameStateSchema } from "../schema/GameStateSchema.js";
 import type { PlayerSchema } from "../schema/PlayerSchema.js";

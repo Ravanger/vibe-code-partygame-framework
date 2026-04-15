@@ -9,7 +9,7 @@ const server = createServer();
 
 const gameServer = new Server({
   transport: new WebSocketTransport({
-    server,
+    server: server as any,
   }),
 });
 
