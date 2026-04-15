@@ -1,6 +1,6 @@
 import { buildXStateMachine } from "@partygame/core";
 import type { GameDefinition, GameVisibilityConfig } from "@partygame/core";
-import { type Client, Room } from "colyseus";
+import { type Client, Room, CloseCode } from "colyseus";
 import { type AnyActorRef, createActor } from "xstate";
 import { GameStateSchema } from "../schema/GameStateSchema.js";
 import type { PlayerSchema } from "../schema/PlayerSchema.js";
@@ -30,7 +30,7 @@ export class GameRoom<TState = unknown> extends Room<GameStateSchema> {
       if (!actionDef) return;
 
       if (actionDef.from !== "player" && player.role !== actionDef.from) {
-        client.send("ERROR", { code: "UNAUTHORIZED", message: "Forbidden" });
+        client.leave(CloseCode.WITH_ERROR);
         return;
       }
 
