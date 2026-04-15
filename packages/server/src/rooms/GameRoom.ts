@@ -1,11 +1,15 @@
 import { buildXStateMachine } from "@partygame/core";
 import type { GameDefinition, GameVisibilityConfig } from "@partygame/core";
 import { type Client, Room } from "colyseus";
-import { CloseCode } from "@colyseus/core";
 import { type AnyActorRef, createActor } from "xstate";
 import { GameStateSchema } from "../schema/GameStateSchema.js";
 import type { PlayerSchema } from "../schema/PlayerSchema.js";
 import { RoleBasedStateView } from "./RoleBasedStateView.js";
+
+const CloseCode = {
+  CONSENTED: 4000,
+  WITH_ERROR: 4001,
+} as const;
 
 export class GameRoom<TState = unknown> extends Room<GameStateSchema> {
   private machine!: AnyActorRef;
@@ -31,7 +35,7 @@ export class GameRoom<TState = unknown> extends Room<GameStateSchema> {
       if (!actionDef) return;
 
       if (actionDef.from !== "player" && player.role !== actionDef.from) {
-        client.leave(CloseCode.WITH_ERROR);
+        client.send("ERROR", { code: "UNAUTHORIZED", message: "Forbidden" });
         return;
       }
 

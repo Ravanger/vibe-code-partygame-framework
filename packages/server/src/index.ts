@@ -13,13 +13,6 @@ const gameServer = new Server({
   }),
 });
 
-class WitClashRoom extends GameRoom {
-  onCreate() {
-    this.setDefinition(WitClashGame);
-    super.onCreate();
-  }
-}
-
 gameServer.define("wit_clash", WitClashRoom);
 gameServer.listen(port);
 console.info(`[GameServer] Listening on port ${port}`);
