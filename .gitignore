@@ -39,9 +39,14 @@ Thumbs.db
 .turbo
 
 # Agent internal files
-.AGENTS
+.AGENTS/*
 !.AGENTS/GEMINI.md
-!.AGENTS/docs
+!.AGENTS/docs/
+!.AGENTS/checklist.md
+!.AGENTS/session_logs
+!.AGENTS/session_logs/**
+!.AGENTS/superpowers
+!.AGENTS/superpowers/**
 
 # Local files
 *.log
@@ -49,4 +54,3 @@ Thumbs.db
 # Gemini
 .gemini
 .worktrees/
-docs/superpowers/
