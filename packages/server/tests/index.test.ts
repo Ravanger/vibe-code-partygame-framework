@@ -24,6 +24,7 @@ describe("Server Entry Point", () => {
     }));
 
     await import("../src/index.js");
+    await new Promise(resolve => setTimeout(resolve, 50));
 
     expect(createServer).toHaveBeenCalled();
     expect(serverFactory).toHaveBeenCalledWith(
