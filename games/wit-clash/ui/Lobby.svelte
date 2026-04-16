@@ -5,7 +5,7 @@ let _error = $state("");
 
 const { manager } = $props<{ manager: GameConnectionManager }>();
 
-const joinGame = async () => {
+const _joinGame = async () => {
   if (!gameCode.trim()) {
     _error = "Please enter a valid game code.";
     return;
@@ -21,18 +21,17 @@ const joinGame = async () => {
 
 <div class="lobby">
   <h2>WitClash Lobby</h2>
-  
+
   {#if manager.connectionStatus === 'disconnected'}
-  <div class="join-form">
+    <div class="join-form">
       <input type="text" bind:value={gameCode} placeholder="Enter game code" />
-      <button onclick={() => joinGame()}>Join Game</button>
+      <button onclick={async () => await _joinGame()}>Join Game</button>
       {#if _error}<p class="error">{_error}</p>{/if}
     </div>
   {:else}
     <p>Status: {manager.connectionStatus}</p>
   {/if}
 </div>
-
 <style>
   .lobby { padding: 20px; text-align: center; }
   .join-form { display: flex; flex-direction: column; gap: 10px; max-width: 300px; margin: 0 auto; }
