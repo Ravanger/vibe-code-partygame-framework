@@ -1,11 +1,11 @@
 import { buildXStateMachine } from "@partygame/core";
 import type { GameDefinition, GameVisibilityConfig } from "@partygame/core";
+import { GameActionSchema } from "@partygame/shared";
 import { type Client, Room } from "colyseus";
 import { type AnyActorRef, createActor } from "xstate";
 import { GameStateSchema } from "../schema/GameStateSchema.js";
 import type { PlayerSchema } from "../schema/PlayerSchema.js";
 import { RoleBasedStateView } from "./RoleBasedStateView.js";
-import { GameActionSchema } from "@partygame/shared";
 
 const _CloseCode = {
   CONSENTED: 4000,
