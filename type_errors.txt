@@ -1,0 +1,38 @@
+games/wit-clash/index.ts(49,11): error TS2322: Type '(ctx: { state: WitClashState; data: SelectCategoryPayload; }) => void' is not assignable to type '(ctx: { state: WitClashState; clientId: string; data: unknown; }) => void'.
+  Types of parameters 'ctx' and 'ctx' are incompatible.
+    Type '{ state: WitClashState; clientId: string; data: unknown; }' is not assignable to type '{ state: WitClashState; data: SelectCategoryPayload; }'.
+      Types of property 'data' are incompatible.
+        Type 'unknown' is not assignable to type 'SelectCategoryPayload'.
+games/wit-clash/index.ts(60,11): error TS2322: Type '(ctx: { state: WitClashState; clientId: string; data: SubmitAnswerPayload; }) => void' is not assignable to type '(ctx: { state: WitClashState; clientId: string; data: unknown; }) => void'.
+  Types of parameters 'ctx' and 'ctx' are incompatible.
+    Type '{ state: WitClashState; clientId: string; data: unknown; }' is not assignable to type '{ state: WitClashState; clientId: string; data: SubmitAnswerPayload; }'.
+      Types of property 'data' are incompatible.
+        Type 'unknown' is not assignable to type 'SubmitAnswerPayload'.
+games/wit-clash/index.ts(70,11): error TS2322: Type '(ctx: { state: WitClashState; data: VotePayload; }) => void' is not assignable to type '(ctx: { state: WitClashState; clientId: string; data: unknown; }) => void'.
+  Types of parameters 'ctx' and 'ctx' are incompatible.
+    Type '{ state: WitClashState; clientId: string; data: unknown; }' is not assignable to type '{ state: WitClashState; data: VotePayload; }'.
+      Types of property 'data' are incompatible.
+        Type 'unknown' is not assignable to type 'VotePayload'.
+games/wit-clash/tests/full-game-cycle.test.ts(23,5): error TS18048: 'WitClashGame.phases.Prompting' is possibly 'undefined'.
+games/wit-clash/tests/full-game-cycle.test.ts(23,5): error TS18048: 'WitClashGame.phases.Prompting.actions.SubmitAnswer' is possibly 'undefined'.
+games/wit-clash/tests/full-game-cycle.test.ts(24,5): error TS18048: 'WitClashGame.phases.Prompting' is possibly 'undefined'.
+games/wit-clash/tests/full-game-cycle.test.ts(24,5): error TS18048: 'WitClashGame.phases.Prompting.actions.SubmitAnswer' is possibly 'undefined'.
+games/wit-clash/tests/full-game-cycle.test.ts(38,5): error TS18048: 'WitClashGame.phases.Voting' is possibly 'undefined'.
+games/wit-clash/tests/full-game-cycle.test.ts(38,5): error TS18048: 'WitClashGame.phases.Voting.actions.CastVote' is possibly 'undefined'.
+games/wit-clash/tests/full-game-cycle.test.ts(39,5): error TS18048: 'WitClashGame.phases.Voting' is possibly 'undefined'.
+games/wit-clash/tests/full-game-cycle.test.ts(39,5): error TS18048: 'WitClashGame.phases.Voting.actions.CastVote' is possibly 'undefined'.
+games/wit-clash/tests/full-round.test.ts(15,5): error TS18048: 'Prompting' is possibly 'undefined'.
+games/wit-clash/tests/full-round.test.ts(15,5): error TS18048: 'Prompting.actions.SubmitAnswer' is possibly 'undefined'.
+games/wit-clash/tests/full-round.test.ts(23,5): error TS18048: 'Voting' is possibly 'undefined'.
+games/wit-clash/tests/full-round.test.ts(23,5): error TS18048: 'Voting.actions.CastVote' is possibly 'undefined'.
+games/wit-clash/tests/wit-clash.logic.test.ts(7,20): error TS18048: 'WitClashGame.phases.Lobby' is possibly 'undefined'.
+games/wit-clash/tests/wit-clash.logic.test.ts(9,5): error TS18048: 'action' is possibly 'undefined'.
+games/wit-clash/tests/wit-clash.logic.test.ts(17,20): error TS18048: 'WitClashGame.phases.CategorySelection' is possibly 'undefined'.
+games/wit-clash/tests/wit-clash.logic.test.ts(19,5): error TS18048: 'action' is possibly 'undefined'.
+games/wit-clash/tests/wit-clash.logic.test.ts(28,20): error TS18048: 'WitClashGame.phases.Prompting' is possibly 'undefined'.
+games/wit-clash/tests/wit-clash.logic.test.ts(30,5): error TS18048: 'action' is possibly 'undefined'.
+games/wit-clash/tests/wit-clash.logic.test.ts(38,20): error TS18048: 'WitClashGame.phases.Voting' is possibly 'undefined'.
+games/wit-clash/tests/wit-clash.logic.test.ts(40,5): error TS18048: 'action' is possibly 'undefined'.
+games/wit-clash/tests/wit-clash.logic.test.ts(44,5): error TS18048: 'action' is possibly 'undefined'.
+games/wit-clash/tests/wit-clash.logic.test.ts(54,20): error TS18048: 'WitClashGame.phases.Results' is possibly 'undefined'.
+games/wit-clash/tests/wit-clash.logic.test.ts(55,5): error TS18048: 'action' is possibly 'undefined'.

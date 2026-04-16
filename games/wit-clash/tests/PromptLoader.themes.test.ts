@@ -17,7 +17,7 @@ describe("PromptLoader Themes", () => {
     vi.spyOn(fs, "readdirSync").mockReturnValue([
       "pop.json",
       "niche.json",
-    ] as unknown as fs.Dirent[]);
+    ] as any);
     const loader = new PromptLoader("mock/path");
     expect(loader.getAvailableCategories()).toEqual(["pop", "niche"]);
   });

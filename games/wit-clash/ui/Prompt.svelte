@@ -1,18 +1,19 @@
 <script lang="ts">
 import type { GameConnectionManager } from "@partygame/client/src/connection.js";
-const _props = $props<{ manager: GameConnectionManager }>();
-const _answer = $state("");
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+const { manager } = $props<{ manager: GameConnectionManager }>();
+let _answer = $state("");
 </script>
 
 <div class="prompt">
-  <h2>{props.manager.connectionStatus === 'connected' ? 'Answer the Prompt!' : 'Connecting...'}</h2>
+  <h2>{manager.connectionStatus === 'connected' ? 'Answer the Prompt!' : 'Connecting...'}</h2>
   <div class="input-group">
     <input 
       bind:value={_answer} 
       placeholder="Type something funny..." 
-      onkeydown={(e) => e.key === 'Enter' && props.manager.room?.send("ACTION", { type: "SubmitAnswer", answer: _answer })}
+      onkeydown={(e) => e.key === 'Enter' && manager.room?.send("ACTION", { type: "SubmitAnswer", answer: _answer })}
     />
-    <button onclick={() => props.manager.room?.send("ACTION", { type: "SubmitAnswer", answer: _answer })}>Submit</button>
+    <button onclick={() => manager.room?.send("ACTION", { type: "SubmitAnswer", answer: _answer })}>Submit</button>
   </div>
 </div>
 

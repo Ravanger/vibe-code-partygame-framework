@@ -1,6 +1,6 @@
 <script lang="ts">
 import type { GameConnectionManager } from "@partygame/client/src/connection.js";
-const gameCode = $state("");
+let gameCode = $state("");
 let _error = $state("");
 
 const { manager } = $props<{ manager: GameConnectionManager }>();

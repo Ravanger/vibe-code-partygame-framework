@@ -1,8 +1,13 @@
 <script lang="ts">
 import type { GameConnectionManager } from "@partygame/client/src/connection.js";
+import Lobby from "./Lobby.svelte";
+import Prompt from "./Prompt.svelte";
+import Vote from "./Vote.svelte";
+import Results from "./Results.svelte";
 
 const { manager } = $props<{ manager: GameConnectionManager }>();
-const _state = $derived(manager.room?.state ?? { phase: "lobby" });
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+const state = $derived(manager.room?.state ?? { phase: "Lobby" });
 </script>
 
 <main>
@@ -14,8 +19,19 @@ const _state = $derived(manager.room?.state ?? { phase: "lobby" });
   </header>
 
   <section class="game-view">
-    {#if state.phase === 'lobby'}
+    {#if state.phase === 'Lobby'}
       <Lobby {manager} />
+    {:else if state.phase === 'CategorySelection'}
+      <div class="category-selection">
+        <h2>Select a Category</h2>
+        <p>Waiting for host to select a category...</p>
+      </div>
+    {:else if state.phase === 'Prompting'}
+      <Prompt {manager} />
+    {:else if state.phase === 'Voting'}
+      <Vote {manager} />
+    {:else if state.phase === 'Results'}
+      <Results {manager} />
     {:else}
       <div class="unknown-phase">
         <p>Phase: {state.phase}</p>

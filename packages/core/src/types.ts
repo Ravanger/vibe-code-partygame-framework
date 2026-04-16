@@ -33,7 +33,7 @@ export interface ActionDefinition<TState, TPayload> {
  */
 export interface PhaseDefinition<TState> {
   duration?: number;
-  actions: Record<string, ActionDefinition<TState, unknown>>;
+  actions: Record<string, ActionDefinition<TState, any>>;
 }
 
 /**

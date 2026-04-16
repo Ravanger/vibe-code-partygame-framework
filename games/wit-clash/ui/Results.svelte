@@ -1,6 +1,7 @@
 <script lang="ts">
-import type { GameClient } from "@partygame/client";
-const { client: _client } = $props<{ client: GameClient }>();
+import type { GameConnectionManager } from "@partygame/client/src/connection.js";
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+const { manager } = $props<{ manager: GameConnectionManager }>();
 </script>
 
 <div class="results">
@@ -10,7 +11,7 @@ const { client: _client } = $props<{ client: GameClient }>();
   </div>
   <button 
     class="play-again" 
-    onclick={() => client.send('ACTION', { name: 'PLAY_AGAIN', data: {} })}
+    onclick={() => manager.room?.send('ACTION', { type: 'PLAY_AGAIN' })}
   >
     Play Again
   </button>

@@ -37,7 +37,7 @@ export class PromptLoader {
     return PromptFileSchema.parse(json);
   }
 
-  static getRandomPrompt(prompts: Prompt[]): Prompt {
+  static getRandomPrompt(prompts: Prompt[]): Prompt | undefined {
     return prompts[Math.floor(Math.random() * prompts.length)];
   }
 }
