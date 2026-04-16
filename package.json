@@ -5,6 +5,7 @@
   "packageManager": "bun@1.1.0",
   "workspaces": ["packages/*", "games/*"],
   "scripts": {
+    "dev:all": "turbo run dev --parallel",
     "build": "turbo build",
     "test": "turbo test",
     "test:ci": "turbo test:ci",
