@@ -58,3 +58,27 @@
 - [x] Phase 3: Role-based State Visibility (StateView)
 - [x] Phase 4: Svelte 5 Client SDK
 - [x] Phase 5: Reference Game Implementation (WitClash)
+
+## Troubleshooting
+
+### Vite 8 + Svelte Plugin Compatibility
+- **Issue:** `optimizeDeps.esbuildOptions` deprecation warning
+- **Cause:** `@sveltejs/vite-plugin-svelte` < 7.0.0 uses deprecated option
+- **Fix:** Upgrade to `^7.0.0` (supports Vite 8's rolldown optimizer)
+- **Reference:** `games/wit-clash/package.json`
+
+### Turbo Deprecation
+- **Issue:** `--parallel` flag deprecated
+- **Fix:** Remove flag - turbo runs tasks in parallel by default
+- **Reference:** `package.json` script `dev:all`
+
+### GameRoom Player Creation on Join
+- **Issue:** `Failed to join game: TypeError: Cannot read properties of undefined (reading 'name')`
+- **Cause:** `GameRoom.onJoin` tried to retrieve a player from `state.players` that didn't exist - no code was creating players when clients joined
+- **Fix:** Added player creation in `onJoin` handler (`packages/server/src/rooms/GameRoom.ts:65-71`)
+- **Testing:** Tests mocked at the wrong level (mocked entire `colyseus` module) so they passed despite the bug. Added unit tests in `GameRoom.test.ts` and improved `connection.test.ts` to better cover join flow
+
+### TypeScript Build Configuration
+- **Issue:** `tsc` not outputting to `dist/` directory despite `outDir` config
+- **Fix:** Delete `tsconfig.tsbuildinfo` to force fresh build - turbo caching was skipping compilation
+- **Reference:** `packages/server/tsconfig.tsbuildinfo`

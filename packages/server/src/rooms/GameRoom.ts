@@ -4,7 +4,7 @@ import { GameActionSchema } from "@partygame/shared";
 import { type Client, Room } from "colyseus";
 import { type AnyActorRef, createActor } from "xstate";
 import { GameStateSchema } from "../schema/GameStateSchema.js";
-import type { PlayerSchema } from "../schema/PlayerSchema.js";
+import { PlayerSchema } from "../schema/PlayerSchema.js";
 import { RoleBasedStateView } from "./RoleBasedStateView.js";
 
 const _CloseCode = {
@@ -61,8 +61,10 @@ export class GameRoom<TState = unknown> extends Room {
 
   onJoin(client: Client) {
     const state = this.state as GameStateSchema;
-    const player = state.players.get(client.sessionId);
-    if (!player) return;
+    const player = new PlayerSchema();
+    player.id = client.sessionId;
+    player.name = `Player ${client.sessionId.slice(0, 4)}`;
+    state.players.set(client.sessionId, player);
 
     const visibilityConfig = (this.gameDefinition.visibility ||
       {}) as unknown as GameVisibilityConfig<GameStateSchema, PlayerSchema>;
