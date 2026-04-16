@@ -5,6 +5,7 @@ import { type AnyActorRef, createActor } from "xstate";
 import { GameStateSchema } from "../schema/GameStateSchema.js";
 import type { PlayerSchema } from "../schema/PlayerSchema.js";
 import { RoleBasedStateView } from "./RoleBasedStateView.js";
+import { GameActionSchema } from "@partygame/shared";
 
 const _CloseCode = {
   CONSENTED: 4000,
@@ -25,14 +26,20 @@ export class GameRoom<TState = unknown> extends Room {
     this.machine = createActor(buildXStateMachine(this.gameDefinition));
     this.machine.start();
 
-    this.onMessage("ACTION", (client, message: { name: string; data: unknown }) => {
+    this.onMessage("ACTION", (client, message: unknown) => {
+      const parsedAction = GameActionSchema.safeParse(message);
+      if (!parsedAction.success) {
+        client.send("ERROR", { code: "INVALID_ACTION", message: "Invalid action format" });
+        return;
+      }
+
       const state = this.state as GameStateSchema;
       const player = state.players.get(client.sessionId);
       if (!player) return;
 
       const phase = this.gameDefinition.phases[state.phase];
       if (!phase) return;
-      const actionDef = phase.actions[message.name];
+      const actionDef = phase.actions[parsedAction.data.type];
       if (!actionDef) return;
 
       if (actionDef.from !== "player" && player.role !== actionDef.from) {
@@ -43,10 +50,10 @@ export class GameRoom<TState = unknown> extends Room {
       this.machine.send({
         type: "ACTION",
         phase: state.phase,
-        name: message.name,
+        name: parsedAction.data.type,
         clientId: client.sessionId,
         role: player.role,
-        data: message.data,
+        data: parsedAction.data,
         timestamp: Date.now(),
       });
     });
