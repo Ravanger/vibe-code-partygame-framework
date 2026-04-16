@@ -1,5 +1,6 @@
 <script lang="ts">
 import type { GameConnectionManager } from "@partygame/client/src/connection.js";
+
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const { manager } = $props<{ manager: GameConnectionManager }>();
 </script>

@@ -1,5 +1,5 @@
-import { buildXStateMachine } from "@partygame/core";
 import type { GameDefinition, GameVisibilityConfig } from "@partygame/core";
+import { buildXStateMachine } from "@partygame/core";
 import { GameActionSchema } from "@partygame/shared";
 import { type Client, Room } from "colyseus";
 import { type AnyActorRef, createActor } from "xstate";

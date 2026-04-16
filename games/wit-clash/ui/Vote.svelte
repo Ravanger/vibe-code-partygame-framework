@@ -1,5 +1,6 @@
 <script lang="ts">
 import type { GameConnectionManager } from "@partygame/client/src/connection.js";
+
 const { manager } = $props<{ manager: GameConnectionManager }>();
 
 // In a real app, this would come from visibility-filtered state

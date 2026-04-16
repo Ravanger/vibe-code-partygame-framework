@@ -1,16 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GameClient } from "../src/GameClient.js";
 
-vi.mock("@colyseus/sdk", () => ({
-  Client: vi.fn().mockImplementation(() => ({
-    joinOrCreate: vi.fn().mockResolvedValue({
-      sessionId: "session1",
-      onStateChange: vi.fn(),
-      onLeave: vi.fn(),
-      send: vi.fn(),
-    }),
-  })),
-}));
+vi.mock("@colyseus/sdk", () => {
+  class MockRoom {
+    sessionId = "session1";
+    send = vi.fn();
+    onStateChange = vi.fn((cb: (...args: unknown[]) => void) => {
+      (this as { _stateChangeCb?: (...args: unknown[]) => void })._stateChangeCb = cb;
+    });
+    onLeave = vi.fn((cb: (...args: unknown[]) => void) => {
+      (this as { _leaveCb?: (...args: unknown[]) => void })._leaveCb = cb;
+    });
+  }
+
+  class MockClient {}
+  MockClient.prototype.joinOrCreate = vi.fn().mockResolvedValue(new MockRoom());
+
+  return { Client: MockClient };
+});
 
 describe("GameClient", () => {
   beforeEach(() => {
@@ -35,13 +42,16 @@ describe("GameClient", () => {
 
   it("should sync state when onStateChange is called", async () => {
     const client = new GameClient({ endpoint: "http://localhost:3000" });
-    await client.join("room1");
+    const room = (await client.join("room1")) as unknown as {
+      _stateChangeCb?: (...args: unknown[]) => void;
+    };
 
-    const mockRoom = client.room;
-    if (!mockRoom) return;
-    const stateChangeCallback = (mockRoom.onStateChange as ReturnType<typeof vi.fn>).mock
-      .calls[0][0];
-    stateChangeCallback({ phase: "Voting", publicData: '{"key":"value"}', roomCode: "TEST123" });
+    // Trigger the state change callback
+    room._stateChangeCb?.({
+      phase: "Voting",
+      publicData: '{"key":"value"}',
+      roomCode: "TEST123",
+    });
 
     expect(client.state.phase).toBe("Voting");
     expect(client.state.publicData).toBe('{"key":"value"}');
@@ -50,12 +60,11 @@ describe("GameClient", () => {
 
   it("should set disconnected status on leave", async () => {
     const client = new GameClient({ endpoint: "http://localhost:3000" });
-    await client.join("room1");
+    const room = (await client.join("room1")) as unknown as {
+      _leaveCb?: (...args: unknown[]) => void;
+    };
 
-    const mockRoom = client.room;
-    if (!mockRoom) return;
-    const leaveCallback = (mockRoom.onLeave as ReturnType<typeof vi.fn>).mock.calls[0][0];
-    leaveCallback(1000);
+    room._leaveCb?.(1000);
 
     expect(client.connectionStatus).toBe("disconnected");
   });

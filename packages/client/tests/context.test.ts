@@ -1,7 +1,7 @@
 import { getContext, setContext } from "svelte";
-import { type Mock, describe, expect, it, vi } from "vitest";
-import { GameClient } from "../src/GameClient.js";
+import { describe, expect, it, type Mock, vi } from "vitest";
 import { provideGameClient, useGameClient } from "../src/context.js";
+import { GameClient } from "../src/GameClient.js";
 
 vi.mock("svelte", () => ({
   setContext: vi.fn(),

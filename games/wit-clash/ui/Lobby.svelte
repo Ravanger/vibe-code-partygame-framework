@@ -1,7 +1,6 @@
 <script lang="ts">
 import type { GameConnectionManager } from "@partygame/client/src/connection.js";
 
-// biome-ignore lint/style/useConst: $state creates mutable reactive state
 let gameCode = $state("");
 let _error = $state("");
 

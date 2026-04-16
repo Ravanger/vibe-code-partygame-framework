@@ -19,7 +19,7 @@ export type PromptFile = z.infer<typeof PromptFileSchema>;
 export class PromptLoader {
   private categories: string[] = [];
 
-  constructor(private promptPath: string) {
+  constructor(promptPath: string) {
     this.categories = fs
       .readdirSync(promptPath)
       .filter((file) => file.endsWith(".json"))

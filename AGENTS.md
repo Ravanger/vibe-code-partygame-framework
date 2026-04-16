@@ -45,11 +45,11 @@
 | ------------------ | ------------------- |
 | Runtime            | Bun                 |
 | Multiplayer        | Colyseus 0.17       |
-| State Machine      | XState v5           |
-| Validation         | Zod                 |
+| State Machine      | XState v5.30        |
+| Validation         | Zod v4              |
 | Frontend           | Svelte 5 (Runes)    |
-| Testing            | Vitest + fast-check |
-| Linting/Formatting | Biome               |
+| Testing            | Vitest v4 + fast-check |
+| Linting/Formatting | Biome v2            |
 | Logging            | Pino                |
 
 ## MVP Checklist
@@ -100,3 +100,22 @@
 - **Fix:** Upgraded client from `colyseus.js: ^0.16.0` to `@colyseus/sdk: ^0.17.26` in `packages/client/package.json` and updated all imports from `"colyseus.js"` to `"@colyseus/sdk"`
 - **Files:** `packages/client/package.json`, `packages/client/src/*.ts`, `packages/client/tests/*.test.ts`
 - **Reference:** [Colyseus Migration Guide v0.17](https://docs.colyseus.io/migrating/0.17)
+
+### Vitest v4 Mocking Changes
+- **Issue:** Vitest v4 changed how mocks are hoisted, causing `ReferenceError: Cannot access 'MockClient' before initialization` when mock classes are defined at module level
+- **Cause:** In Vitest v4, `vi.mock()` factory functions are hoisted to the top of the file, so any variables (including class definitions) referenced in the mock must be defined inside the factory function
+- **Fix:** Move mock class definitions inside the `vi.mock()` factory function. Use prototype methods instead of instance properties to allow tests to modify `Client.prototype.joinOrCreate`
+- **Files:** `packages/client/tests/GameClient.test.ts`, `packages/client/tests/connection.test.ts`, `packages/client/tests/state.test.ts`
+- **Reference:** [Vitest Migration Guide v4](https://vitest.dev/guide/migration.html#vi-mock-changes)
+
+### Biome v2 Configuration Changes
+- **Issue:** Biome v2 has different configuration keys - `organizeImports` was removed/renamed, `noConsoleLog` rule no longer exists
+- **Cause:** Biome v2 reorganized configuration structure and rule names
+- **Fix:** Removed unsupported `organizeImports` top-level key, removed `noConsoleLog` from suspicious rules section
+- **Files:** `biome.json`
+- **Reference:** [Biome Migration Guide](https://biomejs.dev/guides/migrate-to-v2/)
+
+### TypeScript 6.0 Compatibility
+- **Issue:** TypeScript 6.0 has stricter type checking and new features
+- **Fix:** No code changes required - all existing code passes with TypeScript 6.0.2
+- **Files:** `package.json`, `packages/*/package.json`, `games/wit-clash/package.json`

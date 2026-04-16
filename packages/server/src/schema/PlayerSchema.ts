@@ -1,4 +1,4 @@
-import { Schema, defineTypes } from "@colyseus/schema";
+import { defineTypes, Schema } from "@colyseus/schema";
 
 export class PlayerSchema extends Schema {
   id = "";

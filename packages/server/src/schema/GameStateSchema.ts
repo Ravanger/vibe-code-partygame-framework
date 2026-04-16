@@ -1,4 +1,4 @@
-import { ArraySchema, MapSchema, Schema, defineTypes } from "@colyseus/schema";
+import { ArraySchema, defineTypes, MapSchema, Schema } from "@colyseus/schema";
 import { PlayerSchema } from "./PlayerSchema.js";
 
 export class GameStateSchema extends Schema {

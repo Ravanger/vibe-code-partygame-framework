@@ -1,16 +1,17 @@
 import type { ActionDefinition, GameDefinition, PhaseDefinition } from "./types.js";
+
+export { buildXStateMachine } from "./machine.js";
+export * from "./phases/PromptPhase.js";
+export * from "./phases/types.js";
+export * from "./phases/VotePhase.js";
 export {
-  GameDefinition,
   ActionDefinition,
+  GameDefinition,
+  GameVisibilityConfig,
   PhaseDefinition,
   VisibilityPredicate,
-  GameVisibilityConfig,
 } from "./types.js";
 export { enforceVisibility } from "./visibility.js";
-export * from "./phases/types.js";
-export * from "./phases/PromptPhase.js";
-export * from "./phases/VotePhase.js";
-export { buildXStateMachine } from "./machine.js";
 
 export function defineGame<TState>(config: GameDefinition<TState>): GameDefinition<TState> {
   return config;

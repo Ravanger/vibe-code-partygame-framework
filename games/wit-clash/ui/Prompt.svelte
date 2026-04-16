@@ -3,7 +3,6 @@ import type { GameConnectionManager } from "@partygame/client/src/connection.js"
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const { manager } = $props<{ manager: GameConnectionManager }>();
-// biome-ignore lint/style/useConst: $state creates mutable reactive state
 let _answer = $state("");
 </script>
 

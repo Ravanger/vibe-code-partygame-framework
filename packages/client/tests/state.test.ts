@@ -1,18 +1,22 @@
-import { Client } from "@colyseus/sdk";
-import { type Mock, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GameClient } from "../src/GameClient.js";
 
 vi.mock("@colyseus/sdk", () => {
-  const Room = vi.fn(() => ({
-    onStateChange: vi.fn(),
-    onLeave: vi.fn(),
-    send: vi.fn(),
-    sessionId: "test-session-id",
-  }));
-  const Client = vi.fn(() => ({
-    joinOrCreate: vi.fn().mockResolvedValue(new Room()),
-  }));
-  return { Client, Room };
+  class MockRoom {
+    sessionId = "test-session-id";
+    send = vi.fn();
+    onStateChange = vi.fn((cb: (...args: unknown[]) => void) => {
+      (this as { _stateChangeCb?: (...args: unknown[]) => void })._stateChangeCb = cb;
+    });
+    onLeave = vi.fn((cb: (...args: unknown[]) => void) => {
+      (this as { _leaveCb?: (...args: unknown[]) => void })._leaveCb = cb;
+    });
+  }
+
+  class MockClient {}
+  MockClient.prototype.joinOrCreate = vi.fn().mockResolvedValue(new MockRoom());
+
+  return { Client: MockClient };
 });
 
 describe("GameClient", () => {
@@ -51,16 +55,23 @@ describe("GameClient", () => {
   });
 
   it("should handle join error", async () => {
-    const mockJoinOrCreate = vi.fn().mockRejectedValue(new Error("Join failed"));
-    (Client as Mock).mockImplementationOnce(
-      () =>
-        ({
-          joinOrCreate: mockJoinOrCreate,
-        }) as unknown as Client,
-    );
+    const { Client } = await import("@colyseus/sdk");
+    const originalJoinOrCreate = Client.prototype.joinOrCreate as vi.Mock;
+    // Use mockImplementationOnce to reject once, then restore
+    originalJoinOrCreate.mockImplementationOnce(() => Promise.reject(new Error("Join failed")));
 
     const failClient = new GameClient({ endpoint: "ws://localhost" });
     await expect(failClient.join("fail")).rejects.toThrow("Join failed");
     expect(failClient.connectionStatus).toBe("error");
+
+    // Restore - create a new mock that returns a room
+    originalJoinOrCreate.mockImplementation(() =>
+      Promise.resolve({
+        sessionId: "test-session-id",
+        send: vi.fn(),
+        onStateChange: vi.fn(),
+        onLeave: vi.fn(),
+      }),
+    );
   });
 });
