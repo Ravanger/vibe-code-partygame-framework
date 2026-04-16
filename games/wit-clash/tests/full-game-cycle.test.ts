@@ -20,8 +20,8 @@ describe("WitClash Full Game Cycle", () => {
       data: { answer: "Answer 2" },
     };
 
-    WitClashGame.phases.Prompting!.actions.SubmitAnswer!.handler(p1Ctx);
-    WitClashGame.phases.Prompting!.actions.SubmitAnswer!.handler(p2Ctx);
+    WitClashGame.phases.Prompting?.actions.SubmitAnswer?.handler(p1Ctx);
+    WitClashGame.phases.Prompting?.actions.SubmitAnswer?.handler(p2Ctx);
 
     // Simulate CastVote
     const v1Ctx = {
@@ -35,8 +35,8 @@ describe("WitClash Full Game Cycle", () => {
       data: { answerId: "p1" },
     };
 
-    WitClashGame.phases.Voting!.actions.CastVote!.handler(v1Ctx);
-    WitClashGame.phases.Voting!.actions.CastVote!.handler(v2Ctx);
+    WitClashGame.phases.Voting?.actions.CastVote?.handler(v1Ctx);
+    WitClashGame.phases.Voting?.actions.CastVote?.handler(v2Ctx);
 
     // Validate outcomes (accessing state correctly based on your schema)
     // Adjust expectations based on actual state structure

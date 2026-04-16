@@ -14,10 +14,7 @@ describe("PromptLoader Themes", () => {
   });
 
   it("should discover all json files in prompts directory as categories", () => {
-    vi.spyOn(fs, "readdirSync").mockReturnValue([
-      "pop.json",
-      "niche.json",
-    ] as any);
+    vi.spyOn(fs, "readdirSync").mockReturnValue(["pop.json", "niche.json"] as any);
     const loader = new PromptLoader("mock/path");
     expect(loader.getAvailableCategories()).toEqual(["pop", "niche"]);
   });

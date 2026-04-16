@@ -1,9 +1,5 @@
 <script lang="ts">
 import type { GameConnectionManager } from "@partygame/client/src/connection.js";
-import Lobby from "./Lobby.svelte";
-import Prompt from "./Prompt.svelte";
-import Vote from "./Vote.svelte";
-import Results from "./Results.svelte";
 
 const { manager } = $props<{ manager: GameConnectionManager }>();
 // biome-ignore lint/correctness/noUnusedVariables: used in template

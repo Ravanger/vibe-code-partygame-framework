@@ -2,7 +2,7 @@
 import type { GameConnectionManager } from "@partygame/client/src/connection.js";
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const { manager } = $props<{ manager: GameConnectionManager }>();
-let _answer = $state("");
+const _answer = $state("");
 </script>
 
 <div class="prompt">

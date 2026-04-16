@@ -12,7 +12,7 @@ describe("WitClashGame Full Round", () => {
       clientId: "p1",
       data: { answer: "test" },
     };
-    Prompting!.actions.SubmitAnswer!.handler(ctxSubmit);
+    Prompting?.actions.SubmitAnswer?.handler(ctxSubmit);
 
     // Simulate CastVote
     const ctxVote = {
@@ -20,7 +20,7 @@ describe("WitClashGame Full Round", () => {
       clientId: "p2",
       data: { answerId: "p1" },
     };
-    Voting!.actions.CastVote!.handler(ctxVote);
+    Voting?.actions.CastVote?.handler(ctxVote);
 
     expect(state.prompts.p1).toBe("test");
     expect(state.votes.p1).toBe(1);
