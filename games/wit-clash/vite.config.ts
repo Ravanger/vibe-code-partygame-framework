@@ -1,5 +1,5 @@
 import { svelte } from "@sveltejs/vite-plugin-svelte";
-import { defineConfig } from "vitest/config";
+import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [
@@ -10,10 +10,5 @@ export default defineConfig({
   ],
   resolve: {
     conditions: ["browser", "development"],
-  },
-  test: {
-    environment: "jsdom",
-    globals: true,
-    setupFiles: ["./tests/setup.ts"],
   },
 });
