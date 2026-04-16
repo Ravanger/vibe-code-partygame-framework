@@ -1,6 +1,8 @@
 <script lang="ts">
 import type { GameConnectionManager } from "@partygame/client/src/connection.js";
-const gameCode = $state("");
+
+// biome-ignore lint/style/useConst: $state creates mutable reactive state
+let gameCode = $state("");
 let _error = $state("");
 
 const { manager } = $props<{ manager: GameConnectionManager }>();
@@ -24,7 +26,7 @@ const _joinGame = async () => {
 
   {#if manager.connectionStatus === 'disconnected'}
     <div class="join-form">
-      <input type="text" bind:value={gameCode} placeholder="Enter game code" />
+      <input type="text" value={gameCode} oninput={(e) => gameCode = (e.target as HTMLInputElement).value} placeholder="Enter game code" />
       <button onclick={async () => await _joinGame()}>Join Game</button>
       {#if _error}<p class="error">{_error}</p>{/if}
     </div>

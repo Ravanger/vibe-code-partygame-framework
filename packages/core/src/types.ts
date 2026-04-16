@@ -33,6 +33,7 @@ export interface ActionDefinition<TState, TPayload> {
  */
 export interface PhaseDefinition<TState> {
   duration?: number;
+  // biome-ignore lint/suspicious/noExplicitAny: Action payloads can be any type
   actions: Record<string, ActionDefinition<TState, any>>;
 }
 
