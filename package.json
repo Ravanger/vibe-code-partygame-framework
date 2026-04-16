@@ -20,11 +20,11 @@
   "devDependencies": {
     "@biomejs/biome": "^2.4.12",
     "@types/jsdom": "^28.0.1",
-    "@vitest/coverage-v8": "4.1.4",
+    "@vitest/coverage-v8": "^4.1.4",
     "colyseus": "^0.17.9",
     "jsdom": "^29.0.2",
     "turbo": "^2.9.6",
-    "typescript": "^6.0.2",
+    "typescript": "^6.0.3",
     "vitest": "^4.1.4"
   },
   "engines": {

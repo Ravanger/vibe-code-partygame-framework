@@ -12,12 +12,12 @@
   "dependencies": {
     "@colyseus/sdk": "^0.17.40",
     "@partygame/shared": "workspace:*",
-    "svelte": "^5.55.3"
+    "svelte": "^5.55.4"
   },
   "devDependencies": {
     "@partygame/core": "workspace:*",
     "@sveltejs/vite-plugin-svelte": "^7.0.0",
-    "typescript": "^6.0.2",
+    "typescript": "^6.0.3",
     "vite": "^8.0.8",
     "vitest": "^4.1.4"
   }
