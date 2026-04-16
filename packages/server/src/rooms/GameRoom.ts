@@ -7,6 +7,15 @@ import { GameStateSchema } from "../schema/GameStateSchema.js";
 import { PlayerSchema } from "../schema/PlayerSchema.js";
 import { RoleBasedStateView } from "./RoleBasedStateView.js";
 
+const logger = {
+  info: (message: string, ...args: unknown[]) =>
+    console.log(`[GameRoom] INFO: ${message}`, ...args),
+  error: (message: string, ...args: unknown[]) =>
+    console.error(`[GameRoom] ERROR: ${message}`, ...args),
+  debug: (message: string, ...args: unknown[]) =>
+    console.debug(`[GameRoom] DEBUG: ${message}`, ...args),
+};
+
 const _CloseCode = {
   CONSENTED: 4000,
   WITH_ERROR: 4001,
@@ -21,7 +30,16 @@ export class GameRoom<TState = unknown> extends Room {
   }
 
   onCreate() {
+    logger.info("onCreate called");
     this.setState(new GameStateSchema());
+
+    if (!this.gameDefinition) {
+      logger.error("gameDefinition is undefined in onCreate!");
+      throw new Error(
+        "GameDefinition must be set before onCreate completes. Call setDefinition() in your room class constructor or onCreate().",
+      );
+    }
+    logger.debug("gameDefinition set:", this.gameDefinition.name);
 
     this.machine = createActor(buildXStateMachine(this.gameDefinition));
     this.machine.start();
@@ -60,15 +78,30 @@ export class GameRoom<TState = unknown> extends Room {
   }
 
   onJoin(client: Client) {
+    logger.info(`onJoin called for client: ${client.sessionId}`);
+
+    if (!this.gameDefinition) {
+      logger.error("gameDefinition is undefined in onJoin!");
+      throw new Error(
+        "GameDefinition must be set before clients can join. Call setDefinition() in your room class.",
+      );
+    }
+
     const state = this.state as GameStateSchema;
+    logger.debug(`Current players before join: ${state.players.size}`);
+
     const player = new PlayerSchema();
     player.id = client.sessionId;
     player.name = `Player ${client.sessionId.slice(0, 4)}`;
     state.players.set(client.sessionId, player);
 
+    logger.debug(`Player created: id=${player.id}, name=${player.name}`);
+    logger.debug(`Total players after join: ${state.players.size}`);
+
     const visibilityConfig = (this.gameDefinition.visibility ||
       {}) as unknown as GameVisibilityConfig<GameStateSchema, PlayerSchema>;
 
     client.view = new RoleBasedStateView(state, player, visibilityConfig);
+    logger.info(`Client ${client.sessionId} joined with view set`);
   }
 }

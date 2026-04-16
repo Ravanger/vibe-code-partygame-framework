@@ -16,6 +16,11 @@ const _joinGame = async () => {
   try {
     await manager.connect("wit_clash", { code: gameCode });
   } catch (e) {
+    console.error("[Lobby] Connect failed:", e);
+    console.error("[Lobby] Error type:", typeof e);
+    if (e && typeof e === "object") {
+      console.error("[Lobby] Error keys:", Object.keys(e));
+    }
     _error = `Failed to join game: ${e}`;
   }
 };

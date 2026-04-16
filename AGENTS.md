@@ -74,9 +74,18 @@
 
 ### GameRoom Player Creation on Join
 - **Issue:** `Failed to join game: TypeError: Cannot read properties of undefined (reading 'name')`
-- **Cause:** `GameRoom.onJoin` tried to retrieve a player from `state.players` that didn't exist - no code was creating players when clients joined
-- **Fix:** Added player creation in `onJoin` handler (`packages/server/src/rooms/GameRoom.ts:65-71`)
-- **Testing:** Tests mocked at the wrong level (mocked entire `colyseus` module) so they passed despite the bug. Added unit tests in `GameRoom.test.ts` and improved `connection.test.ts` to better cover join flow
+- **Cause:** 
+  - `GameRoom.onJoin` tried to retrieve a player from `state.players` that didn't exist (no player creation)
+  - Missing null checks for `this.gameDefinition` which could also cause undefined access errors
+- **Fix:** 
+  - **0779e03:** Added player creation in `onJoin` handler (`packages/server/src/rooms/GameRoom.ts:65-71`)
+  - **Current:** Added null checks for `this.gameDefinition` in `onCreate()` and `onJoin()` with clear error messages
+  - **Current:** Added comprehensive logging to track room lifecycle and player creation
+- **Testing:** 
+  - Tests mocked at the wrong level (mocked entire `colyseus` module) so they passed despite the bug
+  - Added unit tests in `GameRoom.test.ts` and improved `connection.test.ts`
+  - Added integration tests in `GameRoom.integration.test.ts` with 7 new tests covering player creation and error scenarios
+- **Logging:** Added `[GameRoom]` prefixed logging at INFO, ERROR, and DEBUG levels for debugging
 
 ### TypeScript Build Configuration
 - **Issue:** `tsc` not outputting to `dist/` directory despite `outDir` config
