@@ -1,9 +1,9 @@
 <script lang="ts">
-import type { GameClient } from "@partygame/client";
-const { client } = $props<{ client: GameClient }>();
+import type { GameConnectionManager } from "@partygame/client/src/connection.js";
+const { manager } = $props<{ manager: GameConnectionManager }>();
 
 // In a real app, this would come from visibility-filtered state
-const _options = $derived(JSON.parse(client.state.publicData).votingOptions || []);
+const _options = $derived(JSON.parse(manager.room?.state.publicData ?? "{}").votingOptions || []);
 </script>
 
 <div class="vote">
@@ -12,7 +12,7 @@ const _options = $derived(JSON.parse(client.state.publicData).votingOptions || [
     {#each options as option}
       <button 
         class="option" 
-        onclick={() => client.send('ACTION', { name: 'VOTE', data: { answerId: option.id } })}
+        onclick={() => manager.room?.send('ACTION', { type: 'CastVote', answerId: option.id })}
       >
         {option.text}
       </button>

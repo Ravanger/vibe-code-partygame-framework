@@ -1,24 +1,21 @@
 <script lang="ts">
-import type { GameClient } from "@partygame/client";
-const { client: _client } = $props<{ client: GameClient }>();
+import type { GameConnectionManager } from "@partygame/client/src/connection.js";
+const { manager } = $props<{ manager: GameConnectionManager }>();
 const _answer = $state("");
-
-function _submit() {
-  _client.send("ACTION", { name: "SUBMIT_ANSWER", data: { text: _answer } });
-}
 </script>
 
 <div class="prompt">
-  <h2>Answer the Prompt!</h2>
+  <h2>{manager.connectionStatus === 'connected' ? 'Answer the Prompt!' : 'Connecting...'}</h2>
   <div class="input-group">
     <input 
       bind:value={_answer} 
       placeholder="Type something funny..." 
-      onkeydown={(e) => e.key === 'Enter' && _submit()}
+      onkeydown={(e) => e.key === 'Enter' && manager.room?.send("ACTION", { type: "SubmitAnswer", answer: _answer })}
     />
-    <button onclick={_submit}>Submit</button>
+    <button onclick={() => manager.room?.send("ACTION", { type: "SubmitAnswer", answer: _answer })}>Submit</button>
   </div>
 </div>
+
 
 <style>
   .prompt { padding: 20px; text-align: center; }
@@ -26,3 +23,4 @@ function _submit() {
   input { padding: 10px; font-size: 1rem; flex: 1; max-width: 300px; }
   button { padding: 10px 20px; background: #2196F3; color: white; border: none; cursor: pointer; }
 </style>
+
