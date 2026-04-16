@@ -5,11 +5,13 @@
 
 ## !Note: Internal agent files (checklists, logs, notes, memories, etc.) should go in the `.AGENTS/` directory
 
+## !Note: Library documentation is maintained in `.AGENTS/docs/libraries/` - check this directory for up-to-date API references
+
 ## Core Mandates
 
 - **Terminology:** DO NOT mention "Jackbox" in any documentation, code, or communication.
 - **TDD First:** NO production code without a failing test first. 100% coverage target for `core` and `shared`.
-- **Modern Tech Stack:** Bun 1.1+, Colyseus 0.16, XState v5, Zod, Svelte 5, Vitest, Biome.
+- **Modern Tech Stack:** Bun 1.1+, Colyseus 0.17, XState v5, Zod, Svelte 5, Vitest, Biome.
 - **Strict Separation:** Clear boundaries between `core` (logic), `server` (multiplayer), and `client` (UI).
 - **Security:** Zod validation for all inputs, rate limiting, and structured logging.
 - **Horizontal Scalability:** Redis adapter pattern for multi-node support.
@@ -42,7 +44,7 @@
 | Layer              | Technology          |
 | ------------------ | ------------------- |
 | Runtime            | Bun                 |
-| Multiplayer        | Colyseus 0.16       |
+| Multiplayer        | Colyseus 0.17       |
 | State Machine      | XState v5           |
 | Validation         | Zod                 |
 | Frontend           | Svelte 5 (Runes)    |
@@ -91,3 +93,10 @@
 - **Issue:** `tsc` not outputting to `dist/` directory despite `outDir` config
 - **Fix:** Delete `tsconfig.tsbuildinfo` to force fresh build - turbo caching was skipping compilation
 - **Reference:** `packages/server/tsconfig.tsbuildinfo`
+
+### Colyseus v0.17 Client/Server Version Mismatch
+- **Issue:** `joinOrCreate` fails with `Cannot read properties of undefined (reading 'name')` - client expects `response.room.name` but server returns `name` directly at top level
+- **Cause:** Using `colyseus.js` v0.16 client with Colyseus v0.17 server. v0.17 changed the seat reservation response format and the client package was renamed from `colyseus.js` to `@colyseus/sdk`
+- **Fix:** Upgraded client from `colyseus.js: ^0.16.0` to `@colyseus/sdk: ^0.17.26` in `packages/client/package.json` and updated all imports from `"colyseus.js"` to `"@colyseus/sdk"`
+- **Files:** `packages/client/package.json`, `packages/client/src/*.ts`, `packages/client/tests/*.test.ts`
+- **Reference:** [Colyseus Migration Guide v0.17](https://docs.colyseus.io/migrating/0.17)

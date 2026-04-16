@@ -1,4 +1,4 @@
-import { Client, type Room } from "colyseus.js";
+import { Client, type Room } from "@colyseus/sdk";
 import { GameRoomState, type ServerGameRoomState } from "./state.svelte.js";
 import type { ConnectionStatus } from "./types.js";
 

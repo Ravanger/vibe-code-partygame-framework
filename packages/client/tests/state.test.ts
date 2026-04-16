@@ -1,8 +1,8 @@
-import { Client } from "colyseus.js";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Client } from "@colyseus/sdk";
+import { type Mock, beforeEach, describe, expect, it, vi } from "vitest";
 import { GameClient } from "../src/GameClient.js";
 
-vi.mock("colyseus.js", () => {
+vi.mock("@colyseus/sdk", () => {
   const Room = vi.fn(() => ({
     onStateChange: vi.fn(),
     onLeave: vi.fn(),

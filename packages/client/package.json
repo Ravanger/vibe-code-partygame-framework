@@ -10,9 +10,9 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@colyseus/sdk": "^0.17.26",
     "@partygame/shared": "workspace:*",
-    "svelte": "^5.0.0",
-    "colyseus.js": "^0.16.0"
+    "svelte": "^5.0.0"
   },
   "devDependencies": {
     "@partygame/core": "workspace:*",

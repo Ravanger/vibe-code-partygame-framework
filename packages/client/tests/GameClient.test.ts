@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GameClient } from "../src/GameClient.js";
 
-vi.mock("colyseus.js", () => ({
+vi.mock("@colyseus/sdk", () => ({
   Client: vi.fn().mockImplementation(() => ({
     joinOrCreate: vi.fn().mockResolvedValue({
       sessionId: "session1",

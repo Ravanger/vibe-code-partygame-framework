@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GameConnectionManager } from "../src/connection.js";
 
-vi.mock("colyseus.js", () => ({
+vi.mock("@colyseus/sdk", () => ({
   Client: vi.fn().mockImplementation(() => ({
     joinOrCreate: vi.fn().mockResolvedValue({
       sessionId: "test-session",
@@ -30,7 +30,7 @@ describe("GameConnectionManager", () => {
   });
 
   it("should set status to error when join fails", async () => {
-    const { Client } = await import("colyseus.js");
+    const { Client } = await import("@colyseus/sdk");
     const mockClient = Client as unknown as ReturnType<typeof vi.fn>;
     mockClient.mockImplementation(() => ({
       joinOrCreate: vi.fn().mockRejectedValue(new Error("Connection refused")),
@@ -42,7 +42,7 @@ describe("GameConnectionManager", () => {
   });
 
   it("should pass options to joinOrCreate", async () => {
-    const { Client } = await import("colyseus.js");
+    const { Client } = await import("@colyseus/sdk");
     const joinOrCreateSpy = vi.fn().mockResolvedValue({
       sessionId: "test-session",
       onStateChange: vi.fn(),

@@ -1,4 +1,4 @@
-import { Client, type Room } from "colyseus.js";
+import { Client, type Room } from "@colyseus/sdk";
 import type { ConnectionStatus } from "./types.js";
 
 export class GameConnectionManager {
