@@ -1,27 +1,21 @@
 <script lang="ts">
-import type { GameClient } from "@partygame/client";
+import { GameConnectionManager } from "@partygame/client/src/connection.js";
 
-const { client } = $props<{ client: GameClient }>();
-const _state = $derived(client.state);
+const manager = new GameConnectionManager("ws://localhost:2567");
+const _state = $derived(manager.room?.state ?? { phase: "lobby" });
 </script>
 
 <main>
   <header>
     <h1>WitClash</h1>
     <div class="status">
-      Status: <span class="badge {client.connectionStatus}">{client.connectionStatus}</span>
+      Status: <span class="badge {manager.connectionStatus}">{manager.connectionStatus}</span>
     </div>
   </header>
 
   <section class="game-view">
     {#if state.phase === 'lobby'}
-      <Lobby {client} />
-    {:else if state.phase === 'Prompting'}
-      <Prompt {client} />
-    {:else if state.phase === 'Voting'}
-      <Vote {client} />
-    {:else if state.phase === 'Results'}
-      <Results {client} />
+      <Lobby {manager} />
     {:else}
       <div class="unknown-phase">
         <p>Phase: {state.phase}</p>
@@ -31,7 +25,7 @@ const _state = $derived(client.state);
   </section>
 
   <footer>
-    <p>Player ID: {client.playerId}</p>
+    <p>Player ID: {manager.room?.sessionId ?? 'N/A'}</p>
   </footer>
 </main>
 
