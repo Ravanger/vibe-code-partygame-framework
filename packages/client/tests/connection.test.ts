@@ -1,6 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { GameConnectionManager } from "../src/connection.js";
-import { Client } from "colyseus.js";
 
 vi.mock("colyseus.js", () => {
   return {
