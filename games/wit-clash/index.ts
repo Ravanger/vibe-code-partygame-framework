@@ -13,7 +13,7 @@ interface SelectCategoryPayload {
 }
 
 interface SubmitAnswerPayload {
-  text: string;
+  answer: string;
 }
 
 interface VotePayload {
@@ -55,18 +55,17 @@ export const WitClashGame = defineGame<WitClashState>({
     }),
     Prompting: createPhase({
       actions: {
-        SUBMIT_ANSWER: {
+        SubmitAnswer: {
           from: "player",
           handler: (ctx: { state: WitClashState; clientId: string; data: SubmitAnswerPayload }) => {
-            ctx.state.prompts[ctx.clientId] = ctx.data.text;
-            // Transition logic would be in the framework/machine, but we'll mock it here
+            ctx.state.prompts[ctx.clientId] = ctx.data.answer;
           },
         },
       },
     }),
     Voting: createPhase({
       actions: {
-        VOTE: {
+        CastVote: {
           from: "player",
           handler: (ctx: { state: WitClashState; data: VotePayload }) => {
             const answerId = ctx.data.answerId;

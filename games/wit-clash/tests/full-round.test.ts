@@ -10,17 +10,17 @@ describe("WitClashGame Full Round", () => {
     const ctxSubmit = {
       state,
       clientId: "p1",
-      data: { text: "test" },
+      data: { answer: "test" },
     };
-    Prompting.actions.SUBMIT_ANSWER.handler(ctxSubmit);
+    Prompting.actions.SubmitAnswer.handler(ctxSubmit);
 
-    // Simulate VOTE
+    // Simulate CastVote
     const ctxVote = {
       state,
       clientId: "p2",
       data: { answerId: "p1" },
     };
-    Voting.actions.VOTE.handler(ctxVote);
+    Voting.actions.CastVote.handler(ctxVote);
 
     expect(state.prompts.p1).toBe("test");
     expect(state.votes.p1).toBe(1);

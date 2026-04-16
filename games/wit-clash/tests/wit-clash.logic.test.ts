@@ -22,20 +22,20 @@ describe("WitClash Game Logic", () => {
     expect(state.phase).toBe("Prompting");
   });
 
-  it("should store prompts when SUBMIT_ANSWER is called", () => {
+  it("should store prompts when SubmitAnswer is called", () => {
     const state = WitClashGame.initialState();
     state.phase = "Prompting";
-    const action = WitClashGame.phases.Prompting.actions.SUBMIT_ANSWER;
+    const action = WitClashGame.phases.Prompting.actions.SubmitAnswer;
 
-    action.handler({ state, clientId: "p1", data: { text: "Funny answer" } });
+    action.handler({ state, clientId: "p1", data: { answer: "Funny answer" } });
 
     expect(state.prompts.p1).toBe("Funny answer");
   });
 
-  it("should record votes on VOTE action", () => {
+  it("should record votes on CastVote action", () => {
     const state = WitClashGame.initialState();
     state.phase = "Voting";
-    const action = WitClashGame.phases.Voting.actions.VOTE;
+    const action = WitClashGame.phases.Voting.actions.CastVote;
 
     action.handler({ state, clientId: "voter-1", data: { answerId: "p1" } });
 
