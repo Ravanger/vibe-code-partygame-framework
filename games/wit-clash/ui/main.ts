@@ -1,11 +1,13 @@
-import { mount } from 'svelte';
-import App from './App.svelte';
+import { mount } from "svelte";
 import { GameConnectionManager } from "../../packages/client/src/connection.js";
+import App from "./App.svelte";
 
 const manager = new GameConnectionManager("ws://localhost:2567");
+const target = document.getElementById("app") ?? document.body;
+
 const app = mount(App, {
-  target: document.getElementById('app')!,
-  props: { manager }
+  target,
+  props: { manager },
 });
 
 export default app;
