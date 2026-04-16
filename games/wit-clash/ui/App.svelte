@@ -1,8 +1,9 @@
 <script lang="ts">
-import { GameConnectionManager } from "@partygame/client/src/connection.js";
+import type { GameConnectionManager } from "@partygame/client/src/connection.js";
+import Lobby from "./Lobby.svelte";
 
-const manager = new GameConnectionManager("ws://localhost:2567");
-const _state = $derived(manager.room?.state ?? { phase: "lobby" });
+const { manager } = $props<{ manager: GameConnectionManager }>();
+const state = $derived(manager.room?.state ?? { phase: "lobby" });
 </script>
 
 <main>
