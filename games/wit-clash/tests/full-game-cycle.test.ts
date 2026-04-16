@@ -4,11 +4,10 @@ import { WitClashGame } from "../index";
 describe("WitClash Full Game Cycle", () => {
   it("should complete a full round of StartGame -> SubmitAnswer -> CastVote", () => {
     const state = WitClashGame.initialState();
-    const { Prompting, Voting } = WitClashGame.phases;
 
     // Simulate StartGame
     // Assuming start game is handled by the state machine
-    
+
     // Simulate SubmitAnswer
     const p1Ctx = {
       state,
@@ -41,7 +40,7 @@ describe("WitClash Full Game Cycle", () => {
 
     // Validate outcomes (accessing state correctly based on your schema)
     // Adjust expectations based on actual state structure
-    expect(state.votes["p2"]).toBe(1);
-    expect(state.votes["p1"]).toBe(1);
+    expect(state.votes.p2).toBe(1);
+    expect(state.votes.p1).toBe(1);
   });
 });
