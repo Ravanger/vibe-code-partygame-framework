@@ -1,5 +1,5 @@
 <script lang="ts">
-import type { GameConnectionManager } from "@partygame/client/src/connection.js";
+import type { GameConnectionManager } from "@partygame/client/src/connection.svelte.js";
 
 const { manager } = $props<{ manager: GameConnectionManager }>();
 

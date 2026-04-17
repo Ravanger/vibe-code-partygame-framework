@@ -4,7 +4,7 @@ import { GameStateSchema } from "../src/schema/GameStateSchema";
 
 test("should instantiate with defaults", () => {
   const state = new GameStateSchema();
-  expect(state.phase).toBe("lobby");
+  expect(state.phase).toBe("Lobby");
   expect(state.publicData).toBe("{}");
   expect(state.roomCode).toBe("");
   expect(state.selectedCategory).toBe("");

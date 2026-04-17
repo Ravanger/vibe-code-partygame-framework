@@ -35,7 +35,7 @@ export const WitClashGame = defineGame<WitClashState>({
     Lobby: createPhase({
       actions: {
         START_GAME: {
-          from: "player", // Host check happens at the framework level usually, or here
+          from: "host",
           handler: (ctx) => {
             ctx.state.phase = "CategorySelection";
           },

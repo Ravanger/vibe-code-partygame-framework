@@ -30,7 +30,10 @@ export class GameRoom<TState = unknown> extends Room {
 
   onCreate() {
     logger.info("onCreate called");
-    this.setState(new GameStateSchema());
+    const state = new GameStateSchema();
+    state.roomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+    this.setState(state);
+    logger.debug("Room code generated:", state.roomCode);
 
     if (!this.gameDefinition) {
       logger.error("gameDefinition is undefined in onCreate!");
@@ -41,29 +44,59 @@ export class GameRoom<TState = unknown> extends Room {
     logger.debug("gameDefinition set:", this.gameDefinition.name);
 
     this.machine = createActor(buildXStateMachine(this.gameDefinition));
+    this.machine.subscribe((snapshot) => {
+      logger.debug("Machine state changed:", snapshot.value);
+      const state = this.state as GameStateSchema;
+      state.phase = snapshot.context.currentPhase;
+      state.publicData = JSON.stringify(snapshot.context.gameState);
+    });
     this.machine.start();
 
+    this.onMessage("SET_NAME", (client, name: string) => {
+      logger.debug(`Received SET_NAME from ${client.sessionId}:`, name);
+      const state = this.state as GameStateSchema;
+      const player = state.players.get(client.sessionId);
+      if (player) {
+        player.name = name;
+        player.isReady = true;
+        logger.info(`Player ${client.sessionId} name set to ${name}`);
+      }
+    });
+
     this.onMessage("ACTION", (client, message: unknown) => {
+      logger.debug(`Received ACTION from ${client.sessionId}:`, message);
       const parsedAction = GameActionSchema.safeParse(message);
       if (!parsedAction.success) {
+        logger.error(`Invalid action format from ${client.sessionId}:`, parsedAction.error);
         client.send("ERROR", { code: "INVALID_ACTION", message: "Invalid action format" });
         return;
       }
 
       const state = this.state as GameStateSchema;
       const player = state.players.get(client.sessionId);
-      if (!player) return;
+      if (!player) {
+        logger.error(`Player not found for ${client.sessionId}`);
+        return;
+      }
 
       const phase = this.gameDefinition.phases[state.phase];
-      if (!phase) return;
+      if (!phase) {
+        logger.error(`Phase ${state.phase} not found in game definition`);
+        return;
+      }
       const actionDef = phase.actions[parsedAction.data.type];
-      if (!actionDef) return;
+      if (!actionDef) {
+        logger.error(`Action ${parsedAction.data.type} not found in phase ${state.phase}`);
+        return;
+      }
 
       if (actionDef.from !== "player" && player.role !== actionDef.from) {
+        logger.error(`Unauthorized action ${parsedAction.data.type} from ${client.sessionId}`);
         client.send("ERROR", { code: "UNAUTHORIZED", message: "Forbidden" });
         return;
       }
 
+      logger.debug(`Sending action to machine: ${parsedAction.data.type}`);
       this.machine.send({
         type: "ACTION",
         phase: state.phase,
@@ -76,8 +109,9 @@ export class GameRoom<TState = unknown> extends Room {
     });
   }
 
-  onJoin(client: Client) {
+  onJoin(client: Client, options?: Record<string, unknown>) {
     logger.info(`onJoin called for client: ${client.sessionId}`);
+    logger.debug(`Options: ${JSON.stringify(options)}`);
 
     if (!this.gameDefinition) {
       logger.error("gameDefinition is undefined in onJoin!");
@@ -91,12 +125,13 @@ export class GameRoom<TState = unknown> extends Room {
 
     const player = new PlayerSchema();
     player.id = client.sessionId;
-    player.name = `Player ${client.sessionId.slice(0, 4)}`;
+    player.name = (options?.name as string) || `Player ${client.sessionId.slice(0, 4)}`;
+    player.role = state.players.size === 0 ? "host" : "player";
     state.players.set(client.sessionId, player);
 
-    logger.debug(`Player created: id=${player.id}, name=${player.name}`);
+    logger.debug(`Player created: id=${player.id}, name=${player.name}, role=${player.role}`);
     logger.debug(`Total players after join: ${state.players.size}`);
 
-    logger.info(`Client ${client.sessionId} joined`);
+    logger.info(`Client ${client.sessionId} joined as ${player.name}`);
   }
 }

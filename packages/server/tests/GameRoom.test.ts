@@ -49,7 +49,7 @@ describe("GameRoom", () => {
   describe("GameStateSchema integration", () => {
     it("should create game state with correct defaults", () => {
       const state = new GameStateSchema();
-      expect(state.phase).toBe("lobby");
+      expect(state.phase).toBe("Lobby");
       expect(state.players).toBeDefined();
     });
 

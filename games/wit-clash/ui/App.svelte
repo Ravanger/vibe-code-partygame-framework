@@ -1,5 +1,5 @@
 <script lang="ts">
-import type { GameConnectionManager } from "@partygame/client/src/connection.js";
+import type { GameConnectionManager } from "@partygame/client/src/connection.svelte.js";
 // biome-ignore lint/correctness/noUnusedImports: used in template
 import Lobby from "./Lobby.svelte";
 // biome-ignore lint/correctness/noUnusedImports: used in template
@@ -10,8 +10,14 @@ import Results from "./Results.svelte";
 import Vote from "./Vote.svelte";
 
 const { manager } = $props<{ manager: GameConnectionManager }>();
-// biome-ignore lint/correctness/noUnusedVariables: used in template
 const state = $derived(manager.room?.state ?? { phase: "Lobby" });
+
+$effect(() => {
+  if (manager.room) {
+    console.log(`[App] Current phase: ${state.phase}`);
+    console.log("[App] Full state:", JSON.parse(JSON.stringify(state)));
+  }
+});
 </script>
 
 <main>
@@ -24,7 +30,7 @@ const state = $derived(manager.room?.state ?? { phase: "Lobby" });
 
   <section class="game-view">
     {#if state.phase === 'Lobby'}
-      <Lobby {manager} />
+      <Lobby {manager} createGameOnLoad={true} />
     {:else if state.phase === 'CategorySelection'}
       <div class="category-selection">
         <h2>Select a Category</h2>

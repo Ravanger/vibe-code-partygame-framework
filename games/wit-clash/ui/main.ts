@@ -1,5 +1,5 @@
 import { mount } from "svelte";
-import { GameConnectionManager } from "../../../packages/client/src/connection.js";
+import { GameConnectionManager } from "../../../packages/client/src/connection.svelte.js";
 import App from "./App.svelte";
 
 const manager = new GameConnectionManager("http://localhost:2567");

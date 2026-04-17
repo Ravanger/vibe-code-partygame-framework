@@ -14,6 +14,6 @@ describe("XState Machine", () => {
     const machine = buildXStateMachine(mockDef);
     const actor = createActor(machine);
     actor.start();
-    expect(actor.getSnapshot().context.currentPhase).toBe("lobby");
+    expect(actor.getSnapshot().context.currentPhase).toBe("Lobby");
   });
 });

@@ -2,7 +2,7 @@ import { ArraySchema, MapSchema, Schema, type } from "@colyseus/schema";
 import { PlayerSchema } from "./PlayerSchema.js";
 
 export class GameStateSchema extends Schema {
-  @type("string") phase = "lobby";
+  @type("string") phase = "Lobby";
   @type("string") publicData = "{}";
   @type("string") roomCode = "";
   @type({ array: "string" }) currentVotingOptions: ArraySchema<string>;

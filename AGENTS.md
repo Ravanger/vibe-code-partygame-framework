@@ -154,3 +154,19 @@ Library-specific documentation is maintained in `.AGENTS/docs/libraries/`. Each 
 - **Issue:** TypeScript 6.0 has stricter type checking and new features
 - **Fix:** No code changes required - all existing code passes with TypeScript 6.0.2
 - **Files:** `package.json`, `packages/*/package.json`, `games/wit-clash/package.json`
+
+### WitClash Lobby Multi-step Joining
+- **Pattern:** Implemented a three-step lobby joining flow:
+  1. **Connection Step:** Host auto-creates room via `manager.create()` (if `createGameOnLoad` prop is set), guests join via `manager.join(roomCode)`.
+  2. **Name Entry Step:** Once connected, players enter a nickname. This sends `SET_NAME` to the server.
+  3. **Waiting Room:** Players only appear in the lobby list once `isReady` is true (set after `SET_NAME`).
+- **Implementation:** 
+  - `GameConnectionManager` (Svelte 5 SDK) uses `$state` runes for `connectionStatus` and `room`.
+  - Server-side `GameRoom` generates a 4-letter `roomCode` and handles `SET_NAME` messages.
+  - `isReady` property on `PlayerSchema` controls player visibility in the lobby list.
+
+### Known Issues & Bugs
+- **Player Sync Bug:** There is an intermittent issue where players joining a lobby may not appear for other players immediately, or the state synchronization between the XState machine and Colyseus state might lag.
+- **XState Phase Transitions:** `START_GAME` action transitions the machine, but ensures that all clients are notified and their UI updates to the next phase (e.g., `CategorySelection`).
+- **Biome False Positives:** `Lobby.svelte` currently has `biome-ignore` for `isHost` being "unused" despite its usage in the template; Biome's Svelte 5 support is still maturing.
+- **Type Casting in Server:** `GameRoom.onJoin` uses manual casting for `options.name` as `options` is `Record<string, unknown>`.

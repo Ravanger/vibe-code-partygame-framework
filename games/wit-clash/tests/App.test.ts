@@ -1,4 +1,4 @@
-import type { GameConnectionManager } from "@partygame/client/src/connection.js";
+import type { GameConnectionManager } from "@partygame/client/src/connection.svelte.js";
 import { render, screen } from "@testing-library/svelte";
 import { describe, expect, it } from "vitest";
 import App from "../ui/App.svelte";
