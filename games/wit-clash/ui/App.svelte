@@ -12,6 +12,11 @@ import Vote from "./Vote.svelte";
 const { manager } = $props<{ manager: GameConnectionManager }>();
 const state = $derived(manager.room?.state ?? { phase: "Lobby" });
 
+// Detect if this is the host (has ?host=true in URL)
+const urlParams = new URLSearchParams(window.location.search);
+// biome-ignore lint/correctness/noUnusedVariables: used in template <Lobby createGameOnLoad={isHost}>
+const isHost = $derived(urlParams.get("host") === "true");
+
 $effect(() => {
   if (manager.room) {
     console.log(`[App] Current phase: ${state.phase}`);
@@ -30,7 +35,7 @@ $effect(() => {
 
   <section class="game-view">
     {#if state.phase === 'Lobby'}
-      <Lobby {manager} createGameOnLoad={true} />
+      <Lobby {manager} createGameOnLoad={isHost} />
     {:else if state.phase === 'CategorySelection'}
       <div class="category-selection">
         <h2>Select a Category</h2>
