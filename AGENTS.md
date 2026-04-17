@@ -28,6 +28,35 @@
 - `packages/cli`: Scaffolding tool for new games.
 - `games/reference`: Canonical demo game (Quiplash-style).
 
+## Library Documentation References
+
+Library-specific documentation is maintained in `.AGENTS/docs/libraries/`. Each document provides comprehensive API references, project-specific usage patterns, best practices, and troubleshooting guidance.
+
+| Library | Documentation | Version |
+|---------|---------------|---------|
+| **@biomejs/biome** | [biome.md](.AGENTS/docs/libraries/biome.md) | v2.4.12 |
+| **colyseus** | [colyseus.md](.AGENTS/docs/libraries/colyseus.md) | v0.17.41 |
+| **@colyseus/core** | [colyseus.md](.AGENTS/docs/libraries/colyseus.md) | v0.17.41 |
+| **@colyseus/sdk** | [colyseus.md](.AGENTS/docs/libraries/colyseus.md) | v0.17.40 |
+| **@colyseus/schema** | [colyseus-schema.md](.AGENTS/docs/libraries/colyseus-schema.md) | v4.0.20 |
+| **@colyseus/testing** | [colyseus-testing.md](.AGENTS/docs/libraries/colyseus-testing.md) | v0.17.11 |
+| **@colyseus/ws-transport** | [colyseus-ws-transport.md](.AGENTS/docs/libraries/colyseus-ws-transport.md) | v0.17.13 |
+| **svelte** | [svelte.md](.AGENTS/docs/libraries/svelte.md) | v5.55.4 |
+| **@sveltejs/vite-plugin-svelte** | [svelte.md](.AGENTS/docs/libraries/svelte.md) | v7.0.0 |
+| **turbo** | [turbo.md](.AGENTS/docs/libraries/turbo.md) | v2.9.6 |
+| **vitest** | [vitest.md](.AGENTS/docs/libraries/vitest.md) | v4.1.4 |
+| **@vitest/coverage-v8** | [vitest.md](.AGENTS/docs/libraries/vitest.md) | v4.1.4 |
+| **xstate** | [xstate.md](.AGENTS/docs/libraries/xstate.md) | v5.30.0 |
+| **zod** | [zod.md](.AGENTS/docs/libraries/zod.md) | v4.3.6 |
+| **@testing-library/svelte** | [testing-library.md](.AGENTS/docs/libraries/testing-library.md) | v5.3.1 |
+| **@testing-library/jest-dom** | [testing-library.md](.AGENTS/docs/libraries/testing-library.md) | v6.9.1 |
+| **@testing-library/user-event** | [testing-library.md](.AGENTS/docs/libraries/testing-library.md) | v14.6.1 |
+| **jsdom** | [jsdom.md](.AGENTS/docs/libraries/jsdom.md) | v29.0.2 |
+| **@types/jsdom** | [jsdom.md](.AGENTS/docs/libraries/jsdom.md) | v28.0.1 |
+| **vite** | [vite.md](.AGENTS/docs/libraries/vite.md) | v8.0.8 |
+| **typescript** | [typescript.md](.AGENTS/docs/libraries/typescript.md) | v6.0.3 |
+| **pino** | (reference only) | v9.x |
+
 ## Development Workflow
 
 1. **Research & Plan:** Use `writing-plans` to define tasks.
