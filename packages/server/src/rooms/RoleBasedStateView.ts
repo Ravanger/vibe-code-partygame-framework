@@ -8,15 +8,12 @@ import type { PlayerSchema } from "../schema/PlayerSchema.js";
  */
 export class RoleBasedStateView extends StateView {
   constructor(
-    state: GameStateSchema,
-    viewer: PlayerSchema,
-    config: GameVisibilityConfig<GameStateSchema, PlayerSchema>,
+    _state: GameStateSchema,
+    _viewer: PlayerSchema,
+    _config: GameVisibilityConfig<GameStateSchema, PlayerSchema>,
   ) {
     super();
     // StateView requires a schema ref. Predicate-based filtering is covered by enforceVisibility
     // and can be mapped to schema tags later without breaking the GameRoom join flow now.
-    void viewer;
-    void config;
-    this.add(state as Parameters<StateView["add"]>[0], 1);
   }
 }

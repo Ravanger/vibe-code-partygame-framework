@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@colyseus/bun-websockets": "^0.17.13",
     "@colyseus/core": "^0.17.41",
     "@colyseus/schema": "^4.0.20",
     "@partygame/core": "workspace:*",
@@ -19,7 +20,6 @@
   },
   "devDependencies": {
     "@colyseus/testing": "^0.17.11",
-    "@colyseus/ws-transport": "^0.17.13",
     "typescript": "^6.0.3",
     "vitest": "^4.1.4"
   }

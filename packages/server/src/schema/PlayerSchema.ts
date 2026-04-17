@@ -5,6 +5,7 @@ export class PlayerSchema extends Schema {
   name = "";
   role = "player";
 }
+
 defineTypes(PlayerSchema, {
   id: "string",
   name: "string",

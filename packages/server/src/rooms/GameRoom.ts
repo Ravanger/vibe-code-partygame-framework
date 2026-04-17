@@ -1,11 +1,10 @@
-import type { GameDefinition, GameVisibilityConfig } from "@partygame/core";
+import type { GameDefinition } from "@partygame/core";
 import { buildXStateMachine } from "@partygame/core";
 import { GameActionSchema } from "@partygame/shared";
 import { type Client, Room } from "colyseus";
 import { type AnyActorRef, createActor } from "xstate";
 import { GameStateSchema } from "../schema/GameStateSchema.js";
 import { PlayerSchema } from "../schema/PlayerSchema.js";
-import { RoleBasedStateView } from "./RoleBasedStateView.js";
 
 const logger = {
   info: (message: string, ...args: unknown[]) =>
@@ -98,10 +97,6 @@ export class GameRoom<TState = unknown> extends Room {
     logger.debug(`Player created: id=${player.id}, name=${player.name}`);
     logger.debug(`Total players after join: ${state.players.size}`);
 
-    const visibilityConfig = (this.gameDefinition.visibility ||
-      {}) as unknown as GameVisibilityConfig<GameStateSchema, PlayerSchema>;
-
-    client.view = new RoleBasedStateView(state, player, visibilityConfig);
-    logger.info(`Client ${client.sessionId} joined with view set`);
+    logger.info(`Client ${client.sessionId} joined`);
   }
 }

@@ -1,16 +1,12 @@
-import { createServer } from "node:http";
-import { WebSocketTransport } from "@colyseus/ws-transport";
+import { BunWebSockets } from "@colyseus/bun-websockets";
 import type { GameDefinition } from "@partygame/core";
 import { Server } from "colyseus";
 import { GameRoom } from "./rooms/GameRoom.js";
 
 const port = Number(process.env.PORT) || 2567;
-const server = createServer();
 
 const gameServer = new Server({
-  transport: new WebSocketTransport({
-    server,
-  }),
+  transport: new BunWebSockets({ path: "/" }),
 });
 
 async function start() {

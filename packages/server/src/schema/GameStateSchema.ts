@@ -5,9 +5,15 @@ export class GameStateSchema extends Schema {
   phase = "lobby";
   publicData = "{}";
   roomCode = "";
-  currentVotingOptions = new ArraySchema<string>();
+  currentVotingOptions: ArraySchema<string>;
   selectedCategory = "";
-  players = new MapSchema<PlayerSchema>();
+  players: MapSchema<PlayerSchema>;
+
+  constructor() {
+    super();
+    this.currentVotingOptions = new ArraySchema<string>();
+    this.players = new MapSchema<PlayerSchema>();
+  }
 }
 
 defineTypes(GameStateSchema, {
