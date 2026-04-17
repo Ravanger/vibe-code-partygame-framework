@@ -19,9 +19,12 @@ const localPlayer = $derived(players.find((p) => p.id === manager.room?.sessionI
 const isHost = $derived(localPlayer?.role === "host");
 
 $effect(() => {
+  // Clear error when state changes
+  _error = "";
+
   if (createGameOnLoad && manager.connectionStatus === "disconnected") {
     console.log("[Lobby] auto-creating game...");
-    manager.create("wit_clash");
+    _createGame().catch(console.error);
   }
 });
 
@@ -29,8 +32,10 @@ const _createGame = async () => {
   _error = "";
   try {
     await manager.create("wit_clash");
+    // After creating, get the room code from state
+    gameCode = state?.roomCode || "";
   } catch (e) {
-    _error = `Failed to create game: ${e}`;
+    _error = `Failed to create game: ${(e as Error)?.message || String(e)}`;
   }
 };
 
@@ -39,11 +44,15 @@ const _joinGame = async () => {
     _error = "Please enter a valid game code.";
     return;
   }
+  if (!/^[A-Z]{4}$/.test(gameCode)) {
+    _error = "Game code must be 4 uppercase letters (A-Z).";
+    return;
+  }
   _error = "";
   try {
-    await manager.join("wit_clash", { code: gameCode });
+    await manager.joinByCode(gameCode);
   } catch (e) {
-    _error = `Failed to join game: ${e}`;
+    _error = `Failed to join game: ${(e as Error)?.message || String(e)}`;
   }
 };
 
@@ -70,10 +79,13 @@ const _startGame = () => {
         <h3>Join a Game</h3>
         <input 
           type="text" 
-          value={gameCode} 
-          oninput={(e) => gameCode = (e.target as HTMLInputElement).value.toUpperCase()} 
-          placeholder="Enter 4-letter code" 
+          bind:value={gameCode}
+          placeholder="Enter 4-letter code"
           maxlength="4"
+          oninput={(e) => {
+            const input = (e.target as HTMLInputElement).value;
+            gameCode = input.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+          }}
         />
         <button class="join-btn" onclick={_joinGame}>Join Game</button>
       </div>
@@ -98,12 +110,11 @@ const _startGame = () => {
       <div class="step name-step">
         <div class="card">
           <h3>Welcome!</h3>
-          <p>You joined room: <strong>{state?.roomCode}</strong></p>
+          <p>You joined room: <strong>{state?.roomCode || '...'}</strong></p>
           <input 
             type="text" 
-            value={playerName} 
-            oninput={(e) => playerName = (e.target as HTMLInputElement).value} 
-            placeholder="Enter your nickname" 
+            bind:value={playerName}
+            placeholder="Enter your nickname"
           />
           <button class="ready-btn" onclick={_setName}>Join Lobby</button>
           {#if _error}<p class="error">{_error}</p>{/if}
@@ -116,7 +127,7 @@ const _startGame = () => {
         </div>
 
         <div class="card players-card">
-          <h3>Players ({players.filter((p: any) => p.isReady).length})</h3>
+          <h3>Players ({players.filter((p: any) => p.isReady).length}/8)</h3>
           <ul class="player-list">
             {#each players.filter((p: any) => p.isReady) as player}
               <li class={player.id === manager.room?.sessionId ? 'current-player' : ''}>
@@ -138,7 +149,7 @@ const _startGame = () => {
               {/if}
             </div>
           {:else}
-            <p class="waiting-msg">Waiting for host to start...</p>
+            <p class="waiting-msg">Waiting for host to start the game...</p>
           {/if}
         </div>
       </div>
@@ -154,7 +165,7 @@ const _startGame = () => {
   h2 { color: #333; margin-bottom: 30px; font-size: 2.5rem; letter-spacing: -1px; }
   h3 { margin: 0; color: #444; }
   
-  input { padding: 12px; font-size: 1.1rem; border: 2px solid #eee; border-radius: 8px; transition: border-color 0.2s; }
+  input { padding: 12px; font-size: 1.1rem; border: 2px solid #eee; border-radius: 8px; transition: border-color 0.2s; text-align: center; font-family: monospace; font-size: 1.5rem; letter-spacing: 4px; }
   input:focus { outline: none; border-color: #2196F3; }
   
   button { padding: 14px; font-size: 1.1rem; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: transform 0.1s, background 0.2s; }
@@ -179,6 +190,6 @@ const _startGame = () => {
   
   .hint { font-size: 0.85rem; color: #777; margin-top: 8px; }
   .waiting-msg { font-style: italic; color: #666; margin-top: 20px; font-size: 1.1rem; }
-
+  
   @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 </style>
