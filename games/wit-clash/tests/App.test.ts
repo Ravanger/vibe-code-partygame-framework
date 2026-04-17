@@ -11,6 +11,7 @@ describe("App.svelte", () => {
         state: {
           phase,
           publicData: JSON.stringify({ votingOptions: [] }),
+          roomCode: "TEST",
         },
         sessionId: "test-session",
         send: () => {},
@@ -19,7 +20,7 @@ describe("App.svelte", () => {
 
   it("should render Lobby phase", () => {
     render(App, { manager: createMockManager("Lobby") });
-    expect(screen.getByText("WitClash Lobby")).toBeInTheDocument();
+    expect(screen.getByText("WitClash")).toBeInTheDocument();
   });
 
   it("should render Prompting phase", () => {
@@ -34,7 +35,7 @@ describe("App.svelte", () => {
 
   it("should render Results phase", () => {
     render(App, { manager: createMockManager("Results") });
-    expect(screen.getByText("Results")).toBeInTheDocument();
+    expect(screen.getByText("Final Scores")).toBeInTheDocument();
   });
 
   it("should render unknown phase", () => {
