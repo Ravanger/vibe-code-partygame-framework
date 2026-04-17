@@ -5,6 +5,7 @@ import { type Client, Room } from "colyseus";
 import { type AnyActorRef, createActor } from "xstate";
 import { GameStateSchema } from "../schema/GameStateSchema.js";
 import { PlayerSchema } from "../schema/PlayerSchema.js";
+import type { RoomCodeService } from "../services/RoomCodeService.js";
 
 const logger = {
   info: (message: string, ...args: unknown[]) =>
@@ -23,6 +24,12 @@ const _CloseCode = {
 export class GameRoom<TState = unknown> extends Room {
   private machine!: AnyActorRef;
   private gameDefinition!: GameDefinition<TState>;
+  private roomCodeService?: RoomCodeService;
+
+  constructor(roomCodeService?: RoomCodeService) {
+    super();
+    this.roomCodeService = roomCodeService;
+  }
 
   setDefinition(def: GameDefinition<TState>) {
     this.gameDefinition = def;
@@ -31,7 +38,17 @@ export class GameRoom<TState = unknown> extends Room {
   onCreate() {
     logger.info("onCreate called");
     const state = new GameStateSchema();
-    state.roomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+
+    // Generate and register room code
+    if (this.roomCodeService) {
+      const code = this.roomCodeService.generateAndRegister(this.roomId);
+      state.roomCode = code;
+      logger.debug("Generated room code:", code);
+    } else {
+      // Fallback for backward compatibility
+      state.roomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+    }
+
     this.setState(state);
     logger.debug("Room code generated:", state.roomCode);
 
@@ -133,5 +150,13 @@ export class GameRoom<TState = unknown> extends Room {
     logger.debug(`Total players after join: ${state.players.size}`);
 
     logger.info(`Client ${client.sessionId} joined as ${player.name}`);
+  }
+
+  onDispose() {
+    logger.info(`OnDispose called for room ${this.roomId}`);
+    if (this.roomCodeService) {
+      const state = this.state as GameStateSchema;
+      this.roomCodeService.unregister(state.roomCode);
+    }
   }
 }
