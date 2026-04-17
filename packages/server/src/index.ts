@@ -1,6 +1,7 @@
 import { BunWebSockets } from "@colyseus/bun-websockets";
 import type { GameDefinition } from "@partygame/core";
-import { type Serve, serve } from "bun";
+// @ts-expect-error - Bun runtime does not have TypeScript declarations in npm
+import { serve } from "bun";
 import { Server } from "colyseus";
 import { GameRoom } from "./rooms/GameRoom.js";
 import { RoomCodeService } from "./services/RoomCodeService.js";
@@ -14,9 +15,9 @@ const gameServer = new Server({
 });
 
 // HTTP API server for code resolution
-const _apiServer: Serve = serve({
+const _apiServer = serve({
   port: apiPort,
-  fetch(req) {
+  fetch(req: Request) {
     const url = new URL(req.url);
     if (url.pathname === "/api/resolve-code") {
       if (req.method !== "GET") {
