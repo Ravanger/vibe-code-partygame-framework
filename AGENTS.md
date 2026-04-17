@@ -118,6 +118,12 @@ Library-specific documentation is maintained in `.AGENTS/docs/libraries/`. Each 
   - Added integration tests in `GameRoom.integration.test.ts` with 7 new tests covering player creation and error scenarios
 - **Logging:** Added `[GameRoom]` prefixed logging at INFO, ERROR, and DEBUG levels for debugging
 
+### Colyseus Schema Serialization Error (Bun)
+- **Issue:** `TypeError: undefined is not an object (evaluating 'type[Symbol.metadata]')` during serialization.
+- **Cause:** Legacy `defineTypes` shorthand for arrays (e.g., `["string"]`) fails in Bun due to missing/unresolved metadata required by Colyseus 0.17+ schema engine.
+- **Fix:** Use modern `@type` decorators instead of `defineTypes`. For arrays, use the explicit object format: `@type({ array: "string" })`.
+- **Reference:** `packages/server/src/schema/GameStateSchema.ts`
+
 ### TypeScript Build Configuration
 - **Issue:** `tsc` not outputting to `dist/` directory despite `outDir` config
 - **Fix:** Delete `tsconfig.tsbuildinfo` to force fresh build - turbo caching was skipping compilation

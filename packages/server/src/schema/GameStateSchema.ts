@@ -1,13 +1,13 @@
-import { ArraySchema, defineTypes, MapSchema, Schema } from "@colyseus/schema";
+import { ArraySchema, MapSchema, Schema, type } from "@colyseus/schema";
 import { PlayerSchema } from "./PlayerSchema.js";
 
 export class GameStateSchema extends Schema {
-  phase = "lobby";
-  publicData = "{}";
-  roomCode = "";
-  currentVotingOptions: ArraySchema<string>;
-  selectedCategory = "";
-  players: MapSchema<PlayerSchema>;
+  @type("string") phase = "lobby";
+  @type("string") publicData = "{}";
+  @type("string") roomCode = "";
+  @type({ array: "string" }) currentVotingOptions: ArraySchema<string>;
+  @type("string") selectedCategory = "";
+  @type({ map: PlayerSchema }) players: MapSchema<PlayerSchema>;
 
   constructor() {
     super();
@@ -15,12 +15,3 @@ export class GameStateSchema extends Schema {
     this.players = new MapSchema<PlayerSchema>();
   }
 }
-
-defineTypes(GameStateSchema, {
-  phase: "string",
-  publicData: "string",
-  roomCode: "string",
-  currentVotingOptions: ["string"],
-  selectedCategory: "string",
-  players: { map: PlayerSchema },
-});

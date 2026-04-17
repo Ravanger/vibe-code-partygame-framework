@@ -1,13 +1,7 @@
-import { defineTypes, Schema } from "@colyseus/schema";
+import { Schema, type } from "@colyseus/schema";
 
 export class PlayerSchema extends Schema {
-  id = "";
-  name = "";
-  role = "player";
+  @type("string") id = "";
+  @type("string") name = "";
+  @type("string") role = "player";
 }
-
-defineTypes(PlayerSchema, {
-  id: "string",
-  name: "string",
-  role: "string",
-});
