@@ -15,13 +15,19 @@
     "lint": "biome check .",
     "format": "biome format --write .",
     "typecheck": "turbo typecheck",
-    "dev": "turbo dev"
+    "dev": "turbo dev",
+    "launch": "bun run launch.ts",
+    "launch:dev": "bun run launch.ts dev",
+    "launch:host": "bun run launch.ts host",
+    "launch:prod": "bun run launch.ts prod"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.12",
+    "@testing-library/jest-dom": "^6.9.1",
     "@types/jsdom": "^28.0.1",
     "@vitest/coverage-v8": "^4.1.4",
     "colyseus": "^0.17.9",
+    "happy-dom": "^20.9.0",
     "jsdom": "^29.0.2",
     "turbo": "^2.9.6",
     "typescript": "^6.0.3",
@@ -29,5 +35,8 @@
   },
   "engines": {
     "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@colyseus/tools": "0.17.19"
   }
 }

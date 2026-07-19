@@ -2,8 +2,8 @@ import { Client, type Room } from "@colyseus/sdk";
 import type { ConnectionStatus } from "./types.js";
 
 export class GameConnectionManager {
-  public connectionStatus: ConnectionStatus = $state("disconnected");
-  public room: Room<unknown> | undefined = $state();
+  public connectionStatus: ConnectionStatus = "disconnected";
+  public room: Room<unknown> | undefined;
   private client: Client;
   private apiBaseUrl: string;
 
@@ -55,8 +55,11 @@ export class GameConnectionManager {
         throw new Error("Game code must be 4 uppercase letters");
       }
 
+      console.log(`[GameConnectionManager] Resolving code ${cleanCode} via API at ${this.apiBaseUrl}/api/resolve-code?code=${cleanCode}`);
       const response = await fetch(`${this.apiBaseUrl}/api/resolve-code?code=${cleanCode}`);
+      console.log(`[GameConnectionManager] API response status: ${response.status}`);
       const data = await response.json();
+      console.log(`[GameConnectionManager] API response data:`, data);
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to resolve game code");
@@ -66,6 +69,7 @@ export class GameConnectionManager {
         throw new Error("Game code not found");
       }
 
+      console.log(`[GameConnectionManager] Resolved code ${cleanCode} to roomId ${data.roomId}, joining room...`);
       // Now join the room using the resolved roomId
       this.room = await this.client.joinById<unknown>(data.roomId);
       this.connectionStatus = "connected";
@@ -75,6 +79,7 @@ export class GameConnectionManager {
       });
       return this.room;
     } catch (e) {
+      console.error(`[GameConnectionManager] Error in joinByCode:`, e);
       this.connectionStatus = "error";
       throw e;
     }

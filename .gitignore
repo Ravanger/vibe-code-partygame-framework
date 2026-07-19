@@ -55,3 +55,6 @@ Thumbs.db
 .gemini
 .worktrees/
 .worktrees/
+
+LAUNCH_GUIDE.md
+launch.ts

@@ -1,9 +1,9 @@
+import path from "node:path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
     coverage: {
-      reportsDirectory: "./.gemini/tmp/coverage",
       exclude: [
         "**/coverage/**",
         "**/node_modules/**",
@@ -16,6 +16,10 @@ export default defineConfig({
         "vitest.workspace.ts",
         "packages/server/src/index.ts",
       ],
+      reportsDirectory: "./.gemini/tmp/coverage",
     },
+    environment: "happy-dom",
+    globals: true,
+    setupFiles: [path.resolve("./vitest.setup.ts")],
   },
 });

@@ -1,5 +1,5 @@
 <script lang="ts">
-import type { GameConnectionManager } from "@partygame/client/src/connection.svelte.js";
+import type { GameConnectionManager } from "@partygame/game-client/src/connection.svelte.js";
 // biome-ignore lint/correctness/noUnusedImports: used in template
 import Lobby from "./Lobby.svelte";
 // biome-ignore lint/correctness/noUnusedImports: used in template
@@ -10,7 +10,9 @@ import Results from "./Results.svelte";
 import Vote from "./Vote.svelte";
 
 const { manager } = $props<{ manager: GameConnectionManager }>();
-const state = $derived(manager.room?.state ?? { phase: "Lobby" });
+// Use $derived.by to track state changes - accessing manager.room?.state directly
+// biome-ignore lint/suspicious/noExplicitAny: room state is a Colyseus proxy
+const state = $derived.by(() => manager.room?.state ?? { phase: "Lobby" } as any);
 
 // Detect if this is the host (has ?host=true in URL)
 const urlParams = new URLSearchParams(window.location.search);

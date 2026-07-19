@@ -1,9 +1,9 @@
 import type { GameDefinition } from "@partygame/core";
 import type { Client } from "colyseus";
 import { describe, expect, it, vi } from "vitest";
-import { GameRoom } from "../src/rooms/GameRoom.js";
-import { GameStateSchema } from "../src/schema/GameStateSchema.js";
-import { PlayerSchema } from "../src/schema/PlayerSchema.js";
+import { GameRoom } from "../src/rooms/GameRoom";
+import { GameStateSchema } from "../src/schema/GameStateSchema";
+import { PlayerSchema } from "../src/schema/PlayerSchema";
 
 const mockGameDefinition: GameDefinition<Record<string, unknown>> = {
   name: "TestGame",

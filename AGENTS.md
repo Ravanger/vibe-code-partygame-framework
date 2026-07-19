@@ -24,7 +24,7 @@
 - `packages/shared`: Validation schemas, types, and constants.
 - `packages/core`: Pure TypeScript game engine logic and DSL (`defineGame`).
 - `packages/server`: Colyseus room implementation and XState integration.
-- `packages/client`: Svelte 5 SDK for game clients.
+- `packages/game-client`: Svelte 5 SDK for game clients.
 - `packages/cli`: Scaffolding tool for new games.
 - `games/reference`: Canonical demo game (Quiplash-style).
 
@@ -132,15 +132,15 @@ Library-specific documentation is maintained in `.AGENTS/docs/libraries/`. Each 
 ### Colyseus v0.17 Client/Server Version Mismatch
 - **Issue:** `joinOrCreate` fails with `Cannot read properties of undefined (reading 'name')` - client expects `response.room.name` but server returns `name` directly at top level
 - **Cause:** Using `colyseus.js` v0.16 client with Colyseus v0.17 server. v0.17 changed the seat reservation response format and the client package was renamed from `colyseus.js` to `@colyseus/sdk`
-- **Fix:** Upgraded client from `colyseus.js: ^0.16.0` to `@colyseus/sdk: ^0.17.26` in `packages/client/package.json` and updated all imports from `"colyseus.js"` to `"@colyseus/sdk"`
-- **Files:** `packages/client/package.json`, `packages/client/src/*.ts`, `packages/client/tests/*.test.ts`
+- **Fix:** Upgraded client from `colyseus.js: ^0.16.0` to `@colyseus/sdk: ^0.17.26` in `packages/game-client/package.json` and updated all imports from `"colyseus.js"` to `"@colyseus/sdk"`
+- **Files:** `packages/game-client/package.json`, `packages/game-client/src/*.ts`, `packages/game-client/tests/*.test.ts`
 - **Reference:** [Colyseus Migration Guide v0.17](https://docs.colyseus.io/migrating/0.17)
 
 ### Vitest v4 Mocking Changes
 - **Issue:** Vitest v4 changed how mocks are hoisted, causing `ReferenceError: Cannot access 'MockClient' before initialization` when mock classes are defined at module level
 - **Cause:** In Vitest v4, `vi.mock()` factory functions are hoisted to the top of the file, so any variables (including class definitions) referenced in the mock must be defined inside the factory function
 - **Fix:** Move mock class definitions inside the `vi.mock()` factory function. Use prototype methods instead of instance properties to allow tests to modify `Client.prototype.joinOrCreate`
-- **Files:** `packages/client/tests/GameClient.test.ts`, `packages/client/tests/connection.test.ts`, `packages/client/tests/state.test.ts`
+- **Files:** `packages/game-client/tests/GameClient.test.ts`, `packages/game-client/tests/connection.test.ts`, `packages/game-client/tests/state.test.ts`
 - **Reference:** [Vitest Migration Guide v4](https://vitest.dev/guide/migration.html#vi-mock-changes)
 
 ### Biome v2 Configuration Changes

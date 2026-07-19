@@ -19,11 +19,27 @@ const _apiServer = serve({
   port: apiPort,
   fetch(req: Request) {
     const url = new URL(req.url);
+    
+    // CORS headers - allow all origins for development
+    const corsHeaders = {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    };
+    
+    // Handle OPTIONS for CORS preflight
+    if (req.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: corsHeaders,
+      });
+    }
+    
     if (url.pathname === "/api/resolve-code") {
       if (req.method !== "GET") {
         return new Response(JSON.stringify({ error: "Method not allowed" }), {
           status: 405,
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...corsHeaders },
         });
       }
       const code = url.searchParams.get("code");
@@ -32,7 +48,7 @@ const _apiServer = serve({
           JSON.stringify({ error: "Invalid code format. Must be 4 uppercase letters." }),
           {
             status: 400,
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", ...corsHeaders },
           },
         );
       }
@@ -40,17 +56,17 @@ const _apiServer = serve({
       if (!roomId) {
         return new Response(JSON.stringify({ error: "Game code not found" }), {
           status: 404,
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...corsHeaders },
         });
       }
       return new Response(JSON.stringify({ roomId }), {
         status: 200,
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
     return new Response(JSON.stringify({ error: "Not found" }), {
       status: 404,
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   },
 });

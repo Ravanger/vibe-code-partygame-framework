@@ -74,7 +74,7 @@ Since Colyseus clients cannot directly query the server's code registry, a light
 | `src/index.ts` | Add HTTP API server on port 3001, inject RoomCodeService |
 | `src/rooms/GameRoom.ts` | Accept RoomCodeService, register code onCreate, unregister onDispose |
 
-### Client (`packages/client`)
+### Client (`packages/game-client`)
 
 | File | Change |
 |------|--------|

@@ -24,7 +24,7 @@ const _CloseCode = {
 export class GameRoom<TState = unknown> extends Room {
   private machine!: AnyActorRef;
   private gameDefinition!: GameDefinition<TState>;
-  private roomCodeService?: RoomCodeService;
+  private roomCodeService: RoomCodeService | undefined;
 
   constructor(roomCodeService?: RoomCodeService) {
     super();

@@ -5,7 +5,7 @@
   "dependencies": {
     "@partygame/core": "workspace:*",
     "@partygame/shared": "workspace:*",
-    "@partygame/client": "workspace:*",
+    "@partygame/game-client": "workspace:*",
     "@partygame/server": "workspace:*",
     "colyseus": "^0.17.9",
     "zod": "^4.3.6"

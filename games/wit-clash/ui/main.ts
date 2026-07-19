@@ -1,5 +1,5 @@
 import { mount } from "svelte";
-import { GameConnectionManager } from "../../../packages/client/src/connection.svelte.js";
+import { GameConnectionManager } from "../../../packages/game-client/src/connection.svelte.js";
 import App from "./App.svelte";
 
 // API server runs on port 3001
