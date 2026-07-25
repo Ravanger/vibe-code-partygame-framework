@@ -1,6 +1,20 @@
 import type { GameDefinition } from "@partygame/core";
-import type { Client } from "colyseus";
 import { describe, expect, it, vi } from "vitest";
+
+vi.mock("colyseus", () => ({
+  Room: class Room {
+    state: unknown;
+    setState(s: unknown) {
+      this.state = s;
+    }
+    onMessage(_event: string, _handler: () => void) {}
+  },
+  Client: class Client {
+    sessionId = "";
+    send: () => void = vi.fn();
+  },
+}));
+
 import { GameRoom } from "../src/rooms/GameRoom";
 import { GameStateSchema } from "../src/schema/GameStateSchema";
 import { PlayerSchema } from "../src/schema/PlayerSchema";
@@ -153,5 +167,25 @@ describe("GameRoom integration tests", () => {
     player.name = `Player ${sessionId.slice(0, 4)}`;
 
     expect(player.name).toBe("Player abcd");
+  });
+
+  it("does not throw when SET_NAME arrives for an unknown session", () => {
+    const testRoom = new TestGameRoom();
+    testRoom.onCreate();
+    const mockClient = {
+      sessionId: "ghost",
+      send: vi.fn(),
+    } as unknown as Client;
+    expect(() => testRoom.handleSetName(mockClient, "Ada" as unknown)).not.toThrow();
+  });
+
+  it("does not throw when onLeave fires for an unknown session", () => {
+    const testRoom = new TestGameRoom();
+    testRoom.onCreate();
+    const mockClient = {
+      sessionId: "ghost",
+      send: vi.fn(),
+    } as unknown as Client;
+    expect(() => testRoom.onLeave(mockClient, true)).not.toThrow();
   });
 });

@@ -1,3 +1,12 @@
+import { vi } from "vitest";
+
+vi.mock("@colyseus/tools", () => ({
+  default: {},
+  listen: () => {
+    throw new Error("unused in tests");
+  },
+}));
+
 import type { Room as ColyseusServerRoom } from "@colyseus/core";
 import type { Room as ColyseusClientRoom } from "@colyseus/sdk";
 import { boot, type ColyseusTestServer } from "@colyseus/testing";

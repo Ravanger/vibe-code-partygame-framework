@@ -11,21 +11,21 @@ describe("WitClashGame Full Round", () => {
     const voting = WitClashGame.phases.Voting as any;
     if (!voting) throw new Error("Voting phase missing");
 
-    // Simulate SubmitAnswer
+    // Simulate SUBMIT_ANSWER
     const ctxSubmit = {
       state,
       clientId: "p1",
       data: { answer: "test" },
     };
-    prompting.actions.SubmitAnswer.handler(ctxSubmit);
+    prompting.actions.SUBMIT_ANSWER.handler(ctxSubmit);
 
-    // Simulate CastVote
+    // Simulate CAST_VOTE
     const ctxVote = {
       state,
       clientId: "p2",
       data: { answerId: "p1" },
     };
-    voting.actions.CastVote.handler(ctxVote);
+    voting.actions.CAST_VOTE.handler(ctxVote);
 
     expect(state.prompts.p1).toBe("test");
     expect(state.votes.p1).toBe(1);

@@ -1,6 +1,6 @@
 import type { GameDefinition } from "@partygame/core";
 import { buildXStateMachine } from "@partygame/core";
-import { GameActionSchema } from "@partygame/shared";
+import { GameActionSchema, SetNameSchema } from "@partygame/shared";
 import { type Client, Room } from "colyseus";
 import { type AnyActorRef, createActor } from "xstate";
 import { GameStateSchema } from "../schema/GameStateSchema.js";
@@ -35,6 +35,8 @@ export const TEST_DURATIONS: PhaseDurations = {
 const logger = {
   info: (message: string, ...args: unknown[]) =>
     console.log(`[GameRoom] INFO: ${message}`, ...args),
+  warn: (message: string, ...args: unknown[]) =>
+    console.warn(`[GameRoom] WARN: ${message}`, ...args),
   error: (message: string, ...args: unknown[]) =>
     console.error(`[GameRoom] ERROR: ${message}`, ...args),
   debug: (message: string, ...args: unknown[]) =>
@@ -111,14 +113,7 @@ export class GameRoom<TState = unknown> extends Room {
     this.machine.start();
 
     this.onMessage("SET_NAME", (client, name: string) => {
-      logger.debug(`Received SET_NAME from ${client.sessionId}:`, name);
-      const state = this.state as GameStateSchema;
-      const player = state.players.get(client.sessionId);
-      if (player) {
-        player.name = name;
-        player.isReady = true;
-        logger.info(`Player ${client.sessionId} name set to ${name}`);
-      }
+      this.handleSetName(client, name);
     });
 
     this.onMessage("ACTION", (client, message: unknown) => {
@@ -165,6 +160,35 @@ export class GameRoom<TState = unknown> extends Room {
         timestamp: Date.now(),
       });
     });
+  }
+
+  handleSetName(client: Client, raw: unknown) {
+    const parsed = SetNameSchema.safeParse(raw);
+    if (!parsed.success) {
+      logger.warn(`[SET_NAME] Invalid name from ${client.sessionId}`);
+      return;
+    }
+    logger.debug(`Received SET_NAME from ${client.sessionId}:`, parsed.data);
+    const state = this.state as GameStateSchema;
+    const player = state.players.get(client.sessionId);
+    if (!player) {
+      logger.warn(`[SET_NAME] Unknown session ${client.sessionId}`);
+      return;
+    }
+    player.name = parsed.data;
+    player.isReady = true;
+    logger.info(`Player ${client.sessionId} name set to ${parsed.data}`);
+  }
+
+  onLeave(client: Client, _consented?: boolean) {
+    logger.info(`Client ${client.sessionId} left`);
+    const state = this.state as GameStateSchema;
+    const player = state.players.get(client.sessionId);
+    if (!player) {
+      logger.warn(`[onLeave] Unknown session ${client.sessionId}`);
+      return;
+    }
+    state.players.delete(client.sessionId);
   }
 
   onJoin(client: Client, options?: Record<string, unknown>) {

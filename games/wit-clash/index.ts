@@ -8,8 +8,8 @@ export interface WitClashState {
   phase: string;
 }
 
-interface SelectCategoryPayload {
-  category: string;
+interface VoteCategoryPayload {
+  categoryId: string;
 }
 
 interface SubmitAnswerPayload {
@@ -44,10 +44,10 @@ export const WitClashGame = defineGame<WitClashState>({
     }),
     CategorySelection: createPhase({
       actions: {
-        SELECT_CATEGORY: {
+        VOTE_CATEGORY: {
           from: "player",
-          handler: (ctx: { state: WitClashState; data: SelectCategoryPayload }) => {
-            ctx.state.category = ctx.data.category;
+          handler: (ctx: { state: WitClashState; data: VoteCategoryPayload }) => {
+            ctx.state.category = ctx.data.categoryId;
             ctx.state.phase = "Prompting";
           },
         },
@@ -55,7 +55,7 @@ export const WitClashGame = defineGame<WitClashState>({
     }),
     Prompting: createPhase({
       actions: {
-        SubmitAnswer: {
+        SUBMIT_ANSWER: {
           from: "player",
           handler: (ctx: { state: WitClashState; clientId: string; data: SubmitAnswerPayload }) => {
             ctx.state.prompts[ctx.clientId] = ctx.data.answer;
@@ -65,7 +65,7 @@ export const WitClashGame = defineGame<WitClashState>({
     }),
     Voting: createPhase({
       actions: {
-        CastVote: {
+        CAST_VOTE: {
           from: "player",
           handler: (ctx: { state: WitClashState; data: VotePayload }) => {
             const answerId = ctx.data.answerId;

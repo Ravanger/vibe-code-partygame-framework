@@ -13,31 +13,31 @@ describe("WitClash Game Logic", () => {
     expect(state.phase).toBe("CategorySelection");
   });
 
-  it("should set category and transition to Prompting on SELECT_CATEGORY", () => {
+  it("should set category and transition to Prompting on VOTE_CATEGORY", () => {
     const state = WitClashGame.initialState();
     state.phase = "CategorySelection";
     // biome-ignore lint/suspicious/noExplicitAny: test assertion
     const categorySelection = WitClashGame.phases.CategorySelection as any;
     if (!categorySelection) throw new Error("CategorySelection phase missing");
 
-    categorySelection.actions.SELECT_CATEGORY.handler({
+    categorySelection.actions.VOTE_CATEGORY.handler({
       state,
       clientId: "player-id",
-      data: { category: "Standard" },
+      data: { categoryId: "Standard" },
     });
 
     expect(state.category).toBe("Standard");
     expect(state.phase).toBe("Prompting");
   });
 
-  it("should store prompts when SubmitAnswer is called", () => {
+  it("should store prompts when SUBMIT_ANSWER is called", () => {
     const state = WitClashGame.initialState();
     state.phase = "Prompting";
     // biome-ignore lint/suspicious/noExplicitAny: test assertion
     const prompting = WitClashGame.phases.Prompting as any;
     if (!prompting) throw new Error("Prompting phase missing");
 
-    prompting.actions.SubmitAnswer.handler({
+    prompting.actions.SUBMIT_ANSWER.handler({
       state,
       clientId: "p1",
       data: { answer: "Funny answer" },
@@ -46,14 +46,14 @@ describe("WitClash Game Logic", () => {
     expect(state.prompts.p1).toBe("Funny answer");
   });
 
-  it("should record votes on CastVote action", () => {
+  it("should record votes on CAST_VOTE action", () => {
     const state = WitClashGame.initialState();
     state.phase = "Voting";
     // biome-ignore lint/suspicious/noExplicitAny: test assertion
     const voting = WitClashGame.phases.Voting as any;
     if (!voting) throw new Error("Voting phase missing");
 
-    voting.actions.CastVote.handler({
+    voting.actions.CAST_VOTE.handler({
       state,
       clientId: "voter-1",
       data: { answerId: "p1" },
@@ -61,7 +61,7 @@ describe("WitClash Game Logic", () => {
 
     expect(state.votes.p1).toBe(1);
 
-    voting.actions.CastVote.handler({
+    voting.actions.CAST_VOTE.handler({
       state,
       clientId: "voter-2",
       data: { answerId: "p1" },

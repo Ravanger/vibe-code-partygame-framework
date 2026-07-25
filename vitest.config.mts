@@ -7,7 +7,6 @@ export default defineConfig({
       "**/node_modules/**",
       "**/dist/**",
       "**/coverage/**",
-      "packages/server/tests/GameRoom.unit.test.ts",
       "packages/server/tests/helpers/harness.test.ts",
     ],
     coverage: {

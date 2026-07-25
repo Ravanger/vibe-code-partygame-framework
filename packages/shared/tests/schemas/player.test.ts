@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { PlayerNameSchema } from "../../src/schemas/player";
+import { PlayerNameSchema, SetNameSchema } from "../../src/schemas/player";
+
+describe("SetNameSchema", () => {
+  it("trims and accepts a normal name", () => {
+    expect(SetNameSchema.parse("  Ada  ")).toBe("Ada");
+  });
+  it("rejects an empty name", () => {
+    expect(SetNameSchema.safeParse("   ").success).toBe(false);
+  });
+  it("rejects a name over 20 characters", () => {
+    expect(SetNameSchema.safeParse("x".repeat(21)).success).toBe(false);
+  });
+});
 
 describe("PlayerNameSchema", () => {
   it("should validate a valid player name", () => {
