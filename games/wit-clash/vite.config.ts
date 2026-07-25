@@ -8,6 +8,7 @@ export default defineConfig({
       preprocess: [],
     }),
   ],
+  server: { host: true, port: 5173 },
   resolve: {
     conditions: ["browser", "development"],
   },

@@ -4,6 +4,7 @@ import type { ConnectionStatus } from "./types.js";
 export class GameConnectionManager {
   public connectionStatus: ConnectionStatus = "disconnected";
   public room: Room<unknown> | undefined;
+  public error: string | undefined;
   private client: Client;
   private apiBaseUrl: string;
 
@@ -15,6 +16,7 @@ export class GameConnectionManager {
   }
 
   async create(roomName: string, options: Record<string, unknown> = {}) {
+    this.error = undefined;
     this.connectionStatus = "connecting";
     try {
       this.room = await this.client.create<unknown>(roomName, options);
@@ -25,12 +27,15 @@ export class GameConnectionManager {
       });
       return this.room;
     } catch (e) {
+      this.error = e instanceof Error ? e.message : String(e);
+      console.error("[GameConnectionManager] Connection failed:", e);
       this.connectionStatus = "error";
       throw e;
     }
   }
 
   async join(_roomName: string, options: Record<string, unknown> = {}) {
+    this.error = undefined;
     this.connectionStatus = "connecting";
     try {
       this.room = await this.client.joinById<unknown>(options.code as string, options);
@@ -41,12 +46,15 @@ export class GameConnectionManager {
       });
       return this.room;
     } catch (e) {
+      this.error = e instanceof Error ? e.message : String(e);
+      console.error("[GameConnectionManager] Connection failed:", e);
       this.connectionStatus = "error";
       throw e;
     }
   }
 
   async joinByCode(code: string) {
+    this.error = undefined;
     this.connectionStatus = "connecting";
     try {
       // First, resolve the 4-letter code to a roomId via API
@@ -83,13 +91,15 @@ export class GameConnectionManager {
       });
       return this.room;
     } catch (e) {
-      console.error(`[GameConnectionManager] Error in joinByCode:`, e);
+      this.error = e instanceof Error ? e.message : String(e);
+      console.error("[GameConnectionManager] Connection failed:", e);
       this.connectionStatus = "error";
       throw e;
     }
   }
 
   async connect(roomName: string, options: Record<string, unknown> = {}) {
+    this.error = undefined;
     this.connectionStatus = "connecting";
     try {
       this.room = await this.client.joinOrCreate<unknown>(roomName, options);
@@ -102,8 +112,17 @@ export class GameConnectionManager {
 
       return this.room;
     } catch (e) {
+      this.error = e instanceof Error ? e.message : String(e);
+      console.error("[GameConnectionManager] Connection failed:", e);
       this.connectionStatus = "error";
       throw e;
     }
+  }
+
+  /** Return to a clean disconnected state so the user can try again. */
+  reset() {
+    this.room = undefined;
+    this.error = undefined;
+    this.connectionStatus = "disconnected";
   }
 }

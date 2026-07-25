@@ -4,6 +4,16 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "svelte": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./connection": {
+      "svelte": "./src/connection.svelte.ts",
+      "default": "./dist/connection.svelte.js"
+    }
+  },
   "scripts": {
     "dev": "vite",
     "build": "rm -rf dist && tsc",

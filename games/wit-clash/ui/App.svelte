@@ -1,5 +1,5 @@
 <script lang="ts">
-import type { GameConnectionManager } from "@partygame/game-client/src/connection.svelte.js";
+import type { GameConnectionManager } from "@partygame/game-client/connection";
 // biome-ignore lint/correctness/noUnusedImports: used in template
 import Lobby from "./Lobby.svelte";
 // biome-ignore lint/correctness/noUnusedImports: used in template
