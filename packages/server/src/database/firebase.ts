@@ -1,21 +1,21 @@
 /**
  * Firebase Realtime Database Implementation
- * 
+ *
  * STATUS: NOT YET IMPLEMENTED - This is a placeholder for future implementation
- * 
+ *
  * Firebase offers a generous free tier:
  * - 1GB database storage
  * - 10GB/month downloads
  * - 20,000 writes/day
  * - 50,000 reads/day
- * 
+ *
  * To enable:
  * 1. Install Firebase: `bun add firebase`
  * 2. Create a Firebase project at https://console.firebase.google.com/
  * 3. Enable Realtime Database
  * 4. Configure database rules for public access (or use authentication)
  * 5. Set environment variables (see below)
- * 
+ *
  * Environment Variables:
  *   FIREBASE_API_KEY
  *   FIREBASE_AUTH_DOMAIN
@@ -26,8 +26,15 @@
  *   FIREBASE_DATABASE_URL
  */
 
-import type { DatabaseConfig, DatabaseResult, RoomStateData, PlayerData, HealthCheckResult, DatabaseStats } from "./types.js";
 import { GameDatabase } from "./GameDatabase.js";
+import type {
+  DatabaseConfig,
+  DatabaseResult,
+  DatabaseStats,
+  HealthCheckResult,
+  PlayerData,
+  RoomStateData,
+} from "./types.js";
 
 /**
  * Firebase Realtime Database configuration
@@ -44,7 +51,7 @@ export interface FirebaseDbConfig {
 
 /**
  * Firebase Realtime Database Implementation
- * 
+ *
  * NOTE: This is a placeholder. The actual implementation would:
  * 1. Initialize Firebase app with config
  * 2. Get reference to Realtime Database
@@ -52,16 +59,13 @@ export interface FirebaseDbConfig {
  * 4. Handle real-time updates and synchronization
  */
 export class FirebaseDatabase extends GameDatabase {
-  private app: unknown; // Would be firebase.app.App
-  private db: unknown; // Would be firebase.database.Database
-
   constructor(config: DatabaseConfig) {
     super(config);
-    
+
     if (!config.firebase) {
       throw new Error("Firebase configuration is required");
     }
-    
+
     // TODO: Initialize Firebase
     // import { initializeApp } from "firebase/app";
     // import { getDatabase } from "firebase/database";
@@ -83,15 +87,23 @@ export class FirebaseDatabase extends GameDatabase {
     return { success: true, timestamp: new Date() };
   }
 
-  async saveRoomState(roomId: string, data: RoomStateData): Promise<DatabaseResult> {
+  async saveRoomState(_roomId: string, _data: RoomStateData): Promise<DatabaseResult> {
     // TODO: Implement
     // Example:
     // import { set, ref } from "firebase/database";
     // await set(ref(this.db, `rooms/${roomId}`), data);
-    return { success: false, error: { code: "NOT_IMPLEMENTED", message: "Firebase database not yet implemented", timestamp: new Date() }, timestamp: new Date() };
+    return {
+      success: false,
+      error: {
+        code: "NOT_IMPLEMENTED",
+        message: "Firebase database not yet implemented",
+        timestamp: new Date(),
+      },
+      timestamp: new Date(),
+    };
   }
 
-  async loadRoomState(roomId: string): Promise<DatabaseResult<RoomStateData | null>> {
+  async loadRoomState(_roomId: string): Promise<DatabaseResult<RoomStateData | null>> {
     // TODO: Implement
     // Example:
     // import { get, ref } from "firebase/database";
@@ -100,9 +112,17 @@ export class FirebaseDatabase extends GameDatabase {
     return { success: true, data: null, timestamp: new Date() };
   }
 
-  async deleteRoomState(roomId: string): Promise<DatabaseResult> {
+  async deleteRoomState(_roomId: string): Promise<DatabaseResult> {
     // TODO: Implement
-    return { success: false, error: { code: "NOT_IMPLEMENTED", message: "Firebase database not yet implemented", timestamp: new Date() }, timestamp: new Date() };
+    return {
+      success: false,
+      error: {
+        code: "NOT_IMPLEMENTED",
+        message: "Firebase database not yet implemented",
+        timestamp: new Date(),
+      },
+      timestamp: new Date(),
+    };
   }
 
   async listRooms(): Promise<DatabaseResult<RoomStateData[]>> {
@@ -110,19 +130,35 @@ export class FirebaseDatabase extends GameDatabase {
     return { success: true, data: [], timestamp: new Date() };
   }
 
-  async savePlayerData(playerId: string, data: PlayerData): Promise<DatabaseResult> {
+  async savePlayerData(_playerId: string, _data: PlayerData): Promise<DatabaseResult> {
     // TODO: Implement
-    return { success: false, error: { code: "NOT_IMPLEMENTED", message: "Firebase database not yet implemented", timestamp: new Date() }, timestamp: new Date() };
+    return {
+      success: false,
+      error: {
+        code: "NOT_IMPLEMENTED",
+        message: "Firebase database not yet implemented",
+        timestamp: new Date(),
+      },
+      timestamp: new Date(),
+    };
   }
 
-  async loadPlayerData(playerId: string): Promise<DatabaseResult<PlayerData | null>> {
+  async loadPlayerData(_playerId: string): Promise<DatabaseResult<PlayerData | null>> {
     // TODO: Implement
     return { success: true, data: null, timestamp: new Date() };
   }
 
-  async deletePlayerData(playerId: string): Promise<DatabaseResult> {
+  async deletePlayerData(_playerId: string): Promise<DatabaseResult> {
     // TODO: Implement
-    return { success: false, error: { code: "NOT_IMPLEMENTED", message: "Firebase database not yet implemented", timestamp: new Date() }, timestamp: new Date() };
+    return {
+      success: false,
+      error: {
+        code: "NOT_IMPLEMENTED",
+        message: "Firebase database not yet implemented",
+        timestamp: new Date(),
+      },
+      timestamp: new Date(),
+    };
   }
 
   async queryPlayers(): Promise<DatabaseResult<PlayerData[]>> {
@@ -159,7 +195,15 @@ export class FirebaseDatabase extends GameDatabase {
 
   async clearAll(): Promise<DatabaseResult> {
     // TODO: Implement
-    return { success: false, error: { code: "NOT_IMPLEMENTED", message: "Firebase database not yet implemented", timestamp: new Date() }, timestamp: new Date() };
+    return {
+      success: false,
+      error: {
+        code: "NOT_IMPLEMENTED",
+        message: "Firebase database not yet implemented",
+        timestamp: new Date(),
+      },
+      timestamp: new Date(),
+    };
   }
 
   async exportData(): Promise<DatabaseResult<{ rooms: RoomStateData[]; players: PlayerData[] }>> {
@@ -167,8 +211,19 @@ export class FirebaseDatabase extends GameDatabase {
     return { success: true, data: { rooms: [], players: [] }, timestamp: new Date() };
   }
 
-  async importData(data: { rooms: RoomStateData[]; players: PlayerData[] }): Promise<DatabaseResult> {
+  async importData(_data: {
+    rooms: RoomStateData[];
+    players: PlayerData[];
+  }): Promise<DatabaseResult> {
     // TODO: Implement
-    return { success: false, error: { code: "NOT_IMPLEMENTED", message: "Firebase database not yet implemented", timestamp: new Date() }, timestamp: new Date() };
+    return {
+      success: false,
+      error: {
+        code: "NOT_IMPLEMENTED",
+        message: "Firebase database not yet implemented",
+        timestamp: new Date(),
+      },
+      timestamp: new Date(),
+    };
   }
 }

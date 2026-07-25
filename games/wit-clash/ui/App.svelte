@@ -12,7 +12,7 @@ import Vote from "./Vote.svelte";
 const { manager } = $props<{ manager: GameConnectionManager }>();
 // Use $derived.by to track state changes - accessing manager.room?.state directly
 // biome-ignore lint/suspicious/noExplicitAny: room state is a Colyseus proxy
-const state = $derived.by(() => manager.room?.state ?? { phase: "Lobby" } as any);
+const state = $derived.by(() => manager.room?.state ?? ({ phase: "Lobby" } as any));
 
 // Detect if this is the host (has ?host=true in URL)
 const urlParams = new URLSearchParams(window.location.search);

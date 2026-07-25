@@ -5,7 +5,9 @@ const { manager } = $props<{ manager: GameConnectionManager }>();
 
 // In a real app, this would come from visibility-filtered state
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-const options = $derived.by(() => JSON.parse(manager.room?.state?.publicData ?? "{}").votingOptions || []);
+const options = $derived.by(
+  () => JSON.parse(manager.room?.state?.publicData ?? "{}").votingOptions || [],
+);
 </script>
 
 <div class="vote">

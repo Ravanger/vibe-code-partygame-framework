@@ -3,6 +3,13 @@ import { WitClashGame } from "../index";
 
 describe("WitClash Full Game Cycle", () => {
   it("should complete a full round of StartGame -> SubmitAnswer -> CastVote", () => {
+    // biome-ignore lint/suspicious/noExplicitAny: test assertion
+    const prompting = WitClashGame.phases.Prompting as any;
+    if (!prompting) throw new Error("Prompting phase missing");
+    // biome-ignore lint/suspicious/noExplicitAny: test assertion
+    const voting = WitClashGame.phases.Voting as any;
+    if (!voting) throw new Error("Voting phase missing");
+
     const state = WitClashGame.initialState();
 
     // Simulate StartGame
@@ -20,8 +27,8 @@ describe("WitClash Full Game Cycle", () => {
       data: { answer: "Answer 2" },
     };
 
-    WitClashGame.phases.Prompting?.actions.SubmitAnswer?.handler(p1Ctx);
-    WitClashGame.phases.Prompting?.actions.SubmitAnswer?.handler(p2Ctx);
+    prompting.actions.SubmitAnswer.handler(p1Ctx);
+    prompting.actions.SubmitAnswer.handler(p2Ctx);
 
     // Simulate CastVote
     const v1Ctx = {
@@ -35,8 +42,8 @@ describe("WitClash Full Game Cycle", () => {
       data: { answerId: "p1" },
     };
 
-    WitClashGame.phases.Voting?.actions.CastVote?.handler(v1Ctx);
-    WitClashGame.phases.Voting?.actions.CastVote?.handler(v2Ctx);
+    voting.actions.CastVote.handler(v1Ctx);
+    voting.actions.CastVote.handler(v2Ctx);
 
     // Validate outcomes (accessing state correctly based on your schema)
     // Adjust expectations based on actual state structure

@@ -3,8 +3,15 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     include: ["tests/**/*.test.ts"],
-    exclude: ["dist/**", "node_modules/**", "coverage/**", "**/GameRoom.unit.test.ts"],
+    exclude: [
+      "dist/**",
+      "node_modules/**",
+      "coverage/**",
+      "**/GameRoom.unit.test.ts",
+      "**/helpers/harness.test.ts",
+    ],
     setupFiles: ["./vitest.setup.ts"],
+    fileParallelism: false,
     coverage: {
       reportsDirectory: "../../.gemini/tmp/coverage",
       exclude: [

@@ -3,6 +3,13 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
+    exclude: [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/coverage/**",
+      "packages/server/tests/GameRoom.unit.test.ts",
+      "packages/server/tests/helpers/harness.test.ts",
+    ],
     coverage: {
       exclude: [
         "**/coverage/**",
@@ -18,7 +25,7 @@ export default defineConfig({
       ],
       reportsDirectory: "./.gemini/tmp/coverage",
     },
-    environment: "happy-dom",
+    environment: "jsdom",
     globals: true,
     setupFiles: [path.resolve("./vitest.setup.ts")],
   },

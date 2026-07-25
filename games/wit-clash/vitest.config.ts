@@ -6,7 +6,6 @@ export default defineConfig({
   plugins: [
     svelte({
       compilerOptions: {
-        generate: "dom",
         mode: "client",
       },
       emitCss: false,
@@ -14,7 +13,7 @@ export default defineConfig({
     }),
   ],
   test: {
-    environment: "happy-dom",
+    environment: "jsdom",
     exclude: ["dist/**", "node_modules/**"],
     globals: true,
     include: ["tests/**/*.test.ts"],

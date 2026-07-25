@@ -1,6 +1,26 @@
 import { ArraySchema, MapSchema } from "@colyseus/schema";
-import { expect, test } from "vitest";
+import { describe, expect, it, test } from "vitest";
 import { GameStateSchema } from "../src/schema/GameStateSchema";
+import { PlayerSchema } from "../src/schema/PlayerSchema";
+
+describe("GameStateSchema serialisation", () => {
+  it("registers field metadata (guards against a stubbed @type decorator)", () => {
+    const state = new GameStateSchema();
+    // Symbol.metadata is populated only by the real decorator.
+    expect(Object.getPrototypeOf(state).constructor[Symbol.metadata]).toBeDefined();
+  });
+
+  it("stores and retrieves a player round-trip", () => {
+    const state = new GameStateSchema();
+    const p = new PlayerSchema();
+    p.id = "abc";
+    p.name = "Ada";
+    p.role = "host";
+    state.players.set("abc", p);
+    expect(state.players.get("abc")?.name).toBe("Ada");
+    expect(state.players.size).toBe(1);
+  });
+});
 
 test("should instantiate with defaults", () => {
   const state = new GameStateSchema();

@@ -4,7 +4,12 @@ import { WitClashGame } from "../index";
 describe("WitClashGame Full Round", () => {
   it("should run a complete cycle", () => {
     const state = WitClashGame.initialState();
-    const { Prompting, Voting } = WitClashGame.phases;
+    // biome-ignore lint/suspicious/noExplicitAny: test assertion
+    const prompting = WitClashGame.phases.Prompting as any;
+    if (!prompting) throw new Error("Prompting phase missing");
+    // biome-ignore lint/suspicious/noExplicitAny: test assertion
+    const voting = WitClashGame.phases.Voting as any;
+    if (!voting) throw new Error("Voting phase missing");
 
     // Simulate SubmitAnswer
     const ctxSubmit = {
@@ -12,7 +17,7 @@ describe("WitClashGame Full Round", () => {
       clientId: "p1",
       data: { answer: "test" },
     };
-    Prompting?.actions.SubmitAnswer?.handler(ctxSubmit);
+    prompting.actions.SubmitAnswer.handler(ctxSubmit);
 
     // Simulate CastVote
     const ctxVote = {
@@ -20,7 +25,7 @@ describe("WitClashGame Full Round", () => {
       clientId: "p2",
       data: { answerId: "p1" },
     };
-    Voting?.actions.CastVote?.handler(ctxVote);
+    voting.actions.CastVote.handler(ctxVote);
 
     expect(state.prompts.p1).toBe("test");
     expect(state.votes.p1).toBe(1);

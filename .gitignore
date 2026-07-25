@@ -51,6 +51,17 @@ Thumbs.db
 *.log
 *.tsbuildinfo
 
+# Package managers
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Game build artifacts
+games/**/index.js
+games/**/index.js.map
+games/**/index.d.ts
+games/**/index.d.ts.map
+
 # Gemini
 .gemini
 .worktrees/

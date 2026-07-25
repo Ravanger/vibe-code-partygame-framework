@@ -55,7 +55,9 @@ export class GameConnectionManager {
         throw new Error("Game code must be 4 uppercase letters");
       }
 
-      console.log(`[GameConnectionManager] Resolving code ${cleanCode} via API at ${this.apiBaseUrl}/api/resolve-code?code=${cleanCode}`);
+      console.log(
+        `[GameConnectionManager] Resolving code ${cleanCode} via API at ${this.apiBaseUrl}/api/resolve-code?code=${cleanCode}`,
+      );
       const response = await fetch(`${this.apiBaseUrl}/api/resolve-code?code=${cleanCode}`);
       console.log(`[GameConnectionManager] API response status: ${response.status}`);
       const data = await response.json();
@@ -69,7 +71,9 @@ export class GameConnectionManager {
         throw new Error("Game code not found");
       }
 
-      console.log(`[GameConnectionManager] Resolved code ${cleanCode} to roomId ${data.roomId}, joining room...`);
+      console.log(
+        `[GameConnectionManager] Resolved code ${cleanCode} to roomId ${data.roomId}, joining room...`,
+      );
       // Now join the room using the resolved roomId
       this.room = await this.client.joinById<unknown>(data.roomId);
       this.connectionStatus = "connected";

@@ -1,18 +1,18 @@
 import type {
   DatabaseConfig,
-  DatabaseStatus,
   DatabaseResult,
-  RoomStateData,
-  PlayerData,
-  HealthCheckResult,
-  RoomQueryOptions,
-  PlayerQueryOptions,
   DatabaseStats,
+  DatabaseStatus,
+  HealthCheckResult,
+  PlayerData,
+  PlayerQueryOptions,
+  RoomQueryOptions,
+  RoomStateData,
 } from "./types.js";
 
 /**
  * Abstract base class for game database implementations
- * 
+ *
  * All database providers should extend this class and implement
  * the abstract methods.
  */
@@ -37,7 +37,7 @@ export abstract class GameDatabase {
   getStatus(): DatabaseStatus {
     return this._status;
   }
-  
+
   /**
    * Set connection status (protected for child classes)
    */
@@ -138,10 +138,12 @@ export abstract class GameDatabase {
   /**
    * Export all data for backup
    */
-  abstract exportData(): Promise<DatabaseResult<{
-    rooms: RoomStateData[];
-    players: PlayerData[];
-  }>>;
+  abstract exportData(): Promise<
+    DatabaseResult<{
+      rooms: RoomStateData[];
+      players: PlayerData[];
+    }>
+  >;
 
   /**
    * Import data from backup
@@ -194,10 +196,10 @@ export class MemoryDatabase extends GameDatabase {
   }
 
   async listRooms(): Promise<DatabaseResult<RoomStateData[]>> {
-    return { 
-      success: true, 
+    return {
+      success: true,
       data: Array.from(this.rooms.values()),
-      timestamp: new Date() 
+      timestamp: new Date(),
     };
   }
 
@@ -217,10 +219,10 @@ export class MemoryDatabase extends GameDatabase {
   }
 
   async queryPlayers(): Promise<DatabaseResult<PlayerData[]>> {
-    return { 
-      success: true, 
+    return {
+      success: true,
       data: Array.from(this.players.values()),
-      timestamp: new Date() 
+      timestamp: new Date(),
     };
   }
 
@@ -232,7 +234,7 @@ export class MemoryDatabase extends GameDatabase {
     for (const [, player] of this.players) {
       storageUsed += JSON.stringify(player).length;
     }
-    
+
     return {
       success: true,
       data: {
@@ -274,7 +276,10 @@ export class MemoryDatabase extends GameDatabase {
     };
   }
 
-  async importData(data: { rooms: RoomStateData[]; players: PlayerData[] }): Promise<DatabaseResult> {
+  async importData(data: {
+    rooms: RoomStateData[];
+    players: PlayerData[];
+  }): Promise<DatabaseResult> {
     this.rooms.clear();
     this.players.clear();
     for (const room of data.rooms) {
@@ -300,7 +305,7 @@ export function createDatabase(config: DatabaseConfig): GameDatabase {
     case "redis":
       console.warn(
         `[Database] Provider '${config.provider}' is not yet implemented. ` +
-        `Falling back to memory database. Please implement the provider in the database directory.`
+          `Falling back to memory database. Please implement the provider in the database directory.`,
       );
       return new MemoryDatabase();
     default:

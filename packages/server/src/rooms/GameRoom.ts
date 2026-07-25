@@ -5,7 +5,32 @@ import { type Client, Room } from "colyseus";
 import { type AnyActorRef, createActor } from "xstate";
 import { GameStateSchema } from "../schema/GameStateSchema.js";
 import { PlayerSchema } from "../schema/PlayerSchema.js";
+import type { CategoryRepository } from "../services/CategoryRepository.js";
 import type { RoomCodeService } from "../services/RoomCodeService.js";
+
+export interface PhaseDurations {
+  categoryVoteMs: number;
+  promptMs: number;
+  matchupVoteMs: number;
+  matchupRevealMs: number;
+  emptyRoomGraceMs: number;
+}
+
+export const DEFAULT_DURATIONS: PhaseDurations = {
+  categoryVoteMs: 60_000,
+  promptMs: 90_000,
+  matchupVoteMs: 20_000,
+  matchupRevealMs: 5_000,
+  emptyRoomGraceMs: 120_000,
+};
+
+export const TEST_DURATIONS: PhaseDurations = {
+  categoryVoteMs: 80,
+  promptMs: 80,
+  matchupVoteMs: 60,
+  matchupRevealMs: 30,
+  emptyRoomGraceMs: 200,
+};
 
 const logger = {
   info: (message: string, ...args: unknown[]) =>
@@ -25,10 +50,26 @@ export class GameRoom<TState = unknown> extends Room {
   private machine!: AnyActorRef;
   private gameDefinition!: GameDefinition<TState>;
   private roomCodeService: RoomCodeService | undefined;
+  private categories: CategoryRepository | undefined;
+  private durations: PhaseDurations;
 
-  constructor(roomCodeService?: RoomCodeService) {
+  constructor(
+    roomCodeService?: RoomCodeService,
+    categories?: CategoryRepository,
+    durations: PhaseDurations = DEFAULT_DURATIONS,
+  ) {
     super();
     this.roomCodeService = roomCodeService;
+    this.categories = categories;
+    this.durations = durations;
+  }
+
+  getDurations(): PhaseDurations {
+    return this.durations;
+  }
+
+  getCategories(): CategoryRepository | undefined {
+    return this.categories;
   }
 
   setDefinition(def: GameDefinition<TState>) {

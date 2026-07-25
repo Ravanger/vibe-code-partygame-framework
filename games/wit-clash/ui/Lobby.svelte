@@ -19,25 +19,29 @@ const urlParams = new URLSearchParams(window.location.search);
 const codeFromUrl = urlParams.get("code");
 
 // Access manager.room?.state directly in derived computations so Svelte tracks it
-// biome-ignore lint/suspicious/noExplicitAny: room state is a Colyseus proxy
-const state = $derived.by(() => manager.room?.state as any);
-// biome-ignore lint/suspicious/noExplicitAny: players MapSchema
-const players = $derived.by(() => {
-  const s = manager.room?.state as any;
-  return s?.players ? (Array.from(s.players.values()) as any[]) : [];
-});
-// biome-ignore lint/suspicious/noExplicitAny: player objects are proxies
-const localPlayer = $derived.by(() => {
-  const p = players as any[];
-  return p.find((player: any) => player.id === manager.room?.sessionId);
-});
+const state = $derived.by(() => manager.room?.state);
+type PlayerLike = { id: string; name: string; role: string; isReady: boolean };
+const players = $derived.by(() =>
+  (manager.room?.state as { players?: { values: () => Iterable<PlayerLike> } })?.players
+    ? Array.from(
+        (
+          manager.room?.state as { players?: { values: () => Iterable<PlayerLike> } }
+        ).players.values(),
+      )
+    : [],
+);
+const localPlayer = $derived.by(() =>
+  players.find((player) => player.id === manager.room?.sessionId),
+);
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const isHost = $derived.by(() => localPlayer?.role === "host");
 
 // Debug: log when players change
 $effect(() => {
-  // biome-ignore lint/suspicious/noExplicitAny: players is proxy array
-  console.log(`[Lobby] Players updated:`, players.map((p: any) => ({ id: p.id, name: p.name, isReady: p.isReady })));
+  console.log(
+    "[Lobby] Players updated:",
+    players.map((p) => ({ id: p.id, name: p.name, isReady: p.isReady })),
+  );
 });
 
 $effect(() => {
@@ -45,12 +49,12 @@ $effect(() => {
   _error = "";
 
   // Auto-join if code in URL
-  if (codeFromUrl && codeFromUrl.match(/^[A-Z]{4}$/) && manager.connectionStatus === "disconnected") {
+  if (codeFromUrl?.match(/^[A-Z]{4}$/) && manager.connectionStatus === "disconnected") {
     console.log("[Lobby] auto-joining with code:", codeFromUrl);
     gameCode = codeFromUrl;
     _joinGame().catch(console.error);
   }
-  
+
   // Auto-create if host mode
   if (createGameOnLoad && manager.connectionStatus === "disconnected") {
     console.log("[Lobby] auto-creating game...");
@@ -175,9 +179,9 @@ const _startGame = () => {
         </div>
 
         <div class="card players-card">
-          <h3>Players ({players.filter((p: any) => p.isReady).length}/{mockGameDefinition?.maxPlayers || 8})</h3>
+          <h3>Players ({players.filter((p) => p.isReady).length}/{mockGameDefinition?.maxPlayers || 8})</h3>
           <ul class="player-list">
-            {#each players.filter((p: any) => p.isReady) as player}
+            {#each players.filter((p) => p.isReady) as player}
               <li class={player.id === manager.room?.sessionId ? 'current-player' : ''}>
                 <span class="player-name">{player.name}</span>
                 {#if player.id === manager.room?.sessionId}
@@ -188,7 +192,7 @@ const _startGame = () => {
                 {/if}
               </li>
             {/each}
-            {#if players.filter((p: any) => p.isReady).length === 0}
+            {#if players.filter((p) => p.isReady).length === 0}
               <li class="empty-message">No players yet - share your room code!</li>
             {/if}
           </ul>
@@ -200,11 +204,11 @@ const _startGame = () => {
               <button 
                 class="start-button" 
                 onclick={_startGame} 
-                disabled={players.filter((p: any) => p.isReady).length < (mockGameDefinition?.minPlayers || 3)}
-              >
-                Start Game ({players.filter((p: any) => p.isReady).length}/{mockGameDefinition?.minPlayers || 3})
-              </button>
-              {#if players.filter((p: any) => p.isReady).length < (mockGameDefinition?.minPlayers || 3)}
+                disabled={players.filter((p) => p.isReady).length < (mockGameDefinition?.minPlayers || 3)}
+               >
+                Start Game ({players.filter((p) => p.isReady).length}/{mockGameDefinition?.minPlayers || 3})
+               </button>
+               {#if players.filter((p) => p.isReady).length < (mockGameDefinition?.minPlayers || 3)}
                 <p class="hint">Need at least {mockGameDefinition?.minPlayers || 3} players to start</p>
               {/if}
             </div>

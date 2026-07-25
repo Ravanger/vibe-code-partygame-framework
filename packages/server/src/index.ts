@@ -19,14 +19,14 @@ const _apiServer = serve({
   port: apiPort,
   fetch(req: Request) {
     const url = new URL(req.url);
-    
+
     // CORS headers - allow all origins for development
     const corsHeaders = {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type",
     };
-    
+
     // Handle OPTIONS for CORS preflight
     if (req.method === "OPTIONS") {
       return new Response(null, {
@@ -34,7 +34,7 @@ const _apiServer = serve({
         headers: corsHeaders,
       });
     }
-    
+
     if (url.pathname === "/api/resolve-code") {
       if (req.method !== "GET") {
         return new Response(JSON.stringify({ error: "Method not allowed" }), {
