@@ -11,9 +11,9 @@ import type { Room as ColyseusServerRoom } from "@colyseus/core";
 import type { Room as ColyseusClientRoom } from "@colyseus/sdk";
 import { boot, type ColyseusTestServer } from "@colyseus/testing";
 import { WitClashGame } from "../../../../games/wit-clash/index.js";
+import { CategoryRepository } from "../../../../games/wit-clash/src/content/CategoryRepository.js";
 import { createGameServer, TEST_DURATIONS } from "../../src/createGameServer.js";
 import type { PhaseDurations } from "../../src/rooms/GameRoom.js";
-import { CategoryRepository } from "../../src/services/CategoryRepository.js";
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

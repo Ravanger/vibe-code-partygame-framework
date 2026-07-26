@@ -1,0 +1,18 @@
+{
+  "id": "politics",
+  "name": "Politics",
+  "emoji": "🏛️",
+  // Add your own prompts below. Each needs a unique "id" within this file.
+  "prompts": [
+    { "id": "pol-1", "text": "A great finishing line for your presidential inauguration speech." },
+    { "id": "pol-2", "text": "The worst possible campaign slogan." },
+    { "id": "pol-3", "text": "A law that would instantly make you the most popular leader alive." },
+    { "id": "pol-4", "text": "The most ridiculous government position you'd love to hold." },
+    { "id": "pol-5", "text": "A new national holiday that would be universally hated." },
+    { "id": "pol-6", "text": "The best way to accidentally start a diplomatic incident." },
+    { "id": "pol-7", "text": "A political debate topic that could only end in chaos." },
+    { "id": "pol-8", "text": "The worst thing to say during a peace treaty signing." }
+  ],
+  // Optional. Used to break a tie; falls back to "prompts" if empty.
+  "tieBreakers": [{ "id": "pol-tb-1", "text": "The one law you'd repeal on day one." }]
+}

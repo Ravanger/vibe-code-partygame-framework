@@ -1,0 +1,16 @@
+{
+  "id": "food",
+  "name": "Food",
+  "emoji": "🍕",
+  "prompts": [
+    { "id": "food-1", "text": "The worst possible topping for a pizza." },
+    { "id": "food-2", "text": "A restaurant chain everyone should boycott." },
+    { "id": "food-3", "text": "The most overrated dessert in the world." },
+    { "id": "food-4", "text": "A food combination that should be illegal." },
+    { "id": "food-5", "text": "The worst thing to order on a first date." },
+    { "id": "food-6", "text": "A breakfast food that should only be eaten at midnight." },
+    { "id": "food-7", "text": "The perfect snack to eat while crying." },
+    { "id": "food-8", "text": "A dish so fancy it sounds made up." }
+  ],
+  "tieBreakers": [{ "id": "food-tb-1", "text": "The secret ingredient to a perfect nap." }]
+}

@@ -1,0 +1,16 @@
+{
+  "id": "sci-fi",
+  "name": "Sci-Fi",
+  "emoji": "🚀",
+  "prompts": [
+    { "id": "sf-1", "text": "What would be the worst name for a new planet?" },
+    { "id": "sf-2", "text": "The most useless invention from the year 3000." },
+    { "id": "sf-3", "text": "A time travel rule that would ruin history." },
+    { "id": "sf-4", "text": "The worst alien superpower you could have." },
+    { "id": "sf-5", "text": "A robot uprising that fails spectacularly." },
+    { "id": "sf-6", "text": "The most boring sci-fi movie ever made." },
+    { "id": "sf-7", "text": "A space law that everyone ignores." },
+    { "id": "sf-8", "text": "The best thing to put after https:// in a fake alien URL." }
+  ],
+  "tieBreakers": [{ "id": "sf-tb-1", "text": "The first words you'd say to an alien." }]
+}

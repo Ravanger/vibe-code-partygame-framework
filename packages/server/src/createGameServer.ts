@@ -1,7 +1,7 @@
 import { Server } from "@colyseus/core";
 import type { GameDefinition } from "@partygame/core";
+import type { CategoryRepository } from "../../../games/wit-clash/src/content/CategoryRepository.js";
 import { DEFAULT_DURATIONS, GameRoom, type PhaseDurations } from "./rooms/GameRoom.js";
-import type { CategoryRepository } from "./services/CategoryRepository.js";
 import type { RoomCodeService } from "./services/RoomCodeService.js";
 
 // Re-export for convenience

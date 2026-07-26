@@ -52,4 +52,22 @@ describe("CategorySelectionPhase", () => {
     expect(result).toHaveLength(3);
     expect(new Set(result).size).toBe(3);
   });
+
+  it("produces an exact known order for a seeded rng", () => {
+    const seq = [0.99, 0.5, 0.01];
+    let i = 0;
+    const rng = () => seq[i++ % seq.length]!;
+    const result = new CategorySelectionPhase().getRandomCategories(["a", "b", "c", "d"], 4, rng);
+    expect(result).toEqual(["c", "a", "b", "d"]);
+  });
+
+  it("returns every element when count exceeds the input length", () => {
+    expect(new CategorySelectionPhase().getRandomCategories(["a"], 5)).toHaveLength(1);
+  });
+
+  it("does not mutate the input array", () => {
+    const input = ["a", "b", "c"];
+    new CategorySelectionPhase().getRandomCategories(input, 2);
+    expect(input).toEqual(["a", "b", "c"]);
+  });
 });

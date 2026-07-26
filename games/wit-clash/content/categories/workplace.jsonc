@@ -1,0 +1,16 @@
+{
+  "id": "workplace",
+  "name": "Workplace",
+  "emoji": "💼",
+  "prompts": [
+    { "id": "wp-1", "text": "The worst possible team-building activity." },
+    { "id": "wp-2", "text": "A job title that sounds impressive but is meaningless." },
+    { "id": "wp-3", "text": "The most annoying office policy." },
+    { "id": "wp-4", "text": "A meeting that absolutely should not exist." },
+    { "id": "wp-5", "text": "The worst thing to put in an employee handbook." },
+    { "id": "wp-6", "text": "A performance review comment that would get you fired." },
+    { "id": "wp-7", "text": "The best way to accidentally insult your boss." },
+    { "id": "wp-8", "text": "A company slogan that's accidentally offensive." }
+  ],
+  "tieBreakers": [{ "id": "wp-tb-1", "text": "The perfect excuse for being late to work." }]
+}

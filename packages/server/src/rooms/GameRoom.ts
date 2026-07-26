@@ -3,9 +3,9 @@ import { buildXStateMachine } from "@partygame/core";
 import { GameActionSchema, SetNameSchema } from "@partygame/shared";
 import { type Client, Room } from "colyseus";
 import { type AnyActorRef, createActor } from "xstate";
+import type { CategoryRepository } from "../../../games/wit-clash/src/content/CategoryRepository.js";
 import { GameStateSchema } from "../schema/GameStateSchema.js";
 import { PlayerSchema } from "../schema/PlayerSchema.js";
-import type { CategoryRepository } from "../services/CategoryRepository.js";
 import type { RoomCodeService } from "../services/RoomCodeService.js";
 
 export interface PhaseDurations {

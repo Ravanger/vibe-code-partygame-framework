@@ -1,8 +1,10 @@
+import { join } from "node:path";
 import { BunWebSockets } from "@colyseus/bun-websockets";
 import type { GameDefinition } from "@partygame/core";
 // @ts-expect-error - Bun runtime does not have TypeScript declarations in npm
 import { serve } from "bun";
 import { Server } from "colyseus";
+import { CategoryRepository } from "../../../games/wit-clash/src/content/CategoryRepository.js";
 import { GameRoom } from "./rooms/GameRoom.js";
 import { RoomCodeService } from "./services/RoomCodeService.js";
 
@@ -74,6 +76,15 @@ const _apiServer = serve({
 console.info(`[API] Code resolution server listening on port ${apiPort}`);
 
 async function start() {
+  const contentDir =
+    process.env.WITCLASH_CONTENT_DIR ??
+    join(process.cwd(), "../../games/wit-clash/content/categories");
+  const categories = await CategoryRepository.loadFromDir(contentDir);
+  console.info(`[Content] Loaded ${categories.all().length} categories from ${contentDir}`);
+  if (categories.all().length < 3) {
+    throw new Error(`Need at least 3 categories to run a vote; found ${categories.all().length}`);
+  }
+
   const witClashPath = "../../../games/wit-clash/index.js";
   const { WitClashGame } = (await import(witClashPath)) as {
     WitClashGame: GameDefinition<unknown>;
@@ -81,7 +92,7 @@ async function start() {
 
   class WitClashRoom extends GameRoom {
     constructor() {
-      super(roomCodeService);
+      super(roomCodeService, categories);
     }
 
     onCreate() {
