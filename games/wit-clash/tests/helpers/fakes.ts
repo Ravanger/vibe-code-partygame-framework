@@ -44,11 +44,11 @@ export interface FakeState {
 }
 
 export interface FakeManager {
-  connectionStatus: "disconnected" | "connected" | "error";
+  connectionStatus: "disconnected" | "connecting" | "connected" | "error";
   error: string | undefined;
   stateVersion: number;
   room: FakeRoom | undefined;
-  create: () => Promise<FakeRoom>;
+  create: (roomName?: string) => Promise<FakeRoom>;
   join: (code: string) => Promise<FakeRoom>;
   joinByCode: (code: string) => Promise<FakeRoom>;
   connect: () => Promise<FakeRoom>;
