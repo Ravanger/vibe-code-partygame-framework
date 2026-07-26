@@ -12,6 +12,10 @@
     "./connection": {
       "svelte": "./src/connection.svelte.ts",
       "default": "./dist/connection.svelte.js"
+    },
+    "./countdown": {
+      "svelte": "./src/countdown.svelte.ts",
+      "default": "./dist/countdown.svelte.js"
     }
   },
   "scripts": {

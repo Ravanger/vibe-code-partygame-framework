@@ -29,7 +29,7 @@ export interface FakeState {
   serverNow: number;
   phaseEndsAt: number;
   players: Map<string, FakePlayer>;
-  categoryOptions: Array<{ id: string; name: string; emoji: string }>;
+  categoryOptions: Array<{ id: string; name: string; emoji: string; votes: number }>;
   categoryVotes: Map<string, string>;
   matchups: unknown[];
   answerVotes: Map<string, string>;

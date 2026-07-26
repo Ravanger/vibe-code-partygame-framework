@@ -51,6 +51,8 @@ export function buildXStateMachine<TState>(gameDef: GameDefinition<TState>) {
       CategorySelection: {},
       Prompting: {},
       Voting: {},
+      MatchupVoting: {},
+      MatchupReveal: {},
       Results: {},
       checkPhase: {
         always: [
@@ -61,6 +63,14 @@ export function buildXStateMachine<TState>(gameDef: GameDefinition<TState>) {
           },
           { target: "Prompting", guard: ({ context }) => context.currentPhase === "Prompting" },
           { target: "Voting", guard: ({ context }) => context.currentPhase === "Voting" },
+          {
+            target: "MatchupVoting",
+            guard: ({ context }) => context.currentPhase === "MatchupVoting",
+          },
+          {
+            target: "MatchupReveal",
+            guard: ({ context }) => context.currentPhase === "MatchupReveal",
+          },
           { target: "Results", guard: ({ context }) => context.currentPhase === "Results" },
         ],
       },

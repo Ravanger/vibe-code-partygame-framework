@@ -61,6 +61,12 @@ export const WitClashGame = defineGame<WitClashState>({
             ctx.state.prompts[ctx.clientId] = ctx.data.answer;
           },
         },
+        RESOLVE_PROMPTING: {
+          from: "host",
+          handler: (ctx) => {
+            ctx.state.phase = "Voting";
+          },
+        },
       },
     }),
     Voting: createPhase({
@@ -72,6 +78,12 @@ export const WitClashGame = defineGame<WitClashState>({
             ctx.state.votes[answerId] = (ctx.state.votes[answerId] || 0) + 1;
           },
         },
+        RESOLVE_VOTING: {
+          from: "host",
+          handler: (ctx) => {
+            ctx.state.phase = "Results";
+          },
+        },
       },
     }),
     Results: createPhase({
@@ -80,6 +92,14 @@ export const WitClashGame = defineGame<WitClashState>({
           from: "player",
           handler: (ctx) => {
             ctx.state.phase = "Lobby";
+            ctx.state.prompts = {};
+            ctx.state.votes = {};
+          },
+        },
+        NEXT_ROUND: {
+          from: "host",
+          handler: (ctx) => {
+            ctx.state.phase = "CategorySelection";
             ctx.state.prompts = {};
             ctx.state.votes = {};
           },

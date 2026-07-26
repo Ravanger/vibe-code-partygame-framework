@@ -5,7 +5,7 @@ export class VotePhase implements PhaseHandler {
   private votes: Record<string, number> = {};
 
   handleAction(player: string, action: GameAction) {
-    if (action.type !== "CastVote") {
+    if (action.type !== "CAST_VOTE") {
       throw new Error("Invalid Action");
     }
 

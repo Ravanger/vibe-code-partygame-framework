@@ -8,15 +8,15 @@ describe("VotePhase", () => {
     expect(phase).toBeDefined();
   });
 
-  it("should handle CastVote and increment votes", () => {
+  it("should handle CAST_VOTE and increment votes", () => {
     const phase = new VotePhase();
-    phase.handleAction("p1", { type: "CastVote", answerId: "p2_a1" });
+    phase.handleAction("p1", { type: "CAST_VOTE", answerId: "p2_a1" });
     expect(phase.getVotes().p2_a1).toBe(1);
   });
 
   it("should throw for self-voting", () => {
     const phase = new VotePhase();
-    expect(() => phase.handleAction("p1", { type: "CastVote", answerId: "p1_a1" })).toThrow(
+    expect(() => phase.handleAction("p1", { type: "CAST_VOTE", answerId: "p1_a1" })).toThrow(
       "Cannot vote for self",
     );
   });
@@ -35,16 +35,16 @@ describe("VotePhase", () => {
 
   it("should handle multiple votes for same answer", () => {
     const phase = new VotePhase();
-    phase.handleAction("p1", { type: "CastVote", answerId: "p2_a1" });
-    phase.handleAction("p3", { type: "CastVote", answerId: "p2_a1" });
-    phase.handleAction("p4", { type: "CastVote", answerId: "p2_a1" });
+    phase.handleAction("p1", { type: "CAST_VOTE", answerId: "p2_a1" });
+    phase.handleAction("p3", { type: "CAST_VOTE", answerId: "p2_a1" });
+    phase.handleAction("p4", { type: "CAST_VOTE", answerId: "p2_a1" });
     expect(phase.getVotes().p2_a1).toBe(3);
   });
 
   it("should handle votes for different answers", () => {
     const phase = new VotePhase();
-    phase.handleAction("p1", { type: "CastVote", answerId: "p2_a1" });
-    phase.handleAction("p3", { type: "CastVote", answerId: "p4_a1" });
+    phase.handleAction("p1", { type: "CAST_VOTE", answerId: "p2_a1" });
+    phase.handleAction("p3", { type: "CAST_VOTE", answerId: "p4_a1" });
     expect(phase.getVotes().p2_a1).toBe(1);
     expect(phase.getVotes().p4_a1).toBe(1);
   });

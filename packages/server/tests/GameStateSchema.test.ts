@@ -1,5 +1,6 @@
 import { ArraySchema, MapSchema } from "@colyseus/schema";
 import { describe, expect, it, test } from "vitest";
+import { CategoryOptionSchema } from "../src/schema/CategoryOptionSchema";
 import { GameStateSchema } from "../src/schema/GameStateSchema";
 import { PlayerSchema } from "../src/schema/PlayerSchema";
 
@@ -69,4 +70,49 @@ test("should allow adding to currentVotingOptions", () => {
   const state = new GameStateSchema();
   state.currentVotingOptions.push("option1");
   expect([...state.currentVotingOptions]).toContain("option1");
+});
+
+describe("Plan 07: category voting fields", () => {
+  test("defaults are empty/zero", () => {
+    const state = new GameStateSchema();
+    expect(state.categoryOptions.length).toBe(0);
+    expect(state.categoryVotes.size).toBe(0);
+    expect(state.phaseEndsAt).toBe(0);
+    expect(state.serverNow).toBe(0);
+  });
+
+  test("categoryOptions accepts CategoryOptionSchema", () => {
+    const state = new GameStateSchema();
+    const opt = new CategoryOptionSchema();
+    opt.id = "alpha";
+    opt.name = "Alpha";
+    opt.emoji = "🅰️";
+    opt.votes = 0;
+    state.categoryOptions.push(opt);
+    expect(state.categoryOptions.length).toBe(1);
+    expect(state.categoryOptions[0]?.id).toBe("alpha");
+  });
+
+  test("categoryVotes stores sessionId -> categoryId", () => {
+    const state = new GameStateSchema();
+    state.categoryVotes.set("session-1", "alpha");
+    expect(state.categoryVotes.size).toBe(1);
+    expect(state.categoryVotes.get("session-1")).toBe("alpha");
+  });
+
+  test("CategoryOptionSchema persists fields correctly", () => {
+    const state = new GameStateSchema();
+    const opt = new CategoryOptionSchema();
+    opt.id = "alpha";
+    opt.name = "Alpha";
+    opt.emoji = "🅰️";
+    opt.votes = 3;
+    state.categoryOptions.push(opt);
+
+    expect(state.categoryOptions.length).toBe(1);
+    expect(state.categoryOptions[0]?.id).toBe("alpha");
+    expect(state.categoryOptions[0]?.name).toBe("Alpha");
+    expect(state.categoryOptions[0]?.emoji).toBe("🅰️");
+    expect(state.categoryOptions[0]?.votes).toBe(3);
+  });
 });
