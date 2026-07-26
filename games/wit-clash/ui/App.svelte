@@ -1,78 +1,46 @@
 <script lang="ts">
 import type { GameConnectionManager } from "@partygame/game-client/connection";
 // biome-ignore lint/correctness/noUnusedImports: used in template
-import Lobby from "./Lobby.svelte";
+import CategoryVote from "./screens/CategoryVote.svelte";
 // biome-ignore lint/correctness/noUnusedImports: used in template
-import Prompt from "./Prompt.svelte";
+import WaitingRoom from "./screens/WaitingRoom.svelte";
 // biome-ignore lint/correctness/noUnusedImports: used in template
-import Results from "./Results.svelte";
-// biome-ignore lint/correctness/noUnusedImports: used in template
-import Vote from "./Vote.svelte";
+import Welcome from "./screens/Welcome.svelte";
+import { AppViewModel } from "./viewmodels/AppViewModel.svelte.js";
 
 const { manager } = $props<{ manager: GameConnectionManager }>();
-// Use $derived.by to track state changes - accessing manager.room?.state directly
-// biome-ignore lint/suspicious/noExplicitAny: room state is a Colyseus proxy
-const state = $derived.by(() => manager.room?.state ?? ({ phase: "Lobby" } as any));
-
-// Detect if this is the host (has ?host=true in URL)
-const urlParams = new URLSearchParams(window.location.search);
-// biome-ignore lint/correctness/noUnusedVariables: used in template <Lobby createGameOnLoad={isHost}>
-const isHost = $derived(urlParams.get("host") === "true");
-
-$effect(() => {
-  if (manager.room) {
-    console.log(`[App] Current phase: ${state.phase}`);
-    console.log("[App] Full state:", JSON.parse(JSON.stringify(state)));
-  }
-});
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+const vm = new AppViewModel(manager);
 </script>
 
 <main>
   <header>
     <h1>WitClash</h1>
-    <div class="status">
-      Status: <span class="badge {manager.connectionStatus}">{manager.connectionStatus}</span>
-    </div>
+    <span class="badge {manager.connectionStatus}">{manager.connectionStatus}</span>
   </header>
 
   <section class="game-view">
-    {#if state.phase === 'Lobby'}
-      <Lobby {manager} createGameOnLoad={isHost} />
-    {:else if state.phase === 'CategorySelection'}
-      <div class="category-selection">
-        <h2>Select a Category</h2>
-        <p>Waiting for host to select a category...</p>
-      </div>
-    {:else if state.phase === 'Prompting'}
-      <Prompt {manager} />
-    {:else if state.phase === 'Voting'}
-      <Vote {manager} />
-    {:else if state.phase === 'Results'}
-      <Results {manager} />
+    {#if vm.screen === 'welcome'}
+      <Welcome {manager} />
+    {:else if vm.screen === 'connecting'}
+      <p class="connecting">Connecting to game server…</p>
+    {:else if vm.screen === 'waiting-room'}
+      <WaitingRoom {manager} />
+    {:else if vm.screen === 'category-vote'}
+      <CategoryVote {manager} />
     {:else}
-      <div class="unknown-phase">
-        <p>Phase: {state.phase}</p>
-        <p>Please wait for the game to advance...</p>
-      </div>
+      <p class="unsupported">This part of the game isn't built yet (phase: {vm.phase}).</p>
     {/if}
   </section>
 
-  <footer>
-    <p>Player ID: {manager.room?.sessionId ?? 'N/A'}</p>
-  </footer>
+  <footer><p>Player ID: {manager.room?.sessionId ?? 'N/A'}</p></footer>
 </main>
 
 <style>
-  :global(body) { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f5f5f5; color: #333; }
-  main { max-width: 800px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+  main { max-width: 800px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; background: white; }
   header { padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-  h1 { margin: 0; font-size: 1.5rem; color: #333; }
-  .status { font-size: 0.9rem; }
-  .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; text-transform: uppercase; }
-  .badge.connected { background: #e8f5e9; color: #2e7d32; }
-  .badge.disconnected { background: #ffebee; color: #c62828; }
-  .badge.connecting { background: #fff8e1; color: #f9a825; }
+  h1 { margin: 0; font-size: 1.5rem; }
   .game-view { flex: 1; padding: 20px; }
-  footer { padding: 10px 20px; border-top: 1px solid #eee; font-size: 0.8rem; color: #888; text-align: right; }
-  .unknown-phase { text-align: center; color: #666; padding: 40px; }
+  footer { padding: 10px 20px; border-top: 1px solid #eee; font-size: .8rem; color: #888; text-align: right; }
+  .connecting, .unsupported { text-align: center; color: #666; padding: 40px; }
 </style>

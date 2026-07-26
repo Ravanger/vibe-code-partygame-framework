@@ -4,12 +4,13 @@
 // This is an upstream library issue, not a bug in our code.
 // To test Svelte components, run them in a browser environment or use Node.js.
 
-import { describe, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
-describe.skip("App.svelte", () => {
-  it.skip("should render Lobby phase", () => {});
-  it.skip("should render Prompting phase", () => {});
-  it.skip("should render Voting phase", () => {});
-  it.skip("should render Results phase", () => {});
-  it.skip("should render unknown phase", () => {});
+describe.skip("App.svelte routing", () => {
+  it("renders the Welcome screen, not an error, when disconnected", () => {
+    // Once testing-library works: render(App, { props: { manager: fakeManager() } });
+    expect(true).toBe(true);
+  });
+
+  it.todo("shows Host Game button on Welcome screen");
 });

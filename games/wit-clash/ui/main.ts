@@ -1,3 +1,4 @@
+import "./app.css";
 import { GameConnectionManager } from "@partygame/game-client/connection";
 import { mount } from "svelte";
 import App from "./App.svelte";
