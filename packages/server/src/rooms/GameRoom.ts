@@ -64,6 +64,7 @@ export class GameRoom<TState = unknown> extends Room {
   private serverNowTimer: ReturnType<typeof setInterval> | null = null;
   private voteResolved = false;
   private promptResolved = false;
+  private matchupResolved = false;
   private answerAuthors = new Map<string, string>();
   private assignments = new Map<string, string[]>();
   private drafts = new Map<string, string>();
@@ -444,7 +445,9 @@ export class GameRoom<TState = unknown> extends Room {
     this.drafts.set(key, data.answer);
 
     if (isNew) state.answersSubmitted += 1;
-    logger.debug(`[SUBMIT_ANSWER] ${player.name} submitted answer (${state.answersSubmitted}/${state.answersExpected})`);
+    logger.debug(
+      `[SUBMIT_ANSWER] ${player.name} submitted answer (${state.answersSubmitted}/${state.answersExpected})`,
+    );
 
     if (state.answersSubmitted >= state.answersExpected) this.finishPrompting();
   }
@@ -490,31 +493,129 @@ export class GameRoom<TState = unknown> extends Room {
 
   private enterVoting() {
     const state = this.state as GameStateSchema;
-    // Matchups already built and populated in finishPrompting.
-    // Plan 09 will implement sequential matchup voting here.
+    state.activeMatchupIndex = -1;
+    state.isRevealing = false;
+    state.answerVotes.clear();
+    this.matchupResolved = false;
+    this.startNextMatchup();
     logger.info(`Voting started: ${state.matchups.length} matchups ready`);
   }
 
-  private handleCastVote(client: Client, player: PlayerSchema, data: { answerId: string }) {
+  private startNextMatchup() {
     const state = this.state as GameStateSchema;
-    if (state.phase !== "Voting") return;
-    // Plan 09 will implement sequential matchup voting.
-    logger.debug(`[CAST_VOTE] ${player.name} voted for ${data.answerId}`);
+    const next = state.activeMatchupIndex + 1;
+
+    if (next >= state.matchups.length) {
+      state.activeMatchupIndex = -1;
+      state.isRevealing = false;
+      state.phaseEndsAt = 0;
+      this.machine.send({
+        type: "ACTION",
+        phase: "Voting",
+        name: "RESOLVE_VOTING",
+        clientId: "__server__",
+        role: "host",
+        data: undefined,
+        timestamp: Date.now(),
+      });
+      return;
+    }
+
+    state.activeMatchupIndex = next;
+    state.isRevealing = false;
+    state.answerVotes.clear();
+    const matchup = state.matchups[next];
+    if (matchup) {
+      for (const a of matchup.answers) a.votes = 0;
+    }
+    this.matchupResolved = false;
+
+    if (this.eligibleVoters(next).length === 0) {
+      this.revealMatchup();
+      return;
+    }
+
+    state.phaseEndsAt = Date.now() + this.durations.matchupVoteMs;
+    this.clearPhaseTimer();
+    this.phaseTimer = setTimeout(() => this.revealMatchup(), this.durations.matchupVoteMs);
   }
 
-  private resolveVoting() {
+  private eligibleVoters(index: number): PlayerSchema[] {
     const state = this.state as GameStateSchema;
-    if (state.phase !== "Voting") return;
-    logger.info("Voting resolved");
-    this.machine.send({
-      type: "ACTION",
-      phase: "Voting",
-      name: "RESOLVE_VOTING",
-      clientId: "__server__",
-      role: "host",
-      data: undefined,
-      timestamp: Date.now(),
-    });
+    const matchup = state.matchups[index];
+    if (!matchup) return [];
+    const authors = new Set(matchup.answers.map((a) => this.answerAuthors.get(a.id)));
+    return [...state.players.values()].filter(
+      (p) => p.isConnected && p.isReady && !authors.has(p.id),
+    );
+  }
+
+  private handleCastVote(client: Client, _player: PlayerSchema, data: { answerId: string }) {
+    const state = this.state as GameStateSchema;
+    if (state.phase !== "Voting" || state.isRevealing || this.matchupResolved) return;
+
+    const matchup = state.matchups[state.activeMatchupIndex];
+    if (!matchup) return;
+
+    const answer = matchup.answers.find((a) => a.id === data.answerId);
+    if (!answer) {
+      logger.warn(`[CAST_VOTE] ${data.answerId} is not in the active matchup`);
+      return;
+    }
+
+    if (!this.eligibleVoters(state.activeMatchupIndex).some((p) => p.id === client.sessionId)) {
+      logger.warn(`[CAST_VOTE] ${client.sessionId} is not eligible for this matchup`);
+      return;
+    }
+
+    state.answerVotes.set(client.sessionId, data.answerId);
+    this.recountActiveMatchup();
+
+    const eligible = this.eligibleVoters(state.activeMatchupIndex);
+    if (eligible.every((p) => state.answerVotes.has(p.id))) this.revealMatchup();
+  }
+
+  private recountActiveMatchup() {
+    const state = this.state as GameStateSchema;
+    const matchup = state.matchups[state.activeMatchupIndex];
+    if (!matchup) return;
+    const tally = new Map<string, number>();
+    for (const id of state.answerVotes.values()) tally.set(id, (tally.get(id) ?? 0) + 1);
+    for (const a of matchup.answers) a.votes = tally.get(a.id) ?? 0;
+  }
+
+  private revealMatchup() {
+    if (this.matchupResolved) return;
+    this.matchupResolved = true;
+    this.clearPhaseTimer();
+
+    const state = this.state as GameStateSchema;
+    const matchup = state.matchups[state.activeMatchupIndex];
+    if (!matchup) return;
+
+    for (const a of matchup.answers) a.authorId = this.answerAuthors.get(a.id) ?? "";
+    matchup.isRevealed = true;
+    state.isRevealing = true;
+
+    this.awardMatchupPoints(matchup, this.eligibleVoters(state.activeMatchupIndex).length);
+
+    state.phaseEndsAt = Date.now() + this.durations.matchupRevealMs;
+    this.phaseTimer = setTimeout(() => this.startNextMatchup(), this.durations.matchupRevealMs);
+  }
+
+  private awardMatchupPoints(matchup: MatchupSchema, eligibleCount: number) {
+    if (eligibleCount === 0) return;
+    const state = this.state as GameStateSchema;
+    const [a, b] = matchup.answers;
+    if (!a || !b) return;
+    if (a.votes === b.votes) return;
+    const winnerAnswer = a.votes > b.votes ? a : b;
+    const winnerId = this.answerAuthors.get(winnerAnswer.id);
+    if (!winnerId) return;
+    const points = Math.floor(eligibleCount * 0.5) + 1;
+    const current = state.scores.get(winnerId) ?? 0;
+    state.scores.set(winnerId, current + points);
+    logger.debug(`[SCORING] ${winnerId} awarded ${points} points`);
   }
 
   private enterResults() {
@@ -526,21 +627,12 @@ export class GameRoom<TState = unknown> extends Room {
     logger.info(`Results started, revealing for ${this.durations.matchupRevealMs}ms`);
   }
 
-  private calculateScores(_state: GameStateSchema) {
-    // Plan 09 will implement scoring based on matchup answers.
-    logger.debug("Scores updated");
-  }
-
   private resolveResults() {
     this.clearPhaseTimer();
     const state = this.state as GameStateSchema;
     if (state.phase !== "Results") return;
-    if (state.round >= state.maxRounds) {
-      logger.info("Game over, final scores:", Object.fromEntries(state.scores));
-      return;
-    }
-    state.round++;
-    logger.info(`Starting round ${state.round}`);
+    state.roundNumber++;
+    logger.info(`Starting round ${state.roundNumber}`);
     this.machine.send({
       type: "ACTION",
       phase: "Results",
@@ -560,14 +652,12 @@ export class GameRoom<TState = unknown> extends Room {
   }
 
   private rekeyPromptingState(oldSessionId: string, newSessionId: string) {
-    // Re-key assignments
     const assigned = this.assignments.get(oldSessionId);
     if (assigned) {
       this.assignments.delete(oldSessionId);
       this.assignments.set(newSessionId, assigned);
     }
 
-    // Re-key drafts
     for (const [key, value] of this.drafts) {
       if (key.startsWith(`${oldSessionId}:`)) {
         this.drafts.delete(key);
@@ -575,11 +665,19 @@ export class GameRoom<TState = unknown> extends Room {
       }
     }
 
-    // Re-key answerAuthors
     for (const [answerId, sessionId] of this.answerAuthors) {
       if (sessionId === oldSessionId) {
         this.answerAuthors.set(answerId, newSessionId);
       }
+    }
+  }
+
+  private rekeyVotingState(oldSessionId: string, newSessionId: string) {
+    const state = this.state as GameStateSchema;
+    const vote = state.answerVotes.get(oldSessionId);
+    if (vote !== undefined) {
+      state.answerVotes.delete(oldSessionId);
+      state.answerVotes.set(newSessionId, vote);
     }
   }
 
@@ -611,8 +709,10 @@ export class GameRoom<TState = unknown> extends Room {
     const remainingHosts = players.filter((p) => p.role === "host");
     if (remainingHosts.length > 0) return;
     const newHost = players.find((p) => p.isConnected) || players[0];
-    newHost.role = "host";
-    logger.info(`Player ${newHost.name} promoted to host`);
+    if (newHost) {
+      newHost.role = "host";
+      logger.info(`Player ${newHost.name} promoted to host`);
+    }
   }
 
   private scheduleDisposeIfEmpty(state: GameStateSchema) {
@@ -624,7 +724,7 @@ export class GameRoom<TState = unknown> extends Room {
       const stillEmpty = !Array.from(state.players.values()).some((p) => p.isConnected);
       if (stillEmpty) {
         this.lock();
-        this._events.emit("dispose");
+        (this as unknown as { _events: { emit: (event: string) => void } })._events.emit("dispose");
       }
     }, graceMs);
   }
@@ -659,6 +759,11 @@ export class GameRoom<TState = unknown> extends Room {
         if (state.phase === "Prompting") {
           this.rekeyPromptingState(oldSessionId, client.sessionId);
           this.sendPromptsTo(client);
+        }
+
+        // Re-key votes if reconnecting during Voting
+        if (state.phase === "Voting") {
+          this.rekeyVotingState(oldSessionId, client.sessionId);
         }
 
         logger.info(`Client ${client.sessionId} reconnected as ${existingPlayer.name}`);

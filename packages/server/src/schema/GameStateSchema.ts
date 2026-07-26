@@ -20,6 +20,9 @@ export class GameStateSchema extends Schema {
   @type("number") answersSubmitted = 0;
   @type("number") answersExpected = 0;
   @type({ map: "number" }) scores: MapSchema<number>;
+  @type("number") activeMatchupIndex = -1;
+  @type("boolean") isRevealing = false;
+  @type({ map: "string" }) answerVotes: MapSchema<string>;
 
   constructor() {
     super();
@@ -28,5 +31,6 @@ export class GameStateSchema extends Schema {
     this.categoryVotes = new MapSchema<string>();
     this.matchups = new ArraySchema<MatchupSchema>();
     this.scores = new MapSchema<number>();
+    this.answerVotes = new MapSchema<string>();
   }
 }
