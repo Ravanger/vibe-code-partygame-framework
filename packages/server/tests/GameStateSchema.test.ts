@@ -31,12 +31,6 @@ test("should instantiate with defaults", () => {
   expect(state.selectedCategory).toBe("");
 });
 
-test("should have currentVotingOptions as ArraySchema", () => {
-  const state = new GameStateSchema();
-  expect(state.currentVotingOptions).toBeInstanceOf(ArraySchema);
-  expect([...state.currentVotingOptions]).toEqual([]);
-});
-
 test("should allow setting phase", () => {
   const state = new GameStateSchema();
   state.phase = "playing";
@@ -64,12 +58,6 @@ test("should allow setting publicData", () => {
   const state = new GameStateSchema();
   state.publicData = '{"score": 100}';
   expect(state.publicData).toBe('{"score": 100}');
-});
-
-test("should allow adding to currentVotingOptions", () => {
-  const state = new GameStateSchema();
-  state.currentVotingOptions.push("option1");
-  expect([...state.currentVotingOptions]).toContain("option1");
 });
 
 describe("Plan 07: category voting fields", () => {

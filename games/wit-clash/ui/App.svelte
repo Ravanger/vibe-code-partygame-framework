@@ -3,6 +3,8 @@ import type { GameConnectionManager } from "@partygame/game-client/connection";
 // biome-ignore lint/correctness/noUnusedImports: used in template
 import CategoryVote from "./screens/CategoryVote.svelte";
 // biome-ignore lint/correctness/noUnusedImports: used in template
+import Prompting from "./screens/Prompting.svelte";
+// biome-ignore lint/correctness/noUnusedImports: used in template
 import WaitingRoom from "./screens/WaitingRoom.svelte";
 // biome-ignore lint/correctness/noUnusedImports: used in template
 import Welcome from "./screens/Welcome.svelte";
@@ -28,6 +30,8 @@ const vm = new AppViewModel(manager);
       <WaitingRoom {manager} />
     {:else if vm.screen === 'category-vote'}
       <CategoryVote {manager} />
+    {:else if vm.screen === 'prompting'}
+      <Prompting {manager} />
     {:else}
       <p class="unsupported">This part of the game isn't built yet (phase: {vm.phase}).</p>
     {/if}

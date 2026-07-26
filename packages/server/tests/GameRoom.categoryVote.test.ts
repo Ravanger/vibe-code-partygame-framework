@@ -1,13 +1,21 @@
 import type { ColyseusTestServer } from "@colyseus/testing";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { bootTestServer, seatPlayers, sleep } from "./helpers/harness.js";
+import type { PhaseDurations } from "../src/rooms/GameRoom.js";
 
 const TEST_DURATIONS_CATEGORY_VOTE_MS = 500;
 
 describe("GameRoom — Category Vote phase", () => {
   let colyseus: ColyseusTestServer;
+  const durations: PhaseDurations = {
+    categoryVoteMs: TEST_DURATIONS_CATEGORY_VOTE_MS,
+    promptMs: 10000,
+    matchupVoteMs: 60,
+    matchupRevealMs: 30,
+    emptyRoomGraceMs: 200,
+  };
   beforeAll(async () => {
-    colyseus = await bootTestServer();
+    colyseus = await bootTestServer(durations);
   });
   afterEach(async () => {
     await colyseus.cleanup();

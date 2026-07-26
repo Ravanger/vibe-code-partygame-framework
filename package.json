@@ -36,6 +36,7 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
-    "@colyseus/tools": "0.17.19"
+    "@colyseus/tools": "0.17.19",
+    "svelte": "5.53.0"
   }
 }

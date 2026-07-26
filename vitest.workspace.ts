@@ -1,7 +1,13 @@
-export default [
-  { name: "@partygame/shared", config: "packages/shared/vitest.config.ts" },
-  { name: "@partygame/core", config: "packages/core/vitest.config.ts" },
-  { name: "@partygame/server", config: "packages/server/vitest.config.ts" },
-  { name: "@partygame/game-client", config: "packages/game-client/vitest.config.ts" },
-  { name: "@partygame/wit-clash", config: "games/wit-clash/vitest.config.ts" },
-];
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  test: {
+    projects: [
+      "packages/shared/vitest.config.ts",
+      "packages/core/vitest.config.ts",
+      "packages/server/vitest.config.ts",
+      "packages/game-client/vitest.config.ts",
+      "games/wit-clash/vitest.config.ts",
+    ],
+  },
+});

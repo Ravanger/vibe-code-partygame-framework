@@ -3,12 +3,15 @@ import type { GameDefinition } from "@partygame/core";
 import { buildXStateMachine } from "@partygame/core";
 import { GameActionSchema, SetNameSchema } from "@partygame/shared";
 import { type AnyActorRef, createActor } from "xstate";
-import type { CategoryRepository } from "../../../games/wit-clash/src/content/CategoryRepository.js";
+import type { CategoryRepository } from "../../../../games/wit-clash/src/content/CategoryRepository.js";
+import { shuffle } from "../../../../games/wit-clash/src/content/CategoryRepository.js";
+import { AnswerSchema } from "../schema/AnswerSchema.js";
 import { CategoryOptionSchema } from "../schema/CategoryOptionSchema.js";
 import { GameStateSchema } from "../schema/GameStateSchema.js";
 import { MatchupSchema } from "../schema/MatchupSchema.js";
 import { PlayerSchema } from "../schema/PlayerSchema.js";
 import type { RoomCodeService } from "../services/RoomCodeService.js";
+import { buildMatchups } from "./buildMatchups.js";
 import { resolveCategoryVote } from "./resolveCategoryVote.js";
 
 export interface PhaseDurations {
@@ -28,8 +31,8 @@ export const DEFAULT_DURATIONS: PhaseDurations = {
 };
 
 export const TEST_DURATIONS: PhaseDurations = {
-  categoryVoteMs: 500,
-  promptMs: 5000,
+  categoryVoteMs: 80,
+  promptMs: 80,
   matchupVoteMs: 60,
   matchupRevealMs: 30,
   emptyRoomGraceMs: 200,
@@ -60,6 +63,14 @@ export class GameRoom<TState = unknown> extends Room {
   private phaseTimer: ReturnType<typeof setTimeout> | null = null;
   private serverNowTimer: ReturnType<typeof setInterval> | null = null;
   private voteResolved = false;
+  private promptResolved = false;
+  private answerAuthors = new Map<string, string>();
+  private assignments = new Map<string, string[]>();
+  private drafts = new Map<string, string>();
+
+  get rng(): () => number {
+    return Math.random;
+  }
 
   constructor(
     roomCodeService?: RoomCodeService,
@@ -114,7 +125,6 @@ export class GameRoom<TState = unknown> extends Room {
 
     this.machine = createActor(buildXStateMachine(this.gameDefinition));
     this.machine.subscribe((snapshot) => {
-      logger.debug("Machine state changed:", snapshot.value);
       const state = this.state as GameStateSchema;
       const prevPhase = state.phase;
       state.phase = snapshot.context.currentPhase;
@@ -342,10 +352,10 @@ export class GameRoom<TState = unknown> extends Room {
     this.machine.send({
       type: "ACTION",
       phase: "CategorySelection",
-      name: "VOTE_CATEGORY",
+      name: "RESOLVE_CATEGORY_VOTE",
       clientId: "__server__",
-      role: "player",
-      data: { categoryId: winnerId },
+      role: "host",
+      data: undefined,
       timestamp: Date.now(),
     });
 
@@ -358,49 +368,115 @@ export class GameRoom<TState = unknown> extends Room {
       logger.error("Cannot enter Prompting: no categories or selected category");
       return;
     }
-    const prompt = this.categories.randomPrompt(state.selectedCategory);
-    if (!prompt) {
-      logger.error(`No prompts found for category ${state.selectedCategory}`);
-      return;
+
+    state.matchups.clear();
+    this.answerAuthors.clear();
+    this.assignments.clear();
+    this.drafts.clear();
+    this.promptResolved = false;
+    state.roundNumber = Math.max(1, state.roundNumber + 1);
+
+    const players = [...state.players.values()].filter((p) => p.isConnected && p.isReady);
+    const category = this.categories.byId(state.selectedCategory);
+    const planned = buildMatchups(
+      players.map((p) => p.id),
+      category?.prompts ?? [],
+      this.rng,
+    );
+
+    for (const pm of planned) {
+      const m = new MatchupSchema();
+      m.id = crypto.randomUUID();
+      m.index = pm.index;
+      m.promptText = pm.promptText;
+      m.isRevealed = false;
+      state.matchups.push(m);
+      for (const authorId of pm.authorIds) {
+        const list = this.assignments.get(authorId) ?? [];
+        list.push(m.id);
+        this.assignments.set(authorId, list);
+      }
     }
-    state.promptId = prompt.id;
-    state.promptText = prompt.text;
-    state.submittedAnswers.clear();
+
+    state.answersSubmitted = 0;
+    state.answersExpected = [...this.assignments.values()].reduce((n, l) => n + l.length, 0);
+
+    this.sendPromptsToAll();
     state.phaseEndsAt = Date.now() + this.durations.promptMs;
     this.clearPhaseTimer();
-    this.phaseTimer = setTimeout(() => this.resolvePrompting(), this.durations.promptMs);
-    logger.info(`Prompting started: "${prompt.text}", ${this.durations.promptMs}ms`);
+    this.phaseTimer = setTimeout(() => this.finishPrompting(), this.durations.promptMs);
+    logger.info(
+      `Prompting started: ${state.matchups.length} matchups, ${state.answersExpected} answers expected, ${this.durations.promptMs}ms`,
+    );
+  }
+
+  private sendPromptsToAll() {
+    for (const client of this.clients) this.sendPromptsTo(client);
+  }
+
+  private sendPromptsTo(client: Client) {
+    const state = this.state as GameStateSchema;
+    const mine = (this.assignments.get(client.sessionId) ?? []).map((matchupId) => ({
+      matchupId,
+      promptText: state.matchups.find((m) => m.id === matchupId)?.promptText ?? "",
+    }));
+    if (mine.length) client.send("YOUR_PROMPTS", mine);
   }
 
   private handleSubmitAnswer(
     client: Client,
-    player: PlayerSchema,
+    _player: PlayerSchema,
     data: { matchupId: string; answer: string },
   ) {
     const state = this.state as GameStateSchema;
-    if (state.phase !== "Prompting") return;
-    if (state.submittedAnswers.has(client.sessionId)) return;
-    state.submittedAnswers.set(client.sessionId, data.answer);
-    logger.debug(`[SUBMIT_ANSWER] ${player.name} submitted answer`);
-    if (this.allConnectedReadyPlayersSubmitted(state)) {
-      this.resolvePrompting();
+    if (this.promptResolved || state.phase !== "Prompting") return;
+
+    const player = state.players.get(client.sessionId);
+    if (!player?.isConnected) return;
+
+    if (!(this.assignments.get(client.sessionId) ?? []).includes(data.matchupId)) {
+      logger.warn(`[SUBMIT_ANSWER] ${client.sessionId} is not an author of ${data.matchupId}`);
+      return;
     }
+
+    const key = `${data.matchupId}:${client.sessionId}`;
+    const isNew = !this.drafts.has(key);
+    this.drafts.set(key, data.answer);
+
+    if (isNew) state.answersSubmitted += 1;
+    logger.debug(`[SUBMIT_ANSWER] ${player.name} submitted answer (${state.answersSubmitted}/${state.answersExpected})`);
+
+    if (state.answersSubmitted >= state.answersExpected) this.finishPrompting();
   }
 
-  private allConnectedReadyPlayersSubmitted(state: GameStateSchema): boolean {
-    const connectedReady = Array.from(state.players.values()).filter(
-      (p) => p.isConnected && p.isReady,
-    );
-    return (
-      connectedReady.length > 0 && connectedReady.every((p) => state.submittedAnswers.has(p.id))
-    );
-  }
-
-  private resolvePrompting() {
+  private finishPrompting() {
+    if (this.promptResolved) return;
+    this.promptResolved = true;
     this.clearPhaseTimer();
+
     const state = this.state as GameStateSchema;
     if (state.phase !== "Prompting") return;
-    logger.info(`Prompting resolved: ${state.submittedAnswers.size} answers`);
+
+    for (const m of state.matchups) {
+      const authors = [...this.assignments.entries()]
+        .filter(([, ids]) => ids.includes(m.id))
+        .map(([sessionId]) => sessionId);
+
+      const built = authors.map((sessionId) => {
+        const a = new AnswerSchema();
+        a.id = crypto.randomUUID();
+        a.text = this.drafts.get(`${m.id}:${sessionId}`) ?? "(no answer)";
+        a.votes = 0;
+        a.authorId = "";
+        this.answerAuthors.set(a.id, sessionId);
+        return a;
+      });
+
+      for (const a of shuffle(built, this.rng)) m.answers.push(a);
+    }
+
+    state.phaseEndsAt = 0;
+    logger.info(`Prompting resolved: ${state.answersSubmitted} answers submitted`);
     this.machine.send({
       type: "ACTION",
       phase: "Prompting",
@@ -414,79 +490,22 @@ export class GameRoom<TState = unknown> extends Room {
 
   private enterVoting() {
     const state = this.state as GameStateSchema;
-    state.matchups.clear();
-    state.playerVotes.clear();
-    const answers = Array.from(state.submittedAnswers.entries());
-    if (answers.length < 2) {
-      logger.warn("Not enough answers for matchups, skipping voting");
-      this.resolveVoting();
-      return;
-    }
-    const shuffled = this.shuffleAnswers(answers);
-    for (let i = 0; i < shuffled.length - 1; i += 2) {
-      const [playerA, answerA] = shuffled[i]!;
-      const [playerB, answerB] = shuffled[i + 1]!;
-      const matchup = new MatchupSchema();
-      matchup.id = `m${i}`;
-      matchup.answerAId = playerA;
-      matchup.answerA = answerA;
-      matchup.answerBId = playerB;
-      matchup.answerB = answerB;
-      matchup.votesA = 0;
-      matchup.votesB = 0;
-      state.matchups.push(matchup);
-    }
-    state.phaseEndsAt = Date.now() + this.durations.matchupVoteMs;
-    this.clearPhaseTimer();
-    this.phaseTimer = setTimeout(() => this.resolveVoting(), this.durations.matchupVoteMs);
-    logger.info(
-      `Voting started: ${state.matchups.length} matchups, ${this.durations.matchupVoteMs}ms`,
-    );
-  }
-
-  private shuffleAnswers(answers: Array<[string, string]>): Array<[string, string]> {
-    const a = [...answers];
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j]!, a[i]!];
-    }
-    return a;
+    // Matchups already built and populated in finishPrompting.
+    // Plan 09 will implement sequential matchup voting here.
+    logger.info(`Voting started: ${state.matchups.length} matchups ready`);
   }
 
   private handleCastVote(client: Client, player: PlayerSchema, data: { answerId: string }) {
     const state = this.state as GameStateSchema;
     if (state.phase !== "Voting") return;
-    const matchup = state.matchups.find(
-      (m) => m.answerAId === data.answerId || m.answerBId === data.answerId,
-    );
-    if (!matchup) {
-      logger.debug(`[CAST_VOTE] Unknown answer ${data.answerId} from ${client.sessionId}`);
-      return;
-    }
-    if (matchup.answerAId === data.answerId) {
-      matchup.votesA++;
-    } else {
-      matchup.votesB++;
-    }
-    state.playerVotes.set(client.sessionId, data.answerId);
+    // Plan 09 will implement sequential matchup voting.
     logger.debug(`[CAST_VOTE] ${player.name} voted for ${data.answerId}`);
-    if (this.allConnectedReadyPlayersVotedMatchups(state)) {
-      this.resolveVoting();
-    }
-  }
-
-  private allConnectedReadyPlayersVotedMatchups(state: GameStateSchema): boolean {
-    const connectedReady = Array.from(state.players.values()).filter(
-      (p) => p.isConnected && p.isReady,
-    );
-    return connectedReady.length > 0 && connectedReady.every((p) => state.playerVotes.has(p.id));
   }
 
   private resolveVoting() {
-    this.clearPhaseTimer();
     const state = this.state as GameStateSchema;
     if (state.phase !== "Voting") return;
-    logger.info(`Voting resolved: ${state.playerVotes.size} votes`);
+    logger.info("Voting resolved");
     this.machine.send({
       type: "ACTION",
       phase: "Voting",
@@ -500,20 +519,16 @@ export class GameRoom<TState = unknown> extends Room {
 
   private enterResults() {
     const state = this.state as GameStateSchema;
-    this.calculateScores(state);
+    // Plan 09 will implement scoring.
     state.phaseEndsAt = Date.now() + this.durations.matchupRevealMs;
     this.clearPhaseTimer();
     this.phaseTimer = setTimeout(() => this.resolveResults(), this.durations.matchupRevealMs);
     logger.info(`Results started, revealing for ${this.durations.matchupRevealMs}ms`);
   }
 
-  private calculateScores(state: GameStateSchema) {
-    for (const matchup of state.matchups) {
-      const winnerId = matchup.votesA >= matchup.votesB ? matchup.answerAId : matchup.answerBId;
-      const currentScore = state.scores.get(winnerId) ?? 0;
-      state.scores.set(winnerId, currentScore + 1);
-    }
-    logger.debug("Scores updated:", Object.fromEntries(state.scores));
+  private calculateScores(_state: GameStateSchema) {
+    // Plan 09 will implement scoring based on matchup answers.
+    logger.debug("Scores updated");
   }
 
   private resolveResults() {
@@ -541,6 +556,30 @@ export class GameRoom<TState = unknown> extends Room {
     if (this.phaseTimer !== null) {
       clearTimeout(this.phaseTimer);
       this.phaseTimer = null;
+    }
+  }
+
+  private rekeyPromptingState(oldSessionId: string, newSessionId: string) {
+    // Re-key assignments
+    const assigned = this.assignments.get(oldSessionId);
+    if (assigned) {
+      this.assignments.delete(oldSessionId);
+      this.assignments.set(newSessionId, assigned);
+    }
+
+    // Re-key drafts
+    for (const [key, value] of this.drafts) {
+      if (key.startsWith(`${oldSessionId}:`)) {
+        this.drafts.delete(key);
+        this.drafts.set(key.replace(oldSessionId, newSessionId), value);
+      }
+    }
+
+    // Re-key answerAuthors
+    for (const [answerId, sessionId] of this.answerAuthors) {
+      if (sessionId === oldSessionId) {
+        this.answerAuthors.set(answerId, newSessionId);
+      }
     }
   }
 
@@ -610,10 +649,18 @@ export class GameRoom<TState = unknown> extends Room {
         (p) => p.playerId === playerId,
       );
       if (existingPlayer) {
-        state.players.delete(existingPlayer.id);
+        const oldSessionId = existingPlayer.id;
+        state.players.delete(oldSessionId);
         existingPlayer.id = client.sessionId;
         existingPlayer.isConnected = true;
         state.players.set(client.sessionId, existingPlayer);
+
+        // Re-key private maps if reconnecting during Prompting
+        if (state.phase === "Prompting") {
+          this.rekeyPromptingState(oldSessionId, client.sessionId);
+          this.sendPromptsTo(client);
+        }
+
         logger.info(`Client ${client.sessionId} reconnected as ${existingPlayer.name}`);
         return;
       }
@@ -639,6 +686,9 @@ export class GameRoom<TState = unknown> extends Room {
       clearInterval(this.serverNowTimer);
       this.serverNowTimer = null;
     }
+    this.answerAuthors.clear();
+    this.assignments.clear();
+    this.drafts.clear();
     if (this.roomCodeService) {
       const state = this.state as GameStateSchema;
       this.roomCodeService.unregister(state.roomCode);

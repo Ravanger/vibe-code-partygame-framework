@@ -1,13 +1,14 @@
-import path from "node:path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  oxc: false,
   test: {
-    exclude: [
-      "**/node_modules/**",
-      "**/dist/**",
-      "**/coverage/**",
-      "packages/server/tests/helpers/harness.test.ts",
+    projects: [
+      "packages/shared/vitest.config.ts",
+      "packages/core/vitest.config.ts",
+      "packages/server/vitest.config.ts",
+      "packages/game-client/vitest.config.ts",
+      "games/wit-clash/vitest.config.ts",
     ],
     coverage: {
       exclude: [
@@ -24,8 +25,5 @@ export default defineConfig({
       ],
       reportsDirectory: "./.gemini/tmp/coverage",
     },
-    environment: "jsdom",
-    globals: true,
-    setupFiles: [path.resolve("./vitest.setup.ts")],
   },
 });

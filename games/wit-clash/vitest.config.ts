@@ -3,16 +3,19 @@ import { svelte } from "@sveltejs/vite-plugin-svelte";
 import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
 
+console.log("[vitest.config] Loading svelte-ts-runes plugin");
+
 function svelteTsPlugin(): Plugin {
   return {
     name: "svelte-ts-runes",
     enforce: "pre",
     async transform(code: string, id: string) {
+      console.log("[svelte-ts-runes] transform called for:", id);
       if (!id.endsWith(".svelte.ts")) return null;
+      console.log("[svelte-ts-runes] processing .svelte.ts file:", id);
       try {
         const { compileModule } = await import("svelte/compiler");
         const ts = await import("typescript");
-        // Strip TypeScript syntax first (import type, types, etc.)
         const transpiled = ts.transpileModule(code, {
           compilerOptions: {
             module: ts.ModuleKind.ESNext,
@@ -58,6 +61,6 @@ export default defineConfig({
     exclude: ["dist/**", "node_modules/**", "tests/screens/**/*.test.ts"],
     globals: true,
     include: ["tests/**/*.test.ts"],
-    setupFiles: [path.resolve("../../vitest.setup.ts")],
+    setupFiles: [path.resolve(path.dirname(new URL(import.meta.url).pathname), "../../vitest.setup.ts")],
   },
 });

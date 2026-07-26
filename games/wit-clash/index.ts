@@ -51,6 +51,12 @@ export const WitClashGame = defineGame<WitClashState>({
             ctx.state.phase = "Prompting";
           },
         },
+        RESOLVE_CATEGORY_VOTE: {
+          from: "host",
+          handler: (ctx) => {
+            ctx.state.phase = "Prompting";
+          },
+        },
       },
     }),
     Prompting: createPhase({
