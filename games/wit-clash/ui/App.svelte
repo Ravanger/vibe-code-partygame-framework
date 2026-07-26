@@ -7,6 +7,8 @@ import MatchupVote from "./screens/MatchupVote.svelte";
 // biome-ignore lint/correctness/noUnusedImports: used in template
 import Prompting from "./screens/Prompting.svelte";
 // biome-ignore lint/correctness/noUnusedImports: used in template
+import Results from "./screens/Results.svelte";
+// biome-ignore lint/correctness/noUnusedImports: used in template
 import WaitingRoom from "./screens/WaitingRoom.svelte";
 // biome-ignore lint/correctness/noUnusedImports: used in template
 import Welcome from "./screens/Welcome.svelte";
@@ -36,6 +38,8 @@ const vm = new AppViewModel(manager);
       <Prompting {manager} />
     {:else if vm.screen === 'matchup-vote'}
       <MatchupVote {manager} />
+    {:else if vm.screen === 'results'}
+      <Results {manager} />
     {:else}
       <p class="unsupported">This part of the game isn't built yet (phase: {vm.phase}).</p>
     {/if}

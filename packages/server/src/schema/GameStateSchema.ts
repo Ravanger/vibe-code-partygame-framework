@@ -2,6 +2,7 @@ import { ArraySchema, MapSchema, Schema, type } from "@colyseus/schema";
 import { CategoryOptionSchema } from "./CategoryOptionSchema.js";
 import { MatchupSchema } from "./MatchupSchema.js";
 import { PlayerSchema } from "./PlayerSchema.js";
+import { ScoreEntrySchema } from "./ScoreEntrySchema.js";
 
 export class GameStateSchema extends Schema {
   @type("string") phase = "Lobby";
@@ -23,6 +24,9 @@ export class GameStateSchema extends Schema {
   @type("number") activeMatchupIndex = -1;
   @type("boolean") isRevealing = false;
   @type({ map: "string" }) answerVotes: MapSchema<string>;
+  @type({ array: ScoreEntrySchema })
+  scoreboard: ArraySchema<ScoreEntrySchema>;
+  @type("boolean") isFinalRound = false;
 
   constructor() {
     super();
@@ -32,5 +36,6 @@ export class GameStateSchema extends Schema {
     this.matchups = new ArraySchema<MatchupSchema>();
     this.scores = new MapSchema<number>();
     this.answerVotes = new MapSchema<string>();
+    this.scoreboard = new ArraySchema<ScoreEntrySchema>();
   }
 }

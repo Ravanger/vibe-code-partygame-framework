@@ -4,6 +4,7 @@ export { buildXStateMachine } from "./machine.js";
 export * from "./phases/PromptPhase.js";
 export * from "./phases/types.js";
 export * from "./phases/VotePhase.js";
+export * from "./scoring.js";
 export {
   ActionDefinition,
   GameDefinition,

@@ -95,17 +95,19 @@ export const WitClashGame = defineGame<WitClashState>({
     Results: createPhase({
       actions: {
         PLAY_AGAIN: {
-          from: "player",
+          from: "host",
           handler: (ctx) => {
             ctx.state.phase = "Lobby";
+            ctx.state.scores = {};
             ctx.state.prompts = {};
             ctx.state.votes = {};
+            ctx.state.category = "";
           },
         },
         NEXT_ROUND: {
           from: "host",
           handler: (ctx) => {
-            ctx.state.phase = "CategorySelection";
+            ctx.state.phase = "Prompting";
             ctx.state.prompts = {};
             ctx.state.votes = {};
           },

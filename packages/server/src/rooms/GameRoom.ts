@@ -1,6 +1,12 @@
 import { type Client, CloseCode, Room } from "@colyseus/core";
 import type { GameDefinition } from "@partygame/core";
-import { buildXStateMachine } from "@partygame/core";
+import {
+  awardPoints,
+  buildXStateMachine,
+  calculateMatchupAwards,
+  leaderboard,
+  type MatchupAward,
+} from "@partygame/core";
 import { GameActionSchema, SetNameSchema } from "@partygame/shared";
 import { type AnyActorRef, createActor } from "xstate";
 import type { CategoryRepository } from "../../../../games/wit-clash/src/content/CategoryRepository.js";
@@ -10,6 +16,7 @@ import { CategoryOptionSchema } from "../schema/CategoryOptionSchema.js";
 import { GameStateSchema } from "../schema/GameStateSchema.js";
 import { MatchupSchema } from "../schema/MatchupSchema.js";
 import { PlayerSchema } from "../schema/PlayerSchema.js";
+import { ScoreEntrySchema } from "../schema/ScoreEntrySchema.js";
 import type { RoomCodeService } from "../services/RoomCodeService.js";
 import { buildMatchups } from "./buildMatchups.js";
 import { resolveCategoryVote } from "./resolveCategoryVote.js";
@@ -68,6 +75,8 @@ export class GameRoom<TState = unknown> extends Room {
   private answerAuthors = new Map<string, string>();
   private assignments = new Map<string, string[]>();
   private drafts = new Map<string, string>();
+  private scores: Record<string, number> = {};
+  private roundAwards: MatchupAward[] = [];
 
   get rng(): () => number {
     return Math.random;
@@ -96,10 +105,15 @@ export class GameRoom<TState = unknown> extends Room {
     this.gameDefinition = def;
   }
 
-  onCreate() {
+  onCreate(options?: Record<string, unknown>) {
     logger.info("onCreate called");
     this.autoDispose = false;
     const state = new GameStateSchema();
+
+    // Handle totalRounds option (default 3)
+    if (options?.totalRounds && Number(options.totalRounds) > 0) {
+      state.totalRounds = Number(options.totalRounds);
+    }
 
     // Generate and register room code
     if (this.roomCodeService) {
@@ -180,6 +194,18 @@ export class GameRoom<TState = unknown> extends Room {
       if (state.phase === "Voting" && parsedAction.data.type === "CAST_VOTE") {
         this.handleCastVote(client, player, parsedAction.data as { answerId: string });
         return;
+      }
+
+      // Handle Results actions directly
+      if (state.phase === "Results") {
+        if (parsedAction.data.type === "NEXT_ROUND") {
+          this.handleNextRound(client);
+          return;
+        }
+        if (parsedAction.data.type === "PLAY_AGAIN") {
+          this.handlePlayAgain(client);
+          return;
+        }
       }
 
       const phase = this.gameDefinition.phases[state.phase];
@@ -605,43 +631,94 @@ export class GameRoom<TState = unknown> extends Room {
 
   private awardMatchupPoints(matchup: MatchupSchema, eligibleCount: number) {
     if (eligibleCount === 0) return;
-    const state = this.state as GameStateSchema;
-    const [a, b] = matchup.answers;
-    if (!a || !b) return;
-    if (a.votes === b.votes) return;
-    const winnerAnswer = a.votes > b.votes ? a : b;
-    const winnerId = this.answerAuthors.get(winnerAnswer.id);
-    if (!winnerId) return;
-    const points = Math.floor(eligibleCount * 0.5) + 1;
-    const current = state.scores.get(winnerId) ?? 0;
-    state.scores.set(winnerId, current + points);
-    logger.debug(`[SCORING] ${winnerId} awarded ${points} points`);
+    const awards = calculateMatchupAwards(
+      [...matchup.answers].map((a) => ({
+        id: a.id,
+        authorId: a.authorId,
+        votes: a.votes,
+        isPlaceholder: a.text === "(no answer)",
+      })),
+      eligibleCount,
+    );
+    for (const award of awards) {
+      if (award.total > 0) {
+        awardPoints(this.scores, award.playerId, award.total);
+        logger.debug(
+          `[SCORING] ${award.playerId} awarded ${award.total} points (${award.votePoints} votes + ${award.bonusPoints} bonus${award.isClash ? " CLASH!" : ""})`,
+        );
+      }
+    }
+    this.roundAwards.push(...awards);
   }
 
   private enterResults() {
     const state = this.state as GameStateSchema;
-    // Plan 09 will implement scoring.
-    state.phaseEndsAt = Date.now() + this.durations.matchupRevealMs;
     this.clearPhaseTimer();
-    this.phaseTimer = setTimeout(() => this.resolveResults(), this.durations.matchupRevealMs);
-    logger.info(`Results started, revealing for ${this.durations.matchupRevealMs}ms`);
+    state.phaseEndsAt = 0;
+    state.isFinalRound = state.roundNumber >= state.totalRounds;
+    this.rebuildScoreboard();
+    logger.info(
+      `Results started (round ${state.roundNumber}/${state.totalRounds}, final: ${state.isFinalRound})`,
+    );
   }
 
-  private resolveResults() {
-    this.clearPhaseTimer();
+  private rebuildScoreboard() {
     const state = this.state as GameStateSchema;
-    if (state.phase !== "Results") return;
-    state.roundNumber++;
-    logger.info(`Starting round ${state.roundNumber}`);
+    state.scoreboard.clear();
+    for (const { playerId, score } of leaderboard(this.scores)) {
+      const mine = this.roundAwards.filter((a) => a.playerId === playerId);
+      const entry = new ScoreEntrySchema();
+      entry.playerId = playerId;
+      entry.name = state.players.get(playerId)?.name ?? "(left)";
+      entry.score = score;
+      entry.roundPoints = mine.reduce((n, a) => n + a.total, 0);
+      entry.matchupsWon = mine.filter((a) => a.isWinner).length;
+      entry.hadClash = mine.some((a) => a.isClash);
+      state.scoreboard.push(entry);
+    }
+  }
+
+  private handleNextRound(client: Client) {
+    const state = this.state as GameStateSchema;
+    if (state.players.get(client.sessionId)?.role !== "host") return;
+    if (state.isFinalRound) return;
+    this.roundAwards = [];
+    this.enterPrompting();
+    logger.info(`NEXT_ROUND: entering round ${state.roundNumber + 1}`);
+  }
+
+  private handlePlayAgain(client: Client) {
+    const state = this.state as GameStateSchema;
+    if (state.players.get(client.sessionId)?.role !== "host") return;
+
+    this.scores = {};
+    this.roundAwards = [];
+    this.answerAuthors.clear();
+    this.assignments.clear();
+    this.drafts.clear();
+    state.scoreboard.clear();
+    state.matchups.clear();
+    state.answerVotes.clear();
+    state.categoryOptions.clear();
+    state.categoryVotes.clear();
+    state.selectedCategory = "";
+    state.activeMatchupIndex = -1;
+    state.isRevealing = false;
+    state.roundNumber = 0;
+    state.isFinalRound = false;
+    state.phaseEndsAt = 0;
+    state.scores.clear();
+    this.clearPhaseTimer();
     this.machine.send({
       type: "ACTION",
       phase: "Results",
-      name: "NEXT_ROUND",
-      clientId: "__server__",
+      name: "PLAY_AGAIN",
+      clientId: client.sessionId,
       role: "host",
       data: undefined,
       timestamp: Date.now(),
     });
+    logger.info("PLAY_AGAIN: reset to Lobby");
   }
 
   private clearPhaseTimer() {
@@ -764,6 +841,12 @@ export class GameRoom<TState = unknown> extends Room {
         // Re-key votes if reconnecting during Voting
         if (state.phase === "Voting") {
           this.rekeyVotingState(oldSessionId, client.sessionId);
+        }
+
+        // Re-key scores on reconnect so points survive a refresh
+        if (this.scores[oldSessionId] !== undefined) {
+          this.scores[client.sessionId] = this.scores[oldSessionId];
+          delete this.scores[oldSessionId];
         }
 
         logger.info(`Client ${client.sessionId} reconnected as ${existingPlayer.name}`);
