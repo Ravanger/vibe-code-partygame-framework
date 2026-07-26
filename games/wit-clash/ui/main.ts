@@ -8,6 +8,7 @@ const { endpoint, apiPort } = resolveEndpoints();
 const manager = new GameConnectionManager(endpoint, apiPort);
 const target = document.getElementById("app") ?? document.body;
 
+await manager.tryReconnect();
 const app = mount(App, {
   target,
   props: { manager },

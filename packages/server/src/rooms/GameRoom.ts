@@ -1,7 +1,7 @@
+import { type Client, CloseCode, Room } from "@colyseus/core";
 import type { GameDefinition } from "@partygame/core";
 import { buildXStateMachine } from "@partygame/core";
 import { GameActionSchema, SetNameSchema } from "@partygame/shared";
-import { type Client, Room } from "colyseus";
 import { type AnyActorRef, createActor } from "xstate";
 import type { CategoryRepository } from "../../../games/wit-clash/src/content/CategoryRepository.js";
 import { GameStateSchema } from "../schema/GameStateSchema.js";
@@ -80,6 +80,7 @@ export class GameRoom<TState = unknown> extends Room {
 
   onCreate() {
     logger.info("onCreate called");
+    this.autoDispose = false;
     const state = new GameStateSchema();
 
     // Generate and register room code
@@ -180,15 +181,50 @@ export class GameRoom<TState = unknown> extends Room {
     logger.info(`Player ${client.sessionId} name set to ${parsed.data}`);
   }
 
-  onLeave(client: Client, _consented?: boolean) {
-    logger.info(`Client ${client.sessionId} left`);
+  onLeave(client: Client, code?: number) {
+    logger.info(`Client ${client.sessionId} left (code=${code})`);
     const state = this.state as GameStateSchema;
     const player = state.players.get(client.sessionId);
     if (!player) {
       logger.warn(`[onLeave] Unknown session ${client.sessionId}`);
       return;
     }
-    state.players.delete(client.sessionId);
+
+    const isConsented = code === CloseCode.CONSENTED;
+    if (isConsented) {
+      state.players.delete(client.sessionId);
+      this.reassignHostIfNeeded(state);
+      this.scheduleDisposeIfEmpty(state);
+    } else {
+      player.isConnected = false;
+      this.allowReconnection(client, 60);
+      logger.info(`Player ${player.name} disconnected, seat held for reconnection`);
+      this.scheduleDisposeIfEmpty(state);
+    }
+  }
+
+  private reassignHostIfNeeded(state: GameStateSchema) {
+    const players = Array.from(state.players.values());
+    if (players.length === 0) return;
+    const remainingHosts = players.filter((p) => p.role === "host");
+    if (remainingHosts.length > 0) return;
+    const newHost = players.find((p) => p.isConnected) || players[0];
+    newHost.role = "host";
+    logger.info(`Player ${newHost.name} promoted to host`);
+  }
+
+  private scheduleDisposeIfEmpty(state: GameStateSchema) {
+    const hasConnectedPlayers = Array.from(state.players.values()).some((p) => p.isConnected);
+    if (hasConnectedPlayers) return;
+    const graceMs = this.durations.emptyRoomGraceMs;
+    logger.info(`No connected players, scheduling room disposal in ${graceMs}ms`);
+    setTimeout(() => {
+      const stillEmpty = !Array.from(state.players.values()).some((p) => p.isConnected);
+      if (stillEmpty) {
+        this.lock();
+        this._events.emit("dispose");
+      }
+    }, graceMs);
   }
 
   onJoin(client: Client, options?: Record<string, unknown>) {
@@ -203,10 +239,26 @@ export class GameRoom<TState = unknown> extends Room {
     }
 
     const state = this.state as GameStateSchema;
+    const playerId = options?.playerId as string | undefined;
     logger.debug(`Current players before join: ${state.players.size}`);
+
+    if (playerId) {
+      const existingPlayer = Array.from(state.players.values()).find(
+        (p) => p.playerId === playerId,
+      );
+      if (existingPlayer) {
+        state.players.delete(existingPlayer.id);
+        existingPlayer.id = client.sessionId;
+        existingPlayer.isConnected = true;
+        state.players.set(client.sessionId, existingPlayer);
+        logger.info(`Client ${client.sessionId} reconnected as ${existingPlayer.name}`);
+        return;
+      }
+    }
 
     const player = new PlayerSchema();
     player.id = client.sessionId;
+    player.playerId = playerId ?? "";
     player.name = (options?.name as string) || `Player ${client.sessionId.slice(0, 4)}`;
     player.role = state.players.size === 0 ? "host" : "player";
     state.players.set(client.sessionId, player);

@@ -84,7 +84,9 @@
         "xstate": "^5.30.0",
       },
       "devDependencies": {
+        "@colyseus/sdk": "^0.17.40",
         "@colyseus/testing": "^0.17.11",
+        "@colyseus/ws-transport": "^0.17.13",
         "typescript": "^6.0.3",
         "vitest": "^4.1.4",
       },

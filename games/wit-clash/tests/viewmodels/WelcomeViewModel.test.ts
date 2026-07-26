@@ -70,9 +70,11 @@ describe("actions", () => {
   it("clears a stale error when a new attempt begins", async () => {
     const m = fakeManager();
     const vm = new WelcomeViewModel(m as never);
-    vm.setCode("AB"); await vm.join();
+    vm.setCode("AB");
+    await vm.join();
     expect(vm.localError).toBeTruthy();
-    vm.setCode("ABCD"); await vm.join();
+    vm.setCode("ABCD");
+    await vm.join();
     expect(vm.localError).toBeUndefined();
   });
 });
@@ -121,7 +123,8 @@ describe("auto-join from ?code= (D3 regression)", () => {
 
 describe("busy state", () => {
   it("is busy while connecting", () => {
-    const m = fakeManager(); m.connectionStatus = "connecting";
+    const m = fakeManager();
+    m.connectionStatus = "connecting";
     expect(new WelcomeViewModel(m as never).busy).toBe(true);
   });
 });

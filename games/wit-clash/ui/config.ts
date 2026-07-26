@@ -10,3 +10,14 @@ export function resolveEndpoints(): { endpoint: string; apiPort: number } {
   const apiPort = Number(env.VITE_API_PORT ?? 3001);
   return { endpoint: `http://${host}:${gamePort}`, apiPort };
 }
+
+/**
+ * Read minPlayers from VITE_MIN_PLAYERS (default 3).
+ * Standalone so it can be called once and injected into WaitingRoomViewModel
+ * rather than read inline from import.meta.env (which is untestable).
+ */
+export function readMinPlayers(): number {
+  const env = (import.meta as { env?: Record<string, string | undefined> }).env ?? {};
+  const parsed = Number(env.VITE_MIN_PLAYERS);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 3;
+}

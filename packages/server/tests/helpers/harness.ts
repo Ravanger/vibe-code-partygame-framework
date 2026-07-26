@@ -1,15 +1,110 @@
-import { vi } from "vitest";
+import {
+  type Room as ColyseusServerRoom,
+  Deferred,
+  matchMaker,
+  Room,
+  type Server,
+} from "@colyseus/core";
+import { Room as ColyseusClientRoom, ColyseusSDK } from "@colyseus/sdk";
 
-vi.mock("@colyseus/tools", () => ({
-  default: {},
-  listen: () => {
-    throw new Error("unused in tests");
-  },
-}));
+// Patch Room and ClientRoom prototypes (mirrors @colyseus/testing Room.ext.mjs)
+// so tests can use waitForNextPatch, waitForMessage, etc.
+const _originalBroadcastPatch = Room.prototype.broadcastPatch;
+Room.prototype.broadcastPatch = function () {
+  const retVal = _originalBroadcastPatch.call(this);
+  if (this._waitingForPatch) {
+    setTimeout(() => this._waitingForPatch[1].resolve(), this._waitingForPatch[0]);
+  }
+  return retVal;
+};
+(Room.prototype as any).waitForNextPatch = async function (additionalDelay = 0) {
+  this._waitingForPatch = [additionalDelay, new Deferred()];
+  return this._waitingForPatch[1];
+};
 
-import type { Room as ColyseusServerRoom } from "@colyseus/core";
-import type { Room as ColyseusClientRoom } from "@colyseus/sdk";
-import { boot, type ColyseusTestServer } from "@colyseus/testing";
+const _originalClientPatch = ColyseusClientRoom.prototype.patch;
+(ColyseusClientRoom.prototype as any).patch = function () {
+  _originalClientPatch.apply(this, arguments);
+  if (this._waitingForPatch) {
+    setTimeout(() => {
+      this._waitingForPatch[1].resolve([arguments[0], arguments[1]]);
+    }, this._waitingForPatch[0]);
+  }
+};
+(ColyseusClientRoom.prototype as any).waitForNextPatch = async function (additionalDelay = 0) {
+  this._waitingForPatch = [additionalDelay, new Deferred()];
+  return this._waitingForPatch[1];
+};
+
+// Override leave() to accept boolean consented flag (like @colyseus/testing)
+// true = consented (sends LEAVE_ROOM protocol), false = not consented (closes connection)
+const _originalClientLeave = ColyseusClientRoom.prototype.leave;
+(ColyseusClientRoom.prototype as any).leave = async function (consentedOrCode?: boolean | number) {
+  if (typeof consentedOrCode === "boolean") {
+    // Boolean mode: pass directly to SDK which handles LEAVE_ROOM vs close()
+    return _originalClientLeave.call(this, consentedOrCode);
+  }
+  // Number mode: treat as boolean (non-zero = true)
+  return _originalClientLeave.call(this, !!consentedOrCode);
+};
+
+const DEFAULT_TEST_PORT = 2568;
+
+/**
+ * Minimal test server harness that avoids @colyseus/testing entirely.
+ * @colyseus/testing imports @colyseus/tools at module load time, which uses
+ * require() in a .mjs file and fails under both Bun and Node in this repo.
+ */
+export class ColyseusTestServer {
+  public readonly sdk: ColyseusSDK;
+  public readonly http: Record<string, (path: string, opts?: unknown) => Promise<unknown>>;
+
+  constructor(private readonly server: Server) {
+    const hostname = "127.0.0.1";
+    const port = server.port as number;
+    this.sdk = new ColyseusSDK(`ws://${hostname}:${port}`);
+    const httpEndpoint = `http://${hostname}:${port}`;
+    this.http = {
+      get: (segments: string, opts?: unknown) =>
+        fetch(`${httpEndpoint}${segments}`, { method: "GET", ...(opts as RequestInit) }).then((r) =>
+          r.json(),
+        ),
+      post: (segments: string, opts?: unknown) =>
+        fetch(`${httpEndpoint}${segments}`, { method: "POST", ...(opts as RequestInit) }).then(
+          (r) => r.json(),
+        ),
+    };
+  }
+
+  async createRoom(roomName: string, clientOptions: Record<string, unknown> = {}) {
+    const room = await matchMaker.createRoom(roomName, clientOptions);
+    return this.getRoomById(room.roomId);
+  }
+
+  connectTo(room: ColyseusServerRoom, clientOptions: Record<string, unknown> = {}) {
+    return this.sdk.joinById(room.roomId, clientOptions);
+  }
+
+  getRoomById(roomId: string) {
+    return matchMaker.getLocalRoomById(roomId);
+  }
+
+  async cleanup() {
+    await Promise.all(matchMaker.disconnectAll());
+  }
+
+  async shutdown() {
+    await this.server.gracefullyShutdown(false);
+  }
+}
+
+export type ColyseusTestServerType = ColyseusTestServer;
+
+export async function boot(gameServer: Server): Promise<ColyseusTestServer> {
+  await gameServer.listen(DEFAULT_TEST_PORT);
+  return new ColyseusTestServer(gameServer);
+}
+
 import { WitClashGame } from "../../../../games/wit-clash/index.js";
 import { CategoryRepository } from "../../../../games/wit-clash/src/content/CategoryRepository.js";
 import { createGameServer, TEST_DURATIONS } from "../../src/createGameServer.js";
@@ -77,6 +172,7 @@ export function testCategories() {
  */
 export async function bootTestServer(durations?: PhaseDurations): Promise<ColyseusTestServer> {
   const categories = CategoryRepository.fromArray(testCategories());
+  // No transport passed - Server uses @colyseus/ws-transport as default
   return boot(
     createGameServer({
       categories,
@@ -105,5 +201,3 @@ export async function seatPlayers(
   await room.waitForNextPatch();
   return clients;
 }
-
-export type ColyseusTestServerType = ColyseusTestServer;

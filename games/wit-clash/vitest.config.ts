@@ -1,6 +1,6 @@
 import path from "node:path";
-import type { Plugin } from "vite";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
+import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
 
 function svelteTsPlugin(): Plugin {
@@ -61,5 +61,3 @@ export default defineConfig({
     setupFiles: [path.resolve("../../vitest.setup.ts")],
   },
 });
-
-

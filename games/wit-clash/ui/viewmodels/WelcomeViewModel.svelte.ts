@@ -1,5 +1,3 @@
-import { GameConnectionManager } from "@partygame/game-client/connection";
-
 const CODE_PATTERN = /^[A-Z]{4}$/;
 const LAST_ROOM_KEY = "lastRoomCode";
 
@@ -8,10 +6,7 @@ export class WelcomeViewModel {
   localError = $state(undefined);
   #hasAutoJoined = false;
 
-  constructor(
-    manager,
-    urlCode,
-  ) {
+  constructor(manager, urlCode) {
     this.manager = manager;
     this.urlCode = urlCode;
     if (urlCode && CODE_PATTERN.test(urlCode)) this.code = urlCode;
@@ -23,11 +18,18 @@ export class WelcomeViewModel {
   canHost = true;
 
   get previousRoomCode() {
-    try { return localStorage.getItem(LAST_ROOM_KEY) ?? undefined; } catch { return undefined; }
+    try {
+      return localStorage.getItem(LAST_ROOM_KEY) ?? undefined;
+    } catch {
+      return undefined;
+    }
   }
 
   setCode(raw) {
-    this.code = raw.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4);
+    this.code = raw
+      .toUpperCase()
+      .replace(/[^A-Z]/g, "")
+      .slice(0, 4);
   }
 
   async host() {
@@ -42,7 +44,10 @@ export class WelcomeViewModel {
 
   async join() {
     this.localError = undefined;
-    if (!this.codeIsValid) { this.localError = "Game code must be 4 letters (A–Z)."; return; }
+    if (!this.codeIsValid) {
+      this.localError = "Game code must be 4 letters (A–Z).";
+      return;
+    }
     try {
       await this.manager.joinByCode(this.code);
       this.#rememberRoomCode();
@@ -67,7 +72,10 @@ export class WelcomeViewModel {
     await this.join();
   }
 
-  dismissError() { this.localError = undefined; this.manager.reset(); }
+  dismissError() {
+    this.localError = undefined;
+    this.manager.reset();
+  }
 
   /**
    * Read the code from synced state, not from a timer. Fixes D8, which slept
@@ -75,7 +83,13 @@ export class WelcomeViewModel {
    */
   #rememberRoomCode() {
     const code = this.manager.room?.state?.roomCode;
-    if (code) { try { localStorage.setItem(LAST_ROOM_KEY, code); } catch { /* private mode */ } }
+    if (code) {
+      try {
+        localStorage.setItem(LAST_ROOM_KEY, code);
+      } catch {
+        /* private mode */
+      }
+    }
   }
 }
 

@@ -1,10 +1,54 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GameConnectionManager } from "../src/connection.svelte.js";
 
+// Mock localStorage for Bun test runner (not using jsdom)
+const storage: Record<string, string> = {};
+Object.defineProperty(globalThis, "localStorage", {
+  value: {
+    getItem: (key: string) => storage[key] ?? null,
+    setItem: (key: string, value: string) => {
+      storage[key] = value;
+    },
+    removeItem: (key: string) => {
+      delete storage[key];
+    },
+    clear: () => {
+      for (const k of Object.keys(storage)) {
+        delete storage[k];
+      }
+    },
+    get length() {
+      return Object.keys(storage).length;
+    },
+    key: (i: number) => Object.keys(storage)[i] ?? null,
+  },
+  writable: true,
+});
+Object.defineProperty(globalThis, "sessionStorage", {
+  value: {
+    getItem: (key: string) => storage[key] ?? null,
+    setItem: (key: string, value: string) => {
+      storage[key] = value;
+    },
+    removeItem: (key: string) => {
+      delete storage[key];
+    },
+    clear: () => {
+      for (const k of Object.keys(storage)) {
+        delete storage[k];
+      }
+    },
+    get length() {
+      return Object.keys(storage).length;
+    },
+    key: (i: number) => Object.keys(storage)[i] ?? null,
+  },
+  writable: true,
+});
+
 let shouldFail = false;
 
-vi.mock("@colyseus/sdk", async (importOriginal) => {
-  const original = await importOriginal();
+vi.mock("@colyseus/sdk", () => {
   class MockClient {}
 
   // Use prototype methods so tests can override them
@@ -40,7 +84,7 @@ vi.mock("@colyseus/sdk", async (importOriginal) => {
   // Expose MockClient for test overrides via globalThis
   (globalThis as any).__MockClient = MockClient;
 
-  return { ...original, Client: MockClient };
+  return { Client: MockClient };
 });
 
 // biome-ignore lint/suspicious/noExplicitAny: mock class reference
