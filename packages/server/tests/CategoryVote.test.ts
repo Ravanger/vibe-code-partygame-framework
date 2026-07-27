@@ -9,14 +9,18 @@ const opts = [
 
 describe("resolveCategoryVote", () => {
   it("returns the clear plurality winner", () => {
+    // biome-ignore lint/style/noNonNullAssertion: test fixture array elements exist at indices 0, 1, 2
     const o = [{ ...opts[0]!, votes: 3 }, { ...opts[1]!, votes: 1 }, opts[2]!];
     expect(resolveCategoryVote(o, () => 0)).toBe("a");
   });
 
   it("breaks a tie only among the joint leaders", () => {
     const o = [
+      // biome-ignore lint/style/noNonNullAssertion: test fixture array element exists at index 0
       { ...opts[0]!, votes: 2 },
+      // biome-ignore lint/style/noNonNullAssertion: test fixture array element exists at index 1
       { ...opts[1]!, votes: 2 },
+      // biome-ignore lint/style/noNonNullAssertion: test fixture array element exists at index 2
       { ...opts[2]!, votes: 1 },
     ];
     expect(["a", "b"]).toContain(resolveCategoryVote(o, () => 0.99));
@@ -28,6 +32,7 @@ describe("resolveCategoryVote", () => {
   });
 
   it("handles a single option", () => {
+    // biome-ignore lint/style/noNonNullAssertion: test fixture array element exists at index 0
     expect(resolveCategoryVote([opts[0]!], () => 0)).toBe("a");
   });
 

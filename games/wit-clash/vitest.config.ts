@@ -1,4 +1,3 @@
-import path from "node:path";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
@@ -34,8 +33,9 @@ function svelteTsPlugin(): Plugin {
           code: result.js.code,
           map: result.js.map,
         };
-      } catch (e: any) {
-        console.error("[svelte-ts-runes] Failed to compile", id, e.message);
+      } catch (e: unknown) {
+        const err = e instanceof Error ? e : new Error(String(e));
+        console.error("[svelte-ts-runes] Failed to compile", id, err.message);
         throw e;
       }
     },
@@ -46,9 +46,6 @@ export default defineConfig({
   plugins: [
     svelteTsPlugin(),
     svelte({
-      compilerOptions: {
-        mode: "client",
-      },
       emitCss: false,
       preprocess: [],
       experimental: {
@@ -60,12 +57,10 @@ export default defineConfig({
   ],
   test: {
     environment: "jsdom",
-    exclude: ["dist/**", "node_modules/**", "tests/screens/**/*.test.ts"],
+    exclude: ["dist/**", "node_modules/**"],
     globals: true,
     include: ["tests/**/*.test.ts"],
-    setupFiles: [
-      path.resolve(path.dirname(new URL(import.meta.url).pathname), "../../vitest.setup.ts"),
-    ],
+    setupFiles: ["../../vitest.setup.ts"],
     coverage: {
       include: ["src/**/*.ts", "ui/**/*.ts"],
     },

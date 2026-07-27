@@ -46,17 +46,24 @@ describe("ResultsViewModel", () => {
       const state = makeResultsState();
       const vm = new ResultsViewModel(fakeManager({ room: makeFakeRoom({ state }) }) as never);
       expect(vm.scoreboard).toHaveLength(3);
+      // biome-ignore lint/style/noNonNullAssertion: Array index guaranteed to exist
       expect(vm.scoreboard[0]!.name).toBe("Alice");
+      // biome-ignore lint/style/noNonNullAssertion: Array index guaranteed to exist
       expect(vm.scoreboard[0]!.score).toBe(300);
+      // biome-ignore lint/style/noNonNullAssertion: Array index guaranteed to exist
       expect(vm.scoreboard[1]!.name).toBe("Bob");
+      // biome-ignore lint/style/noNonNullAssertion: Array index guaranteed to exist
       expect(vm.scoreboard[2]!.name).toBe("Charlie");
     });
 
     it("adds rank to each entry", () => {
       const state = makeResultsState();
       const vm = new ResultsViewModel(fakeManager({ room: makeFakeRoom({ state }) }) as never);
+      // biome-ignore lint/style/noNonNullAssertion: Array index guaranteed to exist
       expect(vm.scoreboard[0]!.rank).toBe(1);
+      // biome-ignore lint/style/noNonNullAssertion: Array index guaranteed to exist
       expect(vm.scoreboard[1]!.rank).toBe(2);
+      // biome-ignore lint/style/noNonNullAssertion: Array index guaranteed to exist
       expect(vm.scoreboard[2]!.rank).toBe(3);
     });
 
@@ -82,9 +89,13 @@ describe("ResultsViewModel", () => {
         ],
       });
       const vm = new ResultsViewModel(fakeManager({ room: makeFakeRoom({ state }) }) as never);
+      // biome-ignore lint/style/noNonNullAssertion: Array index guaranteed to exist
       expect(vm.scoreboard[0]!.name).toBe("Alice");
+      // biome-ignore lint/style/noNonNullAssertion: Array index guaranteed to exist
       expect(vm.scoreboard[0]!.rank).toBe(1);
+      // biome-ignore lint/style/noNonNullAssertion: Array index guaranteed to exist
       expect(vm.scoreboard[1]!.name).toBe("Bob");
+      // biome-ignore lint/style/noNonNullAssertion: Array index guaranteed to exist
       expect(vm.scoreboard[1]!.rank).toBe(1);
     });
 

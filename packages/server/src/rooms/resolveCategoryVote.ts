@@ -15,9 +15,11 @@ export function resolveCategoryVote(
   const leaders = options.filter((o) => o.votes === maxVotes);
 
   if (leaders.length === 1) {
-    return leaders[0].id;
+    // biome-ignore lint/style/noNonNullAssertion: leaders guaranteed to have 1 element
+    return leaders[0]!.id;
   }
 
   const idx = Math.floor(random() * leaders.length);
-  return leaders[idx].id;
+  // biome-ignore lint/style/noNonNullAssertion: idx guaranteed in bounds by random() < 1
+  return leaders[idx]!.id;
 }

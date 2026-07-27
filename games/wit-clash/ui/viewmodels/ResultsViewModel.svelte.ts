@@ -46,13 +46,13 @@ export interface ScoreboardEntry extends ScoreEntry {
 }
 
 export class ResultsViewModel {
-  constructor(private readonly manager: GameConnectionManager) {}
-
-  private readonly state = $derived(
+  private readonly state = $derived.by(() =>
     this.manager.stateVersion >= 0
       ? (this.manager.room?.state as ResultsState | undefined)
       : undefined,
   );
+
+  constructor(private readonly manager: GameConnectionManager) {}
 
   readonly scoreboard = $derived.by((): ScoreboardEntry[] => {
     const entries = this.state?.scoreboard ?? [];

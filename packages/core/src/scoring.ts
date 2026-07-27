@@ -46,6 +46,7 @@ export function calculateMatchupAwards(
       };
     }
     const votePoints = a.votes * POINTS_PER_VOTE;
+    // biome-ignore lint/style/noNonNullAssertion: leaders array guaranteed non-empty by preceding filter
     const isWinner = leaders.length === 1 && leaders[0]!.id === a.id;
     const isClash =
       isWinner &&

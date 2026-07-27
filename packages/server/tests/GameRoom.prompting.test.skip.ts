@@ -28,7 +28,7 @@ describe("GameRoom — Prompting phase", () => {
     const clients = await seatPlayers(colyseus, room, 3);
     const opts = room.state.categoryOptions;
     for (const client of clients) {
-      client.send("ACTION", { type: "VOTE_CATEGORY", categoryId: opts[0]!.id });
+      client.send("ACTION", { type: "VOTE_CATEGORY", categoryId: opts[0]?.id });
     }
     await room.waitForNextPatch();
     return { room, clients };
@@ -74,17 +74,18 @@ describe("GameRoom — Prompting phase", () => {
     it("sends each player exactly two prompts", async () => {
       const room = await colyseus.createRoom("wit_clash", {});
       const clients = await seatPlayers(colyseus, room, 3);
+      // biome-ignore lint/suspicious/noExplicitAny: test message storage requires any type
       const receivedByClient = clients.map(() => [] as any[]);
       for (let i = 0; i < clients.length; i++) {
-        clients[i]!.onMessage("YOUR_PROMPTS", (msg) => receivedByClient[i]!.push(msg));
+        clients[i]?.onMessage("YOUR_PROMPTS", (msg) => receivedByClient[i]?.push(msg));
       }
       const opts = room.state.categoryOptions;
       for (const client of clients) {
-        client.send("ACTION", { type: "VOTE_CATEGORY", categoryId: opts[0]!.id });
+        client.send("ACTION", { type: "VOTE_CATEGORY", categoryId: opts[0]?.id });
       }
       await room.waitForNextPatch();
       for (let i = 0; i < clients.length; i++) {
-        expect(receivedByClient[i]![0]).toHaveLength(2);
+        expect(receivedByClient[i]?.[0]).toHaveLength(2);
       }
     });
 
@@ -103,7 +104,7 @@ describe("GameRoom — Prompting phase", () => {
       // With ring pairing, clients[0] is in exactly 2 of 3 matchups.
       // Submit to all matchups; answersSubmitted should increase by 2.
       for (const m of room.state.matchups) {
-        clients[0]!.send("ACTION", {
+        clients[0]?.send("ACTION", {
           type: "SUBMIT_ANSWER",
           matchupId: m.id,
           answer: "test answer",
@@ -116,7 +117,7 @@ describe("GameRoom — Prompting phase", () => {
     it("REJECTS an answer for a matchup the player was not assigned", async () => {
       const { room, clients } = await enterPrompting();
       const initialSubmitted = room.state.answersSubmitted;
-      clients[0]!.send("ACTION", {
+      clients[0]?.send("ACTION", {
         type: "SUBMIT_ANSWER",
         matchupId: "not-a-real-id",
         answer: "sneaky",
@@ -128,7 +129,7 @@ describe("GameRoom — Prompting phase", () => {
     it("does not expose answer text in synced state during Prompting", async () => {
       const { room, clients } = await enterPrompting();
       for (const m of room.state.matchups) {
-        clients[0]!.send("ACTION", { type: "SUBMIT_ANSWER", matchupId: m.id, answer: "test" });
+        clients[0]?.send("ACTION", { type: "SUBMIT_ANSWER", matchupId: m.id, answer: "test" });
       }
       await room.waitForNextPatch();
       expect(room.state.matchups.every((m) => m.answers.length === 0)).toBe(true);
@@ -139,11 +140,11 @@ describe("GameRoom — Prompting phase", () => {
       const initialSubmitted = room.state.answersSubmitted;
       // Submit to all matchups twice; answersSubmitted should increase by exactly 2 (not 4)
       for (const m of room.state.matchups) {
-        clients[0]!.send("ACTION", { type: "SUBMIT_ANSWER", matchupId: m.id, answer: "first" });
+        clients[0]?.send("ACTION", { type: "SUBMIT_ANSWER", matchupId: m.id, answer: "first" });
       }
       await room.waitForNextPatch();
       for (const m of room.state.matchups) {
-        clients[0]!.send("ACTION", { type: "SUBMIT_ANSWER", matchupId: m.id, answer: "second" });
+        clients[0]?.send("ACTION", { type: "SUBMIT_ANSWER", matchupId: m.id, answer: "second" });
       }
       await room.waitForNextPatch();
       expect(room.state.answersSubmitted).toBe(initialSubmitted + 2);
@@ -160,9 +161,9 @@ describe("GameRoom — Prompting phase", () => {
       await room.waitForNextPatch();
       await sleep(durations.promptMs + 20);
       const initialSubmitted = room.state.answersSubmitted;
-      clients[0]!.send("ACTION", {
+      clients[0]?.send("ACTION", {
         type: "SUBMIT_ANSWER",
-        matchupId: matchups[0]!.id,
+        matchupId: matchups[0]?.id,
         answer: "late",
       });
       await room.waitForNextPatch();
@@ -186,9 +187,9 @@ describe("GameRoom — Prompting phase", () => {
     it("does not advance when a player has answered only one prompt", async () => {
       const { room, clients } = await enterPrompting();
       const matchups = [...room.state.matchups];
-      clients[0]!.send("ACTION", {
+      clients[0]?.send("ACTION", {
         type: "SUBMIT_ANSWER",
-        matchupId: matchups[0]!.id,
+        matchupId: matchups[0]?.id,
         answer: "test",
       });
       await room.waitForNextPatch();

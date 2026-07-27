@@ -1,19 +1,23 @@
+import type { GameConnectionManager } from "@partygame/game-client/connection";
+
 const CODE_PATTERN = /^[A-Z]{4}$/;
 const LAST_ROOM_KEY = "lastRoomCode";
 
 export class WelcomeViewModel {
   code = $state("");
-  localError = $state(undefined);
+  localError = $state<string | undefined>(undefined);
   #hasAutoJoined = false;
+  manager: GameConnectionManager;
+  urlCode: string | undefined;
 
-  constructor(manager, urlCode) {
+  constructor(manager: GameConnectionManager, urlCode?: string | undefined) {
     this.manager = manager;
     this.urlCode = urlCode;
     if (urlCode && CODE_PATTERN.test(urlCode)) this.code = urlCode;
   }
 
-  codeIsValid = $derived(CODE_PATTERN.test(this.code));
-  busy = $derived(this.manager.connectionStatus === "connecting");
+  codeIsValid = $derived.by(() => CODE_PATTERN.test(this.code));
+  busy = $derived.by(() => this.manager.connectionStatus === "connecting");
   /** Hosting is ALWAYS offered. Hiding it behind stored state was D7. */
   canHost = true;
 
@@ -25,7 +29,7 @@ export class WelcomeViewModel {
     }
   }
 
-  setCode(raw) {
+  setCode(raw: string) {
     this.code = raw
       .toUpperCase()
       .replace(/[^A-Z]/g, "")
@@ -82,7 +86,7 @@ export class WelcomeViewModel {
    * 100ms then 200ms and hoped the state had arrived.
    */
   #rememberRoomCode() {
-    const code = this.manager.room?.state?.roomCode;
+    const code = (this.manager.room?.state as { roomCode?: string } | undefined)?.roomCode;
     if (code) {
       try {
         localStorage.setItem(LAST_ROOM_KEY, code);
@@ -93,4 +97,4 @@ export class WelcomeViewModel {
   }
 }
 
-const message = (e) => (e instanceof Error ? e.message : String(e));
+const message = (e: unknown) => (e instanceof Error ? e.message : String(e));

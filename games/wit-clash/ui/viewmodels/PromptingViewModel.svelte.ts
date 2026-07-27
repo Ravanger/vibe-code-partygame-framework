@@ -13,6 +13,13 @@ export class PromptingViewModel {
   currentIndex = $state(0);
   private drafts = $state<Record<string, string>>({});
   submitted = $state<Record<string, boolean>>({});
+
+  private readonly state = $derived.by(() =>
+    this.manager.stateVersion >= 0
+      ? (this.manager.room?.state as PromptingState | undefined)
+      : undefined,
+  );
+
   readonly countdown: Countdown;
 
   constructor(private readonly manager: GameConnectionManager) {
@@ -20,16 +27,11 @@ export class PromptingViewModel {
       () => this.state?.phaseEndsAt ?? 0,
       () => this.state?.serverNow ?? 0,
     );
+    // biome-ignore lint/suspicious/noExplicitAny: Callback parameter type from room message
     manager.room?.onMessage("YOUR_PROMPTS", (list: any) => {
       this.myPrompts = list;
     });
   }
-
-  private readonly state = $derived(
-    this.manager.stateVersion >= 0
-      ? (this.manager.room?.state as PromptingState | undefined)
-      : undefined,
-  );
 
   readonly current = $derived(this.myPrompts[this.currentIndex]);
   readonly draft = $derived(this.current ? (this.drafts[this.current.matchupId] ?? "") : "");

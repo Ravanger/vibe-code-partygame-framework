@@ -56,6 +56,7 @@ describe("CategorySelectionPhase", () => {
   it("produces an exact known order for a seeded rng", () => {
     const seq = [0.99, 0.5, 0.01];
     let i = 0;
+    // biome-ignore lint/style/noNonNullAssertion: Array bounds guaranteed by modulo operation
     const rng = () => seq[i++ % seq.length]!;
     const result = new CategorySelectionPhase().getRandomCategories(["a", "b", "c", "d"], 4, rng);
     expect(result).toEqual(["c", "a", "b", "d"]);

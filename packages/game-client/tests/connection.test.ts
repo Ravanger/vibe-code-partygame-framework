@@ -82,6 +82,7 @@ vi.mock("@colyseus/sdk", () => {
   );
 
   // Expose MockClient for test overrides via globalThis
+  // biome-ignore lint/suspicious/noExplicitAny: globalThis requires any type assertion
   (globalThis as any).__MockClient = MockClient;
 
   return { Client: MockClient };
@@ -141,14 +142,14 @@ describe("GameConnectionManager", () => {
 
   it("should have room with state when joining by code", async () => {
     // Mock fetch for joinByCode
-    // biome-ignore lint/suspicious/noExplicitAny: mock fetch return type
     global.fetch = vi.fn(() =>
       Promise.resolve({
         ok: true,
         json: () => Promise.resolve({ roomId: "test-room-id" }),
         status: 200,
-      }),
-    ) as any;
+        // biome-ignore lint/suspicious/noExplicitAny: mock response object requires any type for vitest mock
+      } as any),
+    );
 
     const manager = new GameConnectionManager("ws://localhost:2567");
     await manager.joinByCode("TEST");
@@ -181,6 +182,7 @@ describe("GameConnectionManager error reporting", () => {
 
   it("records the failure message when connect fails", async () => {
     const mockFn = vi.fn().mockRejectedValue(new Error("Room not found"));
+    // biome-ignore lint/suspicious/noExplicitAny: mock class prototype manipulation
     (MockClientClass.prototype as any).joinOrCreate = mockFn;
     const m = new GameConnectionManager("http://localhost:2567");
     await expect(m.connect("wit_clash")).rejects.toThrow();
@@ -190,6 +192,7 @@ describe("GameConnectionManager error reporting", () => {
 
   it("records the failure message when create fails", async () => {
     const mockFn = vi.fn().mockRejectedValue(new Error("Server down"));
+    // biome-ignore lint/suspicious/noExplicitAny: mock class prototype manipulation
     (MockClientClass.prototype as any).create = mockFn;
     const m = new GameConnectionManager("http://localhost:2567");
     await expect(m.create("wit_clash")).rejects.toThrow();
@@ -198,11 +201,13 @@ describe("GameConnectionManager error reporting", () => {
   });
 
   it("clears the previous error when a new attempt succeeds", async () => {
+    // biome-ignore lint/suspicious/noExplicitAny: mock class prototype manipulation
     (MockClientClass.prototype as any).joinOrCreate = vi.fn().mockRejectedValue(new Error("first"));
     const m = new GameConnectionManager("http://localhost:2567");
     await expect(m.connect("wit_clash")).rejects.toThrow();
     expect(m.error).toBe("first");
 
+    // biome-ignore lint/suspicious/noExplicitAny: mock class prototype manipulation
     (MockClientClass.prototype as any).joinOrCreate = vi.fn().mockResolvedValue(makeFakeRoom());
     await m.connect("wit_clash");
     expect(m.error).toBeUndefined();
@@ -210,6 +215,7 @@ describe("GameConnectionManager error reporting", () => {
   });
 
   it("reset() returns to a clean disconnected state", async () => {
+    // biome-ignore lint/suspicious/noExplicitAny: mock class prototype manipulation
     (MockClientClass.prototype as any).joinOrCreate = vi.fn().mockRejectedValue(new Error("boom"));
     const m = new GameConnectionManager("http://localhost:2567");
     await expect(m.connect("wit_clash")).rejects.toThrow();
@@ -243,6 +249,7 @@ describe("GameConnectionManager reconnection", () => {
         storedLeaveCallback = cb;
       }),
     });
+    // biome-ignore lint/suspicious/noExplicitAny: mock class prototype manipulation
     (MockClientClass.prototype as any).create = vi.fn().mockResolvedValue(fakeRoom1);
     await m.create("wit_clash");
     expect(m.connectionStatus).toBe("connected");
@@ -255,6 +262,7 @@ describe("GameConnectionManager reconnection", () => {
 
     // Fresh create should work
     const fakeRoom2 = makeFakeRoom({ roomId: "room-2" });
+    // biome-ignore lint/suspicious/noExplicitAny: mock class prototype manipulation
     (MockClientClass.prototype as any).create = vi.fn().mockResolvedValue(fakeRoom2);
     const room = await m.create("wit_clash");
     expect(room.roomId).toBe("room-2");

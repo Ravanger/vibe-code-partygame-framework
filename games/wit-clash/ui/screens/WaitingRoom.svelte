@@ -37,7 +37,9 @@ $effect(() => {
             {#if player.role === "host"}
               <span class="host-badge">Host</span>
             {/if}
-            {!player.isConnected && <span class="disconnected-badge">(Disconnected)</span>}
+            {#if !player.isConnected}
+              <span class="disconnected-badge">(Disconnected)</span>
+            {/if}
           </div>
         </li>
       {/each}

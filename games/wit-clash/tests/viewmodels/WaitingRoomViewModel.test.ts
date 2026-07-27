@@ -17,6 +17,7 @@ describe("WaitingRoomViewModel", () => {
       makePlayer({ id: "other", name: "Them" }),
     ];
     const m = connectedManager(players);
+    // biome-ignore lint/style/noNonNullAssertion: room guaranteed by connectedManager
     m.room!.sessionId = "me";
     const vm = new WaitingRoomViewModel(m as never);
     expect(vm.localPlayer?.id).toBe("me");
@@ -29,6 +30,7 @@ describe("WaitingRoomViewModel", () => {
       makePlayer({ id: "player", role: "player" }),
     ];
     const m = connectedManager(players);
+    // biome-ignore lint/style/noNonNullAssertion: room guaranteed by connectedManager
     m.room!.sessionId = "host";
     const vm = new WaitingRoomViewModel(m as never);
     expect(vm.isHost).toBe(true);
@@ -93,6 +95,7 @@ describe("WaitingRoomViewModel", () => {
     it("is disabled below minPlayers", () => {
       const players = [makePlayer({ id: "a" }), makePlayer({ id: "b" })];
       const m = connectedManager(players);
+      // biome-ignore lint/style/noNonNullAssertion: room guaranteed by connectedManager
       m.room!.sessionId = "a";
       const vm = new WaitingRoomViewModel(m as never);
       expect(vm.canStart).toBe(false);
@@ -105,6 +108,7 @@ describe("WaitingRoomViewModel", () => {
         makePlayer({ id: "c" }),
       ];
       const m = connectedManager(players);
+      // biome-ignore lint/style/noNonNullAssertion: room guaranteed by connectedManager
       m.room!.sessionId = "a";
       const vm = new WaitingRoomViewModel(m as never);
       expect(vm.canStart).toBe(true);
@@ -117,6 +121,7 @@ describe("WaitingRoomViewModel", () => {
         makePlayer({ id: "c", isReady: false }),
       ];
       const m = connectedManager(players);
+      // biome-ignore lint/style/noNonNullAssertion: room guaranteed by connectedManager
       m.room!.sessionId = "a";
       const vm = new WaitingRoomViewModel(m as never);
       expect(vm.readyCount).toBe(2);
@@ -130,6 +135,7 @@ describe("WaitingRoomViewModel", () => {
         makePlayer({ id: "c", isConnected: false }),
       ];
       const m = connectedManager(players);
+      // biome-ignore lint/style/noNonNullAssertion: room guaranteed by connectedManager
       m.room!.sessionId = "a";
       const vm = new WaitingRoomViewModel(m as never);
       expect(vm.readyCount).toBe(2);
@@ -143,6 +149,7 @@ describe("WaitingRoomViewModel", () => {
         makePlayer({ id: "c", role: "player" }),
       ];
       const m = connectedManager(players);
+      // biome-ignore lint/style/noNonNullAssertion: room guaranteed by connectedManager
       m.room!.sessionId = "b";
       const vm = new WaitingRoomViewModel(m as never);
       expect(vm.isHost).toBe(false);
@@ -156,6 +163,7 @@ describe("WaitingRoomViewModel", () => {
         makePlayer({ id: "c" }),
       ];
       const m = connectedManager(players);
+      // biome-ignore lint/style/noNonNullAssertion: room guaranteed by connectedManager
       m.room!.sessionId = "a";
       const vm = new WaitingRoomViewModel(m as never);
       vm.start();
@@ -164,6 +172,7 @@ describe("WaitingRoomViewModel", () => {
 
     it("honours a minPlayers override of 1 so one host can start solo", () => {
       const m = connectedManager([makePlayer({ id: "a", role: "host" })]);
+      // biome-ignore lint/style/noNonNullAssertion: room guaranteed by connectedManager
       m.room!.sessionId = "a";
       const vm = new WaitingRoomViewModel(m as never, 1);
       expect(vm.minPlayers).toBe(1);
@@ -173,6 +182,7 @@ describe("WaitingRoomViewModel", () => {
 
     it("defaults minPlayers to 3 when no override is given", () => {
       const m = connectedManager([makePlayer({ id: "a", role: "host" })]);
+      // biome-ignore lint/style/noNonNullAssertion: room guaranteed by connectedManager
       m.room!.sessionId = "a";
       const vm = new WaitingRoomViewModel(m as never);
       expect(vm.minPlayers).toBe(3);

@@ -29,11 +29,15 @@ describe("GameRoom — Results phase", () => {
   it("enters Results after Voting resolves", async () => {
     const room = await colyseus.createRoom("wit_clash", {});
     const clients = await seatPlayers(colyseus, room, 3);
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees option array is populated
     const categoryId = room.state.categoryOptions[0]!.id;
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees client array is populated
     clients[0]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
     await room.waitForNextPatch();
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees client array is populated
     clients[1]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
     await room.waitForNextPatch();
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees client array is populated
     clients[2]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
     await room.waitForNextPatch();
     for (const matchup of room.state.matchups) {
@@ -54,11 +58,15 @@ describe("GameRoom — Results phase", () => {
   it("calculates scores from matchup results", async () => {
     const room = await colyseus.createRoom("wit_clash", {});
     const clients = await seatPlayers(colyseus, room, 3);
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees option array is populated
     const categoryId = room.state.categoryOptions[0]!.id;
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees client array is populated
     clients[0]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
     await room.waitForNextPatch();
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees client array is populated
     clients[1]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
     await room.waitForNextPatch();
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees client array is populated
     clients[2]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
     await room.waitForNextPatch();
     for (const matchup of room.state.matchups) {
@@ -79,11 +87,15 @@ describe("GameRoom — Results phase", () => {
   it("starts next round after reveal timer", async () => {
     const room = await colyseus.createRoom("wit_clash", {});
     const clients = await seatPlayers(colyseus, room, 3);
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees option array is populated
     const categoryId = room.state.categoryOptions[0]!.id;
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees client array is populated
     clients[0]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
     await room.waitForNextPatch();
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees client array is populated
     clients[1]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
     await room.waitForNextPatch();
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees client array is populated
     clients[2]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
     await room.waitForNextPatch();
     for (const matchup of room.state.matchups) {

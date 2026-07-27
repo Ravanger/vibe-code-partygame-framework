@@ -5,7 +5,10 @@
  *
  * @param env - Environment variables (defaults to import.meta.env). Parameterized for testability.
  */
-export function resolveEndpoints(env = import.meta.env): { endpoint: string; apiPort: number } {
+export function resolveEndpoints(env: Partial<ImportMetaEnv> = import.meta.env): {
+  endpoint: string;
+  apiPort: number;
+} {
   const host = env.VITE_SERVER_HOST ?? window.location.hostname;
   const gamePort = env.VITE_GAME_PORT ?? "2567";
   const apiPort = Number(env.VITE_API_PORT ?? 3001);
@@ -19,7 +22,7 @@ export function resolveEndpoints(env = import.meta.env): { endpoint: string; api
  *
  * @param env - Environment variables (defaults to import.meta.env). Parameterized for testability.
  */
-export function readMinPlayers(env = import.meta.env): number {
+export function readMinPlayers(env: Partial<ImportMetaEnv> = import.meta.env): number {
   const parsed = Number(env.VITE_MIN_PLAYERS);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 3;
 }

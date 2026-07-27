@@ -41,10 +41,9 @@ export function createGameServer<TState = unknown>(deps: GameServerDeps<TState>)
       } else {
         // Fallback: try to import WitClashGame dynamically for production
         // This is used when createGameServer is called without gameDefinition (e.g., from index.ts)
-        const witClashPath = "../../../games/wit-clash/index.js";
-        // @ts-expect-error - Dynamic import of game definition
-        import(witClashPath).then(({ WitClashGame }) => {
-          this.setDefinition(WitClashGame);
+        // biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type
+        import("../../../games/wit-clash/index.js").then((mod: any) => {
+          this.setDefinition(mod.WitClashGame);
         });
       }
       super.onCreate(options);

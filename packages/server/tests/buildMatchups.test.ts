@@ -61,13 +61,13 @@ describe("degenerate sizes", () => {
   it("makes one single-author matchup for one player", () => {
     const ms = buildMatchups(players(1), prompts(4), noShuffle);
     expect(ms).toHaveLength(1);
-    expect(ms[0]!.authorIds).toEqual(["P1"]);
+    expect(ms[0]?.authorIds).toEqual(["P1"]);
   });
 
   it("makes one two-author matchup for two players", () => {
     const ms = buildMatchups(players(2), prompts(4), noShuffle);
     expect(ms).toHaveLength(1);
-    expect(ms[0]!.authorIds).toEqual(expect.arrayContaining(["P1", "P2"]));
+    expect(ms[0]?.authorIds).toEqual(expect.arrayContaining(["P1", "P2"]));
   });
 
   it("returns nothing for zero players", () => {

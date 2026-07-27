@@ -72,6 +72,7 @@ describe("CategoryVoteViewModel", () => {
         { id: "a", name: "A", emoji: "🅰️", votes: 0 },
         { id: "b", name: "B", emoji: "🅱️", votes: 0 },
         { id: "c", name: "C", emoji: "🇨", votes: 0 },
+        // biome-ignore lint/suspicious/noExplicitAny: Test setup uses plain objects
       ] as any,
     });
     const vm = new CategoryVoteViewModel(fakeManager({ room: makeFakeRoom({ state }) }) as never);
@@ -86,6 +87,7 @@ describe("CategoryVoteViewModel", () => {
         { id: "a", name: "A", emoji: "🅰️", votes: 0 },
         { id: "b", name: "B", emoji: "🅱️", votes: 0 },
         { id: "c", name: "C", emoji: "🇨", votes: 0 },
+        // biome-ignore lint/suspicious/noExplicitAny: Test setup uses plain objects
       ] as any,
       categoryVotes: new Map([["me", "b"]]),
     });

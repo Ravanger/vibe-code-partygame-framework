@@ -19,9 +19,18 @@ describe.skip("CategoryVote", () => {
       ],
       categoryVotes: new Map(),
       players: new Map([
-        ["me", { id: "me", isConnected: true, isReady: true }],
-        ["p2", { id: "p2", isConnected: true, isReady: true }],
-        ["p3", { id: "p3", isConnected: true, isReady: true }],
+        [
+          "me",
+          { id: "me", playerId: "me", name: "Me", role: "host", isConnected: true, isReady: true },
+        ],
+        [
+          "p2",
+          { id: "p2", playerId: "p2", name: "P2", role: "guest", isConnected: true, isReady: true },
+        ],
+        [
+          "p3",
+          { id: "p3", playerId: "p3", name: "P3", role: "guest", isConnected: true, isReady: true },
+        ],
       ]),
       ...stateOverrides,
     });

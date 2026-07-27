@@ -17,20 +17,25 @@ Room.prototype.broadcastPatch = function () {
   }
   return retVal;
 };
+// biome-ignore lint/suspicious/noExplicitAny: monkey-patching Room prototype requires any type
 (Room.prototype as any).waitForNextPatch = async function (additionalDelay = 0) {
   this._waitingForPatch = [additionalDelay, new Deferred()];
   return this._waitingForPatch[1];
 };
 
 const _originalClientPatch = ColyseusClientRoom.prototype.patch;
+// biome-ignore lint/suspicious/noExplicitAny: monkey-patching requires any type for method
 (ColyseusClientRoom.prototype as any).patch = function () {
+  // biome-ignore lint/complexity/noArguments: arguments object required for function.apply forwarding
   _originalClientPatch.apply(this, arguments);
   if (this._waitingForPatch) {
     setTimeout(() => {
+      // biome-ignore lint/complexity/noArguments: accessing arguments object for patched method behavior
       this._waitingForPatch[1].resolve([arguments[0], arguments[1]]);
     }, this._waitingForPatch[0]);
   }
 };
+// biome-ignore lint/suspicious/noExplicitAny: monkey-patching ColyseusClientRoom prototype requires any type
 (ColyseusClientRoom.prototype as any).waitForNextPatch = async function (additionalDelay = 0) {
   this._waitingForPatch = [additionalDelay, new Deferred()];
   return this._waitingForPatch[1];
@@ -39,6 +44,7 @@ const _originalClientPatch = ColyseusClientRoom.prototype.patch;
 // Override leave() to accept boolean consented flag (like @colyseus/testing)
 // true = consented (sends LEAVE_ROOM protocol), false = not consented (closes connection)
 const _originalClientLeave = ColyseusClientRoom.prototype.leave;
+// biome-ignore lint/suspicious/noExplicitAny: monkey-patching ColyseusClientRoom.leave requires any type
 (ColyseusClientRoom.prototype as any).leave = async function (consentedOrCode?: boolean | number) {
   if (typeof consentedOrCode === "boolean") {
     // Boolean mode: pass directly to SDK which handles LEAVE_ROOM vs close()

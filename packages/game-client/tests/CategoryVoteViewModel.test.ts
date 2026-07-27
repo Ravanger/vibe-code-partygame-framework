@@ -39,6 +39,7 @@ describe("CategoryVoteViewModel", () => {
       ],
     });
     const send = vi.fn();
+    // biome-ignore lint/suspicious/noExplicitAny: Test setup uses simplified state object
     const vm = new CategoryVoteViewModel(state as any, "player1", send);
 
     expect(vm.categories).toHaveLength(3);
@@ -55,6 +56,7 @@ describe("CategoryVoteViewModel", () => {
       categoryVotes: { player1: "cat2" },
     });
     const send = vi.fn();
+    // biome-ignore lint/suspicious/noExplicitAny: Test setup uses simplified state object
     const vm = new CategoryVoteViewModel(state as any, "player1", send);
 
     expect(vm.selectedCategoryId).toBe("cat2");
@@ -66,6 +68,7 @@ describe("CategoryVoteViewModel", () => {
       categoryVotes: { player2: "cat1" },
     });
     const send = vi.fn();
+    // biome-ignore lint/suspicious/noExplicitAny: Test setup uses simplified state object
     const vm = new CategoryVoteViewModel(state as any, "player1", send);
 
     expect(vm.selectedCategoryId).toBe(null);
@@ -78,6 +81,7 @@ describe("CategoryVoteViewModel", () => {
       serverNow: 50000,
     });
     const send = vi.fn();
+    // biome-ignore lint/suspicious/noExplicitAny: Test setup uses simplified state object
     const vm = new CategoryVoteViewModel(state as any, "player1", send);
 
     expect(vm.canVote).toBe(true);
@@ -89,6 +93,7 @@ describe("CategoryVoteViewModel", () => {
       serverNow: 100001,
     });
     const send = vi.fn();
+    // biome-ignore lint/suspicious/noExplicitAny: Test setup uses simplified state object
     const vm = new CategoryVoteViewModel(state as any, "player1", send);
 
     expect(vm.canVote).toBe(false);
@@ -97,6 +102,7 @@ describe("CategoryVoteViewModel", () => {
   it("should send VOTE_CATEGORY message when selecting a category", () => {
     const state = makeState();
     const send = vi.fn();
+    // biome-ignore lint/suspicious/noExplicitAny: Test setup uses simplified state object
     const vm = new CategoryVoteViewModel(state as any, "player1", send);
 
     vm.selectCategory("cat1");
@@ -109,6 +115,7 @@ describe("CategoryVoteViewModel", () => {
       categoryVotes: { player1: "cat2" },
     });
     const send = vi.fn();
+    // biome-ignore lint/suspicious/noExplicitAny: Test setup uses simplified state object
     const vm = new CategoryVoteViewModel(state as any, "player1", send);
 
     expect(vm.categories[0].selected).toBe(false);
@@ -123,6 +130,7 @@ describe("CategoryVoteViewModel", () => {
       serverNow: now,
     });
     const send = vi.fn();
+    // biome-ignore lint/suspicious/noExplicitAny: Test setup uses simplified state object
     const vm = new CategoryVoteViewModel(state as any, "player1", send);
 
     expect(vm.countdown.secondsLeft).toBe(65);
@@ -132,6 +140,7 @@ describe("CategoryVoteViewModel", () => {
   it("should update when game state changes via sync", () => {
     const state = makeState();
     const send = vi.fn();
+    // biome-ignore lint/suspicious/noExplicitAny: Test setup uses simplified state object
     const vm = new CategoryVoteViewModel(state as any, "player1", send);
 
     expect(vm.hasVoted).toBe(false);
@@ -139,6 +148,7 @@ describe("CategoryVoteViewModel", () => {
     const newState = makeState({
       categoryVotes: { player1: "cat3" },
     });
+    // biome-ignore lint/suspicious/noExplicitAny: Test setup uses simplified state object
     vm.sync(newState as any);
     expect(vm.hasVoted).toBe(true);
     expect(vm.selectedCategoryId).toBe("cat3");
@@ -147,6 +157,7 @@ describe("CategoryVoteViewModel", () => {
   it("should update vote counts when server updates options via sync", () => {
     const state = makeState();
     const send = vi.fn();
+    // biome-ignore lint/suspicious/noExplicitAny: Test setup uses simplified state object
     const vm = new CategoryVoteViewModel(state as any, "player1", send);
 
     expect(vm.categories[0].votes).toBe(0);
@@ -158,6 +169,7 @@ describe("CategoryVoteViewModel", () => {
         { id: "cat3", name: "Three", emoji: "3️⃣", votes: 0 },
       ],
     });
+    // biome-ignore lint/suspicious/noExplicitAny: Test setup uses simplified state object
     vm.sync(newState as any);
     expect(vm.categories[0].votes).toBe(3);
   });
@@ -169,6 +181,7 @@ describe("CategoryVoteViewModel", () => {
       serverNow: now,
     });
     const send = vi.fn();
+    // biome-ignore lint/suspicious/noExplicitAny: Test setup uses simplified state object
     const vm = new CategoryVoteViewModel(state as any, "player1", send);
 
     expect(vm.countdown.secondsLeft).toBe(10);
@@ -177,6 +190,7 @@ describe("CategoryVoteViewModel", () => {
       phaseEndsAt: now + 10_000,
       serverNow: now + 5_000,
     });
+    // biome-ignore lint/suspicious/noExplicitAny: Test setup uses simplified state object
     vm.sync(newState as any);
     expect(vm.countdown.secondsLeft).toBe(5);
   });

@@ -40,22 +40,31 @@ describe("GameRoom — Category Vote phase", () => {
   it("records a vote and increments that option's count", async () => {
     const room = await colyseus.createRoom("wit_clash", {});
     const clients = await seatPlayers(colyseus, room, 3);
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees option array is populated
     const optionId = room.state.categoryOptions[0]!.id;
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees client array is populated
     clients[0]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId: optionId });
     await room.waitForNextPatch();
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees option array is populated
     expect(room.state.categoryOptions[0]!.votes).toBe(1);
   });
 
   it("lets a player change their vote without double-counting", async () => {
     const room = await colyseus.createRoom("wit_clash", {});
     const clients = await seatPlayers(colyseus, room, 3);
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees option array is populated
     const opt0 = room.state.categoryOptions[0]!.id;
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees option array is populated
     const opt1 = room.state.categoryOptions[1]!.id;
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees client array is populated
     clients[0]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId: opt0 });
     await room.waitForNextPatch();
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees client array is populated
     clients[0]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId: opt1 });
     await room.waitForNextPatch();
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees option array is populated
     expect(room.state.categoryOptions[0]!.votes).toBe(0);
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees option array is populated
     expect(room.state.categoryOptions[1]!.votes).toBe(1);
   });
 
@@ -63,6 +72,7 @@ describe("GameRoom — Category Vote phase", () => {
     const room = await colyseus.createRoom("wit_clash", {});
     const clients = await seatPlayers(colyseus, room, 3);
     const initialVotes = room.state.categoryOptions.map((o) => o.votes);
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees client array is populated
     clients[0]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId: "unknown-id" });
     await room.waitForNextPatch();
     const finalVotes = room.state.categoryOptions.map((o) => o.votes);
@@ -73,10 +83,13 @@ describe("GameRoom — Category Vote phase", () => {
     const room = await colyseus.createRoom("wit_clash", {});
     const clients = await seatPlayers(colyseus, room, 3);
     const opts = room.state.categoryOptions;
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees client array is populated
     clients[0]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId: opts[0]!.id });
     await room.waitForNextPatch();
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees client array is populated
     clients[1]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId: opts[0]!.id });
     await room.waitForNextPatch();
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees client array is populated
     clients[2]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId: opts[0]!.id });
     await room.waitForNextPatch();
     expect(room.state.phase).toBe("Prompting");
@@ -94,13 +107,18 @@ describe("GameRoom — Category Vote phase", () => {
     const room = await colyseus.createRoom("wit_clash", {});
     const clients = await seatPlayers(colyseus, room, 3);
     const opts = room.state.categoryOptions;
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees option array is populated
     const opt1 = opts[1]!.id;
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees client array is populated
     clients[0]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId: opts[0]!.id });
     await room.waitForNextPatch();
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees client array is populated
     clients[1]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId: opts[0]!.id });
     await room.waitForNextPatch();
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees client array is populated
     clients[2]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId: opts[0]!.id });
     await room.waitForNextPatch();
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees client array is populated
     clients[0]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId: opt1 });
     await room.waitForNextPatch();
     expect(room.state.phase).toBe("Prompting");
@@ -109,11 +127,14 @@ describe("GameRoom — Category Vote phase", () => {
   it("excludes disconnected players from the all-voted check", async () => {
     const room = await colyseus.createRoom("wit_clash", {});
     const clients = await seatPlayers(colyseus, room, 3);
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees client array is populated
     clients[2]!.leave();
     await room.waitForNextPatch();
     const opts = room.state.categoryOptions;
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees client array is populated
     clients[0]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId: opts[0]!.id });
     await room.waitForNextPatch();
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees client array is populated
     clients[1]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId: opts[0]!.id });
     await room.waitForNextPatch();
     expect(room.state.phase).toBe("Prompting");
@@ -123,10 +144,13 @@ describe("GameRoom — Category Vote phase", () => {
     const room = await colyseus.createRoom("wit_clash", {});
     const clients = await seatPlayers(colyseus, room, 3);
     const opts = room.state.categoryOptions;
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees client array is populated
     clients[0]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId: opts[0]!.id });
     await room.waitForNextPatch();
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees client array is populated
     clients[1]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId: opts[0]!.id });
     await room.waitForNextPatch();
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees client array is populated
     clients[2]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId: opts[0]!.id });
     await room.waitForNextPatch();
     expect(room.state.categoryVotes.size).toBe(0);
@@ -137,10 +161,13 @@ describe("GameRoom — Category Vote phase", () => {
     const room = await colyseus.createRoom("wit_clash", {});
     const clients = await seatPlayers(colyseus, room, 3);
     const opts = room.state.categoryOptions;
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees client array is populated
     clients[0]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId: opts[0]!.id });
     await room.waitForNextPatch();
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees client array is populated
     clients[1]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId: opts[0]!.id });
     await room.waitForNextPatch();
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees client array is populated
     clients[2]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId: opts[0]!.id });
     await room.waitForNextPatch();
     expect(room.state.phase).toBe("Prompting");

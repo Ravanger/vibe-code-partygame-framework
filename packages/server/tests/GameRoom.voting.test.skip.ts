@@ -30,12 +30,12 @@ describe("GameRoom — Voting phase", () => {
   it("enters Voting after Prompting resolves", async () => {
     const room = await colyseus.createRoom("wit_clash", {});
     const clients = await seatPlayers(colyseus, room, 3);
-    const categoryId = room.state.categoryOptions[0]!.id;
-    clients[0]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
+    const categoryId = room.state.categoryOptions[0]?.id;
+    clients[0]?.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
     await room.waitForNextPatch();
-    clients[1]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
+    clients[1]?.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
     await room.waitForNextPatch();
-    clients[2]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
+    clients[2]?.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
     await room.waitForNextPatch();
     expect(room.state.phase).toBe("Prompting");
     // Submit answers for each matchup (ring pairing creates matchups for each player pair)
@@ -57,12 +57,12 @@ describe("GameRoom — Voting phase", () => {
   it("accepts CAST_VOTE from players", async () => {
     const room = await colyseus.createRoom("wit_clash", {});
     const clients = await seatPlayers(colyseus, room, 3);
-    const categoryId = room.state.categoryOptions[0]!.id;
-    clients[0]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
+    const categoryId = room.state.categoryOptions[0]?.id;
+    clients[0]?.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
     await room.waitForNextPatch();
-    clients[1]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
+    clients[1]?.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
     await room.waitForNextPatch();
-    clients[2]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
+    clients[2]?.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
     await room.waitForNextPatch();
     for (const matchup of room.state.matchups) {
       for (const client of clients) {
@@ -76,8 +76,8 @@ describe("GameRoom — Voting phase", () => {
     }
     expect(room.state.phase).toBe("Voting");
     // Plan 09 will implement vote tracking. For now, just verify CAST_VOTE doesn't crash.
-    const answerId = room.state.matchups[0]!.answers[0]!.id;
-    clients[0]!.send("ACTION", { type: "CAST_VOTE", answerId });
+    const answerId = room.state.matchups[0]?.answers[0]?.id;
+    clients[0]?.send("ACTION", { type: "CAST_VOTE", answerId });
     await room.waitForNextPatch();
     expect(room.state.phase).toBe("Voting");
   });
@@ -85,12 +85,12 @@ describe("GameRoom — Voting phase", () => {
   it("transitions when all players vote", async () => {
     const room = await colyseus.createRoom("wit_clash", {});
     const clients = await seatPlayers(colyseus, room, 3);
-    const categoryId = room.state.categoryOptions[0]!.id;
-    clients[0]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
+    const categoryId = room.state.categoryOptions[0]?.id;
+    clients[0]?.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
     await room.waitForNextPatch();
-    clients[1]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
+    clients[1]?.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
     await room.waitForNextPatch();
-    clients[2]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
+    clients[2]?.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
     await room.waitForNextPatch();
     for (const matchup of room.state.matchups) {
       for (const client of clients) {
@@ -104,7 +104,7 @@ describe("GameRoom — Voting phase", () => {
     }
     expect(room.state.phase).toBe("Voting");
     // Plan 09 will implement sequential matchup voting. For now, just verify votes don't crash.
-    const answerId = room.state.matchups[0]!.answers[0]!.id;
+    const answerId = room.state.matchups[0]?.answers[0]?.id;
     for (const client of clients) {
       client.send("ACTION", { type: "CAST_VOTE", answerId });
       await room.waitForNextPatch();
@@ -115,12 +115,12 @@ describe("GameRoom — Voting phase", () => {
   it("transitions when timer expires", async () => {
     const room = await colyseus.createRoom("wit_clash", {});
     const clients = await seatPlayers(colyseus, room, 3);
-    const categoryId = room.state.categoryOptions[0]!.id;
-    clients[0]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
+    const categoryId = room.state.categoryOptions[0]?.id;
+    clients[0]?.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
     await room.waitForNextPatch();
-    clients[1]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
+    clients[1]?.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
     await room.waitForNextPatch();
-    clients[2]!.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
+    clients[2]?.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
     await room.waitForNextPatch();
     for (const matchup of room.state.matchups) {
       for (const client of clients) {

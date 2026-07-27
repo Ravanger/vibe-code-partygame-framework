@@ -8,6 +8,7 @@ describe("PromptingViewModel", () => {
 
   it("shows both assigned prompts", () => {
     const room = makeFakeRoom();
+    // biome-ignore lint/suspicious/noExplicitAny: Callback parameter type from mocked room
     room.onMessage = vi.fn((type: string, cb: (p: any) => void) => {
       if (type === "YOUR_PROMPTS") {
         cb([
@@ -22,6 +23,7 @@ describe("PromptingViewModel", () => {
 
   it("starts on the first prompt", () => {
     const room = makeFakeRoom();
+    // biome-ignore lint/suspicious/noExplicitAny: Callback parameter type from mocked room
     room.onMessage = vi.fn((type: string, cb: (p: any) => void) => {
       if (type === "YOUR_PROMPTS") {
         cb([
@@ -36,6 +38,7 @@ describe("PromptingViewModel", () => {
 
   it("shows an empty draft per prompt", () => {
     const room = makeFakeRoom();
+    // biome-ignore lint/suspicious/noExplicitAny: Callback parameter type from mocked room
     room.onMessage = vi.fn((type: string, cb: (p: any) => void) => {
       if (type === "YOUR_PROMPTS") {
         cb([{ matchupId: "m1", promptText: "Q1" }]);
@@ -47,6 +50,7 @@ describe("PromptingViewModel", () => {
 
   it("keeps drafts separate per prompt", () => {
     const room = makeFakeRoom();
+    // biome-ignore lint/suspicious/noExplicitAny: Callback parameter type from mocked room
     room.onMessage = vi.fn((type: string, cb: (p: any) => void) => {
       if (type === "YOUR_PROMPTS") {
         cb([
@@ -65,6 +69,7 @@ describe("PromptingViewModel", () => {
 
   it("reports remaining characters", () => {
     const room = makeFakeRoom();
+    // biome-ignore lint/suspicious/noExplicitAny: Callback parameter type from mocked room
     room.onMessage = vi.fn((type: string, cb: (p: any) => void) => {
       if (type === "YOUR_PROMPTS") {
         cb([{ matchupId: "m1", promptText: "Q1" }]);
@@ -77,6 +82,7 @@ describe("PromptingViewModel", () => {
 
   it("blocks submit on a blank or whitespace draft", () => {
     const room = makeFakeRoom();
+    // biome-ignore lint/suspicious/noExplicitAny: Callback parameter type from mocked room
     room.onMessage = vi.fn((type: string, cb: (p: any) => void) => {
       if (type === "YOUR_PROMPTS") {
         cb([{ matchupId: "m1", promptText: "Q1" }]);
@@ -89,6 +95,7 @@ describe("PromptingViewModel", () => {
 
   it("blocks submit over 200 characters", () => {
     const room = makeFakeRoom();
+    // biome-ignore lint/suspicious/noExplicitAny: Callback parameter type from mocked room
     room.onMessage = vi.fn((type: string, cb: (p: any) => void) => {
       if (type === "YOUR_PROMPTS") {
         cb([{ matchupId: "m1", promptText: "Q1" }]);
@@ -101,6 +108,7 @@ describe("PromptingViewModel", () => {
 
   it("sends SUBMIT_ANSWER with the matchupId and trimmed text", () => {
     const room = makeFakeRoom();
+    // biome-ignore lint/suspicious/noExplicitAny: Callback parameter type from mocked room
     room.onMessage = vi.fn((type: string, cb: (p: any) => void) => {
       if (type === "YOUR_PROMPTS") {
         cb([{ matchupId: "m0", promptText: "Q1" }]);
@@ -118,6 +126,7 @@ describe("PromptingViewModel", () => {
 
   it("advances to the second prompt after submitting the first", () => {
     const room = makeFakeRoom();
+    // biome-ignore lint/suspicious/noExplicitAny: Callback parameter type from mocked room
     room.onMessage = vi.fn((type: string, cb: (p: any) => void) => {
       if (type === "YOUR_PROMPTS") {
         cb([
@@ -134,6 +143,7 @@ describe("PromptingViewModel", () => {
 
   it("reports allSubmitted only once both are in", () => {
     const room = makeFakeRoom();
+    // biome-ignore lint/suspicious/noExplicitAny: Callback parameter type from mocked room
     room.onMessage = vi.fn((type: string, cb: (p: any) => void) => {
       if (type === "YOUR_PROMPTS") {
         cb([
@@ -154,6 +164,7 @@ describe("PromptingViewModel", () => {
 
   it("still allows editing a submitted answer before the deadline", () => {
     const room = makeFakeRoom();
+    // biome-ignore lint/suspicious/noExplicitAny: Callback parameter type from mocked room
     room.onMessage = vi.fn((type: string, cb: (p: any) => void) => {
       if (type === "YOUR_PROMPTS") {
         cb([{ matchupId: "m0", promptText: "Q1" }]);
@@ -179,6 +190,7 @@ describe("PromptingViewModel", () => {
   it("shows overall progress as '3 of 6 answers in'", () => {
     const state = makeFakeState({ answersSubmitted: 3, answersExpected: 6 });
     const room = makeFakeRoom({ state });
+    // biome-ignore lint/suspicious/noExplicitAny: Callback parameter type from mocked room
     room.onMessage = vi.fn((type: string, cb: (p: any) => void) => {
       if (type === "YOUR_PROMPTS") {
         cb([{ matchupId: "m0", promptText: "Q1" }]);
@@ -190,7 +202,9 @@ describe("PromptingViewModel", () => {
 
   it("handles YOUR_PROMPTS arriving after construction (reconnect)", () => {
     const room = makeFakeRoom();
+    // biome-ignore lint/suspicious/noExplicitAny: Callback parameter type from mocked room
     let callback: (msg: any) => void = () => {};
+    // biome-ignore lint/suspicious/noExplicitAny: Callback parameter type from mocked room
     room.onMessage = vi.fn((type: string, cb: (p: any) => void) => {
       if (type === "YOUR_PROMPTS") {
         callback = cb;
@@ -219,6 +233,7 @@ describe("PromptingViewModel", () => {
       serverNow: Date.now(),
     });
     const room = makeFakeRoom({ state });
+    // biome-ignore lint/suspicious/noExplicitAny: Callback parameter type from mocked room
     room.onMessage = vi.fn((type: string, cb: (p: any) => void) => {
       if (type === "YOUR_PROMPTS") {
         cb([{ matchupId: "m0", promptText: "Q1" }]);

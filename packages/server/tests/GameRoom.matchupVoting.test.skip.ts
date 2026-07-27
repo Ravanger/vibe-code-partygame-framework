@@ -11,14 +11,25 @@ const DURATIONS: PhaseDurations = {
   emptyRoomGraceMs: 200,
 };
 
-function setupRoomWithMatchups(colyseus: ColyseusTestServer, room: any, clients: any[]) {
-  const categoryId = room.state.categoryOptions[0]!.id;
+function setupRoomWithMatchups(
+  _colyseus: ColyseusTestServer,
+  // biome-ignore lint/suspicious/noExplicitAny: test harness uses any for room object
+  room: any,
+  // biome-ignore lint/suspicious/noExplicitAny: test harness uses any for clients array
+  clients: any[],
+) {
+  const categoryId = room.state.categoryOptions[0]?.id;
   for (const client of clients) {
     client.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
   }
 }
 
-function submitAllAnswers(room: any, clients: any[]) {
+function submitAllAnswers(
+  // biome-ignore lint/suspicious/noExplicitAny: test harness uses any for room object
+  room: any,
+  // biome-ignore lint/suspicious/noExplicitAny: test harness uses any for clients array
+  clients: any[],
+) {
   for (const matchup of room.state.matchups) {
     for (const client of clients) {
       client.send("ACTION", {
@@ -30,7 +41,11 @@ function submitAllAnswers(room: any, clients: any[]) {
   }
 }
 
-function answerById(room: any, answerId: string) {
+function answerById(
+  // biome-ignore lint/suspicious/noExplicitAny: test harness uses any for room object
+  room: any,
+  answerId: string,
+) {
   for (const m of room.state.matchups) {
     for (const a of m.answers) {
       if (a.id === answerId) return a;
@@ -122,7 +137,8 @@ describe("GameRoom — matchup voting: CAST_VOTE", () => {
     await room.waitForNextPatch();
     submitAllAnswers(room, clients);
     await room.waitForNextPatch();
-    const a1 = room.state.matchups[0]!.answers[0]!.id;
+    const a1 = room.state.matchups[0]?.answers[0]?.id;
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees clients array has 3 elements
     clients[2]!.send("ACTION", { type: "CAST_VOTE", answerId: a1 });
     await room.waitForNextPatch();
     expect(answerById(room, a1).votes).toBe(1);
@@ -135,7 +151,8 @@ describe("GameRoom — matchup voting: CAST_VOTE", () => {
     await room.waitForNextPatch();
     submitAllAnswers(room, clients);
     await room.waitForNextPatch();
-    const a1 = room.state.matchups[0]!.answers[0]!.id;
+    const a1 = room.state.matchups[0]?.answers[0]?.id;
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees clients array has 3 elements
     clients[0]!.send("ACTION", { type: "CAST_VOTE", answerId: a1 });
     await room.waitForNextPatch();
     expect(answerById(room, a1).votes).toBe(0);
@@ -148,7 +165,8 @@ describe("GameRoom — matchup voting: CAST_VOTE", () => {
     await room.waitForNextPatch();
     submitAllAnswers(room, clients);
     await room.waitForNextPatch();
-    const a1 = room.state.matchups[0]!.answers[0]!.id;
+    const a1 = room.state.matchups[0]?.answers[0]?.id;
+    // biome-ignore lint/style/noNonNullAssertion: test harness guarantees clients array has 3 elements
     clients[1]!.send("ACTION", { type: "CAST_VOTE", answerId: a1 });
     await room.waitForNextPatch();
     expect(answerById(room, a1).votes).toBe(0);
@@ -163,7 +181,7 @@ describe("GameRoom — matchup voting: CAST_VOTE", () => {
     await room.waitForNextPatch();
     const answerInMatchup2 = room.state.matchups[1]?.answers[0]?.id;
     if (answerInMatchup2) {
-      clients[2]!.send("ACTION", { type: "CAST_VOTE", answerId: answerInMatchup2 });
+      clients[2]?.send("ACTION", { type: "CAST_VOTE", answerId: answerInMatchup2 });
       await room.waitForNextPatch();
       expect(answerById(room, answerInMatchup2).votes).toBe(0);
     }
@@ -176,11 +194,11 @@ describe("GameRoom — matchup voting: CAST_VOTE", () => {
     await room.waitForNextPatch();
     submitAllAnswers(room, clients);
     await room.waitForNextPatch();
-    const a1 = room.state.matchups[0]!.answers[0]!.id;
-    const a2 = room.state.matchups[0]!.answers[1]!.id;
-    clients[2]!.send("ACTION", { type: "CAST_VOTE", answerId: a1 });
+    const a1 = room.state.matchups[0]?.answers[0]?.id;
+    const a2 = room.state.matchups[0]?.answers[1]?.id;
+    clients[2]?.send("ACTION", { type: "CAST_VOTE", answerId: a1 });
     await room.waitForNextPatch();
-    clients[2]!.send("ACTION", { type: "CAST_VOTE", answerId: a2 });
+    clients[2]?.send("ACTION", { type: "CAST_VOTE", answerId: a2 });
     await room.waitForNextPatch();
     expect(answerById(room, a1).votes).toBe(0);
     expect(answerById(room, a2).votes).toBe(1);
@@ -194,7 +212,7 @@ describe("GameRoom — matchup voting: CAST_VOTE", () => {
     await room.waitForNextPatch();
     submitAllAnswers(room, clients);
     await room.waitForNextPatch();
-    clients[2]!.send("ACTION", { type: "CAST_VOTE", answerId: "unknown-id" });
+    clients[2]?.send("ACTION", { type: "CAST_VOTE", answerId: "unknown-id" });
     await room.waitForNextPatch();
     expect(room.state.answerVotes.size).toBe(0);
   });
@@ -207,8 +225,8 @@ describe("GameRoom — matchup voting: CAST_VOTE", () => {
     submitAllAnswers(room, clients);
     await room.waitForNextPatch();
     await sleep(DURATIONS.matchupVoteMs + 40);
-    const a1 = room.state.matchups[0]!.answers[0]!.id;
-    clients[2]!.send("ACTION", { type: "CAST_VOTE", answerId: a1 });
+    const a1 = room.state.matchups[0]?.answers[0]?.id;
+    clients[2]?.send("ACTION", { type: "CAST_VOTE", answerId: a1 });
     await room.waitForNextPatch();
     expect(room.state.answerVotes.size).toBe(0);
   });
@@ -223,7 +241,7 @@ describe("GameRoom — matchup voting: CAST_VOTE", () => {
     const notInRoom = await colyseus.connectTo(room, { playerId: "uuid-outside" });
     notInRoom.send("SET_NAME", "Outside");
     await room.waitForNextPatch();
-    const a1 = room.state.matchups[0]!.answers[0]!.id;
+    const a1 = room.state.matchups[0]?.answers[0]?.id;
     notInRoom.send("ACTION", { type: "CAST_VOTE", answerId: a1 });
     await room.waitForNextPatch();
     expect(answerById(room, a1).votes).toBe(0);
@@ -252,7 +270,7 @@ describe("GameRoom — matchup voting: advancing through matchups", () => {
     await room.waitForNextPatch();
     submitAllAnswers(room, clients);
     await room.waitForNextPatch();
-    const a1 = room.state.matchups[0]!.answers[0]!.id;
+    const a1 = room.state.matchups[0]?.answers[0]?.id;
     for (const client of clients) {
       client.send("ACTION", { type: "CAST_VOTE", answerId: a1 });
     }
@@ -331,12 +349,12 @@ describe("GameRoom — matchup voting: advancing through matchups", () => {
     await room.waitForNextPatch();
     submitAllAnswers(room, clients);
     await room.waitForNextPatch();
-    clients[2]!.leave();
+    clients[2]?.leave();
     await room.waitForNextPatch();
-    const a1 = room.state.matchups[0]!.answers[0]!.id;
-    clients[0]!.send("ACTION", { type: "CAST_VOTE", answerId: a1 });
-    clients[1]!.send("ACTION", { type: "CAST_VOTE", answerId: a1 });
-    clients[3]!.send("ACTION", { type: "CAST_VOTE", answerId: a1 });
+    const a1 = room.state.matchups[0]?.answers[0]?.id;
+    clients[0]?.send("ACTION", { type: "CAST_VOTE", answerId: a1 });
+    clients[1]?.send("ACTION", { type: "CAST_VOTE", answerId: a1 });
+    clients[3]?.send("ACTION", { type: "CAST_VOTE", answerId: a1 });
     await room.waitForNextPatch();
     expect(room.state.isRevealing).toBe(true);
   });
@@ -348,7 +366,7 @@ describe("GameRoom — matchup voting: advancing through matchups", () => {
     await room.waitForNextPatch();
     submitAllAnswers(room, clients);
     await room.waitForNextPatch();
-    const a1 = room.state.matchups[0]!.answers[0]!.id;
+    const a1 = room.state.matchups[0]?.answers[0]?.id;
     for (const client of clients) {
       client.send("ACTION", { type: "CAST_VOTE", answerId: a1 });
     }
@@ -364,8 +382,8 @@ describe("GameRoom — matchup voting: advancing through matchups", () => {
     await room.waitForNextPatch();
     submitAllAnswers(room, clients);
     await room.waitForNextPatch();
-    clients[2]!.leave();
-    clients[3]!.leave();
+    clients[2]?.leave();
+    clients[3]?.leave();
     await sleep(DURATIONS.matchupVoteMs + 40);
     expect(room.state.matchups[0].isRevealed).toBe(true);
   });
@@ -393,12 +411,12 @@ describe("GameRoom — matchup voting: scoring hand-off", () => {
     await room.waitForNextPatch();
     submitAllAnswers(room, clients);
     await room.waitForNextPatch();
-    const a1 = room.state.matchups[0]!.answers[0]!.id;
+    const a1 = room.state.matchups[0]?.answers[0]?.id;
     for (const client of clients) {
       client.send("ACTION", { type: "CAST_VOTE", answerId: a1 });
     }
     await room.waitForNextPatch();
-    const initialScore = room.state.scores.get(clients[0]!.sessionId) ?? 0;
+    const initialScore = room.state.scores.get(clients[0]?.sessionId) ?? 0;
     expect(initialScore).toBeGreaterThan(0);
   });
 
@@ -409,14 +427,14 @@ describe("GameRoom — matchup voting: scoring hand-off", () => {
     await room.waitForNextPatch();
     submitAllAnswers(room, clients);
     await room.waitForNextPatch();
-    const a1 = room.state.matchups[0]!.answers[0]!.id;
+    const a1 = room.state.matchups[0]?.answers[0]?.id;
     for (const client of clients) {
       client.send("ACTION", { type: "CAST_VOTE", answerId: a1 });
     }
     await room.waitForNextPatch();
-    const scoreAfterReveal = room.state.scores.get(clients[0]!.sessionId) ?? 0;
+    const scoreAfterReveal = room.state.scores.get(clients[0]?.sessionId) ?? 0;
     await sleep(100);
-    const scoreAfterWait = room.state.scores.get(clients[0]!.sessionId) ?? 0;
+    const scoreAfterWait = room.state.scores.get(clients[0]?.sessionId) ?? 0;
     expect(scoreAfterWait).toBe(scoreAfterReveal);
   });
 });

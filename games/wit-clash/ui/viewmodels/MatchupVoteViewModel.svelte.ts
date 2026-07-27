@@ -34,7 +34,13 @@ export interface VoteAnswer {
 }
 
 export class MatchupVoteViewModel {
-  private readonly countdown: Countdown;
+  private readonly state = $derived.by(() =>
+    this.manager.stateVersion >= 0
+      ? (this.manager.room?.state as VotingState | undefined)
+      : undefined,
+  );
+
+  private countdown: Countdown | undefined;
 
   constructor(private readonly manager: GameConnectionManager) {
     this.countdown = new Countdown(
@@ -43,19 +49,13 @@ export class MatchupVoteViewModel {
     );
   }
 
-  private readonly state = $derived(
-    this.manager.stateVersion >= 0
-      ? (this.manager.room?.state as VotingState | undefined)
-      : undefined,
-  );
-
   private readonly activeMatchup = $derived.by((): Matchup | undefined => {
     const idx = this.state?.activeMatchupIndex;
     if (idx === undefined || idx < 0 || !this.state?.matchups) return undefined;
     return this.state.matchups[idx];
   });
 
-  readonly promptText = $derived(this.activeMatchup?.promptText ?? "");
+  readonly promptText = $derived.by(() => this.activeMatchup?.promptText ?? "");
 
   readonly answers = $derived.by((): VoteAnswer[] => {
     if (!this.activeMatchup) return [];
@@ -67,16 +67,16 @@ export class MatchupVoteViewModel {
     }));
   });
 
-  readonly isRevealed = $derived(this.activeMatchup?.isRevealed ?? false);
+  readonly isRevealed = $derived.by(() => this.activeMatchup?.isRevealed ?? false);
 
-  readonly myVote = $derived(
-    this.state?.answerVotes?.get(this.manager.room?.sessionId ?? "") ?? "",
+  readonly myVote = $derived.by(
+    () => this.state?.answerVotes?.get(this.manager.room?.sessionId ?? "") ?? "",
   );
 
-  readonly totalVotes = $derived(this.answers.reduce((sum, a) => sum + a.votes, 0));
+  readonly totalVotes = $derived.by(() => this.answers.reduce((sum, a) => sum + a.votes, 0));
 
-  readonly secondsLeft = $derived(this.countdown.secondsLeft);
-  readonly isUrgent = $derived(this.countdown.isUrgent);
+  readonly secondsLeft = $derived.by(() => this.countdown?.secondsLeft ?? 0);
+  readonly isUrgent = $derived.by(() => this.countdown?.isUrgent ?? false);
 
   private resolveAuthorName(authorId: string): string {
     if (!authorId || !this.state?.players) return "";
@@ -88,6 +88,6 @@ export class MatchupVoteViewModel {
   }
 
   destroy() {
-    this.countdown.destroy();
+    this.countdown?.destroy();
   }
 }

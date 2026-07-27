@@ -14,6 +14,13 @@ interface LobbyState {
 export class WaitingRoomViewModel {
   draftName = $state("");
   private timer: ReturnType<typeof setTimeout> | undefined;
+  readonly minPlayers: number;
+
+  private readonly state = $derived.by(() =>
+    this.manager.stateVersion >= 0
+      ? (this.manager.room?.state as LobbyState | undefined)
+      : undefined,
+  );
 
   constructor(
     private readonly manager: GameConnectionManager,
@@ -22,27 +29,22 @@ export class WaitingRoomViewModel {
     this.minPlayers = minPlayers;
   }
 
-  private readonly state = $derived(
-    this.manager.stateVersion >= 0
-      ? (this.manager.room?.state as LobbyState | undefined)
-      : undefined,
+  readonly roomCode = $derived.by(() => this.state?.roomCode ?? "");
+  readonly players = $derived.by(() =>
+    this.state?.players ? [...this.state.players.values()] : [],
+  );
+  readonly localPlayer = $derived.by(() =>
+    this.players.find((p) => p.id === this.manager.room?.sessionId),
+  );
+  readonly isHost = $derived.by(() => this.localPlayer?.role === "host");
+  readonly readyCount = $derived.by(
+    () => this.players.filter((p) => p.isReady && p.isConnected).length,
   );
 
-  readonly roomCode = $derived(this.state?.roomCode ?? "");
-  readonly players = $derived(this.state?.players ? [...this.state.players.values()] : []);
-  readonly localPlayer = $derived(this.players.find((p) => p.id === this.manager.room?.sessionId));
-  readonly isHost = $derived(this.localPlayer?.role === "host");
-  readonly readyCount = $derived(this.players.filter((p) => p.isReady && p.isConnected).length);
+  readonly canStart = $derived.by(() => this.isHost && this.readyCount >= this.minPlayers);
 
-  /**
-   * Injected, not read from import.meta.env inline — an inline env read is
-   * untestable. The component passes `readMinPlayers()`; tests pass a literal.
-   */
-  readonly minPlayers: number;
-  readonly canStart = $derived(this.isHost && this.readyCount >= this.minPlayers);
-
-  readonly shareUrl = $derived(
-    `${window.location.origin}${window.location.pathname}?code=${this.roomCode}`,
+  readonly shareUrl = $derived.by(
+    () => `${window.location.origin}${window.location.pathname}?code=${this.roomCode}`,
   );
 
   /** Local draft updates instantly; the server hears one message per burst. */

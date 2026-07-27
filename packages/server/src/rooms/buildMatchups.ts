@@ -20,6 +20,7 @@ export function buildMatchups(
 
   const ring = shuffle(playerIds, rng);
   const pool = shuffle(prompts, rng);
+  // biome-ignore lint/style/noNonNullAssertion: Array bounds guaranteed by modulo operation
   const promptAt = (i: number) => pool[i % pool.length]!.text;
 
   if (ring.length < 3) {
@@ -29,6 +30,7 @@ export function buildMatchups(
   return ring.map((id, j) => ({
     index: j,
     promptText: promptAt(j),
+    // biome-ignore lint/style/noNonNullAssertion: Array bounds guaranteed by modulo operation
     authorIds: [id, ring[(j + 1) % ring.length]!],
   }));
 }
