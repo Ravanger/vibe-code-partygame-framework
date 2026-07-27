@@ -5,18 +5,9 @@ export default defineConfig({
   plugins: [svelte()],
   test: {
     environment: "jsdom",
+    include: ["tests/**/*.test.ts"],
     coverage: {
-      reportsDirectory: "../../.gemini/tmp/coverage",
-      exclude: [
-        "coverage/**",
-        "**/coverage/**",
-        "**/*.d.ts",
-        "**/vitest.config.*",
-        "**/src/types.ts",
-        "**/src/phases/types.ts",
-        "dist/**",
-        "node_modules/**",
-      ],
+      include: ["src/**/*.ts"],
     },
   },
 });

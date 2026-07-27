@@ -1,4 +1,4 @@
-import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PromptingViewModel } from "../../ui/viewmodels/PromptingViewModel.svelte.js";
 import { fakeManager, makeFakeRoom, makeFakeState } from "../helpers/fakes.js";
 

@@ -11,11 +11,7 @@ const DURATIONS: PhaseDurations = {
   emptyRoomGraceMs: 200,
 };
 
-function setupRoomWithMatchups(
-  colyseus: ColyseusTestServer,
-  room: any,
-  clients: any[],
-) {
+function setupRoomWithMatchups(colyseus: ColyseusTestServer, room: any, clients: any[]) {
   const categoryId = room.state.categoryOptions[0]!.id;
   for (const client of clients) {
     client.send("ACTION", { type: "VOTE_CATEGORY", categoryId });
@@ -312,8 +308,7 @@ describe("GameRoom — matchup voting: advancing through matchups", () => {
     submitAllAnswers(room, clients);
     await room.waitForNextPatch();
     const matchupCount = room.state.matchups.length;
-    const totalMs =
-      matchupCount * (DURATIONS.matchupVoteMs + DURATIONS.matchupRevealMs) + 100;
+    const totalMs = matchupCount * (DURATIONS.matchupVoteMs + DURATIONS.matchupRevealMs) + 100;
     await sleep(totalMs);
     expect(room.state.phase).toBe("Results");
   });

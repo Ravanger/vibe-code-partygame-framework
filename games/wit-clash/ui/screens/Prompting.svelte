@@ -10,6 +10,7 @@ $effect(() => {
   return () => vm.destroy();
 });
 
+// biome-ignore lint/correctness/noUnusedVariables: Biome false positive — used in template
 function handleKeydown(e: KeyboardEvent) {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();

@@ -25,8 +25,9 @@
 - `packages/core`: Pure TypeScript game engine logic and DSL (`defineGame`).
 - `packages/server`: Colyseus room implementation and XState integration.
 - `packages/game-client`: Svelte 5 SDK for game clients.
-- `packages/cli`: Scaffolding tool for new games.
-- `games/reference`: Canonical demo game (Quiplash-style).
+- `packages/cli`: Scaffolding tool for new games **(planned, not yet created)**.
+- `games/wit-clash`: Canonical demo game (Quiplash-style).
+- `games/wit-clash/content/categories/`: Host-editable `.jsonc` category files.
 
 ## Library Documentation References
 
@@ -89,6 +90,11 @@ Library-specific documentation is maintained in `.AGENTS/docs/libraries/`. Each 
 - [x] Phase 3: Role-based State Visibility (StateView)
 - [x] Phase 4: Svelte 5 Client SDK
 - [x] Phase 5: Reference Game Implementation (WitClash)
+- [x] Phase 6: Playable loop — Welcome, Waiting Room, Category Voting, Prompting, Answer Voting, Results
+- [x] Phase 7: Reconnection (playerId + reconnectionToken)
+- [x] Phase 8: Host-editable content
+- [ ] Phase 9: Persistence provider (Firebase/Supabase)
+- [ ] Phase 10: QR code join
 
 ## Troubleshooting
 
@@ -165,8 +171,38 @@ Library-specific documentation is maintained in `.AGENTS/docs/libraries/`. Each 
   - Server-side `GameRoom` generates a 4-letter `roomCode` and handles `SET_NAME` messages.
   - `isReady` property on `PlayerSchema` controls player visibility in the lobby list.
 
-### Known Issues & Bugs
-- **Player Sync Bug:** There is an intermittent issue where players joining a lobby may not appear for other players immediately, or the state synchronization between the XState machine and Colyseus state might lag.
-- **XState Phase Transitions:** `START_GAME` action transitions the machine, but ensures that all clients are notified and their UI updates to the next phase (e.g., `CategorySelection`).
-- **Biome False Positives:** `Lobby.svelte` currently has `biome-ignore` for `isHost` being "unused" despite its usage in the template; Biome's Svelte 5 support is still maturing.
-- **Type Casting in Server:** `GameRoom.onJoin` uses manual casting for `options.name` as `options` is `Record<string, unknown>`.
+### Browser shows "Connection Error / Disconnected from server" on every load
+- **Issue:** Every visitor, host or guest, saw the error screen. The app was unusable.
+- **Cause:** A render deadlock in `App.svelte`. `connectionStatus` initialises to `"disconnected"`, and `App.svelte` rendered `<Lobby>` only when `"connected"` while routing `"disconnected"` to an error page. But `<Lobby>` owned the entire Host/Join UI and the auto-create effect — the component that starts a connection was mounted only after a connection existed. Nothing could ever connect.
+- **The server was never at fault.** A live probe confirmed room creation, 4-letter codes, `/api/resolve-code`, second-player join, host/player roles and `SET_NAME` all worked. Do not re-debug the backend for this symptom.
+- **Fix:** `AppViewModel.screen` routes every non-connected status to the Welcome screen; errors render as a dismissible banner there, never as a destination.
+- **Reference:** `games/wit-clash/ui/viewmodels/AppViewModel.svelte.ts`, `.AGENTS/plans/03-screen-router.md`
+
+### Client actions silently rejected
+- **Issue:** Buttons appeared to work but the game never advanced.
+- **Cause:** Three naming schemes. The client sent `START_GAME`, the Zod `GameActionSchema` accepted only `StartGame`, and the phase definitions used a third set. `safeParse` failed and `machine.send` was never reached.
+- **Fix:** All action names are `SCREAMING_SNAKE_CASE` in the schema, the phase definitions and the client. Adding an action means editing all three.
+- **Reference:** `packages/shared/src/schemas/game-actions.ts`, `.AGENTS/plans/01-action-protocol.md`
+
+### Over-mocking makes tests vacuous
+- **Issue:** `vitest.setup.ts` globally replaced `@colyseus/schema`'s `type` decorator with a no-op, so every schema test asserted against plain objects with no serialiser.
+- **Cause:** A workaround for a Bun decorator bug — but Vitest runs on Node, where it is unnecessary.
+- **Fix:** Mock removed. `GameStateSchema.test.ts` now asserts `Symbol.metadata` exists, which fails loudly if anyone re-adds it.
+- **Rule:** Never mock the module under test. This is the second time it hid a real bug — see the GameRoom `onJoin` entry above.
+
+### Biome False Positives
+- `Lobby.svelte` currently has `biome-ignore` for `isHost` being "unused" despite its usage in the template; Biome's Svelte 5 support is still maturing.
+
+### Type Casting in Server
+- `GameRoom.onJoin` uses manual casting for `options.name` as `options` is `Record<string, unknown>`.
+
+## Extension Points
+
+| To add… | Do this |
+|---|---|
+| A category or prompt | Drop a `.jsonc` file into `games/wit-clash/content/categories/` and restart the server. No code change. |
+| A game phase/screen | Add the phase to `games/wit-clash/index.ts`, one line to `PHASE_TO_SCREEN` in `AppViewModel.svelte.ts`, and a screen component. |
+| A client action | Add it to `GameActionSchema`, the phase's `actions`, and a `room.send("ACTION", …)` call. All three, `SCREAMING_SNAKE_CASE`. |
+| A scoring rule | Edit `packages/core/src/scoring.ts`. All score mutation goes through `awardPoints`. |
+| A timed phase | Set `state.phaseEndsAt` server-side and use the `Countdown` view model client-side. The server always owns the clock. |
+| Quiplash-style prompt pairing | Answers already carry a per-answer id and server-private authorship. Add a `promptId` to `AnswerSchema` and assign prompts per player in `enterPrompting`. |

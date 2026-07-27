@@ -15,9 +15,9 @@ export function resolveCategoryVote(
   const leaders = options.filter((o) => o.votes === maxVotes);
 
   if (leaders.length === 1) {
-    return leaders[0]?.id ?? "";
+    return leaders[0].id;
   }
 
   const idx = Math.floor(random() * leaders.length);
-  return leaders[idx]?.id ?? "";
+  return leaders[idx].id;
 }

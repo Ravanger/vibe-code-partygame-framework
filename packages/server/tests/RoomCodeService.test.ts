@@ -43,4 +43,49 @@ describe("RoomCodeService", () => {
     expect(service.resolve(code1)).toBe("room-1");
     expect(service.resolve(code2)).toBe("room-2");
   });
+
+  it("should retry on duplicate code collision", () => {
+    const originalRandom = Math.random;
+    try {
+      Math.random = () => 0;
+      const codeA = service.generateCode();
+      expect(codeA).toBe("AAAA");
+      service.register(codeA, "room-1");
+      let callCount = 0;
+      Math.random = () => {
+        callCount++;
+        return callCount < 4 ? 0 : 0.5;
+      };
+      const codeB = service.generateCode();
+      expect(codeB).not.toBe(codeA);
+    } finally {
+      Math.random = originalRandom;
+    }
+  });
+
+  it("should clean up reverse mapping on unregister", () => {
+    const code = service.generateCode();
+    service.register(code, "room-123");
+    expect(service.resolveByRoomId("room-123")).toBe(code);
+    service.unregister(code);
+    expect(service.resolveByRoomId("room-123")).toBeUndefined();
+  });
+
+  it("should handle unregister of non-existent code", () => {
+    service.unregister("ZZZZ");
+    expect(service.resolve("ZZZZ")).toBeUndefined();
+  });
+
+  it("should throw after max attempts", () => {
+    const originalRandom = Math.random;
+    try {
+      Math.random = () => 0;
+      service.register("AAAA", "room-1");
+      expect(() => service.generateCode()).toThrow(
+        "Failed to generate unique room code after maximum attempts",
+      );
+    } finally {
+      Math.random = originalRandom;
+    }
+  });
 });

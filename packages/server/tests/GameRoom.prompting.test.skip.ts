@@ -1,7 +1,7 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import type { ColyseusTestServer } from "@colyseus/testing";
-import { bootTestServer, sleep, seatPlayers } from "./helpers/harness.js";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import type { PhaseDurations } from "../src/rooms/GameRoom.js";
+import { bootTestServer, seatPlayers, sleep } from "./helpers/harness.js";
 
 describe("GameRoom — Prompting phase", () => {
   let colyseus: ColyseusTestServer;
@@ -103,7 +103,11 @@ describe("GameRoom — Prompting phase", () => {
       // With ring pairing, clients[0] is in exactly 2 of 3 matchups.
       // Submit to all matchups; answersSubmitted should increase by 2.
       for (const m of room.state.matchups) {
-        clients[0]!.send("ACTION", { type: "SUBMIT_ANSWER", matchupId: m.id, answer: "test answer" });
+        clients[0]!.send("ACTION", {
+          type: "SUBMIT_ANSWER",
+          matchupId: m.id,
+          answer: "test answer",
+        });
       }
       await room.waitForNextPatch();
       expect(room.state.answersSubmitted).toBe(initialSubmitted + 2);
@@ -156,7 +160,11 @@ describe("GameRoom — Prompting phase", () => {
       await room.waitForNextPatch();
       await sleep(durations.promptMs + 20);
       const initialSubmitted = room.state.answersSubmitted;
-      clients[0]!.send("ACTION", { type: "SUBMIT_ANSWER", matchupId: matchups[0]!.id, answer: "late" });
+      clients[0]!.send("ACTION", {
+        type: "SUBMIT_ANSWER",
+        matchupId: matchups[0]!.id,
+        answer: "late",
+      });
       await room.waitForNextPatch();
       expect(room.state.answersSubmitted).toBe(initialSubmitted);
     });
@@ -178,7 +186,11 @@ describe("GameRoom — Prompting phase", () => {
     it("does not advance when a player has answered only one prompt", async () => {
       const { room, clients } = await enterPrompting();
       const matchups = [...room.state.matchups];
-      clients[0]!.send("ACTION", { type: "SUBMIT_ANSWER", matchupId: matchups[0]!.id, answer: "test" });
+      clients[0]!.send("ACTION", {
+        type: "SUBMIT_ANSWER",
+        matchupId: matchups[0]!.id,
+        answer: "test",
+      });
       await room.waitForNextPatch();
       expect(room.state.phase).toBe("Prompting");
     });
@@ -201,9 +213,9 @@ describe("GameRoom — Prompting phase", () => {
     it("still hides authorId after the phase ends", async () => {
       const { room } = await enterPrompting();
       await sleep(durations.promptMs + 20);
-      expect(
-        room.state.matchups.every((m) => m.answers.every((a) => a.authorId === "")),
-      ).toBe(true);
+      expect(room.state.matchups.every((m) => m.answers.every((a) => a.authorId === ""))).toBe(
+        true,
+      );
     });
   });
 });

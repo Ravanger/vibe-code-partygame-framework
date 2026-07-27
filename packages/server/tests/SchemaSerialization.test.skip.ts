@@ -1,7 +1,7 @@
+import { ArraySchema, Encoder, Schema, type } from "@colyseus/schema";
 import { describe, expect, it } from "vitest";
-import { GameStateSchema } from "../src/schema/GameStateSchema.js";
 import { CategoryOptionSchema } from "../src/schema/CategoryOptionSchema.js";
-import { Encoder, Schema, type, ArraySchema } from "@colyseus/schema";
+import { GameStateSchema } from "../src/schema/GameStateSchema.js";
 
 class TestChildSchema extends Schema {
   @type("string") name = "";

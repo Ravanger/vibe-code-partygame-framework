@@ -19,12 +19,15 @@
     "launch": "bun run launch.ts",
     "launch:dev": "bun run launch.ts dev",
     "launch:host": "bun run launch.ts host",
-    "launch:prod": "bun run launch.ts prod"
+    "launch:prod": "bun run launch.ts prod",
+    "test:coverage": "vitest run --coverage",
+    "verify": "biome check . && tsc --noEmit -p games/wit-clash/tsconfig.verify.json && vitest run --coverage"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.12",
     "@testing-library/jest-dom": "^6.9.1",
     "@types/jsdom": "^28.0.1",
+    "@vitest/coverage-istanbul": "^4.1.10",
     "@vitest/coverage-v8": "^4.1.4",
     "colyseus": "^0.17.9",
     "jsdom": "^29.0.2",

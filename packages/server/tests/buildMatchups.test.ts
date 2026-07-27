@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { buildMatchups } from "../src/rooms/buildMatchups.js";
 
 const players = (n: number) => Array.from({ length: n }, (_, i) => `P${i + 1}`);
-const prompts = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `q${i}`, text: `Q${i}` }));
+const prompts = (n: number) =>
+  Array.from({ length: n }, (_, i) => ({ id: `q${i}`, text: `Q${i}` }));
 const noShuffle = () => 0;
 
 describe("buildMatchups ring pairing", () => {

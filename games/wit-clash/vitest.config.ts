@@ -12,6 +12,8 @@ function svelteTsPlugin(): Plugin {
     async transform(code: string, id: string) {
       console.log("[svelte-ts-runes] transform called for:", id);
       if (!id.endsWith(".svelte.ts")) return null;
+      // Scope to wit-clash and game-client to avoid interfering with other projects
+      if (!id.includes("games/wit-clash") && !id.includes("packages/game-client")) return null;
       console.log("[svelte-ts-runes] processing .svelte.ts file:", id);
       try {
         const { compileModule } = await import("svelte/compiler");
@@ -61,6 +63,11 @@ export default defineConfig({
     exclude: ["dist/**", "node_modules/**", "tests/screens/**/*.test.ts"],
     globals: true,
     include: ["tests/**/*.test.ts"],
-    setupFiles: [path.resolve(path.dirname(new URL(import.meta.url).pathname), "../../vitest.setup.ts")],
+    setupFiles: [
+      path.resolve(path.dirname(new URL(import.meta.url).pathname), "../../vitest.setup.ts"),
+    ],
+    coverage: {
+      include: ["src/**/*.ts", "ui/**/*.ts"],
+    },
   },
 });

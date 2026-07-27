@@ -1,4 +1,4 @@
-import { ArraySchema, MapSchema } from "@colyseus/schema";
+import { MapSchema } from "@colyseus/schema";
 import { describe, expect, it, test } from "vitest";
 import { CategoryOptionSchema } from "../src/schema/CategoryOptionSchema";
 import { GameStateSchema } from "../src/schema/GameStateSchema";
