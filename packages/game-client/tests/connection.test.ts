@@ -1,52 +1,35 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GameConnectionManager } from "../src/connection.svelte.js";
 
-// Mock localStorage for Bun test runner (not using jsdom)
-const storage: Record<string, string> = {};
-Object.defineProperty(globalThis, "localStorage", {
-  value: {
-    getItem: (key: string) => storage[key] ?? null,
-    setItem: (key: string, value: string) => {
-      storage[key] = value;
-    },
-    removeItem: (key: string) => {
-      delete storage[key];
-    },
-    clear: () => {
-      for (const k of Object.keys(storage)) {
-        delete storage[k];
-      }
-    },
-    get length() {
-      return Object.keys(storage).length;
-    },
-    key: (i: number) => Object.keys(storage)[i] ?? null,
-  },
-  writable: true,
-});
-Object.defineProperty(globalThis, "sessionStorage", {
-  value: {
-    getItem: (key: string) => storage[key] ?? null,
-    setItem: (key: string, value: string) => {
-      storage[key] = value;
-    },
-    removeItem: (key: string) => {
-      delete storage[key];
-    },
-    clear: () => {
-      for (const k of Object.keys(storage)) {
-        delete storage[k];
-      }
-    },
-    get length() {
-      return Object.keys(storage).length;
-    },
-    key: (i: number) => Object.keys(storage)[i] ?? null,
-  },
-  writable: true,
-});
-
 let shouldFail = false;
+let joinByIdShouldWait = false;
+let resolveJoinById: Array<(room: unknown) => void> = [];
+
+const createResolveCodeFetch = () =>
+  vi.fn(() =>
+    Promise.resolve(new Response(JSON.stringify({ roomId: "test-room-id" }), { status: 200 })),
+  );
+
+// A distinct room object per call, so identity assertions about connection reuse mean
+// something — a shared literal would satisfy `toBe` even with no reuse at all.
+const createMockRoom = () => {
+  const state = { phase: "Lobby", roomCode: "TEST", players: new Map() };
+  const stateChangeCallbacks: Array<(updatedState: typeof state) => void> = [];
+
+  return {
+    sessionId: "test-session",
+    state,
+    onLeave: vi.fn(),
+    onStateChange: vi.fn((callback: (updatedState: typeof state) => void) => {
+      stateChangeCallbacks.push(callback);
+    }),
+    triggerStateChange() {
+      for (const callback of stateChangeCallbacks) {
+        callback(state);
+      }
+    },
+  };
+};
 
 vi.mock("@colyseus/sdk", () => {
   class MockClient {}
@@ -55,31 +38,18 @@ vi.mock("@colyseus/sdk", () => {
   // biome-ignore lint/suspicious/noExplicitAny: mocking prototype
   (MockClient.prototype as any).joinOrCreate = vi.fn(() => {
     if (shouldFail) return Promise.reject(new Error("Connection refused"));
-    return Promise.resolve({
-      sessionId: "test-session",
-      state: { phase: "Lobby", roomCode: "TEST", players: new Map() },
-      onLeave: vi.fn(),
-      onStateChange: vi.fn(),
-    });
+    return Promise.resolve(createMockRoom());
   });
   // biome-ignore lint/suspicious/noExplicitAny: mocking prototype
-  (MockClient.prototype as any).create = vi.fn(() =>
-    Promise.resolve({
-      sessionId: "test-session",
-      state: { phase: "Lobby", roomCode: "TEST", players: new Map() },
-      onLeave: vi.fn(),
-      onStateChange: vi.fn(),
-    }),
-  );
+  (MockClient.prototype as any).create = vi.fn(() => Promise.resolve(createMockRoom()));
   // biome-ignore lint/suspicious/noExplicitAny: mocking prototype
-  (MockClient.prototype as any).joinById = vi.fn(() =>
-    Promise.resolve({
-      sessionId: "test-session",
-      state: { phase: "Lobby", roomCode: "TEST", players: new Map() },
-      onLeave: vi.fn(),
-      onStateChange: vi.fn(),
-    }),
-  );
+  (MockClient.prototype as any).joinById = vi.fn(() => {
+    if (!joinByIdShouldWait) return Promise.resolve(createMockRoom());
+
+    return new Promise((resolve) => {
+      resolveJoinById.push(resolve);
+    });
+  });
 
   // Expose MockClient for test overrides via globalThis
   // biome-ignore lint/suspicious/noExplicitAny: globalThis requires any type assertion
@@ -95,6 +65,8 @@ describe("GameConnectionManager", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     shouldFail = false;
+    joinByIdShouldWait = false;
+    resolveJoinById = [];
   });
 
   it("should initialize with disconnected status", () => {
@@ -140,16 +112,18 @@ describe("GameConnectionManager", () => {
     expect(manager.room?.state).toEqual({ phase: "Lobby", roomCode: "TEST", players: new Map() });
   });
 
+  it("should increment state version when the room state changes", async () => {
+    const manager = new GameConnectionManager("ws://localhost:2567");
+    const room = await manager.create("wit_clash", { name: "Host" });
+
+    expect(manager.stateVersion).toBe(0);
+    (room as unknown as { triggerStateChange: () => void }).triggerStateChange();
+
+    expect(manager.stateVersion).toBe(1);
+  });
+
   it("should have room with state when joining by code", async () => {
-    // Mock fetch for joinByCode
-    global.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({ roomId: "test-room-id" }),
-        status: 200,
-        // biome-ignore lint/suspicious/noExplicitAny: mock response object requires any type for vitest mock
-      } as any),
-    );
+    global.fetch = createResolveCodeFetch();
 
     const manager = new GameConnectionManager("ws://localhost:2567");
     await manager.joinByCode("TEST");
@@ -157,6 +131,52 @@ describe("GameConnectionManager", () => {
     expect(manager.room?.state).toEqual({ phase: "Lobby", roomCode: "TEST", players: new Map() });
 
     // Clean up
+    delete global.fetch;
+  });
+
+  it("should reuse the existing room when joining by code after already connected", async () => {
+    global.fetch = createResolveCodeFetch();
+
+    const manager = new GameConnectionManager("ws://localhost:2567");
+    const firstRoom = await manager.joinByCode("TEST");
+    const secondRoom = await manager.joinByCode("TEST");
+
+    expect(secondRoom).toBe(firstRoom);
+    expect(global.fetch).toHaveBeenCalledOnce();
+
+    delete global.fetch;
+  });
+
+  it("should reuse the pending connection when join by code is clicked twice before it resolves", async () => {
+    global.fetch = createResolveCodeFetch();
+    joinByIdShouldWait = true;
+
+    const manager = new GameConnectionManager("ws://localhost:2567");
+    const firstJoin = manager.joinByCode("TEST");
+    const secondJoin = manager.joinByCode("TEST");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    for (const resolve of resolveJoinById) {
+      resolve(createMockRoom());
+    }
+
+    const [firstRoom, secondRoom] = await Promise.all([firstJoin, secondJoin]);
+
+    expect(secondRoom).toBe(firstRoom);
+    expect(global.fetch).toHaveBeenCalledOnce();
+
+    delete global.fetch;
+  });
+
+  it("allows joining a different code while connected", async () => {
+    global.fetch = createResolveCodeFetch();
+
+    const manager = new GameConnectionManager("ws://localhost:2567");
+    const firstRoom = await manager.joinByCode("TEST");
+    const secondRoom = await manager.joinByCode("ABCD");
+
+    expect(secondRoom).not.toBe(firstRoom);
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+
     delete global.fetch;
   });
 });

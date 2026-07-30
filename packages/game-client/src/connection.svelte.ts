@@ -37,6 +37,8 @@ export class GameConnectionManager {
   private client: Client;
   private apiBaseUrl: string;
   private playerId: string;
+  private joinedCode: string | undefined;
+  private pendingJoin: { code: string; promise: Promise<Room<unknown>> } | undefined;
 
   constructor(endpoint: string, apiPort: number = 3001) {
     this.client = new Client(endpoint);
@@ -61,6 +63,7 @@ export class GameConnectionManager {
     this.room.onLeave(() => {
       this.connectionStatus = "disconnected";
       this.room = undefined;
+      this.joinedCode = undefined;
     });
   }
 
@@ -114,10 +117,27 @@ export class GameConnectionManager {
   }
 
   async joinByCode(code: string) {
+    const cleanCode = code.trim().toUpperCase();
+
+    // A double-tapped Join button must not open a second room: the later join would
+    // overwrite this.room, leaking the first (never left) and seating the same person
+    // twice on the server. Joining a *different* code still starts a fresh join.
+    if (this.room && this.joinedCode === cleanCode) return this.room;
+    if (this.pendingJoin?.code === cleanCode) return this.pendingJoin.promise;
+
+    const promise = this.performJoinByCode(cleanCode);
+    this.pendingJoin = { code: cleanCode, promise };
+    try {
+      return await promise;
+    } finally {
+      this.pendingJoin = undefined;
+    }
+  }
+
+  private async performJoinByCode(cleanCode: string) {
     this.error = undefined;
     this.connectionStatus = "connecting";
     try {
-      const cleanCode = code.trim().toUpperCase();
       if (!/^[A-Z]{4}$/.test(cleanCode)) {
         throw new Error("Game code must be 4 uppercase letters");
       }
@@ -144,6 +164,7 @@ export class GameConnectionManager {
       this.room = await this.client.joinById<unknown>(data.roomId, {
         playerId: this.playerId,
       });
+      this.joinedCode = cleanCode;
       this.connectionStatus = "connected";
       this.attachRoomHandlers();
       this.persistConnectionMetadata();
@@ -212,6 +233,7 @@ export class GameConnectionManager {
 
   reset(): void {
     this.room = undefined;
+    this.joinedCode = undefined;
     this.error = undefined;
     this.connectionStatus = "disconnected";
   }

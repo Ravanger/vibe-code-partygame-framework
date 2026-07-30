@@ -22,13 +22,6 @@ export class WaitingRoomViewModel {
       : undefined,
   );
 
-  constructor(
-    private readonly manager: GameConnectionManager,
-    minPlayers: number = readMinPlayers(),
-  ) {
-    this.minPlayers = minPlayers;
-  }
-
   readonly roomCode = $derived.by(() => this.state?.roomCode ?? "");
   readonly players = $derived.by(() =>
     this.state?.players ? [...this.state.players.values()] : [],
@@ -46,6 +39,14 @@ export class WaitingRoomViewModel {
   readonly shareUrl = $derived.by(
     () => `${window.location.origin}${window.location.pathname}?code=${this.roomCode}`,
   );
+
+  constructor(
+    private readonly manager: GameConnectionManager,
+    minPlayers: number = readMinPlayers(),
+  ) {
+    this.minPlayers = minPlayers;
+    this.draftName = this.localPlayer?.name ?? "";
+  }
 
   /** Local draft updates instantly; the server hears one message per burst. */
   setName(value: string) {

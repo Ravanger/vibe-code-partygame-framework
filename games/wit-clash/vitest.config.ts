@@ -2,18 +2,14 @@ import { svelte } from "@sveltejs/vite-plugin-svelte";
 import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
 
-console.log("[vitest.config] Loading svelte-ts-runes plugin");
-
 function svelteTsPlugin(): Plugin {
   return {
     name: "svelte-ts-runes",
     enforce: "pre",
     async transform(code: string, id: string) {
-      console.log("[svelte-ts-runes] transform called for:", id);
       if (!id.endsWith(".svelte.ts")) return null;
       // Scope to wit-clash and game-client to avoid interfering with other projects
       if (!id.includes("games/wit-clash") && !id.includes("packages/game-client")) return null;
-      console.log("[svelte-ts-runes] processing .svelte.ts file:", id);
       try {
         const { compileModule } = await import("svelte/compiler");
         const ts = await import("typescript");
@@ -43,6 +39,9 @@ function svelteTsPlugin(): Plugin {
 }
 
 export default defineConfig({
+  resolve: {
+    conditions: ["browser"],
+  },
   plugins: [
     svelteTsPlugin(),
     svelte({

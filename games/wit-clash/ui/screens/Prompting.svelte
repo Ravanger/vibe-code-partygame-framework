@@ -4,6 +4,7 @@ import { PromptingViewModel } from "../viewmodels/PromptingViewModel.svelte.js";
 
 const { manager }: { manager: GameConnectionManager } = $props();
 
+// svelte-ignore state_referenced_locally -- manager is a stable long-lived instance, never reassigned by the parent
 const vm = new PromptingViewModel(manager);
 
 $effect(() => {
@@ -31,8 +32,8 @@ function handleKeydown(e: KeyboardEvent) {
     <div class="waiting">Waiting for prompts...</div>
   {:else}
     <div class="prompt-nav">
-      <span class:active={vm.currentIndex === 0} on:click={() => vm.goTo(0)} on:keydown={handleKeydown}>1</span>
-      <span class:active={vm.currentIndex === 1} on:click={() => vm.goTo(1)} on:keydown={handleKeydown}>2</span>
+      <span class:active={vm.currentIndex === 0} role="button" tabindex="0" onclick={() => vm.goTo(0)} onkeydown={handleKeydown}>1</span>
+      <span class:active={vm.currentIndex === 1} role="button" tabindex="0" onclick={() => vm.goTo(1)} onkeydown={handleKeydown}>2</span>
     </div>
 
     <div class="prompt-section">
@@ -43,7 +44,7 @@ function handleKeydown(e: KeyboardEvent) {
         placeholder="Type your answer..."
         maxlength="200"
         bind:value={vm.draft}
-        on:keydown={handleKeydown}
+        onkeydown={handleKeydown}
         disabled={!vm.current}
       ></textarea>
 
@@ -51,7 +52,7 @@ function handleKeydown(e: KeyboardEvent) {
         <span class:low={vm.charsRemaining < 20}>{vm.charsRemaining} chars left</span>
         <button
           class="submit-btn"
-          on:click={() => vm.submit()}
+          onclick={() => vm.submit()}
           disabled={!vm.canSubmit}
         >
           {vm.submitted[vm.current?.matchupId ?? ""] ? "Update" : "Submit"}

@@ -15,6 +15,22 @@ describe("Countdown", () => {
     countdown.destroy();
   });
 
+  // The other tests freeze the clock, so they can't catch a mismatch between the two
+  // construction-time Date.now() reads. getServerNowFn runs between them, so advancing
+  // the clock here reproduces a real wall clock ticking over mid-construction.
+  it("does not overshoot by a second when the clock advances during construction", () => {
+    vi.setSystemTime(1_000_000);
+    const countdown = new Countdown(
+      () => 1_060_000,
+      () => {
+        vi.setSystemTime(Date.now() + 1);
+        return 1_000_000;
+      },
+    );
+    expect(countdown.secondsLeft).toBe(60);
+    countdown.destroy();
+  });
+
   it("ticks down as time passes", () => {
     vi.setSystemTime(1_000_000);
     const countdown = new Countdown(

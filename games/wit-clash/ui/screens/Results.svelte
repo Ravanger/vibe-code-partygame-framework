@@ -4,6 +4,7 @@ import { ResultsViewModel } from "../viewmodels/ResultsViewModel.svelte.js";
 
 const { manager }: { manager: GameConnectionManager } = $props();
 
+// svelte-ignore state_referenced_locally -- manager is a stable long-lived instance, never reassigned by the parent
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const vm = new ResultsViewModel(manager);
 </script>
@@ -76,11 +77,11 @@ const vm = new ResultsViewModel(manager);
   {#if vm.isHost}
     <div class="actions">
       {#if vm.isFinalRound}
-        <button class="btn play-again" on:click={() => vm.playAgain()}>
+        <button class="btn play-again" onclick={() => vm.playAgain()}>
           Play Again
         </button>
       {:else}
-        <button class="btn next-round" on:click={() => vm.nextRound()}>
+        <button class="btn next-round" onclick={() => vm.nextRound()}>
           Next Round
         </button>
       {/if}

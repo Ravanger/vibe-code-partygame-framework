@@ -3,7 +3,12 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "../..",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    // Required by @colyseus/schema's legacy `@type` decorators. target ES2022 would default
+    // this to true, emitting native class fields whose `define` semantics shadow the accessors
+    // @type installs on the prototype — change tracking then never runs and the encoder throws
+    // on the first collection it serializes (crashing the server as a client joins).
+    "useDefineForClassFields": false
   },
   "include": ["src"]
 }

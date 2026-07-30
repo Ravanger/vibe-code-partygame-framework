@@ -4,6 +4,7 @@ import { CategoryVoteViewModel } from "../viewmodels/CategoryVoteViewModel.svelt
 
 const { manager }: { manager: GameConnectionManager } = $props();
 
+// svelte-ignore state_referenced_locally -- manager is a stable long-lived instance, never reassigned by the parent
 const vm = new CategoryVoteViewModel(manager);
 
 $effect(() => {
@@ -24,7 +25,7 @@ $effect(() => {
       <button
         class="card"
         class:selected={vm.myVote === option.id}
-        on:click={() => vm.vote(option.id)}
+        onclick={() => vm.vote(option.id)}
         aria-pressed={vm.myVote === option.id}
       >
         <span class="emoji">{option.emoji}</span>

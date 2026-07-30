@@ -1,16 +1,19 @@
 import type { ColyseusTestServer } from "@colyseus/testing";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import type { PhaseDurations } from "../src/rooms/GameRoom.js";
-import { bootTestServer, seatPlayers, sleep } from "./helpers/harness.js";
+import { bootTestServer, seatPlayers, waitUntil } from "./helpers/harness.js";
 
 describe("GameRoom — Prompting phase", () => {
   let colyseus: ColyseusTestServer;
-  // Use longer promptMs for these tests so assertions can complete before timer expiry
+  // promptMs is short so "advances when the timer expires" stays quick. matchupVoteMs and
+  // matchupRevealMs are deliberately LONG: once Prompting ends we land in Voting, and a short
+  // vote window would expire and reveal matchup 0 — legitimately filling authorId — while the
+  // anonymity assertion below is still running.
   const durations: PhaseDurations = {
     categoryVoteMs: 80,
-    promptMs: 500,
-    matchupVoteMs: 60,
-    matchupRevealMs: 30,
+    promptMs: 200,
+    matchupVoteMs: 2000,
+    matchupRevealMs: 500,
     emptyRoomGraceMs: 10,
   };
   beforeAll(async () => {
@@ -30,7 +33,7 @@ describe("GameRoom — Prompting phase", () => {
     for (const client of clients) {
       client.send("ACTION", { type: "VOTE_CATEGORY", categoryId: opts[0]?.id });
     }
-    await room.waitForNextPatch();
+    await waitUntil(() => room.state.phase === "Prompting", "phase=Prompting");
     return { room, clients };
   }
 
@@ -158,8 +161,7 @@ describe("GameRoom — Prompting phase", () => {
           client.send("ACTION", { type: "SUBMIT_ANSWER", matchupId: m.id, answer: "test" });
         }
       }
-      await room.waitForNextPatch();
-      await sleep(durations.promptMs + 20);
+      await waitUntil(() => room.state.phase !== "Prompting", "left Prompting");
       const initialSubmitted = room.state.answersSubmitted;
       clients[0]?.send("ACTION", {
         type: "SUBMIT_ANSWER",
@@ -198,13 +200,13 @@ describe("GameRoom — Prompting phase", () => {
 
     it("advances when the timer expires", async () => {
       const { room } = await enterPrompting();
-      await sleep(durations.promptMs + 20);
+      await waitUntil(() => room.state.phase === "Voting", "phase=Voting");
       expect(room.state.phase).toBe("Voting");
     });
 
     it("fills a placeholder for each missing answer", async () => {
       const { room } = await enterPrompting();
-      await sleep(durations.promptMs + 20);
+      await waitUntil(() => room.state.phase === "Voting", "phase=Voting");
       expect(room.state.matchups.every((m) => m.answers.length === 2)).toBe(true);
       expect(room.state.matchups.some((m) => m.answers.some((a) => a.text === "(no answer)"))).toBe(
         true,
@@ -213,7 +215,10 @@ describe("GameRoom — Prompting phase", () => {
 
     it("still hides authorId after the phase ends", async () => {
       const { room } = await enterPrompting();
-      await sleep(durations.promptMs + 20);
+      // Assert the instant Voting begins: no matchup has been revealed yet, so every authorId
+      // must still be empty. Waiting a fixed sleep instead would let matchup 0 reveal first.
+      await waitUntil(() => room.state.phase === "Voting", "phase=Voting");
+      expect(room.state.isRevealing).toBe(false);
       expect(room.state.matchups.every((m) => m.answers.every((a) => a.authorId === ""))).toBe(
         true,
       );

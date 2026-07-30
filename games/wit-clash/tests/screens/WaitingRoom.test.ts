@@ -1,9 +1,13 @@
-import { fireEvent, render, screen } from "@testing-library/svelte";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, within } from "@testing-library/svelte";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import WaitingRoom from "../../ui/screens/WaitingRoom.svelte";
 import { fakeManager, makeFakeRoom, makeFakeState, makePlayer } from "../helpers/fakes.js";
 
-describe.skip("WaitingRoom", () => {
+describe("WaitingRoom", () => {
+  // Restore here, not inline: a failed assertion would skip an in-test restore and leak
+  // fake timers into the next test.
+  afterEach(() => vi.useRealTimers());
+
   function makeManager(stateOverrides = {}) {
     const state = makeFakeState({
       phase: "Lobby",
@@ -11,6 +15,10 @@ describe.skip("WaitingRoom", () => {
       players: new Map([
         ["host-id", makePlayer({ id: "host-id", name: "Alice", role: "host", isConnected: true })],
         ["guest-id", makePlayer({ id: "guest-id", name: "Bob", role: "guest", isConnected: true })],
+        [
+          "guest-id-2",
+          makePlayer({ id: "guest-id-2", name: "Charlie", role: "guest", isConnected: true }),
+        ],
       ]),
       ...stateOverrides,
     });
@@ -31,19 +39,23 @@ describe.skip("WaitingRoom", () => {
   it("marks the current player with (You)", () => {
     const manager = makeManager();
     render(WaitingRoom, { manager });
-    expect(screen.getByText(/Alice.*You/)).toBeInTheDocument();
+    const item = screen.getByText("Alice").closest("li");
+    expect(item).not.toBeNull();
+    expect(within(item as HTMLElement).getByText("(You)")).toBeInTheDocument();
   });
 
   it("marks the host with Host badge", () => {
     const manager = makeManager();
     render(WaitingRoom, { manager });
-    expect(screen.getByText(/Alice.*Host/)).toBeInTheDocument();
+    const item = screen.getByText("Alice").closest("li");
+    expect(item).not.toBeNull();
+    expect(within(item as HTMLElement).getByText("Host")).toBeInTheDocument();
   });
 
   it("displays the room code", () => {
     const manager = makeManager();
     render(WaitingRoom, { manager });
-    expect(screen.getByText(/PNVW/)).toBeInTheDocument();
+    expect(screen.getByText("PNVW")).toBeInTheDocument();
   });
 
   it("provides a copy button for the room code", () => {
@@ -94,12 +106,8 @@ describe.skip("WaitingRoom", () => {
     const manager = makeManager();
     render(WaitingRoom, { manager });
     const nameInput = screen.getByDisplayValue(/Alice/);
-    await fireEvent.change(nameInput, { target: { value: "Charlie" } });
+    await fireEvent.input(nameInput, { target: { value: "Charlie" } });
     vi.advanceTimersByTime(250);
-    expect(manager.room?.send).toHaveBeenCalledWith("ACTION", {
-      type: "SET_NAME",
-      name: "Charlie",
-    });
-    vi.useRealTimers();
+    expect(manager.room?.send).toHaveBeenCalledWith("SET_NAME", "Charlie");
   });
 });

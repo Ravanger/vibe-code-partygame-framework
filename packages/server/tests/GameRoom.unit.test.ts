@@ -170,6 +170,9 @@ describe("GameRoom integration tests", () => {
   });
 
   it("does not throw when SET_NAME arrives for an unknown session", () => {
+    // Spied, not just silenced: the warn is the documented behaviour (D5), so assert it fires
+    // instead of letting it print into the test log.
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const testRoom = new TestGameRoom();
     testRoom.onCreate();
     const mockClient = {
@@ -177,9 +180,12 @@ describe("GameRoom integration tests", () => {
       send: vi.fn(),
     } as unknown as Client;
     expect(() => testRoom.handleSetName(mockClient, "Ada" as unknown)).not.toThrow();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("[SET_NAME] Unknown session ghost"));
+    warn.mockRestore();
   });
 
   it("does not throw when onLeave fires for an unknown session", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const testRoom = new TestGameRoom();
     testRoom.onCreate();
     const mockClient = {
@@ -187,5 +193,7 @@ describe("GameRoom integration tests", () => {
       send: vi.fn(),
     } as unknown as Client;
     expect(() => testRoom.onLeave(mockClient, true)).not.toThrow();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("[onLeave] Unknown session ghost"));
+    warn.mockRestore();
   });
 });

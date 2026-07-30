@@ -20,8 +20,6 @@ function tsTransformPlugin(): Plugin {
       // Let Vite handle content files natively for proper source maps
       if (id.includes("/src/content/")) return null;
 
-      console.log("[ts-transform] Transforming:", id);
-
       const result = ts.transpileModule(code, {
         fileName: id,
         compilerOptions: {
@@ -30,14 +28,16 @@ function tsTransformPlugin(): Plugin {
           moduleResolution: ts.ModuleResolutionKind.NodeNext,
           experimentalDecorators: true,
           emitDecoratorMetadata: true,
+          // Must stay false: ES2022 would otherwise default it to true, and `define`
+          // semantics on class fields shadow the accessors @colyseus/schema's @type
+          // installs on the prototype. Change tracking then silently never runs, and the
+          // encoder throws on the first collection it tries to serialize.
+          useDefineForClassFields: false,
           esModuleInterop: true,
           sourceMap: true,
         },
         reportErrors: true,
       });
-
-      console.log("[ts-transform] Full output for", id.split("/").pop(), ":");
-      console.log(result.outputText.slice(0, 200));
 
       return {
         code: result.outputText,
@@ -57,7 +57,9 @@ export default defineConfig({
   test: {
     name: "@partygame/server",
     include: ["tests/**/*.test.ts"],
-    exclude: ["dist/**", "node_modules/**", "coverage/**", "**/helpers/harness.test.ts"],
+    // harness.test.ts is deliberately INCLUDED: excluding it is why a broken test harness went
+    // unnoticed while seven room-level suites sat parked as .skip.ts.
+    exclude: ["dist/**", "node_modules/**", "coverage/**"],
     setupFiles: ["./vitest.setup.ts"],
     fileParallelism: false,
     coverage: {

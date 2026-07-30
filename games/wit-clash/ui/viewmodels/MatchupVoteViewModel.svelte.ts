@@ -57,6 +57,9 @@ export class MatchupVoteViewModel {
 
   readonly promptText = $derived.by(() => this.activeMatchup?.promptText ?? "");
 
+  readonly matchupNumber = $derived.by(() => (this.state?.activeMatchupIndex ?? -1) + 1);
+  readonly totalMatchups = $derived.by(() => this.state?.matchups.length ?? 0);
+
   readonly answers = $derived.by((): VoteAnswer[] => {
     if (!this.activeMatchup) return [];
     return this.activeMatchup.answers.map((a) => ({
@@ -73,7 +76,30 @@ export class MatchupVoteViewModel {
     () => this.state?.answerVotes?.get(this.manager.room?.sessionId ?? "") ?? "",
   );
 
+  readonly isAuthor = $derived.by(() => this.authorIds.has(this.manager.room?.sessionId ?? ""));
+
   readonly totalVotes = $derived.by(() => this.answers.reduce((sum, a) => sum + a.votes, 0));
+
+  private readonly authorIds = $derived.by(
+    () => new Set(this.activeMatchup?.answers.map((a) => a.authorId) ?? []),
+  );
+
+  readonly eligibleVoterCount = $derived.by(() => {
+    const players = this.state?.players;
+    if (!players) return 0;
+    let count = 0;
+    for (const id of players.keys()) if (!this.authorIds.has(id)) ++count;
+    return count;
+  });
+
+  readonly votedCount = $derived.by(() => {
+    const votes = this.state?.answerVotes;
+    const players = this.state?.players;
+    if (!votes || !players) return 0;
+    let count = 0;
+    for (const id of votes.keys()) if (players.has(id) && !this.authorIds.has(id)) ++count;
+    return count;
+  });
 
   readonly secondsLeft = $derived.by(() => this.countdown?.secondsLeft ?? 0);
   readonly isUrgent = $derived.by(() => this.countdown?.isUrgent ?? false);

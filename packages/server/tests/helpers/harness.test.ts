@@ -9,7 +9,7 @@ vi.mock("@colyseus/tools", () => ({
 }));
 
 import type { ColyseusTestServer } from "@colyseus/testing";
-import { bootTestServer, seatPlayers, sleep } from "./harness.js";
+import { bootTestServer, seatPlayers, sleep, waitUntil } from "./harness.js";
 
 describe("Test Harness", () => {
   let colyseus: ColyseusTestServer;
@@ -38,9 +38,19 @@ describe("Test Harness", () => {
     expect(clients).toHaveLength(3);
   });
 
-  it("sleep helper works", async () => {
-    await sleep(10);
-    // If we get here, sleep worked
-    expect(true).toBe(true);
+  it("sleep helper waits at least the requested time", async () => {
+    const before = Date.now();
+    await sleep(25);
+    expect(Date.now() - before).toBeGreaterThanOrEqual(20);
+  });
+
+  it("waitUntil resolves once the condition holds and throws when it never does", async () => {
+    let flag = false;
+    setTimeout(() => {
+      flag = true;
+    }, 20);
+    await waitUntil(() => flag, "flag set");
+    expect(flag).toBe(true);
+    await expect(waitUntil(() => false, "never", 60, 10)).rejects.toThrow(/never/);
   });
 });

@@ -12,7 +12,9 @@ export class Countdown {
     tickMs = DEFAULT_TICK_MS,
   ) {
     this.lastServerNow = this.getServerNowFn();
-    this.lastServerNowClientTime = Date.now();
+    // Must be the same instant as `now`; a second Date.now() read here can land a
+    // millisecond later, making elapsedSinceServer negative and rounding secondsLeft up.
+    this.lastServerNowClientTime = this.now;
     this.interval = setInterval(() => {
       this.now = Date.now();
       const newServerNow = this.getServerNowFn();

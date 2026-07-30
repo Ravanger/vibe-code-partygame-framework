@@ -4,6 +4,7 @@ import { WaitingRoomViewModel } from "../viewmodels/WaitingRoomViewModel.svelte.
 
 const { manager }: { manager: GameConnectionManager } = $props();
 
+// svelte-ignore state_referenced_locally -- manager is a stable long-lived instance, never reassigned by the parent
 const vm = new WaitingRoomViewModel(manager);
 
 $effect(() => {
@@ -16,7 +17,7 @@ $effect(() => {
     <p>Room Code</p>
     <div class="room-code-display">
       <span class="room-code">{vm.roomCode}</span>
-      <button class="copy-btn" on:click={() => vm.copyCode()}>Copy</button>
+      <button class="copy-btn" onclick={() => vm.copyCode()}>Copy</button>
     </div>
     <p class="share-instructions">
       Share this link:
@@ -47,19 +48,20 @@ $effect(() => {
   </div>
 
   <div class="your-name">
-    <label>Your name</label>
+    <label for="playerName">Your name</label>
     <input
+      id="playerName"
       type="text"
       placeholder="Enter your name"
       maxlength="20"
       value={vm.draftName}
-      on:input={(e) => vm.setName((e.target as HTMLInputElement).value)}
+      oninput={(e) => vm.setName((e.target as HTMLInputElement).value)}
     />
   </div>
 
   {#if vm.isHost}
     <div class="host-controls">
-      <button class="start-btn" disabled={!vm.canStart} on:click={() => vm.start()}>
+      <button class="start-btn" disabled={!vm.canStart} onclick={() => vm.start()}>
         Start Game ({vm.readyCount}/{vm.minPlayers})
       </button>
       {#if vm.readyCount < vm.minPlayers}

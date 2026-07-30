@@ -15,6 +15,7 @@ import Welcome from "./screens/Welcome.svelte";
 import { AppViewModel } from "./viewmodels/AppViewModel.svelte.js";
 
 const { manager } = $props<{ manager: GameConnectionManager }>();
+// svelte-ignore state_referenced_locally -- manager is a stable long-lived instance, never reassigned by the parent
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const vm = new AppViewModel(manager);
 </script>

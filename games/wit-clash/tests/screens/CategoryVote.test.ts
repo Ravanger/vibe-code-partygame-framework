@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import CategoryVote from "../../ui/screens/CategoryVote.svelte";
 import { fakeManager, makeFakeRoom, makeFakeState } from "../helpers/fakes.js";
 
-describe.skip("CategoryVote", () => {
+describe("CategoryVote", () => {
   function makeManager(stateOverrides = {}) {
     const state = makeFakeState({
       phase: "CategorySelection",

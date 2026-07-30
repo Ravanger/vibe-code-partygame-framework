@@ -4,6 +4,7 @@ import { MatchupVoteViewModel } from "../viewmodels/MatchupVoteViewModel.svelte.
 
 const { manager }: { manager: GameConnectionManager } = $props();
 
+// svelte-ignore state_referenced_locally -- manager is a stable long-lived instance, never reassigned by the parent
 const vm = new MatchupVoteViewModel(manager);
 
 $effect(() => {
@@ -31,6 +32,7 @@ $effect(() => {
   {:else}
     <div class="vote">
       <div class="header">
+        <span class="progress">Matchup {vm.matchupNumber} of {vm.totalMatchups}</span>
         <div class="timer" class:urgent={vm.isUrgent}>
           {vm.secondsLeft}s
         </div>
@@ -43,17 +45,17 @@ $effect(() => {
           <button
             class="answer-card"
             class:selected={vm.myVote === answer.id}
-            on:click={() => vm.vote(answer.id)}
+            disabled={vm.isAuthor}
+            onclick={() => vm.vote(answer.id)}
             aria-pressed={vm.myVote === answer.id}
           >
             <p class="text">{answer.text}</p>
-            <p class="votes">{answer.votes} vote{answer.votes !== 1 ? "s" : ""}</p>
           </button>
         {/each}
       </div>
 
       <p class="footer">
-        {vm.totalVotes} vote{vm.totalVotes !== 1 ? "s" : ""} cast
+        {vm.votedCount} of {vm.eligibleVoterCount} voted
       </p>
     </div>
   {/if}

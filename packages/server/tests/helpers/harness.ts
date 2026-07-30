@@ -23,23 +23,10 @@ Room.prototype.broadcastPatch = function () {
   return this._waitingForPatch[1];
 };
 
-const _originalClientPatch = ColyseusClientRoom.prototype.patch;
-// biome-ignore lint/suspicious/noExplicitAny: monkey-patching requires any type for method
-(ColyseusClientRoom.prototype as any).patch = function () {
-  // biome-ignore lint/complexity/noArguments: arguments object required for function.apply forwarding
-  _originalClientPatch.apply(this, arguments);
-  if (this._waitingForPatch) {
-    setTimeout(() => {
-      // biome-ignore lint/complexity/noArguments: accessing arguments object for patched method behavior
-      this._waitingForPatch[1].resolve([arguments[0], arguments[1]]);
-    }, this._waitingForPatch[0]);
-  }
-};
-// biome-ignore lint/suspicious/noExplicitAny: monkey-patching ColyseusClientRoom prototype requires any type
-(ColyseusClientRoom.prototype as any).waitForNextPatch = async function (additionalDelay = 0) {
-  this._waitingForPatch = [additionalDelay, new Deferred()];
-  return this._waitingForPatch[1];
-};
+// NOTE: there is deliberately no client-side waitForNextPatch. @colyseus/sdk 0.17 has no
+// Room.prototype.patch to wrap (state application moved into `this.serializer.patch()`), so
+// the old wrapper installed a method nothing ever called and a Deferred that never resolved.
+// Wait on the server room's waitForNextPatch, or on waitUntil() below.
 
 // Override leave() to accept boolean consented flag (like @colyseus/testing)
 // true = consented (sends LEAVE_ROOM protocol), false = not consented (closes connection)
@@ -54,7 +41,11 @@ const _originalClientLeave = ColyseusClientRoom.prototype.leave;
   return _originalClientLeave.call(this, !!consentedOrCode);
 };
 
-const DEFAULT_TEST_PORT = 2568;
+// A single test FILE often boots one server per `describe`. Reusing one hardcoded port makes the
+// second boot race the first shutdown and fail with EADDRINUSE, which surfaces as a failed
+// beforeAll and a whole describe reported as "skipped". Hand out a fresh port per boot instead.
+const BASE_TEST_PORT = 2568;
+let nextTestPort = BASE_TEST_PORT;
 
 /**
  * Minimal test server harness that avoids @colyseus/testing entirely.
@@ -107,7 +98,7 @@ export class ColyseusTestServer {
 export type ColyseusTestServerType = ColyseusTestServer;
 
 export async function boot(gameServer: Server): Promise<ColyseusTestServer> {
-  await gameServer.listen(DEFAULT_TEST_PORT);
+  await gameServer.listen(nextTestPort++);
   return new ColyseusTestServer(gameServer);
 }
 
@@ -117,6 +108,25 @@ import { createGameServer, TEST_DURATIONS } from "../../src/createGameServer.js"
 import type { PhaseDurations } from "../../src/rooms/GameRoom.js";
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Poll until `predicate` holds. Prefer this over `waitForNextPatch()` when waiting for a
+ * phase change: a patch fires on the room's ~50ms tick regardless of whether the server has
+ * processed your message yet, so a single patch wait is a race, not a barrier.
+ */
+export async function waitUntil(
+  predicate: () => boolean,
+  label = "condition",
+  timeoutMs = 4000,
+  stepMs = 10,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (predicate()) return;
+    await sleep(stepMs);
+  }
+  throw new Error(`waitUntil timed out after ${timeoutMs}ms waiting for: ${label}`);
+}
 
 export interface Category {
   id: string;

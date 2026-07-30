@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import MatchupVote from "../../ui/screens/MatchupVote.svelte";
 import { fakeManager, makeFakeRoom, makeFakeState, makePlayer } from "../helpers/fakes.js";
 
-describe.skip("MatchupVote", () => {
+describe("MatchupVote", () => {
   function makeManager(stateOverrides = {}) {
     const state = makeFakeState({
       phase: "Voting",
@@ -14,9 +14,13 @@ describe.skip("MatchupVote", () => {
       matchups: [
         {
           id: "m0",
-          answers: ["Answer A", "Answer B"],
-          authorIds: ["p1", "p2"],
-          votes: new Map(),
+          index: 0,
+          promptText: "Best pizza topping?",
+          isRevealed: false,
+          answers: [
+            { id: "a0", text: "Answer A", votes: 0, authorId: "" },
+            { id: "a1", text: "Answer B", votes: 0, authorId: "" },
+          ],
         },
       ],
       players: new Map([
@@ -48,7 +52,7 @@ describe.skip("MatchupVote", () => {
     await fireEvent.click(answerBtn);
     expect(manager.room?.send).toHaveBeenCalledWith("ACTION", {
       type: "CAST_VOTE",
-      answerIndex: 0,
+      answerId: "a0",
     });
   });
 
@@ -57,11 +61,16 @@ describe.skip("MatchupVote", () => {
       matchups: [
         {
           id: "m0",
-          answers: ["Answer A", "Answer B"],
-          authorIds: ["p1", "p2"],
-          votes: new Map([["me", 0]]),
+          index: 0,
+          promptText: "Best pizza topping?",
+          isRevealed: false,
+          answers: [
+            { id: "a0", text: "Answer A", votes: 1, authorId: "" },
+            { id: "a1", text: "Answer B", votes: 0, authorId: "" },
+          ],
         },
       ],
+      answerVotes: new Map([["me", "a0"]]),
     });
     render(MatchupVote, { manager });
     expect(screen.getByRole("button", { name: /answer a/i })).toHaveAttribute(
@@ -80,17 +89,22 @@ describe.skip("MatchupVote", () => {
       matchups: [
         {
           id: "m0",
-          answers: ["Answer A", "Answer B"],
-          authorIds: ["p1", "p2"],
-          votes: new Map([
-            ["p3", 0],
-            ["p4", 0],
-          ]),
+          index: 0,
+          promptText: "Best pizza topping?",
+          isRevealed: false,
+          answers: [
+            { id: "a0", text: "Answer A", votes: 1, authorId: "" },
+            { id: "a1", text: "Answer B", votes: 1, authorId: "" },
+          ],
         },
       ],
+      answerVotes: new Map([
+        ["p3", "a0"],
+        ["p4", "a1"],
+      ]),
     });
     render(MatchupVote, { manager });
-    expect(screen.queryByText(/votes/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/vote/i, { selector: ".votes" })).not.toBeInTheDocument();
   });
 
   it("shows vote counts and author names on reveal (isRevealing=true)", () => {
@@ -99,12 +113,13 @@ describe.skip("MatchupVote", () => {
       matchups: [
         {
           id: "m0",
-          answers: ["Answer A", "Answer B"],
-          authorIds: ["p1", "p2"],
-          votes: new Map([
-            ["p3", 0],
-            ["p4", 1],
-          ]),
+          index: 0,
+          promptText: "Best pizza topping?",
+          isRevealed: true,
+          answers: [
+            { id: "a0", text: "Answer A", votes: 2, authorId: "p1" },
+            { id: "a1", text: "Answer B", votes: 1, authorId: "p2" },
+          ],
         },
       ],
     });
@@ -128,9 +143,13 @@ describe.skip("MatchupVote", () => {
           matchups: [
             {
               id: "m0",
-              answers: ["Answer A", "Answer B"],
-              authorIds: ["p1", "p2"],
-              votes: new Map(),
+              index: 0,
+              promptText: "Best pizza topping?",
+              isRevealed: false,
+              answers: [
+                { id: "a0", text: "Answer A", votes: 0, authorId: "p1" },
+                { id: "a1", text: "Answer B", votes: 0, authorId: "p2" },
+              ],
             },
           ],
           players: new Map([
@@ -158,14 +177,19 @@ describe.skip("MatchupVote", () => {
       matchups: [
         {
           id: "m0",
-          answers: ["Answer A", "Answer B"],
-          authorIds: ["p1", "p2"],
-          votes: new Map([
-            ["me", 0],
-            ["p3", 1],
-          ]),
+          index: 0,
+          promptText: "Best pizza topping?",
+          isRevealed: false,
+          answers: [
+            { id: "a0", text: "Answer A", votes: 1, authorId: "p1" },
+            { id: "a1", text: "Answer B", votes: 1, authorId: "p2" },
+          ],
         },
       ],
+      answerVotes: new Map([
+        ["me", "a0"],
+        ["p3", "a1"],
+      ]),
     });
     render(MatchupVote, { manager });
     expect(screen.getByText(/2 of 2 voted/i)).toBeInTheDocument();
@@ -173,7 +197,7 @@ describe.skip("MatchupVote", () => {
 
   it("shows countdown timer", () => {
     const manager = makeManager({
-      phaseEndsAt: 1_020_000,
+      phaseEndsAt: 1_019_500,
       serverNow: 1_000_000,
     });
     render(MatchupVote, { manager });
