@@ -15,11 +15,15 @@ const createResolveCodeFetch = () =>
 const createMockRoom = () => {
   const state = { phase: "Lobby", roomCode: "TEST", players: new Map() };
   const stateChangeCallbacks: Array<(updatedState: typeof state) => void> = [];
+  const messageHandlers = new Map<string, (payload: unknown) => void>();
 
   return {
     sessionId: "test-session",
     state,
     onLeave: vi.fn(),
+    onMessage: vi.fn((type: string, callback: (payload: unknown) => void) => {
+      messageHandlers.set(type, callback);
+    }),
     onStateChange: vi.fn((callback: (updatedState: typeof state) => void) => {
       stateChangeCallbacks.push(callback);
     }),
@@ -27,6 +31,9 @@ const createMockRoom = () => {
       for (const callback of stateChangeCallbacks) {
         callback(state);
       }
+    },
+    triggerMessage(type: string, payload: unknown) {
+      messageHandlers.get(type)?.(payload);
     },
   };
 };
@@ -120,6 +127,23 @@ describe("GameConnectionManager", () => {
     (room as unknown as { triggerStateChange: () => void }).triggerStateChange();
 
     expect(manager.stateVersion).toBe(1);
+  });
+
+  it("captures YOUR_PROMPTS into myPrompts at the manager level", async () => {
+    const manager = new GameConnectionManager("ws://localhost:2567");
+    const room = (await manager.create("wit_clash", { name: "Host" })) as unknown as {
+      triggerMessage: (type: string, payload: unknown) => void;
+    };
+
+    expect(manager.myPrompts).toEqual([]);
+    room.triggerMessage("YOUR_PROMPTS", [
+      { matchupId: "m1", promptText: "Q1" },
+      { matchupId: "m2", promptText: "Q2" },
+    ]);
+    expect(manager.myPrompts).toEqual([
+      { matchupId: "m1", promptText: "Q1" },
+      { matchupId: "m2", promptText: "Q2" },
+    ]);
   });
 
   it("should have room with state when joining by code", async () => {
@@ -239,10 +263,12 @@ describe("GameConnectionManager error reporting", () => {
     (MockClientClass.prototype as any).joinOrCreate = vi.fn().mockRejectedValue(new Error("boom"));
     const m = new GameConnectionManager("http://localhost:2567");
     await expect(m.connect("wit_clash")).rejects.toThrow();
+    m.myPrompts = [{ matchupId: "m0", promptText: "Q1" }];
     m.reset();
     expect(m.connectionStatus).toBe("disconnected");
     expect(m.error).toBeUndefined();
     expect(m.room).toBeUndefined();
+    expect(m.myPrompts).toEqual([]);
   });
 });
 

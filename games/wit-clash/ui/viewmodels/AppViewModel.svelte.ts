@@ -22,8 +22,13 @@ const PHASE_TO_SCREEN: Record<string, Screen> = {
 export class AppViewModel {
   constructor(private readonly manager: GameConnectionManager) {}
 
+  // Getter that reads stateVersion first: room.state is a Colyseus schema
+  // object (never proxied by Svelte), so without this tick the screen router
+  // never re-derives when the server changes phase.
   get phase(): string {
-    return (this.manager.room?.state as { phase?: string } | undefined)?.phase ?? "Lobby";
+    return this.manager.stateVersion >= 0
+      ? ((this.manager.room?.state as { phase?: string } | undefined)?.phase ?? "Lobby")
+      : "Lobby";
   }
 
   get errorMessage(): string | undefined {

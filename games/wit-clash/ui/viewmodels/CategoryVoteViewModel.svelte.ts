@@ -12,11 +12,13 @@ interface VoteState {
 export class CategoryVoteViewModel {
   private lastAnnounced = $state(0);
 
-  private readonly state = $derived.by(() =>
-    this.manager.stateVersion >= 0
+  // Getter, not $derived — same-referenced room.state is swallowed by Svelte's equality gate
+  // (see WaitingRoomViewModel for the full rationale).
+  private get state(): VoteState | undefined {
+    return this.manager.stateVersion >= 0
       ? (this.manager.room?.state as VoteState | undefined)
-      : undefined,
-  );
+      : undefined;
+  }
 
   private countdown: Countdown;
 
@@ -27,8 +29,10 @@ export class CategoryVoteViewModel {
     );
   }
 
+  // Fresh plain snapshots per tick: schema objects are mutated in place (stable
+  // identity), and the identity-keyed each block would never re-render a vote count.
   readonly options = $derived.by(() =>
-    this.state?.categoryOptions ? [...this.state.categoryOptions] : [],
+    this.state?.categoryOptions ? this.state.categoryOptions.map((o) => ({ ...o })) : [],
   );
   readonly totalVotes = $derived.by(() => this.options.reduce((n, o) => n + o.votes, 0));
   readonly myVote = $derived.by(() =>

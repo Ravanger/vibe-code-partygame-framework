@@ -683,8 +683,16 @@ export class GameRoom<TState = unknown> extends Room {
     if (state.players.get(client.sessionId)?.role !== "host") return;
     if (state.isFinalRound) return;
     this.roundAwards = [];
-    this.enterPrompting();
-    logger.info(`NEXT_ROUND: entering round ${state.roundNumber + 1}`);
+    this.machine.send({
+      type: "ACTION",
+      phase: "Results",
+      name: "NEXT_ROUND",
+      clientId: client.sessionId,
+      role: "host",
+      data: undefined,
+      timestamp: Date.now(),
+    });
+    logger.info(`NEXT_ROUND: entering round ${state.roundNumber}`);
   }
 
   private handlePlayAgain(client: Client) {

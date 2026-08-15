@@ -41,6 +41,11 @@ Thumbs.db
 # Turborepo
 .turbo
 
+# Agent tooling
+.omo/
+.playwright-mcp/
+.codegraph
+
 # Agent files
 .AGENTS/**/*
 !.AGENTS/GEMINI.md

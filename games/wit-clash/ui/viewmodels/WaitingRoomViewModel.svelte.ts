@@ -16,15 +16,20 @@ export class WaitingRoomViewModel {
   private timer: ReturnType<typeof setTimeout> | undefined;
   readonly minPlayers: number;
 
-  private readonly state = $derived.by(() =>
-    this.manager.stateVersion >= 0
+  // Getter, not $derived: a derived returning the same room.state reference is
+  // swallowed by Svelte's equality gate, so the stateVersion tick never reached the
+  // deriveds below. As a getter, every reader depends on stateVersion directly.
+  private get state(): LobbyState | undefined {
+    return this.manager.stateVersion >= 0
       ? (this.manager.room?.state as LobbyState | undefined)
-      : undefined,
-  );
+      : undefined;
+  }
 
   readonly roomCode = $derived.by(() => this.state?.roomCode ?? "");
+  // Fresh plain snapshots per tick: schema objects are mutated in place (stable
+  // identity), and the identity-keyed each block would never re-render a renamed row.
   readonly players = $derived.by(() =>
-    this.state?.players ? [...this.state.players.values()] : [],
+    this.state?.players ? [...this.state.players.values()].map((p) => ({ ...p })) : [],
   );
   readonly localPlayer = $derived.by(() =>
     this.players.find((p) => p.id === this.manager.room?.sessionId),

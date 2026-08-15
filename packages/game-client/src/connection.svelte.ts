@@ -30,10 +30,15 @@ function safeRemove(storage: Storage, key: string): void {
 }
 
 export class GameConnectionManager {
-  public connectionStatus: ConnectionStatus = "disconnected";
-  public room: Room<unknown> | undefined;
-  public error: string | undefined;
-  public stateVersion: number = 0;
+  // MUST stay $state: components read these reactively. As plain fields, every
+  // post-connect update was invisible to Svelte (host stuck on Welcome forever).
+  // room is safe: Svelte only deep-proxies plain objects/arrays, so the Colyseus
+  // Room instance and its schema state are never wrapped.
+  public connectionStatus: ConnectionStatus = $state("disconnected");
+  public room: Room<unknown> | undefined = $state(undefined);
+  public error: string | undefined = $state(undefined);
+  public stateVersion: number = $state(0);
+  public myPrompts: Array<{ matchupId: string; promptText: string }> = $state([]);
   private client: Client;
   private apiBaseUrl: string;
   private playerId: string;
@@ -59,6 +64,13 @@ export class GameConnectionManager {
     if (!this.room) return;
     this.room.onStateChange(() => {
       this.stateVersion += 1;
+    });
+    // Captured here (always listening), not in the Prompting viewmodel: the
+    // server sends this one-shot message the instant the phase starts, which
+    // can land before the Prompting screen mounts — a screen-scoped handler
+    // would miss it and the player would be stuck on "Waiting for prompts...".
+    this.room.onMessage("YOUR_PROMPTS", (list) => {
+      this.myPrompts = (list as Array<{ matchupId: string; promptText: string }>) ?? [];
     });
     this.room.onLeave(() => {
       this.connectionStatus = "disconnected";
@@ -235,6 +247,7 @@ export class GameConnectionManager {
     this.room = undefined;
     this.joinedCode = undefined;
     this.error = undefined;
+    this.myPrompts = [];
     this.connectionStatus = "disconnected";
   }
 }

@@ -9,16 +9,24 @@ interface PromptingState {
 }
 
 export class PromptingViewModel {
-  myPrompts = $state<Array<{ matchupId: string; promptText: string }>>([]);
+  // Sourced from the manager (layer 1), which captures the one-shot
+  // YOUR_PROMPTS message at connect time — see connection.svelte.ts.
+  // Getter, not a field: field initializers run before `manager` is assigned
+  // (TS2729), and the manager's $state field is tracked through the read.
+  get myPrompts(): Array<{ matchupId: string; promptText: string }> {
+    return this.manager.myPrompts;
+  }
   currentIndex = $state(0);
   private drafts = $state<Record<string, string>>({});
   submitted = $state<Record<string, boolean>>({});
 
-  private readonly state = $derived.by(() =>
-    this.manager.stateVersion >= 0
+  // Getter, not $derived — same-referenced room.state is swallowed by Svelte's equality gate
+  // (see WaitingRoomViewModel for the full rationale).
+  private get state(): PromptingState | undefined {
+    return this.manager.stateVersion >= 0
       ? (this.manager.room?.state as PromptingState | undefined)
-      : undefined,
-  );
+      : undefined;
+  }
 
   readonly countdown: Countdown;
 
@@ -27,10 +35,6 @@ export class PromptingViewModel {
       () => this.state?.phaseEndsAt ?? 0,
       () => this.state?.serverNow ?? 0,
     );
-    // biome-ignore lint/suspicious/noExplicitAny: Callback parameter type from room message
-    manager.room?.onMessage("YOUR_PROMPTS", (list: any) => {
-      this.myPrompts = list;
-    });
   }
 
   readonly current = $derived(this.myPrompts[this.currentIndex]);

@@ -46,11 +46,13 @@ export interface ScoreboardEntry extends ScoreEntry {
 }
 
 export class ResultsViewModel {
-  private readonly state = $derived.by(() =>
-    this.manager.stateVersion >= 0
+  // Getter, not $derived — same-referenced room.state is swallowed by Svelte's equality gate
+  // (see WaitingRoomViewModel for the full rationale).
+  private get state(): ResultsState | undefined {
+    return this.manager.stateVersion >= 0
       ? (this.manager.room?.state as ResultsState | undefined)
-      : undefined,
-  );
+      : undefined;
+  }
 
   constructor(private readonly manager: GameConnectionManager) {}
 
@@ -97,7 +99,14 @@ export class ResultsViewModel {
     return this.winner;
   });
 
-  readonly matchups = $derived(this.state?.matchups ?? []);
+  // Fresh plain snapshots per tick (incl. nested answers): schema objects are mutated
+  // in place (stable identity), and the identity-keyed each blocks would never re-render.
+  readonly matchups = $derived.by(() =>
+    (this.state?.matchups ?? []).map((m) => ({
+      ...m,
+      answers: m.answers.map((a) => ({ ...a })),
+    })),
+  );
 
   isMe(playerId: string): boolean {
     return this.manager.room?.sessionId === playerId;

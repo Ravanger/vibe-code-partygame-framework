@@ -34,11 +34,13 @@ export interface VoteAnswer {
 }
 
 export class MatchupVoteViewModel {
-  private readonly state = $derived.by(() =>
-    this.manager.stateVersion >= 0
+  // Getter, not $derived — same-referenced room.state is swallowed by Svelte's equality gate
+  // (see WaitingRoomViewModel for the full rationale).
+  private get state(): VotingState | undefined {
+    return this.manager.stateVersion >= 0
       ? (this.manager.room?.state as VotingState | undefined)
-      : undefined,
-  );
+      : undefined;
+  }
 
   private countdown: Countdown | undefined;
 
