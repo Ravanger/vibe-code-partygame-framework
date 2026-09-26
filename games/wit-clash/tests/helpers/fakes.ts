@@ -49,6 +49,9 @@ export interface FakeManager {
   stateVersion: number;
   room: FakeRoom | undefined;
   myPrompts: Array<{ matchupId: string; promptText: string }>;
+  myMatchupInfo:
+    | { matchupId: string; isOwnMatchup: boolean; eligibleVoterCount: number }
+    | undefined;
   create: (roomName?: string) => Promise<FakeRoom>;
   join: (code: string) => Promise<FakeRoom>;
   joinByCode: (code: string) => Promise<FakeRoom>;
@@ -122,6 +125,9 @@ export function fakeManager(over: Partial<FakeManager> = {}): FakeManager {
     stateVersion: 0,
     room: undefined as FakeRoom | undefined,
     myPrompts: [] as Array<{ matchupId: string; promptText: string }>,
+    myMatchupInfo: undefined as
+      | { matchupId: string; isOwnMatchup: boolean; eligibleVoterCount: number }
+      | undefined,
     create: vi.fn().mockResolvedValue(makeFakeRoom()),
     join: vi.fn().mockResolvedValue(makeFakeRoom()),
     joinByCode: vi.fn().mockResolvedValue(makeFakeRoom()),

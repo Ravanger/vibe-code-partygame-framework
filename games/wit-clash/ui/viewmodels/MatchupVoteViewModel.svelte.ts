@@ -33,6 +33,12 @@ export interface VoteAnswer {
   authorName: string;
 }
 
+interface MatchupInfo {
+  matchupId: string;
+  isOwnMatchup: boolean;
+  eligibleVoterCount: number;
+}
+
 export class MatchupVoteViewModel {
   // Getter, not $derived — same-referenced room.state is swallowed by Svelte's equality gate
   // (see WaitingRoomViewModel for the full rationale).
@@ -78,7 +84,18 @@ export class MatchupVoteViewModel {
     () => this.state?.answerVotes?.get(this.manager.room?.sessionId ?? "") ?? "",
   );
 
-  readonly isAuthor = $derived.by(() => this.authorIds.has(this.manager.room?.sessionId ?? ""));
+  // Server-sent per-client voting context (MATCHUP_INFO). Preferred over the
+  // state-derived authorIds below: the server blanks authorId until reveal,
+  // so the state derivation always says "not an author" pre-reveal.
+  private readonly matchupInfo = $derived.by((): MatchupInfo | undefined => {
+    const info = this.manager.myMatchupInfo;
+    const active = this.activeMatchup;
+    return info && active && info.matchupId === active.id ? info : undefined;
+  });
+
+  readonly isAuthor = $derived.by(
+    () => this.matchupInfo?.isOwnMatchup ?? this.authorIds.has(this.manager.room?.sessionId ?? ""),
+  );
 
   readonly totalVotes = $derived.by(() => this.answers.reduce((sum, a) => sum + a.votes, 0));
 
@@ -87,6 +104,8 @@ export class MatchupVoteViewModel {
   );
 
   readonly eligibleVoterCount = $derived.by(() => {
+    // Server-computed: authors of this matchup can't vote.
+    if (this.matchupInfo) return this.matchupInfo.eligibleVoterCount;
     const players = this.state?.players;
     if (!players) return 0;
     let count = 0;

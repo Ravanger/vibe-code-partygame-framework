@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MatchupVoteViewModel } from "../../ui/viewmodels/MatchupVoteViewModel.svelte.js";
-import { fakeManager, makeFakeRoom, makeFakeState, managerWithState } from "../helpers/fakes.js";
+import {
+  fakeManager,
+  makeFakeRoom,
+  makeFakeState,
+  makePlayer,
+  managerWithState,
+} from "../helpers/fakes.js";
 
 describe("MatchupVoteViewModel", () => {
   beforeEach(() => vi.useFakeTimers());
@@ -312,6 +318,81 @@ describe("MatchupVoteViewModel", () => {
       const vm = new MatchupVoteViewModel(fakeManager({ room: makeFakeRoom({ state }) }) as never);
       expect(vm.promptText).toBe("");
       expect(vm.answers).toEqual([]);
+      vm.destroy();
+    });
+  });
+
+  describe("MATCHUP_INFO per-client voting context", () => {
+    function managerWithInfo(info: unknown, sessionId = "me") {
+      const state = makeMatchupState({
+        players: new Map([
+          ["me", makePlayer({ id: "me", name: "Me" })],
+          ["p2", makePlayer({ id: "p2", name: "Bob" })],
+          ["p3", makePlayer({ id: "p3", name: "Carol" })],
+          ["p4", makePlayer({ id: "p4", name: "Dave" })],
+        ]),
+      });
+      return fakeManager({
+        room: makeFakeRoom({ state, sessionId }),
+        myMatchupInfo: info as never,
+      }) as never;
+    }
+
+    it("marks the matchup author pre-reveal, when state authorIds are blank", () => {
+      const vm = new MatchupVoteViewModel(
+        managerWithInfo({ matchupId: "m1", isOwnMatchup: true, eligibleVoterCount: 2 }),
+      );
+      expect(vm.isAuthor).toBe(true);
+      expect(vm.eligibleVoterCount).toBe(2);
+      vm.destroy();
+    });
+
+    it("marks a non-author as votable pre-reveal", () => {
+      const vm = new MatchupVoteViewModel(
+        managerWithInfo({ matchupId: "m1", isOwnMatchup: false, eligibleVoterCount: 2 }),
+      );
+      expect(vm.isAuthor).toBe(false);
+      expect(vm.eligibleVoterCount).toBe(2);
+      vm.destroy();
+    });
+
+    it("ignores matchup info for a different matchup id", () => {
+      const vm = new MatchupVoteViewModel(
+        managerWithInfo({ matchupId: "m2", isOwnMatchup: true, eligibleVoterCount: 2 }),
+      );
+      // Falls back to state derivation: authorIds are blank pre-reveal.
+      expect(vm.isAuthor).toBe(false);
+      expect(vm.eligibleVoterCount).toBe(4);
+      vm.destroy();
+    });
+
+    it("falls back to state derivation when no info was received", () => {
+      const vm = new MatchupVoteViewModel(managerWithInfo(undefined));
+      expect(vm.isAuthor).toBe(false);
+      expect(vm.eligibleVoterCount).toBe(4);
+      vm.destroy();
+    });
+
+    it("still detects authorship from revealed state", () => {
+      const state = makeMatchupState({
+        matchups: [
+          {
+            id: "m1",
+            index: 0,
+            promptText: "Prompt",
+            isRevealed: true,
+            answers: [
+              { id: "a1", text: "A", votes: 2, authorId: "me" },
+              { id: "a2", text: "B", votes: 1, authorId: "p2" },
+            ],
+          },
+        ],
+        isRevealing: true,
+      });
+      const vm = new MatchupVoteViewModel(
+        fakeManager({ room: makeFakeRoom({ state, sessionId: "me" }) }) as never,
+      );
+      expect(vm.isAuthor).toBe(true);
       vm.destroy();
     });
   });

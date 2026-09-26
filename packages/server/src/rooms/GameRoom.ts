@@ -262,8 +262,14 @@ export class GameRoom<TState = unknown> extends Room {
 
   private checkAutoStart(state: GameStateSchema) {
     if (state.phase !== "Lobby") return;
-    const readyCount = Array.from(state.players.values()).filter((p) => p.isReady).length;
-    if (readyCount >= this.gameDefinition.minPlayers) {
+    const players = Array.from(state.players.values());
+    const readyCount = players.filter((p) => p.isReady).length;
+    // Auto-start only once every joined player has picked a name. With
+    // minPlayers=3 the 3rd ready player used to yank the lobby away while a
+    // 4th player was still typing. The host can still start manually once
+    // readyCount >= minPlayers.
+    const everyoneReady = players.length > 0 && players.every((p) => p.isReady);
+    if (everyoneReady && readyCount >= this.gameDefinition.minPlayers) {
       logger.info(
         `Auto-starting game: ${readyCount} players ready (min: ${this.gameDefinition.minPlayers})`,
       );
@@ -563,9 +569,34 @@ export class GameRoom<TState = unknown> extends Room {
       return;
     }
 
+    // Tell each client privately whether they authored this matchup and how
+    // many players may vote on it. The shared state blanks authorId until
+    // reveal, so without this the client would render enabled vote buttons
+    // for everyone (and count every player as an eligible voter).
+    for (const client of this.clients) this.sendMatchupInfoTo(client);
+
     state.phaseEndsAt = Date.now() + this.durations.matchupVoteMs;
     this.clearPhaseTimer();
     this.phaseTimer = setTimeout(() => this.revealMatchup(), this.durations.matchupVoteMs);
+  }
+
+  /**
+   * Per-client voting context for the active matchup. Sent as a targeted
+   * message (never in shared state) so authorship of *other* players stays
+   * hidden: each client learns only whether *they* authored this matchup.
+   */
+  private sendMatchupInfoTo(client: Client) {
+    const state = this.state as GameStateSchema;
+    const matchup = state.matchups[state.activeMatchupIndex];
+    if (!matchup || state.phase !== "Voting") return;
+    const isOwnMatchup = matchup.answers.some(
+      (a) => this.answerAuthors.get(a.id) === client.sessionId,
+    );
+    client.send("MATCHUP_INFO", {
+      matchupId: matchup.id,
+      isOwnMatchup,
+      eligibleVoterCount: this.eligibleVoters(state.activeMatchupIndex).length,
+    });
   }
 
   private eligibleVoters(index: number): PlayerSchema[] {
@@ -891,6 +922,9 @@ export class GameRoom<TState = unknown> extends Room {
         // Re-key votes if reconnecting during Voting
         if (state.phase === "Voting") {
           this.rekeyVotingState(oldSessionId, client.sessionId);
+          // The MATCHUP_INFO broadcast for the active matchup already went
+          // out: resend it to the returner or their buttons stay enabled.
+          this.sendMatchupInfoTo(client);
         }
 
         // Re-key scores on reconnect so points survive a refresh

@@ -39,6 +39,12 @@ export class GameConnectionManager {
   public error: string | undefined = $state(undefined);
   public stateVersion: number = $state(0);
   public myPrompts: Array<{ matchupId: string; promptText: string }> = $state([]);
+  // Per-client voting context for the active matchup: whether THIS client
+  // authored it and how many players may vote. Sent as a targeted message
+  // (MATCHUP_INFO) because the shared state blanks authorId until reveal.
+  public myMatchupInfo:
+    | { matchupId: string; isOwnMatchup: boolean; eligibleVoterCount: number }
+    | undefined = $state(undefined);
   private client: Client;
   private apiBaseUrl: string;
   private playerId: string;
@@ -62,6 +68,8 @@ export class GameConnectionManager {
 
   private attachRoomHandlers(): void {
     if (!this.room) return;
+    // A previous room's matchup context must not leak into this join.
+    this.myMatchupInfo = undefined;
     this.room.onStateChange(() => {
       this.stateVersion += 1;
     });
@@ -71,6 +79,15 @@ export class GameConnectionManager {
     // would miss it and the player would be stuck on "Waiting for prompts...".
     this.room.onMessage("YOUR_PROMPTS", (list) => {
       this.myPrompts = (list as Array<{ matchupId: string; promptText: string }>) ?? [];
+    });
+    // One-shot per matchup start (re-sent on reconnect mid-voting). Like
+    // YOUR_PROMPTS, a screen-scoped handler could miss it, so it lives here.
+    this.room.onMessage("MATCHUP_INFO", (info) => {
+      this.myMatchupInfo = info as {
+        matchupId: string;
+        isOwnMatchup: boolean;
+        eligibleVoterCount: number;
+      };
     });
     this.room.onLeave(() => {
       this.connectionStatus = "disconnected";
@@ -256,6 +273,7 @@ export class GameConnectionManager {
     this.joinedCode = undefined;
     this.error = undefined;
     this.myPrompts = [];
+    this.myMatchupInfo = undefined;
     this.connectionStatus = "disconnected";
   }
 }

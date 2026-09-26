@@ -155,6 +155,25 @@ describe("GameConnectionManager", () => {
     ]);
   });
 
+  it("captures MATCHUP_INFO into myMatchupInfo at the manager level", async () => {
+    const manager = new GameConnectionManager("ws://localhost:2567");
+    const room = (await manager.create("wit_clash", { name: "Host" })) as unknown as {
+      triggerMessage: (type: string, payload: unknown) => void;
+    };
+
+    expect(manager.myMatchupInfo).toBeUndefined();
+    room.triggerMessage("MATCHUP_INFO", {
+      matchupId: "m1",
+      isOwnMatchup: true,
+      eligibleVoterCount: 2,
+    });
+    expect(manager.myMatchupInfo).toEqual({
+      matchupId: "m1",
+      isOwnMatchup: true,
+      eligibleVoterCount: 2,
+    });
+  });
+
   it("should have room with state when joining by code", async () => {
     global.fetch = createResolveCodeFetch();
 
@@ -273,11 +292,13 @@ describe("GameConnectionManager error reporting", () => {
     const m = new GameConnectionManager("http://localhost:2567");
     await expect(m.connect("wit_clash")).rejects.toThrow();
     m.myPrompts = [{ matchupId: "m0", promptText: "Q1" }];
+    m.myMatchupInfo = { matchupId: "m0", isOwnMatchup: true, eligibleVoterCount: 2 };
     m.reset();
     expect(m.connectionStatus).toBe("disconnected");
     expect(m.error).toBeUndefined();
     expect(m.room).toBeUndefined();
     expect(m.myPrompts).toEqual([]);
+    expect(m.myMatchupInfo).toBeUndefined();
   });
 });
 
