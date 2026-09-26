@@ -72,4 +72,42 @@ describe("Results.svelte", () => {
     expect(screen.queryByText("Alice")).not.toBeInTheDocument();
     expect(screen.queryByText("Bob")).not.toBeInTheDocument();
   });
+
+  it("does not show CLASH! when only one voter cast a vote", () => {
+    const manager = makeManager({
+      matchups: [
+        {
+          id: "m1",
+          index: 0,
+          promptText: "Worst breakfast food",
+          isRevealed: true,
+          answers: [
+            { id: "a1", text: "Eggs", votes: 1, authorId: "p2" },
+            { id: "a2", text: "Cereal", votes: 0, authorId: "p1" },
+          ],
+        },
+      ],
+    });
+    render(Results, { manager });
+    expect(screen.queryByText("CLASH!")).not.toBeInTheDocument();
+  });
+
+  it("shows CLASH! when every voter (>= 2) picked the same answer", () => {
+    const manager = makeManager({
+      matchups: [
+        {
+          id: "m1",
+          index: 0,
+          promptText: "Worst breakfast food",
+          isRevealed: true,
+          answers: [
+            { id: "a1", text: "Eggs", votes: 2, authorId: "p2" },
+            { id: "a2", text: "Cereal", votes: 0, authorId: "p1" },
+          ],
+        },
+      ],
+    });
+    render(Results, { manager });
+    expect(screen.getByText("CLASH!")).toBeInTheDocument();
+  });
 });

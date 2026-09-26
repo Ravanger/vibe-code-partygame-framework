@@ -31,7 +31,8 @@ const vm = new ResultsViewModel(manager);
           {#each matchup.answers as answer}
             {@const otherAnswer = matchup.answers.find(a => a.id !== answer.id)}
             {@const isWinner = answer.votes > (otherAnswer?.votes ?? 0)}
-            {@const isClash = answer.votes === totalVotes && answer.votes > 0}
+            <!-- A clash needs >= 2 voters; with a single vote the equality below is trivially true -->
+            {@const isClash = answer.votes === totalVotes && totalVotes >= 2}
             <div class="answer-card" class:winner={isWinner} class:clash={isClash}>
               <div class="answer-text">{answer.text}</div>
               <div class="answer-meta">

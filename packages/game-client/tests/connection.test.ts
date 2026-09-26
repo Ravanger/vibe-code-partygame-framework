@@ -4,6 +4,7 @@ import { GameConnectionManager } from "../src/connection.svelte.js";
 let shouldFail = false;
 let joinByIdShouldWait = false;
 let resolveJoinById: Array<(room: unknown) => void> = [];
+let reconnectRoom: unknown;
 
 const createResolveCodeFetch = () =>
   vi.fn(() =>
@@ -57,6 +58,11 @@ vi.mock("@colyseus/sdk", () => {
       resolveJoinById.push(resolve);
     });
   });
+  // biome-ignore lint/suspicious/noExplicitAny: mocking prototype
+  (MockClient.prototype as any).reconnect = vi.fn(() => {
+    if (reconnectRoom) return Promise.resolve(reconnectRoom);
+    return Promise.reject(new Error("no reconnection available"));
+  });
 
   // Expose MockClient for test overrides via globalThis
   // biome-ignore lint/suspicious/noExplicitAny: globalThis requires any type assertion
@@ -74,6 +80,9 @@ describe("GameConnectionManager", () => {
     shouldFail = false;
     joinByIdShouldWait = false;
     resolveJoinById = [];
+    reconnectRoom = undefined;
+    sessionStorage.clear();
+    localStorage.clear();
   });
 
   it("should initialize with disconnected status", () => {
@@ -313,5 +322,20 @@ describe("GameConnectionManager reconnection", () => {
     const room = await m.create("wit_clash");
     expect(room.roomId).toBe("room-2");
     expect(m.connectionStatus).toBe("connected");
+  });
+
+  it("persists the fresh reconnection token after a successful token reconnect", async () => {
+    sessionStorage.setItem("witclash.reconnectionToken", "token-A");
+    // The server issues a new single-use token with every successful (re)join;
+    // the SDK exposes it as room.reconnectionToken in `roomId:token` format.
+    reconnectRoom = makeFakeRoom({ reconnectionToken: "room-1:token-B" });
+
+    const m = new GameConnectionManager("http://localhost:2567");
+    expect(await m.tryReconnect()).toBe(true);
+    expect(m.connectionStatus).toBe("connected");
+
+    // The consumed token-A must be replaced, or the next reconnect attempt
+    // fails and degrades to a full code-based rejoin.
+    expect(sessionStorage.getItem("witclash.reconnectionToken")).toBe("room-1:token-B");
   });
 });

@@ -1,0 +1,19 @@
+{
+  "id": "animals",
+  "name": "Animals",
+  "emoji": "🐾",
+  "prompts": [
+    { "id": "animals-1", "text": "A terrible name for a pet goldfish." },
+    { "id": "animals-2", "text": "What the pigeons are really plotting." },
+    { "id": "animals-3", "text": "The worst animal to find in your bed." },
+    { "id": "animals-4", "text": "A dating profile bio written by a raccoon." },
+    { "id": "animals-5", "text": "The real reason dogs bark at the mail carrier." },
+    { "id": "animals-6", "text": "A job interview answer given by a job-seeking octopus." },
+    { "id": "animals-7", "text": "What your cat would say about you behind your back." },
+    { "id": "animals-8", "text": "The most suspicious thing a squirrel has ever done." }
+  ],
+  "tieBreakers": [
+    { "id": "animals-tb-1", "text": "A motivational speech delivered by a sloth." },
+    { "id": "animals-tb-2", "text": "The penguin's secret talent." }
+  ]
+}

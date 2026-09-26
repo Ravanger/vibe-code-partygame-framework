@@ -81,7 +81,12 @@ export class GameConnectionManager {
 
   private persistConnectionMetadata(): void {
     if (!this.room) return;
-    safeSet(sessionStorage, RECONNECTION_TOKEN_KEY, this.room.reconnectionToken);
+    // Guard against a missing token: storing the literal string "undefined"
+    // would make tryReconnect() treat it as a valid (but dead) token.
+    const token = this.room.reconnectionToken;
+    if (token) {
+      safeSet(sessionStorage, RECONNECTION_TOKEN_KEY, token);
+    }
     const state = this.room.state as { roomCode?: string };
     if (state?.roomCode) {
       safeSet(localStorage, LAST_ROOM_CODE_KEY, state.roomCode);
@@ -216,6 +221,9 @@ export class GameConnectionManager {
         this.connectionStatus = "connecting";
         this.room = await this.client.reconnect(token);
         this.attachRoomHandlers();
+        // The token we just used is single-use: persist the fresh one the
+        // server issued with this join, or the next reconnect will fail.
+        this.persistConnectionMetadata();
         this.connectionStatus = "connected";
         return true;
       } catch {

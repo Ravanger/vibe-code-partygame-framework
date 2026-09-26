@@ -1,0 +1,19 @@
+{
+  "id": "music",
+  "name": "Music",
+  "emoji": "🎸",
+  "prompts": [
+    { "id": "music-1", "text": "The worst possible band name." },
+    { "id": "music-2", "text": "A terrible lyric to scream at a wedding." },
+    { "id": "music-3", "text": "What the drummer is actually thinking during the guitar solo." },
+    { "id": "music-4", "text": "A one-star review of a legendary concert." },
+    { "id": "music-5", "text": "The real meaning behind a song everyone misinterprets." },
+    { "id": "music-6", "text": "A genre of music that should never have been invented." },
+    { "id": "music-7", "text": "The most dramatic possible reason a band breaks up." },
+    { "id": "music-8", "text": "What the elevator music is trying to tell you." }
+  ],
+  "tieBreakers": [
+    { "id": "music-tb-1", "text": "A roadie's diary entry from the worst tour ever." },
+    { "id": "music-tb-2", "text": "The encore nobody wanted but everybody got." }
+  ]
+}

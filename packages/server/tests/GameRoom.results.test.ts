@@ -9,6 +9,7 @@ const DURATIONS: PhaseDurations = {
   matchupVoteMs: 2000,
   matchupRevealMs: 200,
   emptyRoomGraceMs: 200,
+  reconnectMs: 10000,
 };
 
 describe("GameRoom — Results phase", () => {

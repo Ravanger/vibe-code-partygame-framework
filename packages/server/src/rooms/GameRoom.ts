@@ -27,6 +27,7 @@ export interface PhaseDurations {
   matchupVoteMs: number;
   matchupRevealMs: number;
   emptyRoomGraceMs: number;
+  reconnectMs: number;
 }
 
 export const DEFAULT_DURATIONS: PhaseDurations = {
@@ -35,6 +36,7 @@ export const DEFAULT_DURATIONS: PhaseDurations = {
   matchupVoteMs: 20_000,
   matchupRevealMs: 5_000,
   emptyRoomGraceMs: 120_000,
+  reconnectMs: 60_000,
 };
 
 export const TEST_DURATIONS: PhaseDurations = {
@@ -43,6 +45,7 @@ export const TEST_DURATIONS: PhaseDurations = {
   matchupVoteMs: 60,
   matchupRevealMs: 30,
   emptyRoomGraceMs: 200,
+  reconnectMs: 1000,
 };
 
 const logger = {
@@ -55,11 +58,6 @@ const logger = {
   debug: (message: string, ...args: unknown[]) =>
     console.debug(`[GameRoom] DEBUG: ${message}`, ...args),
 };
-
-const _CloseCode = {
-  CONSENTED: 4000,
-  WITH_ERROR: 4001,
-} as const;
 
 export class GameRoom<TState = unknown> extends Room {
   private machine!: AnyActorRef;
@@ -137,6 +135,10 @@ export class GameRoom<TState = unknown> extends Room {
       );
     }
     logger.debug("gameDefinition set:", this.gameDefinition.name);
+
+    // Enforce the game's player cap at the transport layer: Colyseus rejects
+    // joins once maxClients is reached, so capacity needs no manual policing.
+    this.maxClients = this.gameDefinition.maxPlayers;
 
     this.machine = createActor(buildXStateMachine(this.gameDefinition));
     this.machine.subscribe((snapshot) => {
@@ -743,10 +745,12 @@ export class GameRoom<TState = unknown> extends Room {
       this.assignments.set(newSessionId, assigned);
     }
 
+    // Draft keys are `${matchupId}:${sessionId}` — match on the sessionId suffix.
     for (const [key, value] of this.drafts) {
-      if (key.startsWith(`${oldSessionId}:`)) {
+      const sep = key.lastIndexOf(":");
+      if (sep !== -1 && key.slice(sep + 1) === oldSessionId) {
         this.drafts.delete(key);
-        this.drafts.set(key.replace(oldSessionId, newSessionId), value);
+        this.drafts.set(`${key.slice(0, sep + 1)}${newSessionId}`, value);
       }
     }
 
@@ -764,6 +768,14 @@ export class GameRoom<TState = unknown> extends Room {
       state.answerVotes.delete(oldSessionId);
       state.answerVotes.set(newSessionId, vote);
     }
+
+    // Authorship must follow the session or a reconnected author could vote on
+    // their own answer (the eligibility check compares against this map).
+    for (const [answerId, sessionId] of this.answerAuthors) {
+      if (sessionId === oldSessionId) {
+        this.answerAuthors.set(answerId, newSessionId);
+      }
+    }
   }
 
   onLeave(client: Client, code?: number) {
@@ -777,15 +789,45 @@ export class GameRoom<TState = unknown> extends Room {
 
     const isConsented = code === CloseCode.CONSENTED;
     if (isConsented) {
-      state.players.delete(client.sessionId);
-      this.reassignHostIfNeeded(state);
-      this.scheduleDisposeIfEmpty(state);
+      this.finalizePlayerRemoval(state, client.sessionId);
     } else {
       player.isConnected = false;
-      this.allowReconnection(client, 60);
+      this.allowReconnection(client, this.durations.reconnectMs / 1000);
       logger.info(`Player ${player.name} disconnected, seat held for reconnection`);
+      // Colyseus releases an expired reconnection reservation silently — no second
+      // onLeave — so finalize the seat ourselves or a ghost (a stuck host included)
+      // would linger forever and stall host-gated actions.
+      const sessionId = client.sessionId;
+      setTimeout(() => {
+        const seat = state.players.get(sessionId);
+        if (seat && !seat.isConnected) {
+          logger.info(`Player ${seat.name} did not return in time, removing seat`);
+          this.finalizePlayerRemoval(state, sessionId);
+        }
+      }, this.durations.reconnectMs);
       this.scheduleDisposeIfEmpty(state);
     }
+  }
+
+  private finalizePlayerRemoval(state: GameStateSchema, sessionId: string) {
+    state.players.delete(sessionId);
+    // A leaver forfeits their prompting work: drop assignments and drafts, recompute
+    // the expected total, resolve if everyone else is done.
+    if (state.phase === "Prompting") {
+      const assigned = this.assignments.get(sessionId);
+      if (assigned) {
+        this.assignments.delete(sessionId);
+        for (const matchupId of assigned) {
+          if (this.drafts.delete(`${matchupId}:${sessionId}`)) state.answersSubmitted--;
+        }
+        state.answersExpected -= assigned.length;
+      }
+      if (state.answersExpected > 0 && state.answersSubmitted >= state.answersExpected) {
+        this.finishPrompting();
+      }
+    }
+    this.reassignHostIfNeeded(state);
+    this.scheduleDisposeIfEmpty(state);
   }
 
   private reassignHostIfNeeded(state: GameStateSchema) {

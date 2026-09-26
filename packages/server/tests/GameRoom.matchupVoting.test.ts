@@ -9,6 +9,7 @@ const DURATIONS: PhaseDurations = {
   matchupVoteMs: 1500,
   matchupRevealMs: 400,
   emptyRoomGraceMs: 200,
+  reconnectMs: 10000,
 };
 
 function setupRoomWithMatchups(

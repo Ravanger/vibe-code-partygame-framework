@@ -10,6 +10,7 @@ const DURATIONS: PhaseDurations = {
   matchupVoteMs: TEST_DURATIONS_VOTE_MS,
   matchupRevealMs: 30,
   emptyRoomGraceMs: 200,
+  reconnectMs: 10000,
 };
 
 describe("GameRoom — Voting phase", () => {

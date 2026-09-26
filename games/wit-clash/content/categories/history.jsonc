@@ -1,0 +1,19 @@
+{
+  "id": "history",
+  "name": "History",
+  "emoji": "🏛️",
+  "prompts": [
+    { "id": "history-1", "text": "The real reason the pyramids were built." },
+    { "id": "history-2", "text": "A bad excuse a knight would give for being late to battle." },
+    { "id": "history-3", "text": "What the dinosaurs were arguing about before the asteroid hit." },
+    { "id": "history-4", "text": "A one-star review of the Stone Age." },
+    { "id": "history-5", "text": "The worst possible slogan for a medieval kingdom." },
+    { "id": "history-6", "text": "What pirates actually did with all that treasure." },
+    { "id": "history-7", "text": "A text message accidentally sent by a pharaoh." },
+    { "id": "history-8", "text": "The most embarrassing moment in the history of inventions." }
+  ],
+  "tieBreakers": [
+    { "id": "history-tb-1", "text": "A caveman's complaint about modern life." },
+    { "id": "history-tb-2", "text": "The rejected draft of a famous historical speech." }
+  ]
+}

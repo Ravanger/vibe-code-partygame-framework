@@ -9,6 +9,7 @@ const DURATIONS: PhaseDurations = {
   matchupVoteMs: 300,
   matchupRevealMs: 200,
   emptyRoomGraceMs: 200,
+  reconnectMs: 10000,
 };
 
 function voteCategory(

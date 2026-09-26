@@ -13,6 +13,7 @@ describe("GameRoom — Category Vote phase", () => {
     matchupVoteMs: 60,
     matchupRevealMs: 30,
     emptyRoomGraceMs: 200,
+    reconnectMs: 10000,
   };
   beforeAll(async () => {
     colyseus = await bootTestServer(durations);

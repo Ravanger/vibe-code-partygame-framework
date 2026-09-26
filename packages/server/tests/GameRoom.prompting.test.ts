@@ -15,6 +15,7 @@ describe("GameRoom — Prompting phase", () => {
     matchupVoteMs: 2000,
     matchupRevealMs: 500,
     emptyRoomGraceMs: 10,
+    reconnectMs: 10000,
   };
   beforeAll(async () => {
     colyseus = await bootTestServer(durations);
@@ -62,7 +63,9 @@ describe("GameRoom — Prompting phase", () => {
 
     it("sets phaseEndsAt about promptMs ahead", async () => {
       const { room } = await enterPrompting();
-      const diff = room.state.phaseEndsAt - room.state.serverNow;
+      // Compare against Date.now(), not state.serverNow: serverNow only ticks once per
+      // second, so the diff could lag by up to a full tick and break the upper bound.
+      const diff = room.state.phaseEndsAt - Date.now();
       expect(diff).toBeGreaterThanOrEqual(durations.promptMs - 50);
       expect(diff).toBeLessThanOrEqual(durations.promptMs + 100);
     });

@@ -1,0 +1,25 @@
+{
+  "id": "movies",
+  "name": "Movies",
+  "emoji": "🎬",
+  "prompts": [
+    { "id": "movies-1", "text": "A movie sequel nobody asked for." },
+    { "id": "movies-2", "text": "The worst possible tagline for a romantic comedy." },
+    { "id": "movies-3", "text": "What the villain was thinking during the hero's big speech." },
+    { "id": "movies-4", "text": "A horror movie where the monster is just mildly inconvenienced." },
+    { "id": "movies-5", "text": "The director's commentary excuse for a terrible plot hole." },
+    { "id": "movies-6", "text": "A superhero whose only power is showing up late." },
+    { "id": "movies-7", "text": "The rejected title of a famous blockbuster." },
+    {
+      "id": "movies-8",
+      "text": "What the extras are whispering about in the background of the scene."
+    }
+  ],
+  "tieBreakers": [
+    {
+      "id": "movies-tb-1",
+      "text": "An Oscar acceptance speech that goes completely off the rails."
+    },
+    { "id": "movies-tb-2", "text": "The post-credits scene everyone walked out before seeing." }
+  ]
+}
