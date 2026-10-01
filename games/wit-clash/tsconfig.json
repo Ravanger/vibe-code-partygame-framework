@@ -10,5 +10,5 @@
     "verbatimModuleSyntax": true,
     "types": ["vitest/globals", "jsdom", "vite/client", "@testing-library/jest-dom"]
   },
-  "include": ["src/**/*.ts", "ui/**/*.ts", "ui/**/*.svelte", "tests/**/*.ts", "index.ts"]
+  "include": ["src/**/*.ts", "ui/**/*.ts", "ui/**/*.svelte", "tests/**/*.ts", "server.ts"]
 }

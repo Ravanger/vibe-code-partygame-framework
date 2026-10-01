@@ -3,17 +3,99 @@
   "name": "History",
   "emoji": "🏛️",
   "prompts": [
-    { "id": "history-1", "text": "The real reason the pyramids were built." },
-    { "id": "history-2", "text": "A bad excuse a knight would give for being late to battle." },
-    { "id": "history-3", "text": "What the dinosaurs were arguing about before the asteroid hit." },
-    { "id": "history-4", "text": "A one-star review of the Stone Age." },
-    { "id": "history-5", "text": "The worst possible slogan for a medieval kingdom." },
-    { "id": "history-6", "text": "What pirates actually did with all that treasure." },
-    { "id": "history-7", "text": "A text message accidentally sent by a pharaoh." },
-    { "id": "history-8", "text": "The most embarrassing moment in the history of inventions." }
+    {
+      "id": "history-1",
+      "text": "The real reason the pyramids were built, according to a bored pharaoh."
+    },
+    { "id": "history-2", "text": "A knight's worst excuse for being late to battle." },
+    {
+      "id": "history-3",
+      "text": "What the dinosaurs were arguing about right before the asteroid arrived."
+    },
+    { "id": "history-4", "text": "A time traveler's one-star review of the Stone Age." },
+    { "id": "history-5", "text": "The worst slogan ever printed on a medieval kingdom's banner." },
+    { "id": "history-6", "text": "What pirates actually spent all that treasure on." },
+    { "id": "history-7", "text": "A text a medieval king accidentally sent to the whole kingdom." },
+    {
+      "id": "history-8",
+      "text": "The invention that came with a handwritten apology from its inventor."
+    },
+    { "id": "history-9", "text": "What the Trojans said after dragging the horse inside." },
+    { "id": "history-10", "text": "The first thing a time traveler would ruin in ancient Rome." },
+    { "id": "history-11", "text": "A fake fact you'd sneak into a history textbook." },
+    { "id": "history-12", "text": "The Vikings' real battle cry, translated." },
+    {
+      "id": "history-13",
+      "text": "The worst job in a medieval castle, as described in the job posting."
+    },
+    { "id": "history-14", "text": "The rejected name for the Middle Ages." },
+    {
+      "id": "history-15",
+      "text": "An Industrial Revolution invention that was steam-powered for no reason."
+    },
+    { "id": "history-16", "text": "The note found in the rubble explaining why an empire fell." },
+    { "id": "history-17", "text": "A medieval peasant's reaction to the invention of the fork." },
+    {
+      "id": "history-18",
+      "text": "What the cave paintings really say, translated by a snobby art critic."
+    },
+    { "id": "history-19", "text": "The eighth wonder of the ancient world that never caught on." },
+    { "id": "history-20", "text": "A diary entry from the person who invented the wheel." },
+    {
+      "id": "history-21",
+      "text": "The proposal that got a Roman senator laughed out of the Senate."
+    },
+    { "id": "history-22", "text": "What the Great Wall was really built to keep out." },
+    { "id": "history-23", "text": "A review of a medieval inn where everyone shares one bed." },
+    { "id": "history-24", "text": "A slogan for a Viking cruise line." },
+    { "id": "history-25", "text": "Why the explorer was really lost for three years." },
+    {
+      "id": "history-26",
+      "text": "The very unpiratey fear the pirate captain hides from the crew."
+    },
+    {
+      "id": "history-27",
+      "text": "The most awkward part of being a gladiator, besides the obvious."
+    },
+    { "id": "history-28", "text": "The specials board at a medieval tavern." },
+    {
+      "id": "history-29",
+      "text": "The first words spoken on a telephone, if the inventor was in a bad mood."
+    },
+    { "id": "history-30", "text": "The worst item in the gift shop of a museum dedicated to mud." },
+    { "id": "history-31", "text": "A pharaoh's skincare routine." },
+    {
+      "id": "history-32",
+      "text": "What the Statue of Liberty was almost holding instead of a torch."
+    },
+    { "id": "history-33", "text": "The fossils' gossip once the museum lights go off." },
+    {
+      "id": "history-34",
+      "text": "A silly law an old kingdom passed right after the king lost a bet."
+    },
+    { "id": "history-35", "text": "A Stone Age motivational poster." },
+    {
+      "id": "history-36",
+      "text": "What the first knight said about the Round Table's seating chart."
+    },
+    { "id": "history-37", "text": "The cursed souvenir an explorer smuggled home from the tomb." },
+    {
+      "id": "history-38",
+      "text": "The history lesson a substitute teacher is clearly making up as they go."
+    },
+    { "id": "history-39", "text": "The ancient prophecy that turned out to be a typo." },
+    { "id": "history-40", "text": "The last page of a ship captain's wildly optimistic log." }
   ],
   "tieBreakers": [
-    { "id": "history-tb-1", "text": "A caveman's complaint about modern life." },
-    { "id": "history-tb-2", "text": "The rejected draft of a famous historical speech." }
+    {
+      "id": "history-tb-1",
+      "text": "A caveman's complaint about the newfangled invention of fire."
+    },
+    { "id": "history-tb-2", "text": "The rejected first line of a famous historical speech." },
+    { "id": "history-tb-3", "text": "A royal decree that nobody could possibly enforce." },
+    {
+      "id": "history-tb-4",
+      "text": "The mascot of a lost civilization, and the reason it got lost."
+    }
   ]
 }

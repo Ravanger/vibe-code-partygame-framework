@@ -1,74 +1,122 @@
-import type { GameConnectionManager } from "@partygame/game-client/connection";
-import { Countdown } from "@partygame/game-client/countdown";
+import type { Countdown } from "@partygame/game-client";
+import { ACTION, ANSWER_MAX_LENGTH } from "../../src/actionNames.js";
+import type { SubmitAnswerPayload } from "../../src/actions.js";
+import type { WitClashManager } from "../manager.js";
+import { AnswerProgress } from "./AnswerProgress.js";
+import { TypingReporter } from "./TypingReporter.js";
 
-interface PromptingState {
-  answersSubmitted: number;
-  answersExpected: number;
-  phaseEndsAt: number;
-  serverNow: number;
+export interface PromptView {
+  matchupId: string;
+  promptText: string;
+  submitted: boolean;
 }
 
 export class PromptingViewModel {
-  // Sourced from the manager (layer 1), which captures the one-shot
-  // YOUR_PROMPTS message at connect time — see connection.svelte.ts.
-  // Getter, not a field: field initializers run before `manager` is assigned
-  // (TS2729), and the manager's $state field is tracked through the read.
-  get myPrompts(): Array<{ matchupId: string; promptText: string }> {
-    return this.manager.myPrompts;
-  }
   currentIndex = $state(0);
-  private drafts = $state<Record<string, string>>({});
-  submitted = $state<Record<string, boolean>>({});
+  private readonly drafts = $state<Record<string, string>>({});
+  private readonly countdown: Countdown;
+  private readonly typing: TypingReporter;
+  readonly progress: AnswerProgress;
 
-  // Getter, not $derived — same-referenced room.state is swallowed by Svelte's equality gate
-  // (see WaitingRoomViewModel for the full rationale).
-  private get state(): PromptingState | undefined {
-    return this.manager.stateVersion >= 0
-      ? (this.manager.room?.state as PromptingState | undefined)
-      : undefined;
+  constructor(private readonly manager: WitClashManager) {
+    this.countdown = manager.countdown();
+    this.typing = new TypingReporter(manager);
+    this.progress = new AnswerProgress(manager);
   }
 
-  readonly countdown: Countdown;
+  get isSpectator(): boolean {
+    return this.manager.isSpectator;
+  }
 
-  constructor(private readonly manager: GameConnectionManager) {
-    this.countdown = new Countdown(
-      () => this.state?.phaseEndsAt ?? 0,
-      () => this.state?.serverNow ?? 0,
+  get prompts(): PromptView[] {
+    const mine = this.manager.state?.mine.get(this.manager.playerId);
+    return [...(mine?.prompts ?? [])].map((p) => ({
+      matchupId: p.matchupId,
+      promptText: p.promptText,
+      submitted: p.submitted,
+    }));
+  }
+
+  get isSittingOut(): boolean {
+    return !this.isSpectator && this.prompts.length === 0;
+  }
+
+  get categoryLabel(): string {
+    const state = this.manager.state;
+    const category = [...(state?.categoryOptions ?? [])].find(
+      (option) => option.id === state?.selectedCategory,
     );
+    return category ? `${category.emoji} ${category.name}` : "";
   }
 
-  readonly current = $derived(this.myPrompts[this.currentIndex]);
-  readonly draft = $derived(this.current ? (this.drafts[this.current.matchupId] ?? "") : "");
-  readonly charsRemaining = $derived(200 - this.draft.length);
-  readonly canSubmit = $derived(this.draft.trim().length > 0 && this.draft.length <= 200);
-  readonly allSubmitted = $derived(
-    this.myPrompts.length > 0 && this.myPrompts.every((p) => this.submitted[p.matchupId]),
-  );
-  readonly progress = $derived(
-    `${this.state?.answersSubmitted ?? 0} of ${this.state?.answersExpected ?? 0} answers in`,
-  );
-
-  setDraft(v: string) {
-    if (this.current) this.drafts[this.current.matchupId] = v;
+  get current(): PromptView | undefined {
+    return this.prompts[this.currentIndex];
   }
 
-  submit() {
-    if (!this.canSubmit || !this.current) return;
-    const matchupId = this.current.matchupId;
-    this.manager.room?.send("ACTION", {
-      type: "SUBMIT_ANSWER",
-      matchupId,
+  get draft(): string {
+    return this.drafts[this.current?.matchupId ?? ""] ?? "";
+  }
+
+  get charsRemaining(): number {
+    return ANSWER_MAX_LENGTH - this.draft.length;
+  }
+
+  get canSubmit(): boolean {
+    return this.draft.trim().length > 0 && this.draft.length <= ANSWER_MAX_LENGTH;
+  }
+
+  get allSubmitted(): boolean {
+    const { prompts } = this;
+    return prompts.length > 0 && prompts.every((p) => p.submitted);
+  }
+
+  get answersIn(): number {
+    return [...(this.manager.state?.progress.values() ?? [])].reduce((sum, n) => sum + n, 0);
+  }
+
+  get answersExpected(): number {
+    const state = this.manager.state;
+    return (state?.progress.size ?? 0) * (state?.answersPerPlayer ?? 0);
+  }
+
+  get roundLabel(): string {
+    const state = this.manager.state;
+    return `Round ${state?.roundNumber ?? 0} of ${state?.totalRounds ?? 0}`;
+  }
+
+  get secondsLeft(): number {
+    return this.countdown.secondsLeft;
+  }
+
+  get isUrgent(): boolean {
+    return this.countdown.isUrgent;
+  }
+
+  setDraft(value: string): void {
+    const { current } = this;
+    if (!current) return;
+    this.drafts[current.matchupId] = value;
+    this.typing.keystroke();
+  }
+
+  async submit(): Promise<void> {
+    const { current } = this;
+    if (!this.canSubmit || !current) return;
+    this.typing.stop();
+    const payload: SubmitAnswerPayload = {
+      matchupId: current.matchupId,
       answer: this.draft.trim(),
-    });
-    this.submitted[matchupId] = true;
-    if (this.currentIndex < this.myPrompts.length - 1) this.currentIndex += 1;
+    };
+    const result = await this.manager.sendAction(ACTION.SUBMIT_ANSWER, payload);
+    if (result.ok && this.currentIndex < this.prompts.length - 1) ++this.currentIndex;
   }
 
-  goTo(i: number) {
-    this.currentIndex = Math.max(0, Math.min(i, this.myPrompts.length - 1));
+  goTo(index: number): void {
+    this.currentIndex = Math.max(0, Math.min(index, this.prompts.length - 1));
   }
 
-  destroy() {
+  destroy(): void {
+    this.typing.stop();
     this.countdown.destroy();
   }
 }

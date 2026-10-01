@@ -1,55 +1,51 @@
-import { Server } from "@colyseus/core";
+import { Server, type Transport } from "@colyseus/core";
 import type { GameDefinition } from "@partygame/core";
-import type { CategoryRepository } from "../../../games/wit-clash/src/content/CategoryRepository.js";
-import { DEFAULT_DURATIONS, GameRoom, type PhaseDurations } from "./rooms/GameRoom.js";
-import type { RoomCodeService } from "./services/RoomCodeService.js";
+import type { BaseGameState } from "@partygame/shared/schema";
+import { GameRoom, type GameRoomConfig } from "./rooms/GameRoom.js";
+import { RoomCodeService } from "./services/RoomCodeService.js";
 
-// Re-export for convenience
-export {
-  DEFAULT_DURATIONS,
-  type PhaseDurations,
-  TEST_DURATIONS,
-} from "./rooms/GameRoom.js";
-
-export interface GameServerDeps<TState = unknown> {
-  categories: CategoryRepository;
-  roomCodeService?: RoomCodeService;
-  durations?: PhaseDurations;
-  gameDefinition?: GameDefinition<TState>;
-  /**
-   * Omit in tests. Vitest runs on Node, where importing @colyseus/bun-websockets
-   * throws "Cannot find package 'bun'" (see HELPERS.md section 1c). Passing no transport lets
-   * Colyseus use its bundled default, which works under both Node and Bun.
-   */
-  transport?: unknown;
+/** One game the server hosts under `roomName`. */
+export interface HostedGame {
+  roomName: string;
+  definition: GameDefinition<BaseGameState, unknown, unknown>;
+  stateClass: new () => BaseGameState;
 }
 
-export function createGameServer<TState = unknown>(deps: GameServerDeps<TState>): Server {
-  const gameDefinition = deps.gameDefinition;
-  // @ts-expect-error - transport type is complex and depends on runtime
-  const gameServer = new Server(deps.transport ? { transport: deps.transport } : undefined);
+export interface GameServerOptions {
+  games: HostedGame[];
+  /** Shared with the API handler so `/api/resolve-code` sees the same rooms. Defaults to a fresh one. */
+  roomCodeService?: RoomCodeService;
+  /** Omit under Node/Vitest to use Colyseus' bundled WebSocket transport. */
+  transport?: Transport;
+  /** How long a dropped player's seat is held. Default 60 s. */
+  reconnectMs?: number;
+  /** How long an empty room lives before it is disposed. Default 120 s. */
+  emptyRoomGraceMs?: number;
+}
 
-  // Create a room class that uses the game definition
-  class WitClashRoom extends GameRoom {
-    constructor() {
-      super(deps.roomCodeService, deps.categories, deps.durations ?? DEFAULT_DURATIONS);
-    }
+export const DEFAULT_RECONNECT_MS = 60_000;
+export const DEFAULT_EMPTY_ROOM_GRACE_MS = 120_000;
 
-    onCreate(options: Record<string, unknown>) {
-      if (gameDefinition) {
-        this.setDefinition(gameDefinition as GameDefinition<unknown>);
-      } else {
-        // Fallback: try to import WitClashGame dynamically for production
-        // This is used when createGameServer is called without gameDefinition (e.g., from index.ts)
-        // biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type
-        import("../../../games/wit-clash/index.js").then((mod: any) => {
-          this.setDefinition(mod.WitClashGame);
-        });
-      }
-      super.onCreate(options);
-    }
+/** Colyseus server with one {@link GameRoom} per game. */
+export function createGameServer(options: GameServerOptions): Server {
+  const roomCodeService = options.roomCodeService ?? new RoomCodeService();
+  const server = new Server(options.transport ? { transport: options.transport } : undefined);
+  for (const game of options.games) {
+    const config: GameRoomConfig = {
+      definition: game.definition,
+      stateClass: game.stateClass,
+      roomCodeService,
+      reconnectMs: options.reconnectMs ?? DEFAULT_RECONNECT_MS,
+      emptyRoomGraceMs: options.emptyRoomGraceMs ?? DEFAULT_EMPTY_ROOM_GRACE_MS,
+    };
+    server.define(
+      game.roomName,
+      class extends GameRoom {
+        constructor() {
+          super(config);
+        }
+      },
+    );
   }
-
-  gameServer.define("wit_clash", WitClashRoom);
-  return gameServer;
+  return server;
 }

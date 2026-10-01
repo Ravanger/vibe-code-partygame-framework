@@ -1,9 +1,9 @@
+import { RoomCodeSchema } from "@partygame/shared";
+
 /**
  * Resolve server endpoints from the page's own origin so that a phone opening
  * http://192.168.1.50:5173 talks to 192.168.1.50:2567 rather than its own localhost.
  * Override with VITE_SERVER_HOST / VITE_GAME_PORT / VITE_API_PORT.
- *
- * @param env - Environment variables (defaults to import.meta.env). Parameterized for testability.
  */
 export function resolveEndpoints(env: Partial<ImportMetaEnv> = import.meta.env): {
   endpoint: string;
@@ -15,14 +15,17 @@ export function resolveEndpoints(env: Partial<ImportMetaEnv> = import.meta.env):
   return { endpoint: `http://${host}:${gamePort}`, apiPort };
 }
 
-/**
- * Read minPlayers from VITE_MIN_PLAYERS (default 3).
- * Standalone so it can be called once and injected into WaitingRoomViewModel
- * rather than read inline from import.meta.env (which is untestable).
- *
- * @param env - Environment variables (defaults to import.meta.env). Parameterized for testability.
- */
-export function readMinPlayers(env: Partial<ImportMetaEnv> = import.meta.env): number {
-  const parsed = Number(env.VITE_MIN_PLAYERS);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 3;
+function readCode(param: string, search: string): string | undefined {
+  const code = new URLSearchParams(search).get(param)?.toUpperCase();
+  return RoomCodeSchema.safeParse(code).success ? code : undefined;
+}
+
+/** The room code in `?code=ABCD`, when the page was opened from a share link. */
+export function readUrlCode(search: string = window.location.search): string | undefined {
+  return readCode("code", search);
+}
+
+/** The room code in `?tv=ABCD`, when the page was opened as a TV display. */
+export function readUrlTvCode(search: string = window.location.search): string | undefined {
+  return readCode("tv", search);
 }

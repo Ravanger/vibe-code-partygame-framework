@@ -1,0 +1,74 @@
+{
+  "id": "villain-origins",
+  "name": "Villain Origin Stories",
+  "emoji": "😈",
+  "prompts": [
+    {
+      "id": "villain-1",
+      "text": "The tiny, petty incident that turned a mild-mannered baker into a supervillain."
+    },
+    { "id": "villain-2", "text": "A villain's first evil plan, drawn in crayon." },
+    { "id": "villain-3", "text": "Why the dark lord is furious at the Homeowners' Association." },
+    { "id": "villain-4", "text": "A henchman's complaint to the villain's HR department." },
+    { "id": "villain-5", "text": "The one-star review of the mad scientist's laboratory." },
+    { "id": "villain-6", "text": "The embarrassing reason the villain wears a mask." },
+    {
+      "id": "villain-7",
+      "text": "Step one of the world-domination plan, which is somehow also the only step."
+    },
+    { "id": "villain-8", "text": "A villain's weakness that is suspiciously specific." },
+    { "id": "villain-9", "text": "The monologue interrupted at the worst possible moment." },
+    { "id": "villain-10", "text": "The sidekick's real reason for quitting." },
+    {
+      "id": "villain-11",
+      "text": "The villain's password, which the hero guessed on the first try."
+    },
+    { "id": "villain-12", "text": "What the supervillain does on weekends when no one's looking." },
+    {
+      "id": "villain-13",
+      "text": "The villain's surprisingly modest goal, revealed at the end of the monologue."
+    },
+    { "id": "villain-14", "text": "The real reason the evil lair has so many stairs." },
+    { "id": "villain-15", "text": "A catchphrase that scares absolutely nobody." },
+    { "id": "villain-16", "text": "The rejected costume the villain wore exactly once." },
+    { "id": "villain-17", "text": "How the villain's mother reacted to the news." },
+    { "id": "villain-18", "text": "The tiny thing the villain keeps hiding in the volcano lair." },
+    { "id": "villain-19", "text": "The \"special skills\" section of a supervillain's resume." },
+    { "id": "villain-20", "text": "The villain support group's slogan." },
+    { "id": "villain-21", "text": "The ominous name of a very cheerful evil company." },
+    { "id": "villain-22", "text": "The relatable reason the villain postponed the apocalypse." },
+    { "id": "villain-23", "text": "What the villain's cat has been plotting." },
+    { "id": "villain-24", "text": "The pettiest revenge scheme in history." },
+    {
+      "id": "villain-25",
+      "text": "The idea the intern pitched that somehow made it into the master plan."
+    },
+    { "id": "villain-26", "text": "The villain's non-apology after flooding the city." },
+    { "id": "villain-27", "text": "The warning sign on the door of an evil lair." },
+    {
+      "id": "villain-28",
+      "text": "The trash talk that backfired so badly the hero needed a moment."
+    },
+    { "id": "villain-29", "text": "The unexpectedly cozy hobby of a feared warlord." },
+    { "id": "villain-30", "text": "The henchman's job satisfaction survey." },
+    { "id": "villain-31", "text": "How a villain reacts to being mildly inconvenienced." },
+    { "id": "villain-32", "text": "The evil scheme undone by a coupon." },
+    { "id": "villain-33", "text": "What the villain was doing the day the hero was born." },
+    { "id": "villain-34", "text": "The welcome mat at the entrance to the new world order." },
+    { "id": "villain-35", "text": "Why the doomsday device has a snooze button." },
+    { "id": "villain-36", "text": "A headline from a villain fan club newsletter." },
+    { "id": "villain-37", "text": "A villain's grocery list." },
+    { "id": "villain-38", "text": "The item in the trophy case that explains everything." },
+    { "id": "villain-39", "text": "The reason the villain's laugh is so awful." },
+    { "id": "villain-40", "text": "The villain's LinkedIn headline." }
+  ],
+  "tieBreakers": [
+    { "id": "villain-tb-1", "text": "The last words of a villain who tripped on their own cape." },
+    {
+      "id": "villain-tb-2",
+      "text": "A villain's thank-you speech for winning \"Most Evil\" at the county fair."
+    },
+    { "id": "villain-tb-3", "text": "The villain's embarrassing childhood nickname." },
+    { "id": "villain-tb-4", "text": "A villain's heartfelt apology to the henchmen." }
+  ]
+}

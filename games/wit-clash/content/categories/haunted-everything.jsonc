@@ -1,0 +1,161 @@
+{
+  "id": "haunted-everything",
+  "name": "Haunted Everything",
+  "emoji": "🏚️",
+  "prompts": [
+    { "id": "haunted-1", "text": "The warning label on a haunted toaster." },
+    {
+      "id": "haunted-2",
+      "text": "The ghost's two-star review of the family who moved into its house."
+    },
+    {
+      "id": "haunted-3",
+      "text": "The one house rule the ghost enforces harder than any parent ever did."
+    },
+    {
+      "id": "haunted-4",
+      "text": "The demand the ghost trapped in the office printer keeps printing at 3 a.m."
+    },
+    {
+      "id": "haunted-5",
+      "text": "The ghost's embarrassing hobby, caught on the family's security camera."
+    },
+    {
+      "id": "haunted-6",
+      "text": "The passive-aggressive sticky note the ghost left on the fridge."
+    },
+    {
+      "id": "haunted-7",
+      "text": "The \"amenities\" section of the haunted bed-and-breakfast's website."
+    },
+    {
+      "id": "haunted-8",
+      "text": "The cursed snack in slot B4 of the haunted vending machine, and its price."
+    },
+    {
+      "id": "haunted-9",
+      "text": "What the haunted smart speaker says when you ask it for the weather."
+    },
+    { "id": "haunted-10", "text": "The haunted GPS's final \"recalculating\" instruction." },
+    {
+      "id": "haunted-11",
+      "text": "The ghost's first text after someone teaches it to use a smartphone."
+    },
+    {
+      "id": "haunted-12",
+      "text": "The single, deeply petty thing the poltergeist moves every night."
+    },
+    {
+      "id": "haunted-13",
+      "text": "The one skill on the resume of a ghost who has haunted the same attic for 300 years."
+    },
+    { "id": "haunted-14", "text": "The final stop announced by the haunted school bus driver." },
+    {
+      "id": "haunted-15",
+      "text": "The creepy porcelain doll's surprisingly reasonable list of demands."
+    },
+    {
+      "id": "haunted-16",
+      "text": "The real estate listing for a haunted house, in cheerful language."
+    },
+    {
+      "id": "haunted-17",
+      "text": "The boring real reason for the moaning in the walls, according to the plumber."
+    },
+    { "id": "haunted-18", "text": "The button in the haunted elevator that nobody should press." },
+    {
+      "id": "haunted-19",
+      "text": "The note slipped under the door of the hotel room nobody is allowed to book."
+    },
+    {
+      "id": "haunted-20",
+      "text": "What the ghost is actually trying to spell out by flickering the lights."
+    },
+    {
+      "id": "haunted-21",
+      "text": "The rule at the haunted corn maze that clearly came from experience."
+    },
+    {
+      "id": "haunted-22",
+      "text": "What the haunted fridge's ice dispenser says when you press \"crushed\"."
+    },
+    {
+      "id": "haunted-23",
+      "text": "What the ghost whispers to the tourists who didn't tip the tour guide."
+    },
+    {
+      "id": "haunted-24",
+      "text": "The haunted laundromat's confession about where all the missing socks go."
+    },
+    {
+      "id": "haunted-25",
+      "text": "The theater ghost's notes for the community production of a musical."
+    },
+    {
+      "id": "haunted-26",
+      "text": "The rude nickname the graveyard ghosts gave the new guy with the fancy headstone."
+    },
+    {
+      "id": "haunted-27",
+      "text": "What the ghost demands in exchange for posing for one blurry photo."
+    },
+    {
+      "id": "haunted-28",
+      "text": "The paranormal investigator's most useless gadget, and what it really detects."
+    },
+    { "id": "haunted-29", "text": "Question 4 on the haunted hotel's guest-satisfaction survey." },
+    {
+      "id": "haunted-30",
+      "text": "The terrifying \"sale\" happening only in the haunted mall's food court."
+    },
+    {
+      "id": "haunted-31",
+      "text": "What the haunted dog's sign says instead of \"Beware of Dog\"."
+    },
+    {
+      "id": "haunted-32",
+      "text": "The botched scare that made the ghost go viral on the family's video doorbell."
+    },
+    {
+      "id": "haunted-33",
+      "text": "The HOA rule about how loud a ghost may rattle its chains after 10 p.m."
+    },
+    {
+      "id": "haunted-34",
+      "text": "The one topic the ghost at the séance absolutely refuses to discuss."
+    },
+    { "id": "haunted-35", "text": "The name the ghost gave the house's Wi-Fi network." },
+    {
+      "id": "haunted-36",
+      "text": "What the haunted vacuum cleaner keeps sucking up that definitely isn't dust."
+    },
+    {
+      "id": "haunted-37",
+      "text": "The haunted library's late fee for a book returned 200 years overdue."
+    },
+    {
+      "id": "haunted-38",
+      "text": "The message fogged onto the haunted bathroom mirror after your shower."
+    },
+    {
+      "id": "haunted-39",
+      "text": "The ride attendant's safety speech for the haunted carnival's Tunnel of Despair."
+    },
+    { "id": "haunted-40", "text": "The ghost's excuse for still being here after the priest left." }
+  ],
+  "tieBreakers": [
+    {
+      "id": "haunted-tb-1",
+      "text": "The terms of the peace treaty between the ghost and the new family's cat."
+    },
+    { "id": "haunted-tb-2", "text": "A ghost's pickup line at the graveyard's singles night." },
+    {
+      "id": "haunted-tb-3",
+      "text": "The ghost's answer on the \"reason for leaving\" line of its exit interview."
+    },
+    {
+      "id": "haunted-tb-4",
+      "text": "The item on a haunted house's \"included in sale\" list that really shouldn't be."
+    }
+  ]
+}

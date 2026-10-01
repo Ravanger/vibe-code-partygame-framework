@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { readMinPlayers, resolveEndpoints } from "../ui/config.js";
+import { readUrlCode, readUrlTvCode, resolveEndpoints } from "../ui/config.js";
 
 const mockEnv = (over = {}) => ({
   VITE_SERVER_HOST: undefined,
@@ -48,24 +48,33 @@ describe("resolveEndpoints", () => {
   });
 });
 
-describe("readMinPlayers", () => {
-  it("returns default 3 when VITE_MIN_PLAYERS is not set", () => {
-    expect(readMinPlayers(mockEnv())).toBe(3);
+describe("readUrlCode", () => {
+  it("reads a valid share-link code, upper-cased", () => {
+    expect(readUrlCode("?code=abcd")).toBe("ABCD");
+    expect(readUrlCode("?x=1&code=WXYZ")).toBe("WXYZ");
   });
 
-  it("returns custom value when VITE_MIN_PLAYERS is set", () => {
-    expect(readMinPlayers(mockEnv({ VITE_MIN_PLAYERS: "5" }))).toBe(5);
+  it("ignores a missing or malformed code", () => {
+    expect(readUrlCode("")).toBeUndefined();
+    expect(readUrlCode("?code=ab1")).toBeUndefined();
+    expect(readUrlCode("?code=ABCDE")).toBeUndefined();
   });
 
-  it("returns default 3 when VITE_MIN_PLAYERS is 0", () => {
-    expect(readMinPlayers(mockEnv({ VITE_MIN_PLAYERS: "0" }))).toBe(3);
+  it("defaults to the page URL", () => {
+    vi.stubGlobal("window", { location: { search: "?code=QRST", hostname: "localhost" } });
+    expect(readUrlCode()).toBe("QRST");
+  });
+});
+
+describe("readUrlTvCode", () => {
+  it("reads a valid TV link code, upper-cased, and ignores the share code", () => {
+    expect(readUrlTvCode("?tv=abcd")).toBe("ABCD");
+    expect(readUrlTvCode("?code=WXYZ")).toBeUndefined();
+    expect(readUrlTvCode("?tv=ab1")).toBeUndefined();
   });
 
-  it("returns default 3 when VITE_MIN_PLAYERS is negative", () => {
-    expect(readMinPlayers(mockEnv({ VITE_MIN_PLAYERS: "-1" }))).toBe(3);
-  });
-
-  it("returns default 3 when VITE_MIN_PLAYERS is not a number", () => {
-    expect(readMinPlayers(mockEnv({ VITE_MIN_PLAYERS: "abc" }))).toBe(3);
+  it("defaults to the page URL", () => {
+    vi.stubGlobal("window", { location: { search: "?tv=QRST", hostname: "localhost" } });
+    expect(readUrlTvCode()).toBe("QRST");
   });
 });

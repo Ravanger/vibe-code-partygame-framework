@@ -6,33 +6,33 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "svelte": "./src/index.ts",
       "default": "./dist/index.js"
     },
-    "./connection": {
-      "svelte": "./src/connection.svelte.ts",
-      "default": "./dist/connection.svelte.js"
-    },
-    "./countdown": {
-      "svelte": "./src/countdown.svelte.ts",
-      "default": "./dist/countdown.svelte.js"
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "svelte": "./src/testing.ts",
+      "default": "./dist/testing.js"
     }
   },
   "scripts": {
-    "dev": "vite",
     "build": "rm -rf dist && tsc",
-    "test": "vitest run"
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.test.json"
   },
   "dependencies": {
-    "@colyseus/sdk": "^0.17.40",
+    "@colyseus/sdk": "^0.18.4",
     "@partygame/shared": "workspace:*",
-    "svelte": "^5.55.4"
+    "svelte": "^5.57.1"
   },
   "devDependencies": {
+    "@colyseus/schema": "^5.0.35",
     "@partygame/core": "workspace:*",
-    "@sveltejs/vite-plugin-svelte": "^7.0.0",
+    "@partygame/server": "workspace:*",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "typescript": "^6.0.3",
-    "vite": "^8.0.8",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.11",
+    "zod": "^4.6.5"
   }
 }

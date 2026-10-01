@@ -3,72 +3,81 @@
 ## Quick Start
 
 ```bash
-# Install dependencies
 bun install
-
-# Launch everything (server + client)
 bun run launch
 ```
 
-Your host URL: `http://localhost:5173?host=true`
-Player URL: `http://localhost:5173`
+`bun run launch` starts the game server, the code-lookup API and the Vite client, waits until each answers, and opens
+`http://localhost:5173`. Click **Host Game**: you get a four-letter room code and a share link
+(`http://<host>:5173/?code=ABCD`) that joins a guest straight into your room. Each player enters a name. The game takes 3 to 8 players: the host presses **Start Game**, and it also starts by itself once at least 3
+players are in and every one of them has entered a name.
+
+Press Ctrl+C to stop everything. If any of the three processes dies, the launcher stops the rest and exits with an error.
+
+## Launch Commands
+
+| Command | What it does |
+|---|---|
+| `bun run launch` | Dev mode: game server, API and Vite with hot reload on `http://localhost:5173` |
+| `bun run launch:dev` | Same as `launch` |
+| `bun run launch:host` | Dev mode, and prints this machine's LAN addresses for guests |
+| `bun run launch:prod` | Builds the client, then serves it on `http://localhost:3000` next to the game server |
+
+Add `--no-browser` to any of them to skip opening a browser tab, for example `bun run launch --no-browser`.
+The launcher refuses to start if one of its ports is already in use.
+
+| Port | Used for |
+|---|---|
+| 2567 | Game server (WebSocket) |
+| 3001 | Room-code lookup API (`GET /api/resolve-code?code=ABCD`) |
+| 5173 | Vite dev server (`launch`, `launch:dev`, `launch:host`) |
+| 3000 | Built client (`launch:prod`) |
 
 ## Playing Over LAN
 
-Once the server is running, players on the same network can join using your LAN IP:
-
-```
-http://<YOUR-LAN-IP>:5173
-```
-
-No extra configuration is needed. The client auto-detects the server host from the page URL.
+Players on the same network open `http://<YOUR-LAN-IP>:5173` (`:3000` with `launch:prod`). The client talks to the game server and the API
+on the same host name as the page, so no configuration is needed. Make sure your firewall lets other machines reach the client port, 2567 and 3001.
 
 ### Finding your LAN IP
 
+`bun run launch:host` prints it. Otherwise:
+
 ```bash
-# Linux / macOS
-ip route | grep default | awk '{print $3}'
-
-# macOS alternative
-ipconfig getifaddr en0
-
 # Windows
 ipconfig | findstr "IPv4"
+
+# macOS
+ipconfig getifaddr en0
+
+# Linux
+hostname -I
 ```
+
+## Joining by QR Code
+
+The waiting room shows a QR code of `<address>/?code=ABCD` next to the room code. Players scan it with their phone camera and land in the room; the
+page joins the code straight away. The address is the one the host's browser used, so open the game through the LAN address
+(`http://<YOUR-LAN-IP>:5173`), not `localhost`, or the QR code points guests at their own machine.
+
+## TV Mode
+
+A TV (or any big screen) can watch a room without taking a player seat:
+
+1. Open the game on the TV browser and enter the room code, then press "Watch on a TV". Or open `http://<YOUR-LAN-IP>:5173/?tv=ABCD` directly.
+2. The TV shows the room code, the QR code and the players in the lobby, and then the prompts, matchups, votes and scoreboard in large type. It has
+   no controls and does not count as a player (the lobby lists how many TVs are watching).
+
+## Host Controls in the Lobby
+
+- Remove a player: press "Remove" beside their name, then "Yes". A removed player cannot rejoin the room and sees the reason on the welcome screen.
+- Settings: the host edits the number of rounds and every timer; limits are enforced by the server and a rejected value is shown and reverted.
+  Other players see the settings read-only.
 
 ## Adding Categories and Prompts
 
-Categories live in `games/wit-clash/content/categories/`. Drop a `.jsonc` file and restart the server.
-
-### Example: `animals.jsonc`
-
-```jsonc
-{
-  "id": "animals",           // unique, lowercase kebab-case
-  "name": "Animals",         // display name
-  "emoji": "🐾",             // optional, defaults to 🎲
-  "prompts": [               // at least 8 recommended
-    { "id": "animals-1", "text": "The most dramatic animal to own." },
-    { "id": "animals-2", "text": "A pet that would be terrible in an apartment." },
-    { "id": "animals-3", "text": "The animal most likely to survive a zombie apocalypse." },
-    { "id": "animals-4", "text": "A service animal for people who are afraid of commitment." },
-    { "id": "animals-5", "text": "The animal that would make the worst secret agent." },
-    { "id": "animals-6", "text": "A zoo animal that belongs in a pet store." },
-    { "id": "animals-7", "text": "The most overrated animal crossing character." },
-    { "id": "animals-8", "text": "An animal that should be illegal to own." }
-  ],
-  "tieBreakers": [           // optional, for tie-breaker rounds
-    { "id": "animals-tb-1", "text": "The animal most likely to win a Nobel Prize." }
-  ]
-}
-```
-
-### Rules
-
-- `id` must be unique across **all** category files and match `^[a-z0-9-]+$`
-- Each prompt needs a unique `id` within its file
-- Server requires at least 3 categories to start
-- Changes take effect on server restart
+Categories live in `games/wit-clash/content/categories/`. Drop a `.jsonc` file in and restart the server; there is no code change.
+The file format and rules are in [`games/wit-clash/content/categories/README.md`](../games/wit-clash/content/categories/README.md).
+The server refuses to start with fewer than 3 categories.
 
 ## Environment Variables
 
@@ -76,41 +85,30 @@ Categories live in `games/wit-clash/content/categories/`. Drop a `.jsonc` file a
 
 | Variable | Default | Description |
 |---|---|---|
-| `PORT` | `2567` | Colyseus game server port |
-| `WITCLASH_CONTENT_DIR` | `../wit-clash/content` | Path to category files (relative to server) |
+| `PORT` | `2567` | Game server (WebSocket) port |
+| `API_PORT` | `3001` | Room-code lookup API port |
+| `WITCLASH_CONTENT_DIR` | `games/wit-clash/content/categories` | Directory holding the category files |
 
 ### Client
 
+Read by Vite at dev or build time.
+
 | Variable | Default | Description |
 |---|---|---|
-| `VITE_SERVER_HOST` | `window.location.hostname` | Server hostname for LAN play |
-| `VITE_GAME_PORT` | `2567` | Colyseus game server port |
-| `VITE_API_PORT` | `3001` | API server port |
-| `VITE_MIN_PLAYERS` | `3` | Minimum players before the host can start the game |
+| `VITE_SERVER_HOST` | the page's host name | Host of the game server and API, when they are not on the same host as the page |
+| `VITE_GAME_PORT` | `2567` | Game server port |
+| `VITE_API_PORT` | `3001` | API port |
 
-For LAN play, set `VITE_SERVER_HOST` to your LAN IP before building:
-
-```bash
-VITE_SERVER_HOST=192.168.1.5 bun run build
-```
-
-## Launch Commands
-
-| Command | Description |
-|---|---|
-| `bun run launch` | Start server + client (dev mode) |
-| `bun run launch:host` | Start in host mode (auto-creates room) |
-| `bun run launch:dev` | Dev mode with hot reload |
-| `bun run launch:build` | Build and serve production |
+The launcher always uses the default ports. To move them, start the pieces yourself (below) and give the client the matching `VITE_GAME_PORT` and `VITE_API_PORT`.
 
 ## Manual Launch
 
-If you prefer to run components separately:
-
 ```bash
-# Terminal 1 — Game server
-cd packages/server && PORT=2567 bun run dev
+# Terminal 1: game server and API (PORT and API_PORT optional)
+cd games/wit-clash && bun server.ts          # or: bun run dev:server (hot reload)
 
-# Terminal 2 — Client
-cd games/wit-clash && bun run dev
+# Terminal 2: client
+cd games/wit-clash && bun run dev            # Vite on http://localhost:5173
 ```
+
+For a production client, run `bun run build` in `games/wit-clash` and serve `games/wit-clash/dist` with any static file server.

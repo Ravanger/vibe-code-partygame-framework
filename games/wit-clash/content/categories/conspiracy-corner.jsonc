@@ -1,0 +1,125 @@
+{
+  "id": "conspiracy-corner",
+  "name": "Conspiracy Corner",
+  "emoji": "🕵️",
+  "prompts": [
+    {
+      "id": "conspiracy-1",
+      "text": "The sinister truth behind why there is always exactly one missing sock."
+    },
+    {
+      "id": "conspiracy-2",
+      "text": "The secret society that controls every lost umbrella in the city."
+    },
+    {
+      "id": "conspiracy-3",
+      "text": "The government's official cover story for why the moon smells like cheese."
+    },
+    { "id": "conspiracy-4", "text": "Proof that your neighbor's lawn gnomes are filing reports." },
+    { "id": "conspiracy-5", "text": "Why every elevator in the world plays the same bland song." },
+    { "id": "conspiracy-6", "text": "What the hotel ice machine has seen at 3 a.m." },
+    { "id": "conspiracy-7", "text": "Why the third bridge in town appears on no map." },
+    { "id": "conspiracy-8", "text": "The real reason every airport has the same hideous carpet." },
+    {
+      "id": "conspiracy-9",
+      "text": "The conspiracy theory your uncle texts you at 3 a.m. in all caps."
+    },
+    {
+      "id": "conspiracy-10",
+      "text": "The evidence that the mall fountain is a portal, and where it leads."
+    },
+    {
+      "id": "conspiracy-11",
+      "text": "A leaked memo from the Department of Things That Fall Behind Furniture."
+    },
+    {
+      "id": "conspiracy-12",
+      "text": "The real reason dogs tilt their heads when you talk, revealed by a defector."
+    },
+    { "id": "conspiracy-13", "text": "The hidden message in every flat-pack furniture manual." },
+    {
+      "id": "conspiracy-14",
+      "text": "Why the thirteenth month was quietly deleted from the calendar."
+    },
+    {
+      "id": "conspiracy-15",
+      "text": "A classified UFO sighting that turns out to be deeply embarrassing."
+    },
+    {
+      "id": "conspiracy-16",
+      "text": "Who is secretly tangling all the world's headphones, and why."
+    },
+    {
+      "id": "conspiracy-17",
+      "text": "The shadowy group that decides which snacks get discontinued."
+    },
+    { "id": "conspiracy-18", "text": "What lighthouses are actually signaling to the whales." },
+    {
+      "id": "conspiracy-19",
+      "text": "The red-string corkboard of a man who believes cheese is a hoax."
+    },
+    { "id": "conspiracy-20", "text": "The anonymous tip that finally exposed Big Mattress." },
+    {
+      "id": "conspiracy-21",
+      "text": "What is actually inside the last sealed vending machine in town."
+    },
+    { "id": "conspiracy-22", "text": "What the squirrels are reporting back to headquarters." },
+    { "id": "conspiracy-23", "text": "The agenda of the Illuminati snack committee." },
+    {
+      "id": "conspiracy-24",
+      "text": "The first clue that your smart fridge has been reading your diary."
+    },
+    {
+      "id": "conspiracy-25",
+      "text": "The secret message spelled out by the marshmallows in your cereal."
+    },
+    { "id": "conspiracy-26", "text": "A banned fact the dictionary refuses to print." },
+    { "id": "conspiracy-27", "text": "The real reason the clocks change twice a year." },
+    {
+      "id": "conspiracy-28",
+      "text": "The paper trail that leads straight to a talking houseplant."
+    },
+    {
+      "id": "conspiracy-29",
+      "text": "Why dentists keep the radio low, and what they're really listening for."
+    },
+    {
+      "id": "conspiracy-30",
+      "text": "What the numbers at the bottom of your receipt are secretly counting."
+    },
+    {
+      "id": "conspiracy-31",
+      "text": "The sinister explanation your roommate has for the puddle in the hallway."
+    },
+    { "id": "conspiracy-32", "text": "What the ducks in the town pond are covering up." },
+    {
+      "id": "conspiracy-33",
+      "text": "The word the weather forecaster always blinks twice before saying."
+    },
+    { "id": "conspiracy-34", "text": "The secret handshake of the Brotherhood of Left Socks." },
+    { "id": "conspiracy-35", "text": "The agenda of the mannequins' after-hours staff meeting." },
+    { "id": "conspiracy-36", "text": "The Loch Ness monster's unconvincing alibi." },
+    {
+      "id": "conspiracy-37",
+      "text": "The whistleblower's tearful confession about what crosswalk buttons really do."
+    },
+    { "id": "conspiracy-38", "text": "The secret phrase that cancels any subscription instantly." },
+    { "id": "conspiracy-39", "text": "The conspiracy your grandma started at bingo night." },
+    { "id": "conspiracy-40", "text": "The truth the pigeons will take to their graves." }
+  ],
+  "tieBreakers": [
+    {
+      "id": "conspiracy-tb-1",
+      "text": "The front-page headline of the Conspiracy Gazette on a slow news day."
+    },
+    {
+      "id": "conspiracy-tb-2",
+      "text": "The last line of a leaked memo that was clearly not meant to be seen."
+    },
+    {
+      "id": "conspiracy-tb-3",
+      "text": "The real reason there's always a \"Wet Floor\" sign, even when the floor is dry."
+    },
+    { "id": "conspiracy-tb-4", "text": "What the detective's wall of red string actually proves." }
+  ]
+}

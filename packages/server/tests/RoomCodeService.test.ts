@@ -76,6 +76,22 @@ describe("RoomCodeService", () => {
     expect(service.resolve("ZZZZ")).toBeUndefined();
   });
 
+  it("succeeds when only the tenth attempt is free", () => {
+    const originalRandom = Math.random;
+    try {
+      Math.random = () => 0;
+      service.register("AAAA", "room-1");
+      let calls = 0;
+      Math.random = () => {
+        ++calls;
+        return calls <= 9 * 4 ? 0 : 0.5;
+      };
+      expect(service.generateCode()).toBe("NNNN");
+    } finally {
+      Math.random = originalRandom;
+    }
+  });
+
   it("should throw after max attempts", () => {
     const originalRandom = Math.random;
     try {

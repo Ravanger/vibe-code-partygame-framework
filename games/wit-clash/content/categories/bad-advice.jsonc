@@ -1,0 +1,158 @@
+{
+  "id": "bad-advice",
+  "name": "Bad Advice",
+  "emoji": "🙃",
+  "prompts": [
+    {
+      "id": "advice-1",
+      "text": "First-date advice from a man who has been single since the invention of the fax."
+    },
+    { "id": "advice-2", "text": "A life hack that saves five seconds and costs you one eyebrow." },
+    {
+      "id": "advice-3",
+      "text": "Your overconfident uncle's one golden rule for giving a wedding toast."
+    },
+    { "id": "advice-4", "text": "The fortune cookie message that is technically a threat." },
+    {
+      "id": "advice-5",
+      "text": "What the employee who just quit whispers to the new hire on the way out."
+    },
+    {
+      "id": "advice-6",
+      "text": "Parenting advice from a man whose only child is a sourdough starter."
+    },
+    {
+      "id": "advice-7",
+      "text": "The job-interview \"power move\" that gets you escorted out by security."
+    },
+    {
+      "id": "advice-8",
+      "text": "The road-trip hack that makes your family stop speaking to you by hour three."
+    },
+    { "id": "advice-9", "text": "A pirate's personal finance tip for first-time homebuyers." },
+    {
+      "id": "advice-10",
+      "text": "The board game strategy that wins every time but ends friendships."
+    },
+    {
+      "id": "advice-11",
+      "text": "What the self-help guru says when his own seminar collapses on stage."
+    },
+    {
+      "id": "advice-12",
+      "text": "Fitness advice from someone whose only exercise is running late."
+    },
+    {
+      "id": "advice-13",
+      "text": "The name of the worst advice podcast, and the title of its first episode."
+    },
+    {
+      "id": "advice-14",
+      "text": "A kitchen shortcut the fire department has asked you to stop sharing."
+    },
+    {
+      "id": "advice-15",
+      "text": "The compliment about a friend's new haircut that ends the friendship."
+    },
+    {
+      "id": "advice-16",
+      "text": "A ghost's advice for getting over an ex, after 300 years of not doing so."
+    },
+    {
+      "id": "advice-17",
+      "text": "The travel tip from a souvenir shop that charges $40 for a fridge magnet."
+    },
+    {
+      "id": "advice-18",
+      "text": "The life advice you'd get from a vending machine that just ate your dollar."
+    },
+    {
+      "id": "advice-19",
+      "text": "Relationship advice from a parrot who has overheard every fight in the house."
+    },
+    {
+      "id": "advice-20",
+      "text": "An inspirational quote \"by a famous philosopher\" that clearly came from a gym."
+    },
+    { "id": "advice-21", "text": "The money-saving tip that somehow costs you a car." },
+    { "id": "advice-22", "text": "The pickup line that gets you turned into a frog by a wizard." },
+    { "id": "advice-23", "text": "The \"shortcut\" home that adds two hours and a ferry." },
+    {
+      "id": "advice-24",
+      "text": "The pep talk before an exam, delivered by your equally doomed friend."
+    },
+    {
+      "id": "advice-25",
+      "text": "The \"foolproof\" way to keep a surprise party secret that ruins it instantly."
+    },
+    {
+      "id": "advice-26",
+      "text": "The worst possible thing your inner voice whispers during a job interview."
+    },
+    {
+      "id": "advice-27",
+      "text": "What the park ranger's very bad intern says to do if you meet a bear."
+    },
+    {
+      "id": "advice-28",
+      "text": "The life lesson your goldfish taught you right before it jumped out of the bowl."
+    },
+    { "id": "advice-29", "text": "The Magic 8-Ball answer that suggests it knows way too much." },
+    {
+      "id": "advice-30",
+      "text": "The GPS direction that's technically correct but morally wrong."
+    },
+    {
+      "id": "advice-31",
+      "text": "The very bad idea your most sensible friend suddenly proposes at 2 a.m."
+    },
+    {
+      "id": "advice-32",
+      "text": "The public-speaking coach's replacement for \"picture the audience in their underwear\"."
+    },
+    {
+      "id": "advice-33",
+      "text": "The \"can't-lose\" tip a stranger whispers to you at the horse track."
+    },
+    { "id": "advice-34", "text": "An ancient proverb with a disastrously modern update." },
+    {
+      "id": "advice-35",
+      "text": "The excuse to escape a boring meeting that gets you promoted instead."
+    },
+    {
+      "id": "advice-36",
+      "text": "How to impress your in-laws, according to someone they no longer invite."
+    },
+    {
+      "id": "advice-37",
+      "text": "The trick to learning a language overnight that leaves you fluent in one word."
+    },
+    {
+      "id": "advice-38",
+      "text": "Retirement advice from a squirrel who forgot where it buried everything."
+    },
+    {
+      "id": "advice-39",
+      "text": "The group-project survival tip that gets your name removed from the project."
+    },
+    {
+      "id": "advice-40",
+      "text": "The morning routine of a productivity influencer that guarantees you'll be late."
+    }
+  ],
+  "tieBreakers": [
+    {
+      "id": "advice-tb-1",
+      "text": "The commencement speech advice that got the speaker booed off the stage."
+    },
+    {
+      "id": "advice-tb-2",
+      "text": "Financial advice from a toddler holding a piggy bank and a hammer."
+    },
+    { "id": "advice-tb-3", "text": "The advice a mattress salesman gives you about love." },
+    {
+      "id": "advice-tb-4",
+      "text": "The advice you'd give your younger self that would make everything worse."
+    }
+  ]
+}

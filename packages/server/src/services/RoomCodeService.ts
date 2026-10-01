@@ -1,4 +1,5 @@
 const CODE_LENGTH = 4;
+const MAX_ATTEMPTS = 10;
 const CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 export class RoomCodeService {
@@ -6,24 +7,14 @@ export class RoomCodeService {
   private roomIdToCode: Map<string, string> = new Map();
 
   generateCode(): string {
-    let code: string;
-    let attempts = 0;
-    const maxAttempts = 10;
-
-    do {
-      code = "";
-      for (let i = 0; i < CODE_LENGTH; i++) {
-        const randomIndex = Math.floor(Math.random() * CHARSET.length);
-        code += CHARSET[randomIndex];
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; ++attempt) {
+      let code = "";
+      for (let i = 0; i < CODE_LENGTH; ++i) {
+        code += CHARSET[Math.floor(Math.random() * CHARSET.length)];
       }
-      attempts++;
-    } while (this.codeToRoomId.has(code) && attempts < maxAttempts);
-
-    if (attempts >= maxAttempts) {
-      throw new Error("Failed to generate unique room code after maximum attempts");
+      if (!this.codeToRoomId.has(code)) return code;
     }
-
-    return code;
+    throw new Error("Failed to generate unique room code after maximum attempts");
   }
 
   register(code: string, roomId: string): void {

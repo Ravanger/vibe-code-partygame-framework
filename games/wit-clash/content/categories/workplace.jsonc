@@ -3,14 +3,72 @@
   "name": "Workplace",
   "emoji": "💼",
   "prompts": [
-    { "id": "wp-1", "text": "The worst possible team-building activity." },
-    { "id": "wp-2", "text": "A job title that sounds impressive but is meaningless." },
-    { "id": "wp-3", "text": "The most annoying office policy." },
-    { "id": "wp-4", "text": "A meeting that absolutely should not exist." },
-    { "id": "wp-5", "text": "The worst thing to put in an employee handbook." },
-    { "id": "wp-6", "text": "A performance review comment that would get you fired." },
-    { "id": "wp-7", "text": "The best way to accidentally insult your boss." },
-    { "id": "wp-8", "text": "A company slogan that's accidentally offensive." }
+    { "id": "wp-1", "text": "A team-building exercise that ends with someone filing a complaint." },
+    {
+      "id": "wp-2",
+      "text": "A job title that sounds impressive but means \"person who refills the printer\"."
+    },
+    {
+      "id": "wp-3",
+      "text": "The office policy that was clearly written after one very specific incident."
+    },
+    { "id": "wp-4", "text": "A meeting so pointless it should have been a single sticky note." },
+    { "id": "wp-5", "text": "The line in the employee handbook added after \"the incident\"." },
+    {
+      "id": "wp-6",
+      "text": "A performance review comment that is technically a compliment and clearly an insult."
+    },
+    {
+      "id": "wp-7",
+      "text": "How you accidentally called your boss \"Mom\", and then doubled down."
+    },
+    { "id": "wp-8", "text": "A company slogan that sounded fine until someone read it aloud." },
+    { "id": "wp-9", "text": "The reply-all that made the CEO personally walk over to your desk." },
+    { "id": "wp-10", "text": "The note the office microwave left for employees." },
+    { "id": "wp-11", "text": "An email subject line that sparks instant dread." },
+    { "id": "wp-12", "text": "The most passive-aggressive note in the break room." },
+    { "id": "wp-13", "text": "What the printer is thinking as it jams." },
+    {
+      "id": "wp-14",
+      "text": "A buzzword the CEO invented that everyone now pretends to understand."
+    },
+    { "id": "wp-15", "text": "The worst thing to say at your first lunch with the boss." },
+    { "id": "wp-16", "text": "A reason for leaving early that HR has heard 400 times." },
+    { "id": "wp-17", "text": "The strangest item on a company expense report." },
+    { "id": "wp-18", "text": "What the boss says right before announcing a new logo." },
+    { "id": "wp-19", "text": "The excuse you give to dodge yet another meeting." },
+    { "id": "wp-20", "text": "A company mission statement that is really just a cry for help." },
+    { "id": "wp-21", "text": "The worst place to be caught napping at work." },
+    { "id": "wp-22", "text": "A conference room name that nobody wants to book." },
+    { "id": "wp-23", "text": "The \"fun fact\" in a new coworker's introduction email." },
+    { "id": "wp-24", "text": "The real reason the office Wi-Fi goes down every day at 2 p.m." },
+    { "id": "wp-25", "text": "A resume hobby you should have left off." },
+    { "id": "wp-26", "text": "What your out-of-office reply really means." },
+    { "id": "wp-27", "text": "The new dress-code rule that was clearly aimed at one person." },
+    { "id": "wp-28", "text": "A secret office tradition no one admits to." },
+    {
+      "id": "wp-29",
+      "text": "The motivational poster in the break room that is somehow a threat."
+    },
+    { "id": "wp-30", "text": "The most obvious lie in a job interview." },
+    { "id": "wp-31", "text": "What happened to the lunch labeled \"DO NOT EAT\"." },
+    { "id": "wp-32", "text": "A company perk that is actually a trap." },
+    { "id": "wp-33", "text": "The first thing HR notices about your desk." },
+    { "id": "wp-34", "text": "An unspoken rule of the open-plan office." },
+    { "id": "wp-35", "text": "A video call fail that goes down in company history." },
+    { "id": "wp-36", "text": "A job nobody remembers hiring for." },
+    { "id": "wp-37", "text": "The unlikeliest person to be promoted to CEO." },
+    { "id": "wp-38", "text": "What the office plant has been through." },
+    { "id": "wp-39", "text": "A fancy name for \"we lost the file\"." },
+    { "id": "wp-40", "text": "What you'd say to the coworker who microwaves fish." }
   ],
-  "tieBreakers": [{ "id": "wp-tb-1", "text": "The perfect excuse for being late to work." }]
+  "tieBreakers": [
+    { "id": "wp-tb-1", "text": "The excuse for being late that's so good your boss promotes you." },
+    { "id": "wp-tb-2", "text": "A farewell cake message for a coworker you barely knew." },
+    { "id": "wp-tb-3", "text": "The motto of the third-floor supply closet." },
+    {
+      "id": "wp-tb-4",
+      "text": "A retirement speech from someone who has been waiting forty years."
+    }
+  ]
 }

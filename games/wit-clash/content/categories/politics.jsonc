@@ -2,17 +2,93 @@
   "id": "politics",
   "name": "Politics",
   "emoji": "🏛️",
-  // Add your own prompts below. Each needs a unique "id" within this file.
+  // Each prompt needs a unique "id" within this file.
   "prompts": [
-    { "id": "pol-1", "text": "A great finishing line for your presidential inauguration speech." },
-    { "id": "pol-2", "text": "The worst possible campaign slogan." },
-    { "id": "pol-3", "text": "A law that would instantly make you the most popular leader alive." },
-    { "id": "pol-4", "text": "The most ridiculous government position you'd love to hold." },
-    { "id": "pol-5", "text": "A new national holiday that would be universally hated." },
-    { "id": "pol-6", "text": "The best way to accidentally start a diplomatic incident." },
-    { "id": "pol-7", "text": "A political debate topic that could only end in chaos." },
-    { "id": "pol-8", "text": "The worst thing to say during a peace treaty signing." }
+    {
+      "id": "pol-1",
+      "text": "The last line of an inauguration speech that makes the whole crowd go quiet."
+    },
+    { "id": "pol-2", "text": "A campaign slogan that sounded better in the focus group." },
+    { "id": "pol-3", "text": "A law so popular the entire country throws it a parade." },
+    {
+      "id": "pol-4",
+      "text": "The title of the most pointless government job, complete with a corner office."
+    },
+    {
+      "id": "pol-5",
+      "text": "The national holiday that gives everyone the day off to do one strange thing."
+    },
+    { "id": "pol-6", "text": "The goodwill gift that accidentally starts a diplomatic incident." },
+    { "id": "pol-7", "text": "The debate question that makes every candidate sweat." },
+    { "id": "pol-8", "text": "The worst thing to whisper during a peace treaty signing." },
+    { "id": "pol-9", "text": "A bill that only passes because it's attached to free lunch." },
+    {
+      "id": "pol-10",
+      "text": "The most useless committee in parliament, and its first official finding."
+    },
+    { "id": "pol-11", "text": "What the senator read aloud at hour nine of a filibuster." },
+    { "id": "pol-12", "text": "A campaign promise that even the candidate doesn't believe." },
+    { "id": "pol-13", "text": "The least reassuring name for a new government agency." },
+    {
+      "id": "pol-14",
+      "text": "The trophy for the most boring legislative session, and what's engraved on it."
+    },
+    { "id": "pol-15", "text": "A form you must fill out in triplicate, in person, on a Thursday." },
+    { "id": "pol-16", "text": "What the committee agreed on after six hours of debate." },
+    { "id": "pol-17", "text": "The worst phrase to leave in the final draft of a law." },
+    { "id": "pol-18", "text": "An unexpected rule in the constitution of a tiny island nation." },
+    { "id": "pol-19", "text": "A press-conference excuse that makes everything worse." },
+    { "id": "pol-20", "text": "A ballot item so confusing it requires a lawyer." },
+    { "id": "pol-21", "text": "The slogan on the world's least inspiring protest sign." },
+    {
+      "id": "pol-22",
+      "text": "The real agenda of the town hall meeting that was supposed to be about potholes."
+    },
+    { "id": "pol-23", "text": "A new national mascot and why it's controversial." },
+    { "id": "pol-24", "text": "The most bureaucratic way to say \"no\"." },
+    { "id": "pol-25", "text": "The snack served at the peace summit that nearly started a war." },
+    {
+      "id": "pol-26",
+      "text": "What a candidate said when they didn't realize the debate mic was still on."
+    },
+    {
+      "id": "pol-27",
+      "text": "The mayor's new public project that nobody voted for, including the mayor."
+    },
+    {
+      "id": "pol-28",
+      "text": "The oddly specific gift a lobbyist for the cheese industry brings to a meeting."
+    },
+    {
+      "id": "pol-29",
+      "text": "The campaign rally theme song the band has begged them to stop using."
+    },
+    { "id": "pol-30", "text": "The first thing a new leader finds in the desk drawer." },
+    { "id": "pol-31", "text": "A tax on something silly, and what it pays for." },
+    { "id": "pol-32", "text": "What finally ended the longest meeting in history." },
+    { "id": "pol-33", "text": "A political bumper sticker nobody should put on their car." },
+    {
+      "id": "pol-34",
+      "text": "The voting mascot meant to encourage turnout that scared everyone away."
+    },
+    { "id": "pol-35", "text": "A vague answer that works for any question at a town hall." },
+    { "id": "pol-36", "text": "What a national anthem sounds like when written by committee." },
+    { "id": "pol-37", "text": "What the translator wishes they didn't have to say at a summit." },
+    { "id": "pol-38", "text": "The small-town book club amendment argued over for months." },
+    { "id": "pol-39", "text": "A cabinet position that sounds fake but should absolutely exist." },
+    { "id": "pol-40", "text": "The thing both sides of any debate secretly agree on." }
   ],
   // Optional. Used to break a tie; falls back to "prompts" if empty.
-  "tieBreakers": [{ "id": "pol-tb-1", "text": "The one law you'd repeal on day one." }]
+  "tieBreakers": [
+    {
+      "id": "pol-tb-1",
+      "text": "The first law you'd pass as supreme ruler of your apartment building."
+    },
+    {
+      "id": "pol-tb-2",
+      "text": "The last line of a speech that should have ended twenty minutes ago."
+    },
+    { "id": "pol-tb-3", "text": "The motto on a coin from the Republic of Nowhere." },
+    { "id": "pol-tb-4", "text": "What the intern in the capitol is secretly in charge of." }
+  ]
 }

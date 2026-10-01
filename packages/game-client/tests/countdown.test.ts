@@ -110,4 +110,29 @@ describe("Countdown", () => {
     expect(countdown.isExpired).toBe(true);
     countdown.destroy();
   });
+
+  it("re-anchors to a newer server time seen on a tick", () => {
+    vi.setSystemTime(1_000_000);
+    let serverNow = 1_000_000;
+    const countdown = new Countdown(
+      () => 1_060_000,
+      () => serverNow,
+    );
+    serverNow = 1_005_000;
+    vi.advanceTimersByTime(250);
+    expect(countdown.secondsLeft).toBe(55);
+    countdown.destroy();
+  });
+
+  it("re-anchors to a newer server time seen when read", () => {
+    vi.setSystemTime(1_000_000);
+    let serverNow = 1_000_000;
+    const countdown = new Countdown(
+      () => 1_060_000,
+      () => serverNow,
+    );
+    serverNow = 1_010_000;
+    expect(countdown.secondsLeft).toBe(50);
+    countdown.destroy();
+  });
 });

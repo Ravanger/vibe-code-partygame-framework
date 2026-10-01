@@ -1,100 +1,65 @@
-import type { GameConnectionManager } from "@partygame/game-client/connection";
-
-const CODE_PATTERN = /^[A-Z]{4}$/;
-const LAST_ROOM_KEY = "lastRoomCode";
+import { RoomCodeSchema } from "@partygame/shared";
+import type { WitClashManager } from "../manager.js";
 
 export class WelcomeViewModel {
   code = $state("");
   localError = $state<string | undefined>(undefined);
-  #hasAutoJoined = false;
-  manager: GameConnectionManager;
-  urlCode: string | undefined;
+  private autoJoined = false;
 
-  constructor(manager: GameConnectionManager, urlCode?: string | undefined) {
-    this.manager = manager;
-    this.urlCode = urlCode;
-    if (urlCode && CODE_PATTERN.test(urlCode)) this.code = urlCode;
+  constructor(
+    private readonly manager: WitClashManager,
+    private readonly urlCode?: string,
+    private readonly urlTvCode?: string,
+  ) {}
+
+  get busy(): boolean {
+    return this.manager.status === "connecting";
   }
 
-  codeIsValid = $derived.by(() => CODE_PATTERN.test(this.code));
-  busy = $derived.by(() => this.manager.connectionStatus === "connecting");
-  /** Hosting is ALWAYS offered. Hiding it behind stored state was D7. */
-  canHost = true;
-
-  get previousRoomCode() {
-    try {
-      return localStorage.getItem(LAST_ROOM_KEY) ?? undefined;
-    } catch {
-      return undefined;
-    }
+  get codeIsValid(): boolean {
+    return RoomCodeSchema.safeParse(this.code).success;
   }
 
-  setCode(raw: string) {
+  setCode(raw: string): void {
     this.code = raw
       .toUpperCase()
       .replace(/[^A-Z]/g, "")
       .slice(0, 4);
   }
 
-  async host() {
+  async host(): Promise<void> {
     this.localError = undefined;
-    try {
-      await this.manager.create("wit_clash");
-      this.#rememberRoomCode();
-    } catch (e) {
-      this.localError = message(e);
-    }
+    await this.attempt(() => this.manager.create());
   }
 
-  async join() {
+  async join(): Promise<void> {
     this.localError = undefined;
-    if (!this.codeIsValid) {
-      this.localError = "Game code must be 4 letters (A–Z).";
-      return;
-    }
-    try {
-      await this.manager.joinByCode(this.code);
-      this.#rememberRoomCode();
-    } catch (e) {
-      this.localError = message(e);
-    }
+    await this.attempt(() => this.manager.join(this.code));
   }
 
-  /** Called once on mount when the page was opened with ?code=XXXX. */
-  async autoJoinIfRequested() {
-    if (this.#hasAutoJoined) return;
-    if (!this.urlCode || !CODE_PATTERN.test(this.urlCode)) return;
-    this.#hasAutoJoined = true;
-    this.code = this.urlCode;
-    await this.join();
+  async watch(): Promise<void> {
+    this.localError = undefined;
+    await this.attempt(() => this.manager.joinAsSpectator(this.code));
   }
 
-  async rejoinPrevious() {
-    const code = this.previousRoomCode;
-    if (!code) return;
+  /** Joins from a `?code=` share link, or watches from a `?tv=` link, once. */
+  async autoJoinIfRequested(): Promise<void> {
+    const code = this.urlTvCode ?? this.urlCode;
+    if (this.autoJoined || !code) return;
+    this.autoJoined = true;
     this.code = code;
-    await this.join();
+    await (this.urlTvCode ? this.watch() : this.join());
   }
 
-  dismissError() {
+  dismissError(): void {
     this.localError = undefined;
-    this.manager.reset();
   }
 
-  /**
-   * Read the code from synced state, not from a timer. Fixes D8, which slept
-   * 100ms then 200ms and hoped the state had arrived.
-   */
-  #rememberRoomCode() {
-    const code = (this.manager.room?.state as { roomCode?: string } | undefined)?.roomCode;
-    if (code) {
-      try {
-        localStorage.setItem(LAST_ROOM_KEY, code);
-      } catch {
-        /* private mode */
-      }
+  private async attempt(connect: () => Promise<void>): Promise<void> {
+    try {
+      await connect();
+    } catch (error) {
+      this.localError = error instanceof Error ? error.message : String(error);
     }
   }
 }
-
-const message = (e: unknown) => (e instanceof Error ? e.message : String(e));

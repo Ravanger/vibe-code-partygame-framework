@@ -1,63 +1,51 @@
 <script lang="ts">
-import type { GameConnectionManager } from "@partygame/game-client/connection";
-import { MatchupVoteViewModel } from "../viewmodels/MatchupVoteViewModel.svelte.js";
+import { untrack } from "svelte";
+import type { WitClashManager } from "../manager.js";
+import { MatchupVoteViewModel } from "../viewmodels/MatchupVoteViewModel.js";
 
-const { manager }: { manager: GameConnectionManager } = $props();
+const { manager }: { manager: WitClashManager } = $props();
 
-// svelte-ignore state_referenced_locally -- manager is a stable long-lived instance, never reassigned by the parent
-const vm = new MatchupVoteViewModel(manager);
+const vm = untrack(() => new MatchupVoteViewModel(manager));
 
-$effect(() => {
-  return () => vm.destroy();
-});
+$effect(() => () => vm.destroy());
 </script>
 
 <div class="matchup-vote">
-  {#if vm.answers.length === 0}
+  {#if vm.choices.length === 0}
     <div class="waiting">Waiting for matchup...</div>
-  {:else if vm.isRevealed}
-    <div class="reveal">
-      <h2>{vm.promptText}</h2>
-      <div class="answers">
-        {#each vm.answers as answer}
-          <div class="answer-card revealed" class:winner={answer.votes === Math.max(...vm.answers.map((a) => a.votes)) && answer.votes > 0}>
-            <p class="text">{answer.text}</p>
-            <p class="author">by {answer.authorName}</p>
-            <p class="votes">{answer.votes} vote{answer.votes !== 1 ? "s" : ""}</p>
-          </div>
-        {/each}
-      </div>
-      <p class="next">Next matchup coming up...</p>
-    </div>
   {:else}
-    <div class="vote">
-      <div class="header">
-        <span class="progress">Matchup {vm.matchupNumber} of {vm.totalMatchups}</span>
-        <div class="timer" class:urgent={vm.isUrgent}>
-          {vm.secondsLeft}s
-        </div>
-      </div>
-
-      <h2 class="prompt">{vm.promptText}</h2>
-
-      <div class="answers">
-        {#each vm.answers as answer}
-          <button
-            class="answer-card"
-            class:selected={vm.myVote === answer.id}
-            disabled={vm.isAuthor}
-            onclick={() => vm.vote(answer.id)}
-            aria-pressed={vm.myVote === answer.id}
-          >
-            <p class="text">{answer.text}</p>
-          </button>
-        {/each}
-      </div>
-
-      <p class="footer">
-        {vm.votedCount} of {vm.eligibleVoterCount} voted
-      </p>
+    <div class="header">
+      <span class="progress">{`Matchup ${vm.matchupNumber} of ${vm.totalMatchups}`}</span>
+      <div class="timer" class:urgent={vm.isUrgent}>{`${vm.secondsLeft}s`}</div>
     </div>
+
+    <h2 class="prompt">{vm.promptText}</h2>
+
+    {#if vm.isSpectator}
+      <p class="notice">Cast your votes on your phones.</p>
+    {:else if vm.isOwnMatchup}
+      <p class="notice">This one is yours. Sit tight while the others vote.</p>
+    {:else if vm.isForfeit}
+      <p class="notice">Only one answer came in — no vote needed.</p>
+    {:else if !vm.canVote}
+      <p class="notice">You cannot vote on this one.</p>
+    {/if}
+
+    <div class="answers">
+      {#each vm.choices as choice (choice.id)}
+        <button type="button"
+          class="answer-card"
+          class:selected={choice.isMine}
+          disabled={!vm.canVote}
+          onclick={() => vm.vote(choice.id)}
+          aria-pressed={choice.isMine}
+        >
+          <p class="text">{choice.text}</p>
+        </button>
+      {/each}
+    </div>
+
+    <p class="footer">{`${vm.votesCast} of ${vm.votesExpected} voted`}</p>
   {/if}
 </div>
 
@@ -80,7 +68,10 @@ $effect(() => {
 
   .header {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: #666;
   }
 
   .timer {
@@ -96,7 +87,8 @@ $effect(() => {
   }
 
   @keyframes pulse {
-    0%, 100% {
+    0%,
+    100% {
       opacity: 1;
     }
     50% {
@@ -112,12 +104,11 @@ $effect(() => {
     line-height: 1.4;
   }
 
-  h2 {
+  .notice {
     text-align: center;
-    font-size: 1.8rem;
-    color: #333;
     margin: 0;
-    line-height: 1.4;
+    color: #666;
+    font-style: italic;
   }
 
   .answers {
@@ -134,10 +125,8 @@ $effect(() => {
 
   .answer-card {
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 12px;
     padding: 24px 16px;
     border: 3px solid #e0e0e0;
     border-radius: 16px;
@@ -148,14 +137,10 @@ $effect(() => {
     min-height: 120px;
   }
 
-  .answer-card:hover {
+  .answer-card:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
     border-color: #667eea;
-  }
-
-  .answer-card:active {
-    transform: translateY(0);
   }
 
   .answer-card:focus-visible {
@@ -163,26 +148,16 @@ $effect(() => {
     outline-offset: 2px;
   }
 
+  .answer-card:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+
   .answer-card.selected {
     border-color: #667eea;
     background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
-  }
-
-  .answer-card.revealed {
-    cursor: default;
-    background: #f9fafb;
-  }
-
-  .answer-card.revealed:hover {
-    transform: none;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  }
-
-  .answer-card.winner {
-    border-color: #22c55e;
-    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+    opacity: 1;
   }
 
   .text {
@@ -191,21 +166,6 @@ $effect(() => {
     text-align: center;
     margin: 0;
     line-height: 1.5;
-    flex: 1;
-  }
-
-  .author {
-    font-size: 0.9rem;
-    color: #666;
-    margin: 0;
-    font-style: italic;
-  }
-
-  .votes {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #667eea;
-    margin: 0;
   }
 
   .footer {
@@ -213,18 +173,5 @@ $effect(() => {
     font-size: 1rem;
     color: #666;
     margin: 0;
-  }
-
-  .next {
-    text-align: center;
-    font-size: 1.1rem;
-    color: #666;
-    margin: 0;
-  }
-
-  .reveal {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
   }
 </style>

@@ -1,18 +1,133 @@
-import { render, screen } from "@testing-library/svelte";
-import { describe, expect, it } from "vitest";
+import { ErrorCode } from "@partygame/shared";
+import { fireEvent, render, screen } from "@testing-library/svelte";
+import { flushSync } from "svelte";
+import { describe, expect, it, vi } from "vitest";
 import App from "../ui/App.svelte";
-import { fakeManager } from "./helpers/fakes.js";
+import { addMine, addSeat, connectedClient, option } from "./helpers/client.js";
 
-describe("App.svelte routing", () => {
-  it("renders the Welcome screen, not an error, when disconnected", () => {
-    const manager = fakeManager({ connectionStatus: "disconnected" });
+describe("App", () => {
+  it("shows the welcome screen until a room is joined", () => {
+    const { manager } = connectedClient();
+    manager.dispose();
     render(App, { manager });
     expect(screen.getByRole("button", { name: /host game/i })).toBeInTheDocument();
   });
 
-  it("shows Host Game button on Welcome screen", () => {
-    const manager = fakeManager({ connectionStatus: "disconnected" });
-    render(App, { manager });
+  it("follows the room from the lobby through the phases as patches arrive", () => {
+    const c = connectedClient({ role: "host" });
+    addSeat(c.state, "b-1234567");
+    addSeat(c.state, "c-1234567");
+    c.state.canStart = true;
+    render(App, { manager: c.manager });
+    expect(screen.getByRole("button", { name: /start game/i })).toBeEnabled();
+    expect(screen.getByText("ABCD", { selector: ".room-chip" })).toBeInTheDocument();
+
+    c.state.phase = "CategorySelection";
+    const first = option("a");
+    c.state.categoryOptions.push(first, option("b"));
+    addMine(c.state, c.manager.playerId);
+    c.patch();
+    flushSync();
+    expect(screen.getByRole("heading", { name: /pick a category/i })).toBeInTheDocument();
+
+    first.votes = 1;
+    c.patch();
+    flushSync();
+    expect(screen.getByText("1 vote")).toBeInTheDocument();
+
+    c.state.phase = "Intermission";
+    c.patch();
+    flushSync();
+    expect(screen.getByText(/connecting to game server/i)).toBeInTheDocument();
+  });
+
+  it("shows the waiting screen to a late joiner", () => {
+    const c = connectedClient({ isActive: false }, "Prompting");
+    render(App, { manager: c.manager });
+    expect(screen.getByRole("heading", { name: /join next round/i })).toBeInTheDocument();
+    c.me.isActive = true;
+    c.patch();
+    flushSync();
+    expect(screen.getByText(/sitting this round out/i)).toBeInTheDocument();
+  });
+
+  it("offers leave and end game outside the lobby, and the host confirms before ending", async () => {
+    const c = connectedClient({ role: "host" }, "Prompting");
+    addMine(c.state, c.manager.playerId);
+    render(App, { manager: c.manager });
+    await fireEvent.click(screen.getByRole("button", { name: "End game" }));
+    expect(screen.getByText("End the game for everyone?")).toBeInTheDocument();
+    await fireEvent.click(screen.getByRole("button", { name: "No" }));
+    expect(c.room.requests).toEqual([]);
+    await fireEvent.click(screen.getByRole("button", { name: "End game" }));
+    await fireEvent.click(screen.getByRole("button", { name: "Yes" }));
+    expect(c.room.requests).toEqual([{ type: "ACTION", payload: { type: "END_GAME" } }]);
+    const leave = vi.spyOn(c.manager, "leave").mockResolvedValue();
+    await fireEvent.click(screen.getByRole("button", { name: "Leave game" }));
+    expect(leave).toHaveBeenCalledOnce();
+  });
+
+  it("gives a guest only the leave button, and the lobby none", () => {
+    const guest = connectedClient({}, "Prompting");
+    addMine(guest.state, guest.manager.playerId);
+    const { unmount } = render(App, { manager: guest.manager });
+    expect(screen.queryByRole("button", { name: "End game" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Leave game" })).toBeInTheDocument();
+    unmount();
+    const lobby = connectedClient({ role: "host" });
+    render(App, { manager: lobby.manager });
+    expect(screen.getAllByRole("button", { name: "Leave game" })).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: "End game" })).not.toBeInTheDocument();
+  });
+
+  it("shows a quiet indicator while reconnecting, keeping the game on screen", () => {
+    const c = connectedClient({}, "CategorySelection");
+    render(App, { manager: c.manager });
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    c.room.dropConnection();
+    flushSync();
+    expect(screen.getByRole("status")).toHaveTextContent(/reconnecting/i);
+    expect(screen.getByRole("heading", { name: /pick a category/i })).toBeInTheDocument();
+    c.room.reconnected();
+    flushSync();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("shows a seatless client the room as a TV display", () => {
+    const c = connectedClient({}, "Prompting");
+    c.state.players.delete(c.manager.playerId);
+    addSeat(c.state, "ann-12345", { name: "Ann" });
+    c.state.progress.set("ann-12345", 1);
+    c.state.answersPerPlayer = 2;
+    const { container } = render(App, { manager: c.manager });
+    expect(container.querySelector("main")).toHaveClass("tv");
+    expect(screen.getByText("1 of 2 answers in")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+  });
+
+  it("does not use the TV layout for a seated player", () => {
+    const c = connectedClient();
+    const { container } = render(App, { manager: c.manager });
+    expect(container.querySelector("main")).not.toHaveClass("tv");
+  });
+
+  it("shows server errors in a toast that can be dismissed", async () => {
+    const c = connectedClient();
+    render(App, { manager: c.manager });
+    c.room.push("ERROR", { code: ErrorCode.NOT_ENOUGH_PLAYERS, message: "Need more players" });
+    flushSync();
+    expect(screen.getByRole("alert")).toHaveTextContent("Need more players");
+    await fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("returns a kicked player to the welcome screen with the reason", () => {
+    const c = connectedClient({}, "Results");
+    render(App, { manager: c.manager });
+    c.room.push("ERROR", { code: ErrorCode.KICKED, message: "Removed by the host" });
+    c.room.closed();
+    flushSync();
     expect(screen.getByRole("button", { name: /host game/i })).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("Removed by the host");
   });
 });

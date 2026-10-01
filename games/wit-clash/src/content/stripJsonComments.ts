@@ -9,7 +9,7 @@ export function stripJsonComments(input: string): string {
     inBlock = false,
     escaped = false;
 
-  for (let i = 0; i < input.length; i++) {
+  for (let i = 0; i < input.length; ++i) {
     const ch = input[i];
     const next = input[i + 1];
 
@@ -23,7 +23,7 @@ export function stripJsonComments(input: string): string {
     if (inBlock) {
       if (ch === "*" && next === "/") {
         inBlock = false;
-        i++;
+        ++i;
       }
       continue;
     }
@@ -47,12 +47,12 @@ export function stripJsonComments(input: string): string {
     }
     if (ch === "/" && next === "/") {
       inLine = true;
-      i++;
+      ++i;
       continue;
     }
     if (ch === "/" && next === "*") {
       inBlock = true;
-      i++;
+      ++i;
       continue;
     }
     out += ch;

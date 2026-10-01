@@ -21,6 +21,11 @@
       "dependsOn": ["^build"],
       "cache": false,
       "persistent": true
+    },
+    "dev:server": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": true
     }
   }
 }

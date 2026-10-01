@@ -1,0 +1,176 @@
+{
+  "id": "grandmas-group-chat",
+  "name": "Grandma's Group Chat",
+  "emoji": "👵",
+  "prompts": [
+    {
+      "id": "grandma-1",
+      "text": "The first message Grandma sent after discovering voice-to-text, while vacuuming."
+    },
+    {
+      "id": "grandma-2",
+      "text": "The blurry photo Grandma sent to the family with the caption \"LOOK WHAT HE DID\"."
+    },
+    {
+      "id": "grandma-3",
+      "text": "How Grandma replies when her 400-word text gets answered with a thumbs-up."
+    },
+    {
+      "id": "grandma-4",
+      "text": "The emoji combination Grandma is convinced means \"I love you\"."
+    },
+    {
+      "id": "grandma-5",
+      "text": "The new name Grandma gave the family group chat after the Thanksgiving incident."
+    },
+    {
+      "id": "grandma-6",
+      "text": "The inspirational caption on the glittery \"Good Morning\" image Grandma sends at 5 a.m."
+    },
+    {
+      "id": "grandma-7",
+      "text": "The message that made the whole family chat go silent for three days."
+    },
+    {
+      "id": "grandma-8",
+      "text": "The \"breaking news\" Grandma just shared that is definitely from 2009."
+    },
+    {
+      "id": "grandma-9",
+      "text": "What Grandma \"doesn't want\" for her birthday, listed in great detail."
+    },
+    { "id": "grandma-10", "text": "Minute six of Grandma's nine-minute voicemail." },
+    {
+      "id": "grandma-11",
+      "text": "The life advice Grandma drops into the chat with no context at all."
+    },
+    {
+      "id": "grandma-12",
+      "text": "What \"the computer is doing the thing again\" turned out to mean."
+    },
+    {
+      "id": "grandma-13",
+      "text": "What Grandma typed into the search bar, thinking it was a text to you."
+    },
+    {
+      "id": "grandma-14",
+      "text": "The word autocorrect keeps changing in Grandma's texts, with alarming results."
+    },
+    {
+      "id": "grandma-15",
+      "text": "The all-caps text from Grandma that sent everyone into a panic over nothing."
+    },
+    {
+      "id": "grandma-16",
+      "text": "What actually happened when you clicked the mystery link Grandma sent."
+    },
+    {
+      "id": "grandma-17",
+      "text": "The secret family recipe ingredient Grandma accidentally revealed to everyone."
+    },
+    {
+      "id": "grandma-18",
+      "text": "The caption on Grandma's first selfie, taken from directly below her chin."
+    },
+    {
+      "id": "grandma-19",
+      "text": "What Grandma finally sent after \"Grandma is typing...\" for forty-five minutes."
+    },
+    {
+      "id": "grandma-20",
+      "text": "What the family overheard when Grandma butt-dialed the group video call."
+    },
+    {
+      "id": "grandma-21",
+      "text": "The wildly wrong emoji Grandma used to react to your cousin's breakup."
+    },
+    {
+      "id": "grandma-22",
+      "text": "The guilt-trip text Grandma sends when you don't call back within the hour."
+    },
+    {
+      "id": "grandma-23",
+      "text": "The abbreviation Grandma invented, and what she thinks it means."
+    },
+    {
+      "id": "grandma-24",
+      "text": "The away message Grandma set on her phone in 2014 and can't turn off."
+    },
+    {
+      "id": "grandma-25",
+      "text": "The holiday greeting Grandma sent using 47 emojis, translated into English."
+    },
+    {
+      "id": "grandma-26",
+      "text": "The text clearly meant for Grandma's boyfriend Harold, sent to the whole family."
+    },
+    {
+      "id": "grandma-27",
+      "text": "The meme Grandma shared with \"Ha ha so true!!\" that is not about what she thinks."
+    },
+    {
+      "id": "grandma-28",
+      "text": "How Grandma reacts when you announce you're moving across the country."
+    },
+    {
+      "id": "grandma-29",
+      "text": "What arrived at the door after Grandma tried online shopping for the first time."
+    },
+    {
+      "id": "grandma-30",
+      "text": "The animated sticker Grandma sends after every single message."
+    },
+    {
+      "id": "grandma-31",
+      "text": "The chain message Grandma forwarded that threatens seven years of bad luck."
+    },
+    {
+      "id": "grandma-32",
+      "text": "The poll Grandma created in the family chat, and its shocking results."
+    },
+    {
+      "id": "grandma-33",
+      "text": "The topic that triggers Grandma's six-paragraph typing marathon."
+    },
+    {
+      "id": "grandma-34",
+      "text": "What everyone saw on the video call when Grandma held the phone to her ear."
+    },
+    { "id": "grandma-35", "text": "The first hashtag Grandma ever used, with total confidence." },
+    {
+      "id": "grandma-36",
+      "text": "The text Grandma sent after seeing your new haircut, then tried to \"unsend\"."
+    },
+    {
+      "id": "grandma-37",
+      "text": "The \"totally casual\" way Grandma asks whether you're seeing anyone."
+    },
+    { "id": "grandma-38", "text": "The \"About Me\" section on Grandma's profile." },
+    {
+      "id": "grandma-39",
+      "text": "The new group chat rule, enforced by Grandma and Grandma alone."
+    },
+    {
+      "id": "grandma-40",
+      "text": "What Grandma thinks \"LOL\" stands for, judging by how she uses it."
+    }
+  ],
+  "tieBreakers": [
+    {
+      "id": "grandma-tb-1",
+      "text": "The text you get from Grandma when you forget to call on Sunday."
+    },
+    {
+      "id": "grandma-tb-2",
+      "text": "The voicemail from Grandma that begins, \"Don't panic, but...\""
+    },
+    {
+      "id": "grandma-tb-3",
+      "text": "Grandma's farewell message after she accidentally leaves the group chat."
+    },
+    {
+      "id": "grandma-tb-4",
+      "text": "The one perfect message Grandma used to end a family chat argument forever."
+    }
+  ]
+}

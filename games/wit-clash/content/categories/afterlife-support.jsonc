@@ -1,0 +1,158 @@
+{
+  "id": "afterlife-support",
+  "name": "Afterlife Customer Service",
+  "emoji": "👻",
+  "prompts": [
+    {
+      "id": "afterlife-1",
+      "text": "The one song on loop in the afterlife hotline's 900-year hold queue."
+    },
+    {
+      "id": "afterlife-2",
+      "text": "The option you have to press 9 for on the afterlife hotline menu."
+    },
+    {
+      "id": "afterlife-3",
+      "text": "The penalty for cancelling eternity within the first 1,000 years."
+    },
+    {
+      "id": "afterlife-4",
+      "text": "The magazines in the afterlife waiting room, untouched since 1987."
+    },
+    {
+      "id": "afterlife-5",
+      "text": "Afterlife tech support: \"Have you tried turning your soul off and on again?\""
+    },
+    { "id": "afterlife-6", "text": "The terms and conditions you clicked past before you died." },
+    {
+      "id": "afterlife-7",
+      "text": "What you unlock at Platinum status in the afterlife loyalty program."
+    },
+    { "id": "afterlife-8", "text": "The most-asked question on the afterlife FAQ page." },
+    {
+      "id": "afterlife-9",
+      "text": "Why the afterlife call center's top agent has a 0% satisfaction score."
+    },
+    {
+      "id": "afterlife-10",
+      "text": "The most common note in the afterlife suggestion box this week."
+    },
+    { "id": "afterlife-11", "text": "The fine print on the \"Eternal Rest\" package." },
+    {
+      "id": "afterlife-12",
+      "text": "The script the agent reads to someone who died in a very silly way."
+    },
+    { "id": "afterlife-13", "text": "The upsell they attempt at the pearly gates." },
+    {
+      "id": "afterlife-14",
+      "text": "The afterlife's voicemail greeting, recorded by a very bored angel."
+    },
+    {
+      "id": "afterlife-15",
+      "text": "The item in the afterlife lost-and-found nobody has claimed in 600 years."
+    },
+    {
+      "id": "afterlife-16",
+      "text": "Question 3 on the afterlife's \"How Was Your Death?\" satisfaction survey."
+    },
+    {
+      "id": "afterlife-17",
+      "text": "The surprisingly cheap item in the afterlife welcome basket."
+    },
+    { "id": "afterlife-18", "text": "What the agent says when you ask for a refund on your soul." },
+    {
+      "id": "afterlife-19",
+      "text": "The catch with the \"infinity pool\" pictured in the afterlife brochure."
+    },
+    {
+      "id": "afterlife-20",
+      "text": "The sign above the afterlife complaints desk, in very small letters."
+    },
+    {
+      "id": "afterlife-21",
+      "text": "The one outfit that gets you turned away by the afterlife's dress code."
+    },
+    {
+      "id": "afterlife-22",
+      "text": "What the afterlife chatbot answers when you type \"I'm dead\"."
+    },
+    {
+      "id": "afterlife-23",
+      "text": "Why the line at the afterlife's front desk hasn't moved since the Middle Ages."
+    },
+    {
+      "id": "afterlife-24",
+      "text": "The rest of the afterlife gift shop T-shirt: \"I Died and All I Got Was...\""
+    },
+    { "id": "afterlife-25", "text": "The warranty on your halo." },
+    {
+      "id": "afterlife-26",
+      "text": "The suspicious charge on your first afterlife billing statement."
+    },
+    { "id": "afterlife-27", "text": "The sold-out afterlife event with a 2,000-year waitlist." },
+    {
+      "id": "afterlife-28",
+      "text": "The afterlife self-checkout's version of \"unexpected item in bagging area\"."
+    },
+    {
+      "id": "afterlife-29",
+      "text": "A ghost's one-star review of the haunted house they were assigned."
+    },
+    { "id": "afterlife-30", "text": "What the afterlife snack bar charges instead of money." },
+    {
+      "id": "afterlife-31",
+      "text": "The afterlife support ticket that has been \"escalated\" for 3,000 years."
+    },
+    {
+      "id": "afterlife-32",
+      "text": "The security question you must answer to reset your afterlife account password."
+    },
+    {
+      "id": "afterlife-33",
+      "text": "The name your afterlife reservation was mistakenly booked under."
+    },
+    { "id": "afterlife-34", "text": "The \"eternal\" daily special in the afterlife cafeteria." },
+    {
+      "id": "afterlife-35",
+      "text": "What the afterlife's hold message says after your first hundred years on hold."
+    },
+    {
+      "id": "afterlife-36",
+      "text": "The surprising rule at the afterlife gym, where nobody has a body."
+    },
+    {
+      "id": "afterlife-37",
+      "text": "The parking sign outside the pearly gates, which is very strict about chariots."
+    },
+    {
+      "id": "afterlife-38",
+      "text": "What you can redeem ten million afterlife reward points for."
+    },
+    {
+      "id": "afterlife-39",
+      "text": "The afterlife's out-of-office reply during the end of the world."
+    },
+    {
+      "id": "afterlife-40",
+      "text": "Clause 7 of the \"Terms of Haunting\" every new ghost must sign."
+    }
+  ],
+  "tieBreakers": [
+    {
+      "id": "afterlife-tb-1",
+      "text": "The first words of your afterlife guide, who clearly drew the short straw."
+    },
+    {
+      "id": "afterlife-tb-2",
+      "text": "The motto above the afterlife welcome desk that is really not reassuring."
+    },
+    {
+      "id": "afterlife-tb-3",
+      "text": "The pettiest rule in the afterlife, enforced by an angel with a clipboard."
+    },
+    {
+      "id": "afterlife-tb-4",
+      "text": "The retirement speech of an afterlife receptionist after 10,000 years at the desk."
+    }
+  ]
+}

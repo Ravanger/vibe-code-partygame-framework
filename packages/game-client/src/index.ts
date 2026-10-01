@@ -1,9 +1,7 @@
-import { GameClient } from "./GameClient.js";
-
 export { Countdown } from "./countdown.svelte.js";
-export { GameClient } from "./GameClient.js";
-export { CategoryVoteViewModel } from "./viewmodels/CategoryVoteViewModel.svelte.js";
-
-export function createGameClient(options: { endpoint: string }) {
-  return new GameClient(options);
-}
+export {
+  type ConnectionStatus,
+  GameConnectionManager,
+  type GameConnectionOptions,
+} from "./GameConnectionManager.svelte.js";
+export type { RoomLike } from "./RoomLike.js";

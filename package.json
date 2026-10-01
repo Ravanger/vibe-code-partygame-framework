@@ -8,38 +8,34 @@
     "games/*"
   ],
   "scripts": {
-    "dev:all": "turbo run dev",
+    "dev:all": "turbo run dev dev:server",
     "build": "turbo build",
     "test": "turbo test",
     "test:ci": "turbo test:ci",
     "lint": "biome check .",
     "format": "biome format --write .",
     "typecheck": "turbo typecheck",
-    "dev": "turbo dev",
+    "dev": "turbo run dev dev:server",
     "launch": "bun run launch.ts",
     "launch:dev": "bun run launch.ts dev",
     "launch:host": "bun run launch.ts host",
     "launch:prod": "bun run launch.ts prod",
     "test:coverage": "vitest run --coverage",
-    "verify": "biome check . && tsc --noEmit -p games/wit-clash/tsconfig.verify.json && vitest run --coverage"
+    "typecheck:launch": "tsc --noEmit -p tsconfig.json",
+    "verify": "biome check . && tsc --noEmit -p tsconfig.json && tsc --noEmit -p games/wit-clash/tsconfig.verify.json && vitest run --coverage"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.12",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@types/jsdom": "^28.0.1",
-    "@vitest/coverage-istanbul": "^4.1.10",
-    "@vitest/coverage-v8": "^4.1.4",
-    "colyseus": "^0.17.9",
-    "jsdom": "^29.0.2",
-    "turbo": "^2.9.6",
+    "@biomejs/biome": "^2.5.15",
+    "@testing-library/jest-dom": "^6.10.0",
+    "@types/jsdom": "^28.0.3",
+    "@types/node": "^26.6.3",
+    "@vitest/coverage-v8": "^4.1.11",
+    "jsdom": "^29.1.1",
+    "turbo": "^2.11.5",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.11"
   },
   "engines": {
     "node": ">=20.0.0"
-  },
-  "dependencies": {
-    "@colyseus/tools": "0.17.19",
-    "svelte": "5.53.0"
   }
 }

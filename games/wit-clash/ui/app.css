@@ -109,3 +109,61 @@ body {
     padding: 10px 20px;
   }
 }
+
+main.tv {
+  font-size: 1.6rem;
+}
+
+main.tv .game-view {
+  padding: 40px 60px;
+}
+
+main.tv .room-code {
+  font-size: 7rem;
+  letter-spacing: 16px;
+}
+
+main.tv .qr-box {
+  width: 360px;
+}
+
+main.tv .timer {
+  font-size: 5rem;
+}
+
+main.tv .prompt,
+main.tv .prompt-text {
+  font-size: 3rem;
+}
+
+main.tv .answer-text,
+main.tv .answer-card .text,
+main.tv .name,
+main.tv .player-name,
+main.tv .footer,
+main.tv .spectating,
+main.tv .progress,
+main.tv .notice,
+main.tv .waiting-msg,
+main.tv .share-instructions,
+main.tv .waiting {
+  font-size: 2rem;
+}
+
+main.tv .waiting-room,
+main.tv .results,
+main.tv .reveal,
+main.tv .prompting,
+main.tv .join-next-round,
+main.tv .matchup-vote,
+main.tv .category-vote {
+  max-width: none;
+}
+
+main.tv .votes,
+main.tv .author,
+main.tv .total-score,
+main.tv .round-info,
+main.tv .rank {
+  font-size: 1.6rem;
+}

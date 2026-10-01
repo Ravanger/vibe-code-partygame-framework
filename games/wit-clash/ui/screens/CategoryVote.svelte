@@ -1,43 +1,41 @@
 <script lang="ts">
-import type { GameConnectionManager } from "@partygame/game-client/connection";
-import { CategoryVoteViewModel } from "../viewmodels/CategoryVoteViewModel.svelte.js";
+import { untrack } from "svelte";
+import type { WitClashManager } from "../manager.js";
+import { CategoryVoteViewModel } from "../viewmodels/CategoryVoteViewModel.js";
 
-const { manager }: { manager: GameConnectionManager } = $props();
+const { manager }: { manager: WitClashManager } = $props();
 
-// svelte-ignore state_referenced_locally -- manager is a stable long-lived instance, never reassigned by the parent
-const vm = new CategoryVoteViewModel(manager);
+const vm = untrack(() => new CategoryVoteViewModel(manager));
 
-$effect(() => {
-  return () => vm.destroy();
-});
+$effect(() => () => vm.destroy());
 </script>
 
 <div class="category-vote">
+  <p class="round-info">{vm.roundLabel}</p>
   <h1>Pick a category</h1>
 
   <div class="timer" class:urgent={vm.isUrgent}>
-    <span aria-live="polite" aria-atomic="true">{vm.countdownAnnouncement}</span>
-    {vm.secondsLeft}s
+    <span class="sr-only" aria-live="polite" aria-atomic="true">{vm.announcement}</span>
+    {`${vm.secondsLeft}s`}
   </div>
 
   <div class="cards">
-    {#each vm.options as option}
-      <button
+    {#each vm.options as option (option.id)}
+      <button type="button"
         class="card"
         class:selected={vm.myVote === option.id}
+        disabled={vm.isSpectator}
         onclick={() => vm.vote(option.id)}
         aria-pressed={vm.myVote === option.id}
       >
         <span class="emoji">{option.emoji}</span>
         <span class="name">{option.name}</span>
-        <span class="votes">{option.votes} vote{option.votes !== 1 ? "s" : ""}</span>
+        <span class="votes">{`${option.votes} vote${option.votes !== 1 ? "s" : ""}`}</span>
       </button>
     {/each}
   </div>
 
-  <p class="footer">
-    {vm.totalVotes} of {vm.playerCount} voted
-  </p>
+  <p class="footer">{`${vm.votesCast} of ${vm.votesExpected} voted`}</p>
 </div>
 
 <style>
@@ -55,6 +53,21 @@ $effect(() => {
     font-size: 2rem;
     margin: 0;
     color: #333;
+  }
+
+  .round-info {
+    text-align: center;
+    margin: 0;
+    color: #666;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
 
   .timer {

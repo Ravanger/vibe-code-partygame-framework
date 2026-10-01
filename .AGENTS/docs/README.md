@@ -10,7 +10,5 @@ Whenever an implementation task involves a library not yet documented here or in
 4. Reference this file in implementation plans.
 
 ## Documented Libraries
-- [xstate.md](xstate.md) (pending)
-- [colyseus.md](colyseus.md) (pending)
-- [zod.md](zod.md) (pending)
-- [vitest.md](vitest.md) (pending)
+See `libraries/` (one file per library or library family) and the version table in the root `AGENTS.md`.
+Policy: `LIBRARY_DOCS_POLICY.md`; template: `TEMPLATE.md`. Keep each doc under about 150 lines and limited to APIs this repo uses.

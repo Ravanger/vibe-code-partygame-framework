@@ -3,14 +3,81 @@
   "name": "Sci-Fi",
   "emoji": "🚀",
   "prompts": [
-    { "id": "sf-1", "text": "What would be the worst name for a new planet?" },
-    { "id": "sf-2", "text": "The most useless invention from the year 3000." },
-    { "id": "sf-3", "text": "A time travel rule that would ruin history." },
-    { "id": "sf-4", "text": "The worst alien superpower you could have." },
-    { "id": "sf-5", "text": "A robot uprising that fails spectacularly." },
-    { "id": "sf-6", "text": "The most boring sci-fi movie ever made." },
-    { "id": "sf-7", "text": "A space law that everyone ignores." },
-    { "id": "sf-8", "text": "The best thing to put after https:// in a fake alien URL." }
+    { "id": "sf-1", "text": "The name of a brand-new planet, chosen by an online poll." },
+    { "id": "sf-2", "text": "A useless invention from the year 3000 that everybody owns anyway." },
+    { "id": "sf-3", "text": "The one time-travel rule printed on every time machine's dashboard." },
+    { "id": "sf-4", "text": "An alien superpower that's mostly just inconvenient at parties." },
+    { "id": "sf-5", "text": "The one very human weakness that ended the robot uprising." },
+    { "id": "sf-6", "text": "The plot of a sci-fi epic where the big threat is a very slow leak." },
+    { "id": "sf-7", "text": "The space law everybody breaks while parked near Jupiter." },
+    { "id": "sf-8", "text": "The best thing to put after https:// in a fake alien URL." },
+    {
+      "id": "sf-9",
+      "text": "The rejected name for the warp drive, after it was tested on the intern."
+    },
+    { "id": "sf-10", "text": "What the ship's computer says when you ask it to do the dishes." },
+    {
+      "id": "sf-11",
+      "text": "The worst thing to hear over a spaceship intercom, said far too calmly."
+    },
+    { "id": "sf-12", "text": "The national pastime on a planet with no gravity on Tuesdays." },
+    {
+      "id": "sf-13",
+      "text": "What you'd do with a time machine that only works for five minutes."
+    },
+    { "id": "sf-14", "text": "A sci-fi gadget that would ruin dating." },
+    { "id": "sf-15", "text": "An alien food critic's review of a human birthday party." },
+    { "id": "sf-16", "text": "What the robot butler really thinks of the family." },
+    { "id": "sf-17", "text": "The first thing humanity accidentally says to the aliens." },
+    { "id": "sf-18", "text": "The side effect of teleportation nobody warned you about." },
+    {
+      "id": "sf-19",
+      "text": "The space station amenity that earned the station's only five-star review."
+    },
+    { "id": "sf-20", "text": "The extremely boring day a hero is stuck reliving in a time loop." },
+    {
+      "id": "sf-21",
+      "text": "The motion before the Galactic Council that has been debated for 900 years."
+    },
+    { "id": "sf-22", "text": "The warning label on a shrink ray." },
+    { "id": "sf-23", "text": "What your clone did while you were out." },
+    { "id": "sf-24", "text": "A cheesy tagline for a movie about space truckers." },
+    { "id": "sf-25", "text": "A job posting for an interstellar janitor." },
+    { "id": "sf-26", "text": "The real reason the aliens finally visited Earth." },
+    { "id": "sf-27", "text": "A perfectly ordinary problem faced by a Mars colony." },
+    {
+      "id": "sf-28",
+      "text": "The cryosleep company's wake-up message after you overslept by 300 years."
+    },
+    { "id": "sf-29", "text": "What the self-driving spaceship refuses to do." },
+    { "id": "sf-30", "text": "The first app on a mind-reading phone." },
+    {
+      "id": "sf-31",
+      "text": "The first thing the last human on Earth does now that nobody is watching."
+    },
+    { "id": "sf-32", "text": "A dystopia caused by something tiny and silly." },
+    { "id": "sf-33", "text": "A passive-aggressive message from an AI overlord." },
+    { "id": "sf-34", "text": "The cheapest planet in the real estate listing, and its one flaw." },
+    { "id": "sf-35", "text": "The ray gun setting that got the whole squad sent back to the lab." },
+    { "id": "sf-36", "text": "A sad song sung by a lonely satellite." },
+    { "id": "sf-37", "text": "The sketchiest dish at an interplanetary diner." },
+    { "id": "sf-38", "text": "A new law of robotics, as written by a toddler." },
+    {
+      "id": "sf-39",
+      "text": "The passenger rating that gets you banned from every galactic ride-share."
+    },
+    {
+      "id": "sf-40",
+      "text": "The household chore that even the robots of the future refuse to do."
+    }
   ],
-  "tieBreakers": [{ "id": "sf-tb-1", "text": "The first words you'd say to an alien." }]
+  "tieBreakers": [
+    {
+      "id": "sf-tb-1",
+      "text": "The first words you'd say to an alien who lands on your lawn mid-barbecue."
+    },
+    { "id": "sf-tb-2", "text": "The last message in a bottle from a stranded astronaut." },
+    { "id": "sf-tb-3", "text": "A catchphrase for a retired space cowboy." },
+    { "id": "sf-tb-4", "text": "What the rogue AI wants for its birthday." }
+  ]
 }

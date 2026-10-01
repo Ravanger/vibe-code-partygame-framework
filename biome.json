@@ -2,10 +2,13 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
       "correctness": {
         "noUnusedVariables": "error",
         "noUnusedImports": "error"
+      },
+      "suspicious": {
+        "noExplicitAny": "error"
       },
       "style": {
         "useConst": "error",
@@ -23,5 +26,8 @@
     "enabled": true,
     "clientKind": "git",
     "useIgnoreFile": true
+  },
+  "html": {
+    "experimentalFullSupportEnabled": true
   }
 }

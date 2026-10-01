@@ -1,39 +1,53 @@
 <script lang="ts">
-import type { GameConnectionManager } from "@partygame/game-client/connection";
+import { untrack } from "svelte";
+import ProgressBadges from "../components/ProgressBadges.svelte";
+import type { WitClashManager } from "../manager.js";
 import { PromptingViewModel } from "../viewmodels/PromptingViewModel.svelte.js";
 
-const { manager }: { manager: GameConnectionManager } = $props();
+const { manager }: { manager: WitClashManager } = $props();
 
-// svelte-ignore state_referenced_locally -- manager is a stable long-lived instance, never reassigned by the parent
-const vm = new PromptingViewModel(manager);
+const vm = untrack(() => new PromptingViewModel(manager));
 
-$effect(() => {
-  return () => vm.destroy();
-});
+$effect(() => () => vm.destroy());
 
-// biome-ignore lint/correctness/noUnusedVariables: Biome false positive — used in template
 function handleKeydown(e: KeyboardEvent) {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
-    vm.submit();
+    void vm.submit();
   }
 }
 </script>
 
 <div class="prompting">
   <div class="header">
-    <div class="round-info">Round {manager.room?.state.roundNumber} of {manager.room?.state.totalRounds}</div>
-    <div class="timer" class:urgent={vm.countdown.isUrgent}>
-      {vm.countdown.secondsLeft}s
+    <div class="round-info">
+      <span>{vm.roundLabel}</span>
+      {#if vm.categoryLabel}
+        <span class="category">{vm.categoryLabel}</span>
+      {/if}
     </div>
+    <div class="timer" class:urgent={vm.isUrgent}>{`${vm.secondsLeft}s`}</div>
   </div>
 
-  {#if vm.myPrompts.length === 0}
-    <div class="waiting">Waiting for prompts...</div>
+  <ProgressBadges rows={vm.progress.rows} />
+
+  {#if vm.isSpectator}
+    <div class="waiting spectating">{`${vm.answersIn} of ${vm.answersExpected} answers in`}</div>
+  {:else if vm.isSittingOut}
+    <div class="waiting">You're sitting this round out — you'll vote on the answers.</div>
   {:else}
     <div class="prompt-nav">
-      <span class:active={vm.currentIndex === 0} role="button" tabindex="0" onclick={() => vm.goTo(0)} onkeydown={handleKeydown}>1</span>
-      <span class:active={vm.currentIndex === 1} role="button" tabindex="0" onclick={() => vm.goTo(1)} onkeydown={handleKeydown}>2</span>
+      {#each vm.prompts as prompt, index (prompt.matchupId)}
+        <button type="button"
+          class="nav-dot"
+          class:active={vm.currentIndex === index}
+          class:done={prompt.submitted}
+          aria-label="Prompt {index + 1}"
+          onclick={() => vm.goTo(index)}
+        >
+          {index + 1}
+        </button>
+      {/each}
     </div>
 
     <div class="prompt-section">
@@ -42,27 +56,24 @@ function handleKeydown(e: KeyboardEvent) {
       <textarea
         class="answer-input"
         placeholder="Type your answer..."
+        aria-label="Your answer"
         maxlength="200"
-        bind:value={vm.draft}
+        value={vm.draft}
+        oninput={(e) => vm.setDraft(e.currentTarget.value)}
         onkeydown={handleKeydown}
-        disabled={!vm.current}
       ></textarea>
 
       <div class="input-footer">
-        <span class:low={vm.charsRemaining < 20}>{vm.charsRemaining} chars left</span>
-        <button
-          class="submit-btn"
-          onclick={() => vm.submit()}
-          disabled={!vm.canSubmit}
-        >
-          {vm.submitted[vm.current?.matchupId ?? ""] ? "Update" : "Submit"}
+        <span class:low={vm.charsRemaining < 20}>{`${vm.charsRemaining} chars left`}</span>
+        <button type="button" class="submit-btn" onclick={() => vm.submit()} disabled={!vm.canSubmit}>
+          {vm.current?.submitted ? "Update" : "Submit"}
         </button>
       </div>
     </div>
 
     {#if vm.allSubmitted}
       <div class="all-done">
-        Both answers in! Waiting for the others — {vm.progress}
+        {`All answers in! Waiting for the others: ${vm.answersIn} of ${vm.answersExpected} answers in`}
       </div>
     {/if}
   {/if}
@@ -88,6 +99,13 @@ function handleKeydown(e: KeyboardEvent) {
     font-size: 1.1rem;
     color: #666;
     font-weight: 500;
+  }
+
+  .category {
+    display: block;
+    font-size: 1.3rem;
+    color: #333;
+    font-weight: 600;
   }
 
   .timer {
@@ -118,36 +136,6 @@ function handleKeydown(e: KeyboardEvent) {
     display: flex;
     justify-content: center;
     gap: 12px;
-  }
-
-  .prompt-nav span {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 2px solid #e0e0e0;
-    cursor: pointer;
-    font-weight: 600;
-    color: #999;
-    transition: all 0.15s ease;
-  }
-
-  .prompt-nav span.active {
-    border-color: #667eea;
-    background: #667eea;
-    color: white;
-  }
-
-  .prompt-nav span:hover:not(.active) {
-    border-color: #667eea;
-    color: #667eea;
-  }
-
-  .prompt-nav span:focus-visible {
-    outline: 3px solid #667eea;
-    outline-offset: 2px;
   }
 
   .prompt-section {
@@ -244,5 +232,27 @@ function handleKeydown(e: KeyboardEvent) {
     color: #2e7d32;
     font-size: 1.1rem;
     font-weight: 500;
+  }
+
+  .prompt-nav .nav-dot {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid #e0e0e0;
+    background: white;
+    cursor: pointer;
+    font-weight: 600;
+    color: #999;
+  }
+
+  .prompt-nav .nav-dot.done {
+    border-color: #22c55e;
+    color: #16a34a;
+  }
+
+  .prompt-nav .nav-dot.active {
+    border-color: #667eea;
+    background: #667eea;
+    color: white;
   }
 </style>

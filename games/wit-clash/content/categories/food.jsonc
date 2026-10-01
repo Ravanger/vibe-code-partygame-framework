@@ -3,14 +3,87 @@
   "name": "Food",
   "emoji": "🍕",
   "prompts": [
-    { "id": "food-1", "text": "The worst possible topping for a pizza." },
-    { "id": "food-2", "text": "A restaurant chain everyone should boycott." },
-    { "id": "food-3", "text": "The most overrated dessert in the world." },
-    { "id": "food-4", "text": "A food combination that should be illegal." },
-    { "id": "food-5", "text": "The worst thing to order on a first date." },
-    { "id": "food-6", "text": "A breakfast food that should only be eaten at midnight." },
-    { "id": "food-7", "text": "The perfect snack to eat while crying." },
-    { "id": "food-8", "text": "A dish so fancy it sounds made up." }
+    { "id": "food-1", "text": "The pizza topping that gets you banned from the neighborhood." },
+    {
+      "id": "food-2",
+      "text": "The menu item that made a restaurant chain apologize on social media."
+    },
+    { "id": "food-3", "text": "A dessert so overrated it needs a publicist." },
+    { "id": "food-4", "text": "A food pairing that should be a federal offense." },
+    { "id": "food-5", "text": "The dish to order on a first date if you want it to be the last." },
+    { "id": "food-6", "text": "A breakfast cereal invented at 3 a.m. on a dare." },
+    { "id": "food-7", "text": "The perfect snack to eat while crying in the pantry." },
+    { "id": "food-8", "text": "A dish so fancy the menu needs footnotes." },
+    { "id": "food-9", "text": "The thing at the back of the fridge that has started paying rent." },
+    { "id": "food-10", "text": "The label on a jar of \"Grandma's Mystery Relish\"." },
+    { "id": "food-11", "text": "The line a celebrity chef screams when the soufflé collapses." },
+    { "id": "food-12", "text": "What the last slice of pizza whispers to you at 2 a.m." },
+    {
+      "id": "food-13",
+      "text": "A cooking-show challenge that ends in tears and a fire extinguisher."
+    },
+    { "id": "food-14", "text": "The worst ice cream flavor, sold only at gas stations." },
+    { "id": "food-15", "text": "A sandwich shop name that sounds like a legal threat." },
+    {
+      "id": "food-16",
+      "text": "The secret ingredient in Grandpa's chili that nobody is allowed to ask about."
+    },
+    { "id": "food-17", "text": "The title of a vegetable's tell-all memoir." },
+    { "id": "food-18", "text": "How a Shakespearean actor announces that the lasagna is ready." },
+    {
+      "id": "food-19",
+      "text": "The snack you hide in the vegetable drawer because nobody would ever look there."
+    },
+    {
+      "id": "food-20",
+      "text": "The handwritten sign on the deli counter that clearly has a story behind it."
+    },
+    { "id": "food-21", "text": "A buffet rule enforced by a very serious man in a hairnet." },
+    { "id": "food-22", "text": "A food critic's review of a bowl of plain cereal." },
+    {
+      "id": "food-23",
+      "text": "What the waiter whispers to the chef when you order a salad with extra bacon."
+    },
+    { "id": "food-24", "text": "The fancy name of a cheese that smells exactly like a gym bag." },
+    { "id": "food-25", "text": "What the burnt toast says in its own defense." },
+    {
+      "id": "food-26",
+      "text": "A holiday celebrating a food nobody likes, and its one weird tradition."
+    },
+    {
+      "id": "food-27",
+      "text": "The strangest thing you've dunked in coffee because you were out of cookies."
+    },
+    {
+      "id": "food-28",
+      "text": "The name of a restaurant's signature dish that sounds like a wrestling move."
+    },
+    { "id": "food-29", "text": "A diet plan invented by a toddler." },
+    {
+      "id": "food-30",
+      "text": "A condiment invented by someone who has clearly never tasted food."
+    },
+    {
+      "id": "food-31",
+      "text": "The late-night infomercial gadget that slices bananas and also your thumb."
+    },
+    { "id": "food-32", "text": "What the labels on your spice rack honestly say." },
+    {
+      "id": "food-33",
+      "text": "The potluck dish that made everyone quietly check who brought it."
+    },
+    { "id": "food-34", "text": "Why the microwave beeps three times, in its own words." },
+    { "id": "food-35", "text": "A food-themed superhero and their embarrassing weakness." },
+    { "id": "food-36", "text": "The side effects of a smoothie called \"The Gravedigger\"." },
+    { "id": "food-37", "text": "A popcorn flavor that would clear the whole theater." },
+    { "id": "food-38", "text": "What the last french fry at the bottom of the bag is thinking." },
+    { "id": "food-39", "text": "Your last meal on Earth, if you were also extremely cheap." },
+    { "id": "food-40", "text": "The sculpture you made out of leftover spaghetti, and its title." }
   ],
-  "tieBreakers": [{ "id": "food-tb-1", "text": "The secret ingredient to a perfect nap." }]
+  "tieBreakers": [
+    { "id": "food-tb-1", "text": "The menu at a restaurant run entirely by toddlers." },
+    { "id": "food-tb-2", "text": "A five-star Michelin review of a gas-station hot dog." },
+    { "id": "food-tb-3", "text": "The loudest possible way to eat a cracker in a library." },
+    { "id": "food-tb-4", "text": "A pizza so cursed it comes with a waiver." }
+  ]
 }

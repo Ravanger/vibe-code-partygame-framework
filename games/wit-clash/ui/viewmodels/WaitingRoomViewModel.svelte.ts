@@ -1,83 +1,118 @@
-import type { GameConnectionManager } from "@partygame/game-client/connection";
-import { readMinPlayers } from "../config.js";
+import { KICK_PLAYER, START_GAME } from "@partygame/shared";
+import type { WitClashManager } from "../manager.js";
+import { NameField } from "./NameField.svelte.js";
 
-const NAME_DEBOUNCE_MS = 250;
-
-interface LobbyState {
-  roomCode: string;
-  players: Map<
-    string,
-    { id: string; name: string; role: string; isReady: boolean; isConnected: boolean }
-  >;
+export interface LobbyPlayer {
+  id: string;
+  name: string;
+  isHost: boolean;
+  isReady: boolean;
+  isConnected: boolean;
+  isMe: boolean;
 }
 
 export class WaitingRoomViewModel {
-  draftName = $state("");
-  private timer: ReturnType<typeof setTimeout> | undefined;
-  readonly minPlayers: number;
+  kickCandidate = $state<string | undefined>(undefined);
+  readonly nameField: NameField;
 
-  // Getter, not $derived: a derived returning the same room.state reference is
-  // swallowed by Svelte's equality gate, so the stateVersion tick never reached the
-  // deriveds below. As a getter, every reader depends on stateVersion directly.
-  private get state(): LobbyState | undefined {
-    return this.manager.stateVersion >= 0
-      ? (this.manager.room?.state as LobbyState | undefined)
-      : undefined;
+  constructor(private readonly manager: WitClashManager) {
+    this.nameField = new NameField(manager);
   }
 
-  readonly roomCode = $derived.by(() => this.state?.roomCode ?? "");
-  // Fresh plain snapshots per tick: schema objects are mutated in place (stable
-  // identity), and the identity-keyed each block would never re-render a renamed row.
-  readonly players = $derived.by(() =>
-    this.state?.players ? [...this.state.players.values()].map((p) => ({ ...p })) : [],
-  );
-  readonly localPlayer = $derived.by(() =>
-    this.players.find((p) => p.id === this.manager.room?.sessionId),
-  );
-  readonly isHost = $derived.by(() => this.localPlayer?.role === "host");
-  readonly readyCount = $derived.by(
-    () => this.players.filter((p) => p.isReady && p.isConnected).length,
-  );
-
-  readonly canStart = $derived.by(() => this.isHost && this.readyCount >= this.minPlayers);
-
-  readonly shareUrl = $derived.by(
-    () => `${window.location.origin}${window.location.pathname}?code=${this.roomCode}`,
-  );
-
-  constructor(
-    private readonly manager: GameConnectionManager,
-    minPlayers: number = readMinPlayers(),
-  ) {
-    this.minPlayers = minPlayers;
-    this.draftName = this.localPlayer?.name ?? "";
+  get draftName(): string {
+    return this.nameField.draft;
   }
 
-  /** Local draft updates instantly; the server hears one message per burst. */
-  setName(value: string) {
-    this.draftName = value;
-    clearTimeout(this.timer);
-    const trimmed = value.trim();
-    if (!trimmed) return;
-    this.timer = setTimeout(
-      () => this.manager.room?.send("SET_NAME", trimmed.slice(0, 20)),
-      NAME_DEBOUNCE_MS,
-    );
+  get notice(): string {
+    return this.manager.state?.notice ?? "";
   }
 
-  start() {
-    if (this.canStart) this.manager.room?.send("ACTION", { type: "START_GAME" });
+  get roomCode(): string {
+    return this.manager.roomCode ?? "";
   }
 
-  async copyCode() {
+  get players(): LobbyPlayer[] {
+    return [...(this.manager.state?.players.values() ?? [])].map((seat) => ({
+      id: seat.id,
+      name: seat.name,
+      isHost: seat.role === "host",
+      isReady: seat.isReady,
+      isConnected: seat.isConnected,
+      isMe: seat.id === this.manager.playerId,
+    }));
+  }
+
+  get minPlayers(): number {
+    return this.manager.state?.minPlayers ?? 0;
+  }
+
+  get maxPlayers(): number {
+    return this.manager.state?.maxPlayers ?? 0;
+  }
+
+  get readyCount(): number {
+    return this.players.filter((p) => p.isReady && p.isConnected).length;
+  }
+
+  get isSpectator(): boolean {
+    return this.manager.isSpectator;
+  }
+
+  get spectatorCount(): number {
+    return this.manager.state?.spectatorCount ?? 0;
+  }
+
+  get isHost(): boolean {
+    return this.manager.isHost;
+  }
+
+  get canStart(): boolean {
+    return this.isHost && Boolean(this.manager.state?.canStart);
+  }
+
+  get shareUrl(): string {
+    return `${window.location.origin}${window.location.pathname}?code=${this.roomCode}`;
+  }
+
+  canKick(player: LobbyPlayer): boolean {
+    return this.isHost && !player.isMe;
+  }
+
+  askKick(playerId: string): void {
+    this.kickCandidate = playerId;
+  }
+
+  cancelKick(): void {
+    this.kickCandidate = undefined;
+  }
+
+  async confirmKick(): Promise<void> {
+    const playerId = this.kickCandidate;
+    this.kickCandidate = undefined;
+    if (playerId && this.isHost) await this.manager.sendAction(KICK_PLAYER, { playerId });
+  }
+
+  setName(value: string): void {
+    this.nameField.set(value);
+  }
+
+  async leave(): Promise<void> {
+    await this.manager.leave();
+  }
+
+  async start(): Promise<void> {
+    if (this.canStart) await this.manager.sendAction(START_GAME);
+  }
+
+  async copyCode(): Promise<void> {
     try {
       await navigator.clipboard.writeText(this.roomCode);
     } catch {
-      // Ignore clipboard errors
+      // Clipboard access can be denied; the code is on screen anyway.
     }
   }
 
-  destroy() {
-    clearTimeout(this.timer);
+  destroy(): void {
+    this.nameField.destroy();
   }
 }

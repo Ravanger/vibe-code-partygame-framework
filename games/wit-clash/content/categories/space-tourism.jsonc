@@ -1,0 +1,170 @@
+{
+  "id": "space-tourism",
+  "name": "Space Tourism",
+  "emoji": "🛰️",
+  "prompts": [
+    {
+      "id": "spacetour-1",
+      "text": "What the flight attendant on a budget Mars shuttle says instead of \"buckle up\"."
+    },
+    {
+      "id": "spacetour-2",
+      "text": "The orbital hotel's \"complimentary\" amenity that somehow costs $40,000."
+    },
+    {
+      "id": "spacetour-3",
+      "text": "The souvenir from the lunar gift shop that Earth customs confiscated."
+    },
+    {
+      "id": "spacetour-4",
+      "text": "What the tour guide says, far too cheerfully, as the rocket starts to shake."
+    },
+    { "id": "spacetour-5", "text": "The only in-flight snack on a nine-month trip to Mars." },
+    {
+      "id": "spacetour-6",
+      "text": "The bumper sticker on the space tour bus that does not inspire confidence."
+    },
+    {
+      "id": "spacetour-7",
+      "text": "The sign the Moon hotel had to post right above the airlock button."
+    },
+    {
+      "id": "spacetour-8",
+      "text": "The zero-gravity mishap that got a tourist banned from the orbital buffet."
+    },
+    {
+      "id": "spacetour-9",
+      "text": "The space cruise's Wi-Fi network name, which explains the terrible signal."
+    },
+    {
+      "id": "spacetour-10",
+      "text": "The brochure's best attempt to make a very boring asteroid sound exciting."
+    },
+    {
+      "id": "spacetour-11",
+      "text": "What floated past the window during your once-in-a-lifetime spacewalk selfie."
+    },
+    {
+      "id": "spacetour-12",
+      "text": "What you smuggled aboard the rocket in your two-kilogram luggage allowance."
+    },
+    {
+      "id": "spacetour-13",
+      "text": "A review of the space elevator's revolving restaurant, which revolves too much."
+    },
+    {
+      "id": "spacetour-14",
+      "text": "The fine print on the moon-buggy rental agreement about craters."
+    },
+    {
+      "id": "spacetour-15",
+      "text": "The captain's announcement during an unscheduled meteor shower."
+    },
+    {
+      "id": "spacetour-16",
+      "text": "The one flaw of the Mars honeymoon suite that the brochure left out."
+    },
+    {
+      "id": "spacetour-17",
+      "text": "The spacewalk mishap your tour group still won't stop talking about."
+    },
+    {
+      "id": "spacetour-18",
+      "text": "The jingle for a lunar resort whose only selling point is \"low gravity\"."
+    },
+    {
+      "id": "spacetour-19",
+      "text": "The very first complaint filed by the very first paying space tourist."
+    },
+    { "id": "spacetour-20", "text": "The zero-gravity spa's most regrettable treatment." },
+    {
+      "id": "spacetour-21",
+      "text": "Something the space tour guide insists is \"totally normal\"."
+    },
+    { "id": "spacetour-22", "text": "What the cheapest seat on the rocket is actually bolted to." },
+    {
+      "id": "spacetour-23",
+      "text": "Rule one of the space tourist etiquette pamphlet, clearly written after an incident."
+    },
+    { "id": "spacetour-24", "text": "The late checkout fee at the hotel orbiting Saturn." },
+    {
+      "id": "spacetour-25",
+      "text": "The fine print on a \"one-way, all-inclusive\" Mars vacation."
+    },
+    {
+      "id": "spacetour-26",
+      "text": "The pun on the lunar gift shop T-shirt that real astronauts hate."
+    },
+    {
+      "id": "spacetour-27",
+      "text": "The in-flight movie a rocket full of tourists should absolutely not be showing."
+    },
+    {
+      "id": "spacetour-28",
+      "text": "The passport stamp that makes border control back on Earth very nervous."
+    },
+    {
+      "id": "spacetour-29",
+      "text": "What the orbital bartender says when you order your drink \"on the rocks\"."
+    },
+    {
+      "id": "spacetour-30",
+      "text": "The moment at the launch viewing party that upstaged the actual launch."
+    },
+    {
+      "id": "spacetour-31",
+      "text": "The voicemail from the tourist who missed the last bus home from the comet."
+    },
+    {
+      "id": "spacetour-32",
+      "text": "The travel advisory for Neptune, issued by a very tired government."
+    },
+    {
+      "id": "spacetour-33",
+      "text": "The selfie spot on Mars with a sign that just says \"Seriously, don't.\""
+    },
+    {
+      "id": "spacetour-34",
+      "text": "What the brochure calls the galaxy's biggest attraction, when it's really just a rock."
+    },
+    {
+      "id": "spacetour-35",
+      "text": "The surprise fee on your space-tour invoice that only appears after landing."
+    },
+    { "id": "spacetour-36", "text": "Mission control's reply to the 400th \"Are we there yet?\"" },
+    {
+      "id": "spacetour-37",
+      "text": "The postcard you send Grandma from the dark side of the Moon."
+    },
+    {
+      "id": "spacetour-38",
+      "text": "How the space shuttle passengers decide who gets the window seat."
+    },
+    {
+      "id": "spacetour-39",
+      "text": "The Martian diner dish that costs extra because of what's in it."
+    },
+    {
+      "id": "spacetour-40",
+      "text": "The dress code for the captain's dinner on a zero-gravity cruise."
+    }
+  ],
+  "tieBreakers": [
+    {
+      "id": "spacetour-tb-1",
+      "text": "The safety demonstration on a space shuttle built by the lowest bidder."
+    },
+    {
+      "id": "spacetour-tb-2",
+      "text": "The one-star review from a tourist who found space \"a bit too empty\"."
+    },
+    {
+      "id": "spacetour-tb-3",
+      "text": "What mission control says when a tourist asks them to \"pull over\" in orbit."
+    },
+    {
+      "id": "spacetour-tb-4",
+      "text": "The excuse for why your launch has been delayed for the fifth year in a row."
+    }
+  ]
+}

@@ -8,19 +8,24 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./testing": {
+      "import": "./dist/testing/index.js",
+      "types": "./dist/testing/index.d.ts"
     }
   },
   "scripts": {
     "build": "tsc",
-    "test": "vitest run"
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.test.json"
   },
   "dependencies": {
     "@partygame/shared": "workspace:*",
-    "zod": "^4.3.6",
-    "xstate": "^5.30.0"
+    "zod": "^4.6.5",
+    "xstate": "^5.33.2"
   },
   "devDependencies": {
     "typescript": "^6.0.3",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.11"
   }
 }

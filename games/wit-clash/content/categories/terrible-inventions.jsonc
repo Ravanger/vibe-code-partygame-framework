@@ -1,0 +1,89 @@
+{
+  "id": "terrible-inventions",
+  "name": "Terrible Inventions",
+  "emoji": "💡",
+  "prompts": [
+    {
+      "id": "invent-1",
+      "text": "The infomercial pitch for a spoon with a built-in snooze button."
+    },
+    {
+      "id": "invent-2",
+      "text": "The invention that solves a problem nobody had and creates three new ones."
+    },
+    { "id": "invent-3", "text": "The warning label on a jetpack for toddlers." },
+    { "id": "invent-4", "text": "The software update that made the smart toaster unbearable." },
+    { "id": "invent-5", "text": "A washing machine that eats socks: its name and slogan." },
+    {
+      "id": "invent-6",
+      "text": "The umbrella upgrade that made the rain the least of your problems."
+    },
+    {
+      "id": "invent-7",
+      "text": "The mattress feature that got the company sued by an entire hotel chain."
+    },
+    {
+      "id": "invent-8",
+      "text": "The app that rates your sleeping posture and offers brutal feedback."
+    },
+    {
+      "id": "invent-9",
+      "text": "A gadget that makes Monday mornings measurably worse, and its slogan."
+    },
+    { "id": "invent-10", "text": "The unfortunate side effect of a miracle hair-growth cream." },
+    {
+      "id": "invent-11",
+      "text": "The \"smart\" sneakers that report everything back to your mom."
+    },
+    { "id": "invent-12", "text": "The crowdfunding campaign that raised one dollar and a pickle." },
+    { "id": "invent-13", "text": "The most alarming line in a product's user manual." },
+    { "id": "invent-14", "text": "The inventor of the square wheel's defense." },
+    { "id": "invent-15", "text": "A wearable that tracks one deeply embarrassing metric." },
+    {
+      "id": "invent-16",
+      "text": "The extra setting on the electric toothbrush that nobody should ever use."
+    },
+    { "id": "invent-17", "text": "A pet accessory that betrays its owner." },
+    { "id": "invent-18", "text": "The delivery drone feature that should be illegal." },
+    { "id": "invent-19", "text": "A talking lunchbox that blurts out the wrong things." },
+    { "id": "invent-20", "text": "Your smart fridge's most passive-aggressive notification." },
+    { "id": "invent-21", "text": "A review of a gadget: \"Technically works as a doorstop.\"" },
+    {
+      "id": "invent-22",
+      "text": "The alarm clock that wakes you with your own most embarrassing memory."
+    },
+    { "id": "invent-23", "text": "The disclaimer on a hoverboard for grandparents." },
+    { "id": "invent-24", "text": "A candle scent no one should ever invent." },
+    { "id": "invent-25", "text": "A pair of glasses that shows you something unwelcome." },
+    { "id": "invent-26", "text": "The office chair upgrade that ended every meeting early." },
+    { "id": "invent-27", "text": "The product demo that goes horribly wrong on live stage." },
+    { "id": "invent-28", "text": "A kitchen tool that only works if you whisper to it." },
+    { "id": "invent-29", "text": "A robot that cleans your house by making it worse." },
+    { "id": "invent-30", "text": "A bookmark designed for one very specific type of person." },
+    {
+      "id": "invent-31",
+      "text": "A vending machine that accepts only one very strange form of payment."
+    },
+    { "id": "invent-32", "text": "Training wheels for a skateboard, and why they failed." },
+    { "id": "invent-33", "text": "The blender attachment that voids your home insurance." },
+    { "id": "invent-34", "text": "A self-driving shopping cart with strong opinions." },
+    { "id": "invent-35", "text": "A 3 a.m. napkin sketch, deciphered." },
+    { "id": "invent-36", "text": "The recall notice for a \"smart\" candle." },
+    { "id": "invent-37", "text": "The one button on the remote that does something terrifying." },
+    { "id": "invent-38", "text": "A bicycle designed for people who hate going places." },
+    { "id": "invent-39", "text": "The tagline of a gadget that translates dog barks, badly." },
+    {
+      "id": "invent-40",
+      "text": "The cursed gift that came with a 400-page manual and no batteries."
+    }
+  ],
+  "tieBreakers": [
+    { "id": "invent-tb-1", "text": "The product nobody will admit to buying at 2 a.m." },
+    {
+      "id": "invent-tb-2",
+      "text": "The failed prototype the company keeps locked in the basement, and why."
+    },
+    { "id": "invent-tb-3", "text": "A one-star review of self-tying shoelaces." },
+    { "id": "invent-tb-4", "text": "The invention that finally makes the inventor's mother proud." }
+  ]
+}

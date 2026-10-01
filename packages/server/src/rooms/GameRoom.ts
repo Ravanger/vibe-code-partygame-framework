@@ -1,969 +1,324 @@
-import { type Client, CloseCode, Room } from "@colyseus/core";
-import type { GameDefinition } from "@partygame/core";
+import { type Client, type Delayed, logger, Room, ServerError } from "@colyseus/core";
+import { type Schema, StateView } from "@colyseus/schema";
 import {
-  awardPoints,
-  buildXStateMachine,
-  calculateMatchupAwards,
-  leaderboard,
-  type MatchupAward,
+  type GameDefinition,
+  GameRuntime,
+  type PlayerInfo,
+  type RuntimeHost,
 } from "@partygame/core";
-import { GameActionSchema, SetNameSchema } from "@partygame/shared";
-import { type AnyActorRef, createActor } from "xstate";
-import type { CategoryRepository } from "../../../../games/wit-clash/src/content/CategoryRepository.js";
-import { shuffle } from "../../../../games/wit-clash/src/content/CategoryRepository.js";
-import { AnswerSchema } from "../schema/AnswerSchema.js";
-import { CategoryOptionSchema } from "../schema/CategoryOptionSchema.js";
-import { GameStateSchema } from "../schema/GameStateSchema.js";
-import { MatchupSchema } from "../schema/MatchupSchema.js";
-import { PlayerSchema } from "../schema/PlayerSchema.js";
-import { ScoreEntrySchema } from "../schema/ScoreEntrySchema.js";
+import {
+  type ActionResult,
+  ClientMessage,
+  ErrorCode,
+  JoinOptionsSchema,
+  LOBBY_PHASE,
+  type ServerError as ProtocolError,
+  ServerMessage,
+  SetNameSchema,
+} from "@partygame/shared";
+import type { BaseGameState } from "@partygame/shared/schema";
+import { PlayerSchema } from "@partygame/shared/schema";
 import type { RoomCodeService } from "../services/RoomCodeService.js";
-import { buildMatchups } from "./buildMatchups.js";
-import { resolveCategoryVote } from "./resolveCategoryVote.js";
 
-export interface PhaseDurations {
-  categoryVoteMs: number;
-  promptMs: number;
-  matchupVoteMs: number;
-  matchupRevealMs: number;
-  emptyRoomGraceMs: number;
+const SPECTATOR_SLOTS = 32;
+const FRAMEWORK_KEYS = ["playerId", "name", "spectator"];
+const SPECTATOR_ERROR: ProtocolError = {
+  code: ErrorCode.UNAUTHORIZED,
+  message: "Spectators cannot act",
+};
+const ACTION_FAILED: ActionResult = {
+  ok: false,
+  error: { code: ErrorCode.INTERNAL, message: "The action failed on the server" },
+};
+
+export interface GameRoomConfig {
+  definition: GameDefinition<BaseGameState, unknown, unknown>;
+  stateClass: new () => BaseGameState;
+  roomCodeService: RoomCodeService;
   reconnectMs: number;
+  emptyRoomGraceMs: number;
 }
 
-export const DEFAULT_DURATIONS: PhaseDurations = {
-  categoryVoteMs: 60_000,
-  promptMs: 90_000,
-  matchupVoteMs: 20_000,
-  matchupRevealMs: 5_000,
-  emptyRoomGraceMs: 120_000,
-  reconnectMs: 60_000,
-};
+/** Generic Colyseus room: seats, roster, reconnection and per-player views around a core `GameRuntime`. */
+export class GameRoom extends Room<{ state: BaseGameState }> {
+  private runtime!: GameRuntime<BaseGameState, unknown, unknown>;
+  private emptyTimer: Delayed | undefined;
+  private readonly playerOf = new Map<string, string>();
+  private readonly spectators = new Set<string>();
+  private readonly kicked = new Set<string>();
+  private readonly views = new Map<string, StateView>();
+  private readonly viewRefs = new Map<string, Set<Schema>>();
 
-export const TEST_DURATIONS: PhaseDurations = {
-  categoryVoteMs: 80,
-  promptMs: 80,
-  matchupVoteMs: 60,
-  matchupRevealMs: 30,
-  emptyRoomGraceMs: 200,
-  reconnectMs: 1000,
-};
-
-const logger = {
-  info: (message: string, ...args: unknown[]) =>
-    console.log(`[GameRoom] INFO: ${message}`, ...args),
-  warn: (message: string, ...args: unknown[]) =>
-    console.warn(`[GameRoom] WARN: ${message}`, ...args),
-  error: (message: string, ...args: unknown[]) =>
-    console.error(`[GameRoom] ERROR: ${message}`, ...args),
-  debug: (message: string, ...args: unknown[]) =>
-    console.debug(`[GameRoom] DEBUG: ${message}`, ...args),
-};
-
-export class GameRoom<TState = unknown> extends Room {
-  private machine!: AnyActorRef;
-  private gameDefinition!: GameDefinition<TState>;
-  private roomCodeService: RoomCodeService | undefined;
-  private categories: CategoryRepository | undefined;
-  private durations: PhaseDurations;
-  private phaseTimer: ReturnType<typeof setTimeout> | null = null;
-  private serverNowTimer: ReturnType<typeof setInterval> | null = null;
-  private voteResolved = false;
-  private promptResolved = false;
-  private matchupResolved = false;
-  private answerAuthors = new Map<string, string>();
-  private assignments = new Map<string, string[]>();
-  private drafts = new Map<string, string>();
-  private scores: Record<string, number> = {};
-  private roundAwards: MatchupAward[] = [];
-
-  get rng(): () => number {
-    return Math.random;
-  }
-
-  constructor(
-    roomCodeService?: RoomCodeService,
-    categories?: CategoryRepository,
-    durations: PhaseDurations = DEFAULT_DURATIONS,
-  ) {
+  constructor(private readonly config: GameRoomConfig) {
     super();
-    this.roomCodeService = roomCodeService;
-    this.categories = categories;
-    this.durations = durations;
   }
 
-  getDurations(): PhaseDurations {
-    return this.durations;
-  }
-
-  getCategories(): CategoryRepository | undefined {
-    return this.categories;
-  }
-
-  setDefinition(def: GameDefinition<TState>) {
-    this.gameDefinition = def;
-  }
-
-  onCreate(options?: Record<string, unknown>) {
-    logger.info("onCreate called");
+  onCreate(options: Record<string, unknown>): void {
+    const { definition, stateClass, roomCodeService } = this.config;
     this.autoDispose = false;
-    const state = new GameStateSchema();
-
-    // Handle totalRounds option (default 3)
-    if (options?.totalRounds && Number(options.totalRounds) > 0) {
-      state.totalRounds = Number(options.totalRounds);
-    }
-
-    // Generate and register room code
-    if (this.roomCodeService) {
-      const code = this.roomCodeService.generateAndRegister(this.roomId);
-      state.roomCode = code;
-      logger.debug("Generated room code:", code);
-    } else {
-      // Fallback for backward compatibility
-      state.roomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
-    }
-
+    this.maxClients = definition.maxPlayers + SPECTATOR_SLOTS;
+    const rawOptions = Object.fromEntries(
+      Object.entries(options).filter(([key]) => !FRAMEWORK_KEYS.includes(key)),
+    );
+    const parsedOptions = definition.options ? definition.options.parse(rawOptions) : rawOptions;
+    const state = new stateClass();
+    state.minPlayers = definition.minPlayers;
+    state.maxPlayers = definition.maxPlayers;
     state.serverNow = Date.now();
-
     this.setState(state);
-    logger.debug("Room code generated:", state.roomCode);
-
-    if (!this.gameDefinition) {
-      logger.error("gameDefinition is undefined in onCreate!");
-      throw new Error(
-        "GameDefinition must be set before onCreate completes. Call setDefinition() in your room class constructor or onCreate().",
-      );
-    }
-    logger.debug("gameDefinition set:", this.gameDefinition.name);
-
-    // Enforce the game's player cap at the transport layer: Colyseus rejects
-    // joins once maxClients is reached, so capacity needs no manual policing.
-    this.maxClients = this.gameDefinition.maxPlayers;
-
-    this.machine = createActor(buildXStateMachine(this.gameDefinition));
-    this.machine.subscribe((snapshot) => {
-      const state = this.state as GameStateSchema;
-      const prevPhase = state.phase;
-      state.phase = snapshot.context.currentPhase;
-      state.publicData = JSON.stringify(snapshot.context.gameState);
-      this.handlePhaseTransition(prevPhase, state.phase);
-    });
-    this.machine.start();
-
-    // Update serverNow every second for smooth countdowns
-    this.serverNowTimer = setInterval(() => {
-      const state = this.state as GameStateSchema;
+    this.host.publishOptions(parsedOptions);
+    this.runtime = new GameRuntime({ definition, state, options: parsedOptions, host: this.host });
+    this.clock.setInterval(() => {
       state.serverNow = Date.now();
     }, 1000);
+    this.scheduleDisposeIfEmpty();
 
-    this.onMessage("SET_NAME", (client, name: string) => {
-      this.handleSetName(client, name);
+    this.onMessage(ClientMessage.SET_NAME, (client, raw: unknown) => this.setName(client, raw));
+    this.onMessage(ClientMessage.ACTION, (client, raw: unknown): ActionResult => {
+      const seat = this.seatOf(client);
+      return seat ? this.act(seat.id, raw) : { ok: false, error: SPECTATOR_ERROR };
     });
-
-    this.onMessage("ACTION", (client, message: unknown) => {
-      logger.debug(`Received ACTION from ${client.sessionId}:`, message);
-      const parsedAction = GameActionSchema.safeParse(message);
-      if (!parsedAction.success) {
-        logger.error(`Invalid action format from ${client.sessionId}:`, parsedAction.error);
-        client.send("ERROR", { code: "INVALID_ACTION", message: "Invalid action format" });
-        return;
-      }
-
-      const state = this.state as GameStateSchema;
-      const player = state.players.get(client.sessionId);
-      if (!player) {
-        logger.error(`Player not found for ${client.sessionId}`);
-        return;
-      }
-
-      // Handle category voting directly (not through XState)
-      if (state.phase === "CategorySelection" && parsedAction.data.type === "VOTE_CATEGORY") {
-        this.handleVoteCategory(client, player, parsedAction.data as { categoryId: string });
-        return;
-      }
-
-      // Handle prompting directly (not through XState)
-      if (state.phase === "Prompting" && parsedAction.data.type === "SUBMIT_ANSWER") {
-        this.handleSubmitAnswer(
-          client,
-          player,
-          parsedAction.data as { matchupId: string; answer: string },
-        );
-        return;
-      }
-
-      // Handle voting directly (not through XState)
-      if (state.phase === "Voting" && parsedAction.data.type === "CAST_VOTE") {
-        this.handleCastVote(client, player, parsedAction.data as { answerId: string });
-        return;
-      }
-
-      // Handle Results actions directly
-      if (state.phase === "Results") {
-        if (parsedAction.data.type === "NEXT_ROUND") {
-          this.handleNextRound(client);
-          return;
-        }
-        if (parsedAction.data.type === "PLAY_AGAIN") {
-          this.handlePlayAgain(client);
-          return;
-        }
-      }
-
-      const phase = this.gameDefinition.phases[state.phase];
-      if (!phase) {
-        logger.error(`Phase ${state.phase} not found in game definition`);
-        return;
-      }
-      const actionDef = phase.actions[parsedAction.data.type];
-      if (!actionDef) {
-        logger.error(`Action ${parsedAction.data.type} not found in phase ${state.phase}`);
-        return;
-      }
-
-      if (actionDef.from !== "player" && player.role !== actionDef.from) {
-        logger.error(`Unauthorized action ${parsedAction.data.type} from ${client.sessionId}`);
-        client.send("ERROR", { code: "UNAUTHORIZED", message: "Forbidden" });
-        return;
-      }
-
-      logger.debug(`Sending action to machine: ${parsedAction.data.type}`);
-      this.machine.send({
-        type: "ACTION",
-        phase: state.phase,
-        name: parsedAction.data.type,
-        clientId: client.sessionId,
-        role: player.role,
-        data: parsedAction.data,
-        timestamp: Date.now(),
-      });
-    });
+    state.roomCode = roomCodeService.generateAndRegister(this.roomId);
   }
 
-  handleSetName(client: Client, raw: unknown) {
-    const parsed = SetNameSchema.safeParse(raw);
-    if (!parsed.success) {
-      logger.warn(`[SET_NAME] Invalid name from ${client.sessionId}`);
+  onJoin(client: Client, options?: unknown): void {
+    const parsed = JoinOptionsSchema.safeParse(options);
+    if (!parsed.success) throw new ServerError(4400, "Invalid join options");
+    const { playerId, name, spectator } = parsed.data;
+    if (this.kicked.has(playerId)) throw new ServerError(4403, "You were removed from this room");
+    const view = new StateView();
+    client.view = view;
+    this.views.set(client.sessionId, view);
+    if (spectator) {
+      this.spectators.add(client.sessionId);
+      ++this.state.spectatorCount;
       return;
     }
-    logger.debug(`Received SET_NAME from ${client.sessionId}:`, parsed.data);
-    const state = this.state as GameStateSchema;
-    const player = state.players.get(client.sessionId);
-    if (!player) {
-      logger.warn(`[SET_NAME] Unknown session ${client.sessionId}`);
+    this.cancelDispose();
+    const existing = this.state.players.get(playerId);
+    if (existing) {
+      this.bind(playerId, client.sessionId);
+      this.reconnected(existing, client);
       return;
     }
-    player.name = parsed.data;
-    player.isReady = true;
-    logger.info(`Player ${client.sessionId} name set to ${parsed.data}`);
-
-    this.checkAutoStart(state);
+    if (this.state.players.size >= this.config.definition.maxPlayers) {
+      throw new ServerError(4401, "Room is full");
+    }
+    const seat = new PlayerSchema();
+    seat.id = playerId;
+    seat.name = name && !this.nameTaken(playerId, name) ? name : "";
+    seat.isActive = this.state.phase === LOBBY_PHASE;
+    this.state.players.set(playerId, seat);
+    this.bind(playerId, client.sessionId);
+    this.rosterChanged();
   }
 
-  private checkAutoStart(state: GameStateSchema) {
-    if (state.phase !== "Lobby") return;
-    const players = Array.from(state.players.values());
-    const readyCount = players.filter((p) => p.isReady).length;
-    // Auto-start only once every joined player has picked a name. With
-    // minPlayers=3 the 3rd ready player used to yank the lobby away while a
-    // 4th player was still typing. The host can still start manually once
-    // readyCount >= minPlayers.
-    const everyoneReady = players.length > 0 && players.every((p) => p.isReady);
-    if (everyoneReady && readyCount >= this.gameDefinition.minPlayers) {
-      logger.info(
-        `Auto-starting game: ${readyCount} players ready (min: ${this.gameDefinition.minPlayers})`,
-      );
-      this.machine.send({
-        type: "ACTION",
-        phase: "Lobby",
-        name: "START_GAME",
-        clientId: "__auto__",
-        role: "host",
-        data: undefined,
-        timestamp: Date.now(),
-      });
-    }
+  async onDrop(client: Client): Promise<void> {
+    const seat = this.seatBySession(client);
+    if (!seat) return;
+    seat.isConnected = false;
+    this.rosterChanged();
+    this.scheduleDisposeIfEmpty();
+    await this.allowReconnection(client, this.config.reconnectMs / 1000).catch(() => undefined);
   }
 
-  private handlePhaseTransition(_prevPhase: string, nextPhase: string) {
-    if (nextPhase === "CategorySelection") {
-      this.enterCategorySelection();
-    }
-    if (nextPhase === "Prompting") {
-      this.enterPrompting();
-    }
-    if (nextPhase === "Voting") {
-      this.enterVoting();
-    }
-    if (nextPhase === "Results") {
-      this.enterResults();
-    }
+  onReconnect(client: Client): void {
+    const seat = this.seatBySession(client);
+    if (!seat) throw new ServerError(4402, "Your seat was removed");
+    this.cancelDispose();
+    this.reconnected(seat, client);
   }
 
-  private enterCategorySelection() {
-    if (!this.categories) {
-      logger.error("Cannot enter CategorySelection: no categories configured");
+  onLeave(client: Client): void {
+    this.views.delete(client.sessionId);
+    if (this.spectators.delete(client.sessionId)) {
+      --this.state.spectatorCount;
       return;
     }
-    const state = this.state as GameStateSchema;
-
-    const picked = this.categories.pickRandom(3);
-    state.categoryOptions.clear();
-    for (const cat of picked) {
-      const opt = new CategoryOptionSchema();
-      opt.id = cat.id;
-      opt.name = cat.name;
-      opt.emoji = cat.emoji;
-      opt.votes = 0;
-      state.categoryOptions.push(opt);
-    }
-
-    state.categoryVotes.clear();
-    this.voteResolved = false;
-    state.phaseEndsAt = Date.now() + this.durations.categoryVoteMs;
-
-    this.clearPhaseTimer();
-    this.phaseTimer = setTimeout(() => this.resolveCategoryVote(), this.durations.categoryVoteMs);
-
-    logger.info(
-      `CategorySelection started: ${state.categoryOptions.length} options, ${this.durations.categoryVoteMs}ms`,
-    );
+    const seat = this.seatBySession(client);
+    if (seat) this.removeSeat(seat.id);
   }
 
-  private handleVoteCategory(client: Client, player: PlayerSchema, data: { categoryId: string }) {
-    const state = this.state as GameStateSchema;
-    if (state.phase !== "CategorySelection") return;
-    if (this.voteResolved) return;
+  onDispose(): void {
+    this.runtime?.stop();
+    if (this.state) this.config.roomCodeService.unregister(this.state.roomCode);
+  }
 
-    const option = state.categoryOptions.find((o) => o.id === data.categoryId);
-    if (!option) {
-      logger.debug(`[VOTE_CATEGORY] Unknown category ${data.categoryId} from ${client.sessionId}`);
+  private readonly host: RuntimeHost = {
+    players: () => [...this.state.players.values()].map((seat) => this.infoOf(seat)),
+    activateWaitingPlayers: () => {
+      for (const seat of this.state.players.values()) if (seat.isReady) seat.isActive = true;
+    },
+    benchUnreadyPlayers: () => {
+      for (const seat of this.state.players.values()) if (!seat.isReady) seat.isActive = false;
+    },
+    send: (playerId, type, payload) => this.clientFor(playerId)?.send(type, payload),
+    broadcast: (type, payload) => this.broadcast(type, payload),
+    showTo: (playerId, ref: Schema) => {
+      const refs = this.viewRefs.get(playerId) ?? new Set<Schema>();
+      this.viewRefs.set(playerId, refs.add(ref));
+      this.viewFor(playerId)?.add(ref);
+    },
+    hideFrom: (playerId, ref: Schema) => {
+      this.viewRefs.get(playerId)?.delete(ref);
+      this.viewFor(playerId)?.remove(ref);
+    },
+    kick: (playerId) => {
+      this.kicked.add(playerId);
+      const client = this.clientFor(playerId);
+      client?.send(ServerMessage.ERROR, { code: ErrorCode.KICKED, message: "Removed by the host" });
+      this.dropSeat(playerId);
+      this.scheduleDisposeIfEmpty();
+      client?.leave();
+    },
+    publishOptions: (options) => {
+      this.state.options = JSON.stringify(options);
+    },
+    now: () => Date.now(),
+    rng: () => Math.random(),
+    setTimeout: (callback, ms) => this.clock.setTimeout(() => this.safely(callback), ms),
+    clearTimeout: (handle: Delayed) => handle.clear(),
+  };
+
+  private setName(client: Client, raw: unknown): void {
+    const seat = this.seatOf(client);
+    if (!seat) return;
+    const name = SetNameSchema.safeParse(raw);
+    if (!name.success) {
+      client.send(ServerMessage.ERROR, { code: ErrorCode.INVALID_ACTION, message: "Invalid name" });
       return;
     }
-
-    state.categoryVotes.set(client.sessionId, data.categoryId);
-    this.recountCategoryVotes();
-
-    logger.debug(`[VOTE_CATEGORY] ${player.name} voted for ${data.categoryId}`);
-
-    if (this.allConnectedReadyPlayersVoted(state)) {
-      this.resolveCategoryVote();
-    }
-  }
-
-  private recountCategoryVotes() {
-    const state = this.state as GameStateSchema;
-    const tally = new Map<string, number>();
-    for (const id of state.categoryVotes.values()) {
-      tally.set(id, (tally.get(id) ?? 0) + 1);
-    }
-    for (const o of state.categoryOptions) {
-      o.votes = tally.get(o.id) ?? 0;
-    }
-  }
-
-  private allConnectedReadyPlayersVoted(state: GameStateSchema): boolean {
-    const connectedReady = Array.from(state.players.values()).filter(
-      (p) => p.isConnected && p.isReady,
-    );
-    return connectedReady.length > 0 && connectedReady.every((p) => state.categoryVotes.has(p.id));
-  }
-
-  private resolveCategoryVote() {
-    if (this.voteResolved) return;
-    this.voteResolved = true;
-
-    this.clearPhaseTimer();
-    const state = this.state as GameStateSchema;
-    if (state.phase !== "CategorySelection") return;
-
-    const options = Array.from(state.categoryOptions).map((o) => ({ id: o.id, votes: o.votes }));
-    const winnerId = resolveCategoryVote(options, Math.random);
-    state.selectedCategory = winnerId;
-
-    state.categoryVotes.clear();
-    state.categoryOptions.clear();
-
-    this.machine.send({
-      type: "ACTION",
-      phase: "CategorySelection",
-      name: "RESOLVE_CATEGORY_VOTE",
-      clientId: "__server__",
-      role: "host",
-      data: undefined,
-      timestamp: Date.now(),
-    });
-
-    logger.info(`CategoryVote resolved: ${winnerId}`);
-  }
-
-  private enterPrompting() {
-    const state = this.state as GameStateSchema;
-    if (!this.categories || !state.selectedCategory) {
-      logger.error("Cannot enter Prompting: no categories or selected category");
-      return;
-    }
-
-    state.matchups.clear();
-    this.answerAuthors.clear();
-    this.assignments.clear();
-    this.drafts.clear();
-    this.promptResolved = false;
-    state.roundNumber = Math.max(1, state.roundNumber + 1);
-
-    const players = [...state.players.values()].filter((p) => p.isConnected && p.isReady);
-    const category = this.categories.byId(state.selectedCategory);
-    const planned = buildMatchups(
-      players.map((p) => p.id),
-      category?.prompts ?? [],
-      this.rng,
-    );
-
-    for (const pm of planned) {
-      const m = new MatchupSchema();
-      m.id = crypto.randomUUID();
-      m.index = pm.index;
-      m.promptText = pm.promptText;
-      m.isRevealed = false;
-      state.matchups.push(m);
-      for (const authorId of pm.authorIds) {
-        const list = this.assignments.get(authorId) ?? [];
-        list.push(m.id);
-        this.assignments.set(authorId, list);
-      }
-    }
-
-    state.answersSubmitted = 0;
-    state.answersExpected = [...this.assignments.values()].reduce((n, l) => n + l.length, 0);
-
-    this.sendPromptsToAll();
-    state.phaseEndsAt = Date.now() + this.durations.promptMs;
-    this.clearPhaseTimer();
-    this.phaseTimer = setTimeout(() => this.finishPrompting(), this.durations.promptMs);
-    logger.info(
-      `Prompting started: ${state.matchups.length} matchups, ${state.answersExpected} answers expected, ${this.durations.promptMs}ms`,
-    );
-  }
-
-  private sendPromptsToAll() {
-    for (const client of this.clients) this.sendPromptsTo(client);
-  }
-
-  private sendPromptsTo(client: Client) {
-    const state = this.state as GameStateSchema;
-    const mine = (this.assignments.get(client.sessionId) ?? []).map((matchupId) => ({
-      matchupId,
-      promptText: state.matchups.find((m) => m.id === matchupId)?.promptText ?? "",
-    }));
-    if (mine.length) client.send("YOUR_PROMPTS", mine);
-  }
-
-  private handleSubmitAnswer(
-    client: Client,
-    _player: PlayerSchema,
-    data: { matchupId: string; answer: string },
-  ) {
-    const state = this.state as GameStateSchema;
-    if (this.promptResolved || state.phase !== "Prompting") return;
-
-    const player = state.players.get(client.sessionId);
-    if (!player?.isConnected) return;
-
-    if (!(this.assignments.get(client.sessionId) ?? []).includes(data.matchupId)) {
-      logger.warn(`[SUBMIT_ANSWER] ${client.sessionId} is not an author of ${data.matchupId}`);
-      return;
-    }
-
-    const key = `${data.matchupId}:${client.sessionId}`;
-    const isNew = !this.drafts.has(key);
-    this.drafts.set(key, data.answer);
-
-    if (isNew) state.answersSubmitted += 1;
-    logger.debug(
-      `[SUBMIT_ANSWER] ${player.name} submitted answer (${state.answersSubmitted}/${state.answersExpected})`,
-    );
-
-    if (state.answersSubmitted >= state.answersExpected) this.finishPrompting();
-  }
-
-  private finishPrompting() {
-    if (this.promptResolved) return;
-    this.promptResolved = true;
-    this.clearPhaseTimer();
-
-    const state = this.state as GameStateSchema;
-    if (state.phase !== "Prompting") return;
-
-    for (const m of state.matchups) {
-      const authors = [...this.assignments.entries()]
-        .filter(([, ids]) => ids.includes(m.id))
-        .map(([sessionId]) => sessionId);
-
-      const built = authors.map((sessionId) => {
-        const a = new AnswerSchema();
-        a.id = crypto.randomUUID();
-        a.text = this.drafts.get(`${m.id}:${sessionId}`) ?? "(no answer)";
-        a.votes = 0;
-        a.authorId = "";
-        this.answerAuthors.set(a.id, sessionId);
-        return a;
-      });
-
-      for (const a of shuffle(built, this.rng)) m.answers.push(a);
-    }
-
-    state.phaseEndsAt = 0;
-    logger.info(`Prompting resolved: ${state.answersSubmitted} answers submitted`);
-    this.machine.send({
-      type: "ACTION",
-      phase: "Prompting",
-      name: "RESOLVE_PROMPTING",
-      clientId: "__server__",
-      role: "host",
-      data: undefined,
-      timestamp: Date.now(),
-    });
-  }
-
-  private enterVoting() {
-    const state = this.state as GameStateSchema;
-    state.activeMatchupIndex = -1;
-    state.isRevealing = false;
-    state.answerVotes.clear();
-    this.matchupResolved = false;
-    this.startNextMatchup();
-    logger.info(`Voting started: ${state.matchups.length} matchups ready`);
-  }
-
-  private startNextMatchup() {
-    const state = this.state as GameStateSchema;
-    const next = state.activeMatchupIndex + 1;
-
-    if (next >= state.matchups.length) {
-      state.activeMatchupIndex = -1;
-      state.isRevealing = false;
-      state.phaseEndsAt = 0;
-      this.machine.send({
-        type: "ACTION",
-        phase: "Voting",
-        name: "RESOLVE_VOTING",
-        clientId: "__server__",
-        role: "host",
-        data: undefined,
-        timestamp: Date.now(),
+    if (this.nameTaken(seat.id, name.data)) {
+      client.send(ServerMessage.ERROR, {
+        code: ErrorCode.NAME_TAKEN,
+        message: "That name is already taken",
       });
       return;
     }
-
-    state.activeMatchupIndex = next;
-    state.isRevealing = false;
-    state.answerVotes.clear();
-    const matchup = state.matchups[next];
-    if (matchup) {
-      for (const a of matchup.answers) a.votes = 0;
-    }
-    this.matchupResolved = false;
-
-    if (this.eligibleVoters(next).length === 0) {
-      this.revealMatchup();
-      return;
-    }
-
-    // Tell each client privately whether they authored this matchup and how
-    // many players may vote on it. The shared state blanks authorId until
-    // reveal, so without this the client would render enabled vote buttons
-    // for everyone (and count every player as an eligible voter).
-    for (const client of this.clients) this.sendMatchupInfoTo(client);
-
-    state.phaseEndsAt = Date.now() + this.durations.matchupVoteMs;
-    this.clearPhaseTimer();
-    this.phaseTimer = setTimeout(() => this.revealMatchup(), this.durations.matchupVoteMs);
+    seat.name = name.data;
+    seat.isReady = true;
+    if (this.state.phase === LOBBY_PHASE) seat.isActive = true;
+    this.rosterChanged();
   }
 
-  /**
-   * Per-client voting context for the active matchup. Sent as a targeted
-   * message (never in shared state) so authorship of *other* players stays
-   * hidden: each client learns only whether *they* authored this matchup.
-   */
-  private sendMatchupInfoTo(client: Client) {
-    const state = this.state as GameStateSchema;
-    const matchup = state.matchups[state.activeMatchupIndex];
-    if (!matchup || state.phase !== "Voting") return;
-    const isOwnMatchup = matchup.answers.some(
-      (a) => this.answerAuthors.get(a.id) === client.sessionId,
-    );
-    client.send("MATCHUP_INFO", {
-      matchupId: matchup.id,
-      isOwnMatchup,
-      eligibleVoterCount: this.eligibleVoters(state.activeMatchupIndex).length,
-    });
-  }
-
-  private eligibleVoters(index: number): PlayerSchema[] {
-    const state = this.state as GameStateSchema;
-    const matchup = state.matchups[index];
-    if (!matchup) return [];
-    const authors = new Set(matchup.answers.map((a) => this.answerAuthors.get(a.id)));
-    return [...state.players.values()].filter(
-      (p) => p.isConnected && p.isReady && !authors.has(p.id),
+  private nameTaken(playerId: string, name: string): boolean {
+    const wanted = name.trim().toLowerCase();
+    return [...this.state.players.values()].some(
+      (seat) => seat.id !== playerId && seat.name.trim().toLowerCase() === wanted,
     );
   }
 
-  private handleCastVote(client: Client, _player: PlayerSchema, data: { answerId: string }) {
-    const state = this.state as GameStateSchema;
-    if (state.phase !== "Voting" || state.isRevealing || this.matchupResolved) return;
+  private seatBySession(client: Client): PlayerSchema | undefined {
+    return this.state.players.get(this.playerOf.get(client.sessionId) ?? "");
+  }
 
-    const matchup = state.matchups[state.activeMatchupIndex];
-    if (!matchup) return;
+  private seatOf(client: Client): PlayerSchema | undefined {
+    const seat = this.seatBySession(client);
+    if (!seat) client.send(ServerMessage.ERROR, SPECTATOR_ERROR);
+    return seat;
+  }
 
-    const answer = matchup.answers.find((a) => a.id === data.answerId);
-    if (!answer) {
-      logger.warn(`[CAST_VOTE] ${data.answerId} is not in the active matchup`);
-      return;
+  private act(playerId: string, raw: unknown): ActionResult {
+    try {
+      const error = this.runtime.dispatch(playerId, raw);
+      return error ? { ok: false, error } : { ok: true };
+    } catch (error) {
+      logger.error("[GameRoom] action failed", error);
+      return ACTION_FAILED;
     }
+  }
 
-    if (!this.eligibleVoters(state.activeMatchupIndex).some((p) => p.id === client.sessionId)) {
-      logger.warn(`[CAST_VOTE] ${client.sessionId} is not eligible for this matchup`);
-      return;
+  private clientFor(playerId: string): Client | undefined {
+    return this.clients.find((client) => this.playerOf.get(client.sessionId) === playerId);
+  }
+
+  private viewFor(playerId: string): StateView | undefined {
+    const client = this.clientFor(playerId);
+    return client && this.views.get(client.sessionId);
+  }
+
+  private infoOf(seat: PlayerSchema): PlayerInfo {
+    return {
+      id: seat.id,
+      name: seat.name,
+      role: seat.role,
+      isConnected: seat.isConnected,
+      isReady: seat.isReady,
+      isActive: seat.isActive,
+    };
+  }
+
+  private bind(playerId: string, sessionId: string): void {
+    this.unbind(playerId);
+    this.playerOf.set(sessionId, playerId);
+  }
+
+  private reconnected(seat: PlayerSchema, client: Client): void {
+    seat.isConnected = true;
+    const view = this.views.get(client.sessionId);
+    for (const ref of this.viewRefs.get(seat.id) ?? []) view?.add(ref);
+    this.safely(() => this.runtime.syncPlayer(seat.id));
+    this.rosterChanged();
+  }
+
+  private dropSeat(playerId: string): void {
+    this.state.players.delete(playerId);
+    this.viewRefs.delete(playerId);
+    this.unbind(playerId);
+  }
+
+  private unbind(playerId: string): void {
+    for (const [sessionId, id] of this.playerOf)
+      if (id === playerId) this.playerOf.delete(sessionId);
+  }
+
+  private removeSeat(playerId: string): void {
+    this.dropSeat(playerId);
+    this.rosterChanged();
+    this.scheduleDisposeIfEmpty();
+  }
+
+  private rosterChanged(): void {
+    const seats = [...this.state.players.values()];
+    const host = seats.find((seat) => seat.role === "host");
+    if (!host?.isConnected) {
+      const next = this.nextHost(seats);
+      if (next) {
+        if (host) host.role = "player";
+        next.role = "host";
+      }
     }
-
-    state.answerVotes.set(client.sessionId, data.answerId);
-    this.recountActiveMatchup();
-
-    const eligible = this.eligibleVoters(state.activeMatchupIndex);
-    if (eligible.every((p) => state.answerVotes.has(p.id))) this.revealMatchup();
+    this.safely(() => this.runtime.rosterChanged());
   }
 
-  private recountActiveMatchup() {
-    const state = this.state as GameStateSchema;
-    const matchup = state.matchups[state.activeMatchupIndex];
-    if (!matchup) return;
-    const tally = new Map<string, number>();
-    for (const id of state.answerVotes.values()) tally.set(id, (tally.get(id) ?? 0) + 1);
-    for (const a of matchup.answers) a.votes = tally.get(a.id) ?? 0;
-  }
-
-  private revealMatchup() {
-    if (this.matchupResolved) return;
-    this.matchupResolved = true;
-    this.clearPhaseTimer();
-
-    const state = this.state as GameStateSchema;
-    const matchup = state.matchups[state.activeMatchupIndex];
-    if (!matchup) return;
-
-    for (const a of matchup.answers) a.authorId = this.answerAuthors.get(a.id) ?? "";
-    matchup.isRevealed = true;
-    state.isRevealing = true;
-
-    this.awardMatchupPoints(matchup, this.eligibleVoters(state.activeMatchupIndex).length);
-
-    state.phaseEndsAt = Date.now() + this.durations.matchupRevealMs;
-    this.phaseTimer = setTimeout(() => this.startNextMatchup(), this.durations.matchupRevealMs);
-  }
-
-  private awardMatchupPoints(matchup: MatchupSchema, eligibleCount: number) {
-    if (eligibleCount === 0) return;
-    const awards = calculateMatchupAwards(
-      [...matchup.answers].map((a) => ({
-        id: a.id,
-        authorId: a.authorId,
-        votes: a.votes,
-        isPlaceholder: a.text === "(no answer)",
-      })),
-      eligibleCount,
+  private nextHost(seats: PlayerSchema[]): PlayerSchema | undefined {
+    const connected = seats.filter((seat) => seat.isConnected);
+    return (
+      connected.find((seat) => seat.isActive && seat.isReady) ??
+      connected.find((seat) => seat.isReady) ??
+      connected[0]
     );
-    for (const award of awards) {
-      if (award.total > 0) {
-        awardPoints(this.scores, award.playerId, award.total);
-        logger.debug(
-          `[SCORING] ${award.playerId} awarded ${award.total} points (${award.votePoints} votes + ${award.bonusPoints} bonus${award.isClash ? " CLASH!" : ""})`,
-        );
-      }
-    }
-    this.roundAwards.push(...awards);
   }
 
-  private enterResults() {
-    const state = this.state as GameStateSchema;
-    this.clearPhaseTimer();
-    state.phaseEndsAt = 0;
-    state.isFinalRound = state.roundNumber >= state.totalRounds;
-    this.rebuildScoreboard();
-    logger.info(
-      `Results started (round ${state.roundNumber}/${state.totalRounds}, final: ${state.isFinalRound})`,
+  private scheduleDisposeIfEmpty(): void {
+    const occupied = [...this.state.players.values()].some((seat) => seat.isConnected);
+    if (occupied || this.emptyTimer) return;
+    this.emptyTimer = this.clock.setTimeout(
+      () => void this.disconnect(),
+      this.config.emptyRoomGraceMs,
     );
   }
 
-  private rebuildScoreboard() {
-    const state = this.state as GameStateSchema;
-    state.scoreboard.clear();
-    for (const { playerId, score } of leaderboard(this.scores)) {
-      const mine = this.roundAwards.filter((a) => a.playerId === playerId);
-      const entry = new ScoreEntrySchema();
-      entry.playerId = playerId;
-      entry.name = state.players.get(playerId)?.name ?? "(left)";
-      entry.score = score;
-      entry.roundPoints = mine.reduce((n, a) => n + a.total, 0);
-      entry.matchupsWon = mine.filter((a) => a.isWinner).length;
-      entry.hadClash = mine.some((a) => a.isClash);
-      state.scoreboard.push(entry);
-    }
+  private cancelDispose(): void {
+    this.emptyTimer?.clear();
+    this.emptyTimer = undefined;
   }
 
-  private handleNextRound(client: Client) {
-    const state = this.state as GameStateSchema;
-    if (state.players.get(client.sessionId)?.role !== "host") return;
-    if (state.isFinalRound) return;
-    this.roundAwards = [];
-    this.machine.send({
-      type: "ACTION",
-      phase: "Results",
-      name: "NEXT_ROUND",
-      clientId: client.sessionId,
-      role: "host",
-      data: undefined,
-      timestamp: Date.now(),
-    });
-    logger.info(`NEXT_ROUND: entering round ${state.roundNumber}`);
-  }
-
-  private handlePlayAgain(client: Client) {
-    const state = this.state as GameStateSchema;
-    if (state.players.get(client.sessionId)?.role !== "host") return;
-
-    this.scores = {};
-    this.roundAwards = [];
-    this.answerAuthors.clear();
-    this.assignments.clear();
-    this.drafts.clear();
-    state.scoreboard.clear();
-    state.matchups.clear();
-    state.answerVotes.clear();
-    state.categoryOptions.clear();
-    state.categoryVotes.clear();
-    state.selectedCategory = "";
-    state.activeMatchupIndex = -1;
-    state.isRevealing = false;
-    state.roundNumber = 0;
-    state.isFinalRound = false;
-    state.phaseEndsAt = 0;
-    state.scores.clear();
-    this.clearPhaseTimer();
-    this.machine.send({
-      type: "ACTION",
-      phase: "Results",
-      name: "PLAY_AGAIN",
-      clientId: client.sessionId,
-      role: "host",
-      data: undefined,
-      timestamp: Date.now(),
-    });
-    logger.info("PLAY_AGAIN: reset to Lobby");
-  }
-
-  private clearPhaseTimer() {
-    if (this.phaseTimer !== null) {
-      clearTimeout(this.phaseTimer);
-      this.phaseTimer = null;
-    }
-  }
-
-  private rekeyPromptingState(oldSessionId: string, newSessionId: string) {
-    const assigned = this.assignments.get(oldSessionId);
-    if (assigned) {
-      this.assignments.delete(oldSessionId);
-      this.assignments.set(newSessionId, assigned);
-    }
-
-    // Draft keys are `${matchupId}:${sessionId}` — match on the sessionId suffix.
-    for (const [key, value] of this.drafts) {
-      const sep = key.lastIndexOf(":");
-      if (sep !== -1 && key.slice(sep + 1) === oldSessionId) {
-        this.drafts.delete(key);
-        this.drafts.set(`${key.slice(0, sep + 1)}${newSessionId}`, value);
-      }
-    }
-
-    for (const [answerId, sessionId] of this.answerAuthors) {
-      if (sessionId === oldSessionId) {
-        this.answerAuthors.set(answerId, newSessionId);
-      }
-    }
-  }
-
-  private rekeyVotingState(oldSessionId: string, newSessionId: string) {
-    const state = this.state as GameStateSchema;
-    const vote = state.answerVotes.get(oldSessionId);
-    if (vote !== undefined) {
-      state.answerVotes.delete(oldSessionId);
-      state.answerVotes.set(newSessionId, vote);
-    }
-
-    // Authorship must follow the session or a reconnected author could vote on
-    // their own answer (the eligibility check compares against this map).
-    for (const [answerId, sessionId] of this.answerAuthors) {
-      if (sessionId === oldSessionId) {
-        this.answerAuthors.set(answerId, newSessionId);
-      }
-    }
-  }
-
-  onLeave(client: Client, code?: number) {
-    logger.info(`Client ${client.sessionId} left (code=${code})`);
-    const state = this.state as GameStateSchema;
-    const player = state.players.get(client.sessionId);
-    if (!player) {
-      logger.warn(`[onLeave] Unknown session ${client.sessionId}`);
-      return;
-    }
-
-    const isConsented = code === CloseCode.CONSENTED;
-    if (isConsented) {
-      this.finalizePlayerRemoval(state, client.sessionId);
-    } else {
-      player.isConnected = false;
-      this.allowReconnection(client, this.durations.reconnectMs / 1000);
-      logger.info(`Player ${player.name} disconnected, seat held for reconnection`);
-      // Colyseus releases an expired reconnection reservation silently — no second
-      // onLeave — so finalize the seat ourselves or a ghost (a stuck host included)
-      // would linger forever and stall host-gated actions.
-      const sessionId = client.sessionId;
-      setTimeout(() => {
-        const seat = state.players.get(sessionId);
-        if (seat && !seat.isConnected) {
-          logger.info(`Player ${seat.name} did not return in time, removing seat`);
-          this.finalizePlayerRemoval(state, sessionId);
-        }
-      }, this.durations.reconnectMs);
-      this.scheduleDisposeIfEmpty(state);
-    }
-  }
-
-  private finalizePlayerRemoval(state: GameStateSchema, sessionId: string) {
-    state.players.delete(sessionId);
-    // A leaver forfeits their prompting work: drop assignments and drafts, recompute
-    // the expected total, resolve if everyone else is done.
-    if (state.phase === "Prompting") {
-      const assigned = this.assignments.get(sessionId);
-      if (assigned) {
-        this.assignments.delete(sessionId);
-        for (const matchupId of assigned) {
-          if (this.drafts.delete(`${matchupId}:${sessionId}`)) state.answersSubmitted--;
-        }
-        state.answersExpected -= assigned.length;
-      }
-      if (state.answersExpected > 0 && state.answersSubmitted >= state.answersExpected) {
-        this.finishPrompting();
-      }
-    }
-    this.reassignHostIfNeeded(state);
-    this.scheduleDisposeIfEmpty(state);
-  }
-
-  private reassignHostIfNeeded(state: GameStateSchema) {
-    const players = Array.from(state.players.values());
-    if (players.length === 0) return;
-    const remainingHosts = players.filter((p) => p.role === "host");
-    if (remainingHosts.length > 0) return;
-    const newHost = players.find((p) => p.isConnected) || players[0];
-    if (newHost) {
-      newHost.role = "host";
-      logger.info(`Player ${newHost.name} promoted to host`);
-    }
-  }
-
-  private scheduleDisposeIfEmpty(state: GameStateSchema) {
-    const hasConnectedPlayers = Array.from(state.players.values()).some((p) => p.isConnected);
-    if (hasConnectedPlayers) return;
-    const graceMs = this.durations.emptyRoomGraceMs;
-    logger.info(`No connected players, scheduling room disposal in ${graceMs}ms`);
-    setTimeout(() => {
-      const stillEmpty = !Array.from(state.players.values()).some((p) => p.isConnected);
-      if (stillEmpty) {
-        this.lock();
-        (this as unknown as { _events: { emit: (event: string) => void } })._events.emit("dispose");
-      }
-    }, graceMs);
-  }
-
-  onJoin(client: Client, options?: Record<string, unknown>) {
-    logger.info(`onJoin called for client: ${client.sessionId}`);
-    logger.debug(`Options: ${JSON.stringify(options)}`);
-
-    if (!this.gameDefinition) {
-      logger.error("gameDefinition is undefined in onJoin!");
-      throw new Error(
-        "GameDefinition must be set before clients can join. Call setDefinition() in your room class.",
-      );
-    }
-
-    const state = this.state as GameStateSchema;
-    const playerId = options?.playerId as string | undefined;
-    logger.debug(`Current players before join: ${state.players.size}`);
-
-    if (playerId) {
-      const existingPlayer = Array.from(state.players.values()).find(
-        (p) => p.playerId === playerId,
-      );
-      if (existingPlayer) {
-        const oldSessionId = existingPlayer.id;
-        state.players.delete(oldSessionId);
-        existingPlayer.id = client.sessionId;
-        existingPlayer.isConnected = true;
-        state.players.set(client.sessionId, existingPlayer);
-
-        // Re-key private maps if reconnecting during Prompting
-        if (state.phase === "Prompting") {
-          this.rekeyPromptingState(oldSessionId, client.sessionId);
-          this.sendPromptsTo(client);
-        }
-
-        // Re-key votes if reconnecting during Voting
-        if (state.phase === "Voting") {
-          this.rekeyVotingState(oldSessionId, client.sessionId);
-          // The MATCHUP_INFO broadcast for the active matchup already went
-          // out: resend it to the returner or their buttons stay enabled.
-          this.sendMatchupInfoTo(client);
-        }
-
-        // Re-key scores on reconnect so points survive a refresh
-        if (this.scores[oldSessionId] !== undefined) {
-          this.scores[client.sessionId] = this.scores[oldSessionId];
-          delete this.scores[oldSessionId];
-        }
-
-        logger.info(`Client ${client.sessionId} reconnected as ${existingPlayer.name}`);
-        return;
-      }
-    }
-
-    const player = new PlayerSchema();
-    player.id = client.sessionId;
-    player.playerId = playerId ?? "";
-    player.name = (options?.name as string) || `Player ${client.sessionId.slice(0, 4)}`;
-    player.role = state.players.size === 0 ? "host" : "player";
-    state.players.set(client.sessionId, player);
-
-    logger.debug(`Player created: id=${player.id}, name=${player.name}, role=${player.role}`);
-    logger.debug(`Total players after join: ${state.players.size}`);
-
-    logger.info(`Client ${client.sessionId} joined as ${player.name}`);
-  }
-
-  onDispose() {
-    logger.info(`OnDispose called for room ${this.roomId}`);
-    this.clearPhaseTimer();
-    if (this.serverNowTimer !== null) {
-      clearInterval(this.serverNowTimer);
-      this.serverNowTimer = null;
-    }
-    this.answerAuthors.clear();
-    this.assignments.clear();
-    this.drafts.clear();
-    if (this.roomCodeService) {
-      const state = this.state as GameStateSchema;
-      this.roomCodeService.unregister(state.roomCode);
+  private safely(fn: () => void): void {
+    try {
+      fn();
+    } catch (error) {
+      logger.error("[GameRoom] hook failed", error);
     }
   }
 }

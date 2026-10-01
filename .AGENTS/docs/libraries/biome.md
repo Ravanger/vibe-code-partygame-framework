@@ -1,85 +1,38 @@
 # Biome Documentation
 
-> **Version:** v2.x (v2.0 released June 2025)
+> **Version:** 2.5.15 (root devDependency). 2.5 deprecates `linter.rules.recommended`; `biome migrate --write` turned it into `"preset": "recommended"`.
 
 ## Overview
+Single linter and formatter (no ESLint or Prettier). Config is the root `biome.json`:
 
-Biome is the unified linter and formatter for `vibe-coded`, replacing the ESLint + Prettier combination with a single Rust-powered tool and one config file (`biome.json`). It lints and formats TypeScript, JavaScript, JSON, and CSS across all packages in the monorepo. With v2.0, Biome added type-aware linting (via its own inference engine — no `tsconfig` required), linter plugins, and a new "Assist" system for non-diagnostic code actions like import organisation.
+```json
+linter: { preset: "recommended",
+  correctness: { noUnusedVariables: "error", noUnusedImports: "error" },
+  style: { useConst: "error", useTemplate: "error" } }
+formatter: { indentStyle: "space", indentWidth: 2, lineWidth: 100 }
+vcs: { enabled: true, clientKind: "git", useIgnoreFile: true }
+```
+Not configured: `organizeImports`/`assist` (Biome 2 moved it under `assist.actions.source.organizeImports`), quote style, semicolons (defaults apply), overrides.
 
-## Key Concepts
-
-- **Formatter:** Prettier-compatible output (97%+). Opinionated with few options — indent style/width, quote style, semicolons, line width, trailing commas.
-- **Linter:** 479+ rules organised into groups: `correctness`, `suspicious`, `style`, `complexity`, `performance`, `security`, `a11y`. Rules starting with `use*` enforce something; rules starting with `no*` deny something.
-- **Rule domains:** Biome auto-enables domain-specific rules when it detects matching `package.json` dependencies (e.g. test rules for Vitest, React rules for React projects).
-- **Assist:** Non-diagnostic code actions (formerly "Import Organizer"). Handles import sorting, export sorting, and will expand to more actions. Not linter, not formatter — a third category.
-- **Type-aware linting (v2):** Biome infers types without the TypeScript compiler. Opt-in via the file scanner (adds a slight startup cost). Catches issues like `noFloatingPromises` at ~85% of typescript-eslint coverage.
-- **`biome-ignore` comment:** Inline suppression for specific rules on the next line.
-- **VCS integration:** `--changed` / `--staged` flags process only files changed since last commit / staged files. Useful in pre-commit hooks.
-- **`biome check`:** Runs formatter, linter, and assist together. The preferred all-in-one command for CI.
-
-## Common Functions/Methods
-
+## Commands
 | Command | Description |
 |---|---|
-| `biome check --write .` | Run all checks and apply safe fixes (format + lint). Primary CI command. |
-| `biome format --write .` | Format files only. |
-| `biome lint --write .` | Lint and apply safe fixes only. |
-| `biome ci .` | Check all files; exits non-zero on any violation. Use in CI pipelines. |
-| `biome init` | Scaffold a `biome.json` config file. |
-| `biome migrate` | Migrate from ESLint/Prettier config to `biome.json`. |
-| `// biome-ignore lint/suspicious/noConsoleLog: debug` | Inline suppression comment. Always include a reason. |
+| `bun run lint` | `biome check .` (formatter + linter, read-only). Also the first step of `bun run verify`. |
+| `bun run format` | `biome format --write .` |
+| `biome check --write .` | Apply safe fixes. |
 
-### Minimal `biome.json` for this project
+## Biome 2 changes that bit us
+- `organizeImports` top-level key was removed; `noConsoleLog` no longer exists under `suspicious` (the config would fail to parse). The repo logs through `console.info` and a local `logger` object in `GameRoom.ts` (Pino is not installed).
 
-```jsonc
-{
-  "$schema": "https://biomejs.dev/schemas/2.0.0/schema.json",
-  "formatter": {
-    "enabled": true,
-    "indentStyle": "space",
-    "indentWidth": 2,
-    "lineWidth": 100
-  },
-  "linter": {
-    "enabled": true,
-    "rules": {
-      "recommended": true,
-      "suspicious": {
-        "noConsoleLog": "warn"
-      }
-    }
-  },
-  "javascript": {
-    "formatter": {
-      "quoteStyle": "double",
-      "trailingCommas": "es5",
-      "semicolons": "always"
-    }
-  },
-  "assist": {
-    "actions": {
-      "source": {
-        "organizeImports": "on"
-      }
-    }
-  }
-}
-```
+## Suppressions in use
+Counts across `packages/` and `games/`: `lint/style/noNonNullAssertion` (~100), `lint/suspicious/noExplicitAny` (~85), `noUnusedImports` (6), `noUnusedVariables` (4). Always give a reason after the colon.
+- Svelte templates are understood with `html.experimentalFullSupportEnabled: true` (set in `biome.json`); no `.svelte` overrides are needed.
+- `GameRoom.onJoin` uses manual casting of `options.name` (`options` is `Record<string, unknown>`).
 
 ## Best Practices in This Project
-
-- **Run `biome check --write` as the pre-commit hook**, not separate format and lint passes. One command, one config, no drift.
-- **Add `biome ci` to the Turbo `lint` task** (with `cache: false` or inputs scoped to source files). It exits non-zero in CI on any violation.
-- **Don't mix Biome with ESLint or Prettier** in the same package. If migrating, run `biome migrate` and commit the full reformat in a single chore commit before adding feature work.
-- **Set `"recommended": true` and selectively override rules** rather than listing every rule manually. This keeps you on safe defaults and gains new rules on upgrades.
-- **Use `biome-ignore` with a reason string.** The reason is machine-readable and helps audits. No silent suppressions.
-- **Opt into type-aware linting gradually.** Enable the file scanner in `biome.json` and check performance. On large repos, consider scoping it to specific packages.
-- **Scope `biome.json` per-package for per-package overrides** (e.g. relaxed rules in test files) using the `overrides` array. Don't duplicate the root config.
-- **The Turborepo 2.7 `noUndeclaredEnvVars` Biome rule** is relevant here — enable it to catch env vars used in turbo tasks that aren't declared in `turbo.json` env inputs.
+- Run `biome check` before finishing; formatting is enforced at `lineWidth` 100.
+- Prefer fixing a type over adding another `noExplicitAny` ignore.
+- `turbo.json` has a `lint` task with no script in packages; linting runs from the root only.
 
 ## References
-
-- [Official Docs](https://biomejs.dev)
-- [Linter Rules](https://biomejs.dev/linter/rules)
-- [Configuration Reference](https://biomejs.dev/reference/configuration)
-- [Biome v2 Release Notes](https://biomejs.dev/blog/biome-v2)
+- [Biome docs](https://biomejs.dev), [migrate to v2](https://biomejs.dev/guides/migrate-to-v2/)

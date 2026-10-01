@@ -1,0 +1,107 @@
+{
+  "id": "reality-tv",
+  "name": "Reality TV",
+  "emoji": "📺",
+  "prompts": [
+    { "id": "reality-1", "text": "The title of a reality show starring only retired mascots." },
+    { "id": "reality-2", "text": "The twist on a baking competition that nobody asked for." },
+    {
+      "id": "reality-3",
+      "text": "The confession-booth line from a contestant eliminated on day one."
+    },
+    {
+      "id": "reality-4",
+      "text": "The tagline of a dating show where every contestant is a ghost."
+    },
+    {
+      "id": "reality-5",
+      "text": "A survivalist show where the tribe is stuck with an unusually loud rooster."
+    },
+    { "id": "reality-6", "text": "The big drama of the season: somebody ate the last yogurt." },
+    {
+      "id": "reality-7",
+      "text": "The tagline of a reality show about extremely competitive neighbors."
+    },
+    {
+      "id": "reality-8",
+      "text": "What the host whispers to the contestants during a commercial break."
+    },
+    {
+      "id": "reality-9",
+      "text": "A cooking challenge: \"You have thirty minutes to make dinner from a vending machine.\""
+    },
+    {
+      "id": "reality-10",
+      "text": "The home renovation show that got cancelled after knocking down one wall."
+    },
+    { "id": "reality-11", "text": "The cringiest elimination speech in television history." },
+    { "id": "reality-12", "text": "The ominous voice-over line before a commercial break." },
+    { "id": "reality-13", "text": "A reality show about the world's slowest road trip." },
+    {
+      "id": "reality-14",
+      "text": "The talent-show judge's catchphrase that makes every contestant cry."
+    },
+    { "id": "reality-15", "text": "A contestant's tearful confession about a houseplant." },
+    { "id": "reality-16", "text": "The rule in the reality house that caused a feud." },
+    { "id": "reality-17", "text": "The reunion show's most uncomfortable moment." },
+    { "id": "reality-18", "text": "The prize for winning a reality show about napping." },
+    {
+      "id": "reality-19",
+      "text": "The tribal council vote that went horribly wrong because of a coconut."
+    },
+    { "id": "reality-20", "text": "The cheesiest line at a rose ceremony." },
+    { "id": "reality-21", "text": "A job-swap show with an unfortunate pairing." },
+    { "id": "reality-22", "text": "The \"coming up next\" teaser that is wildly misleading." },
+    { "id": "reality-23", "text": "A fashion challenge with the worst available material." },
+    { "id": "reality-24", "text": "The scene the editors desperately wish they could cut." },
+    { "id": "reality-25", "text": "A contestant's strategy that is brilliant but evil." },
+    { "id": "reality-26", "text": "The prize that makes the winners regret everything." },
+    { "id": "reality-27", "text": "A reality show filmed entirely inside a grocery store." },
+    { "id": "reality-28", "text": "What the camera operator thinks during the big argument." },
+    { "id": "reality-29", "text": "A reality show about people sharing one bathroom." },
+    { "id": "reality-30", "text": "The quiet moment ruined by a producer's gasp." },
+    {
+      "id": "reality-31",
+      "text": "The rule the contestant clearly misread, and what they did instead."
+    },
+    {
+      "id": "reality-32",
+      "text": "What the host of a house-hunting show says when the attic starts whispering."
+    },
+    { "id": "reality-33", "text": "The talent show act that makes the judges stand up and leave." },
+    {
+      "id": "reality-34",
+      "text": "The host's catchphrase on a show about extreme competitive couponing."
+    },
+    { "id": "reality-35", "text": "The dramatic music that plays when someone opens the fridge." },
+    {
+      "id": "reality-36",
+      "text": "A show where strangers are trapped in an elevator for a month."
+    },
+    { "id": "reality-37", "text": "The tie-breaker challenge that is somehow a staring contest." },
+    {
+      "id": "reality-38",
+      "text": "A confessional that ends with the contestant eating the microphone."
+    },
+    {
+      "id": "reality-39",
+      "text": "The legal disclaimer that airs after the episode about the hot-tub incident."
+    },
+    { "id": "reality-40", "text": "The title of a show about wedding cakes that fall over." }
+  ],
+  "tieBreakers": [
+    {
+      "id": "reality-tb-1",
+      "text": "The final-episode twist that made the entire cast quit on camera."
+    },
+    {
+      "id": "reality-tb-2",
+      "text": "The prize at the end of the world's least rewarding competition."
+    },
+    {
+      "id": "reality-tb-3",
+      "text": "The last words of a contestant voted off for eating the group's only food."
+    },
+    { "id": "reality-tb-4", "text": "The most overdramatic exit line of an eliminated contestant." }
+  ]
+}

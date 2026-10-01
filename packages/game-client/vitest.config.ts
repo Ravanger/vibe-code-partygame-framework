@@ -3,12 +3,13 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [svelte()],
+  resolve: { conditions: ["browser"] },
   test: {
+    name: "@partygame/game-client",
     environment: "jsdom",
     include: ["tests/**/*.test.ts"],
     setupFiles: ["./vitest.setup.ts"],
-    coverage: {
-      include: ["src/**/*.ts"],
-    },
+    fileParallelism: false,
+    coverage: { include: ["src/**/*.ts"] },
   },
 });

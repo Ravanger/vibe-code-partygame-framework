@@ -1,7 +1,7 @@
 # Party Game Framework (vibe-coded)
 
 > **Goal:** A flexible, modern, TypeScript-first framework for building immersive, multi-device social party games.
-> **Status:** Initial Setup (Phase 0)
+> **Status:** Playable end to end. Plan 10 (framework inversion) stages 1-7 are done: XState-driven `GameRuntime`, generic Colyseus `GameRoom`, generic Svelte SDK, WitClash as a game on top; 4-bot playtest and review fixes landed. Stage 8 (QR join, TV view, kick/settings UI, podium, best-answer award, progress and typing badges) is done. Stage 9 (lifecycle review fixes: name entry for late joiners, minimum players, host `END_GAME`, spectator resume, seated-only podium, `NAME_TAKEN`, spectator-only rooms dispose) is done; open: persistence (Phase 9). Plan: `.AGENTS/plans/10-framework-inversion.md`.
 
 ## !Note: Internal agent files (checklists, logs, notes, memories, etc.) should go in the `.AGENTS/` directory
 
@@ -10,53 +10,66 @@
 ## Core Mandates
 
 - **Terminology:** DO NOT mention "Jackbox" in any documentation, code, or communication.
-- **TDD First:** NO production code without a failing test first. 100% coverage target for `core` and `shared`.
-- **Modern Tech Stack:** Bun 1.1+, Colyseus 0.17, XState v5, Zod, Svelte 5, Vitest, Biome.
-- **Strict Separation:** Clear boundaries between `core` (logic), `server` (multiplayer), and `client` (UI).
-- **Security:** Zod validation for all inputs, rate limiting, and structured logging.
-- **Horizontal Scalability:** Redis adapter pattern for multi-node support.
-- **Documentation First:** All public-facing APIs MUST have clear, DX-friendly documentation (JSDoc, API reference site, usage examples) established BEFORE implementation. Documentation is a living design document.
+- **TDD First:** NO production code without a failing test first. 100% coverage (statements, branches, functions, lines) for every package and game; `vitest.config.mts` enforces it.
+- **Modern Tech Stack:** Bun, Colyseus 0.18, XState v5, Zod 4, Svelte 5, Vitest 4, Biome 2 (versions in the table below).
+- **Strict Separation:** Dependencies flow `games/* -> packages/server -> packages/core -> packages/shared`; `game-client` depends on `shared` at runtime (`core` and `server` are dev-only, for tests). No package imports `games/`. Framework packages contain no game vocabulary.
+- **Players are keyed by `playerId`** (client-generated UUID) in state, private maps and scores. `sessionId` exists only inside `GameRoom`.
+- **No `any`** (Biome `noExplicitAny` is an error), tests included.
+- **Security:** Zod validation for every client input (protocol envelope, action payloads, options, join options). Rate limiting and structured logging are not built yet.
+- **Horizontal Scalability:** not built yet. Room codes live in an in-memory `RoomCodeService`, so the server is one process.
+- **Documentation First:** All public-facing APIs MUST have clear, DX-friendly documentation (JSDoc, `docs/framework/README.md`, usage examples) established BEFORE implementation. Documentation is a living design document.
 - **Directory Mandates:** ALL agent-related files (checklists, logs, internal plans) MUST reside in `.AGENTS/`. The `docs/` directory is reserved for developer-facing and user-facing documentation only.
 - **Agent Maintenance:** Agents MUST maintain compact, up-to-date session logs and checklists in the `.AGENTS/` directory as work progresses. Summarize periodically to prevent file bloat.
 
 ## Project Structure (Monorepo)
 
-- `packages/shared`: Validation schemas, types, and constants.
-- `packages/core`: Pure TypeScript game engine logic and DSL (`defineGame`).
-- `packages/server`: Colyseus room implementation and XState integration.
-- `packages/game-client`: Svelte 5 SDK for game clients.
+- `packages/shared`: wire protocol (`protocol.ts`: message names, `ErrorCode`, `ActionResult`, zod schemas) and the browser-safe state classes (`@partygame/shared/schema`: `BaseGameState`, `PlayerSchema`).
+- `packages/core`: pure game runtime, no Colyseus: `defineGame`, `actionFactory`, `GameRuntime` (XState actor per room, built-in Lobby/`START_GAME`/`SET_OPTIONS`/`KICK_PLAYER`), `scoring.ts` helpers; `@partygame/core/testing` has `FakeHost`.
+- `packages/server`: generic Colyseus host: `createGameServer`, `GameRoom`, `createApiHandler` (`/api/resolve-code`), `RoomCodeService`; `@partygame/server/bun` (`startServer`) and `@partygame/server/testing` (`bootTestServer`).
+- `packages/game-client`: Svelte 5 SDK: `GameConnectionManager`, `Countdown`; `@partygame/game-client/testing` has `StubRoom`.
 - `packages/cli`: Scaffolding tool for new games **(planned, not yet created)**.
-- `games/wit-clash`: Canonical demo game (Quiplash-style).
-- `games/wit-clash/content/categories/`: Host-editable `.jsonc` category files.
+- `games/wit-clash`: reference game (Quiplash-style). `src/` rules, `ui/` Svelte client, `server.ts` Bun entry, `content/categories/*.jsonc` host-editable prompts. See `games/wit-clash/README.md`.
+- `docs/`: `framework/README.md` (game author guide), `HOSTING.md` (running and LAN play).
+- `launch.ts`: one-command launcher (game server, API and client); wit-clash specific.
+
+## Commands
+
+| Command | What |
+|---|---|
+| `bun run build` | turbo: every package, then the Vite client bundle |
+| `bun run typecheck` | turbo: `tsc` per package, plus `svelte-check` for the game. `bun run typecheck:launch` covers `launch.ts` |
+| `bun run lint` | `biome check .` through the local binary (`./node_modules/.bin/biome.exe check .` on Windows; not `npx`) |
+| `bun run test:coverage` | `vitest run --coverage` over all projects, 100% thresholds |
+| `bun run verify` | lint, typecheck of `launch.ts` and the game, coverage |
+| `bun run launch` / `launch:host` / `launch:prod` | game server (2567), API (3001), Vite (5173) or built client (3000); `--no-browser` to skip opening one |
 
 ## Library Documentation References
 
 Library-specific documentation is maintained in `.AGENTS/docs/libraries/`. Each document provides comprehensive API references, project-specific usage patterns, best practices, and troubleshooting guidance.
+Versions are what the consuming package resolves (checked against installed `package.json`), not the root range.
 
 | Library | Documentation | Version |
 |---------|---------------|---------|
-| **@biomejs/biome** | [biome.md](.AGENTS/docs/libraries/biome.md) | v2.4.12 |
-| **colyseus** | [colyseus.md](.AGENTS/docs/libraries/colyseus.md) | v0.17.41 |
-| **@colyseus/core** | [colyseus.md](.AGENTS/docs/libraries/colyseus.md) | v0.17.41 |
-| **@colyseus/sdk** | [colyseus.md](.AGENTS/docs/libraries/colyseus.md) | v0.17.40 |
-| **@colyseus/schema** | [colyseus-schema.md](.AGENTS/docs/libraries/colyseus-schema.md) | v4.0.20 |
-| **@colyseus/testing** | [colyseus-testing.md](.AGENTS/docs/libraries/colyseus-testing.md) | v0.17.11 |
-| **@colyseus/ws-transport** | [colyseus-ws-transport.md](.AGENTS/docs/libraries/colyseus-ws-transport.md) | v0.17.13 |
-| **svelte** | [svelte.md](.AGENTS/docs/libraries/svelte.md) | v5.55.4 |
-| **@sveltejs/vite-plugin-svelte** | [svelte.md](.AGENTS/docs/libraries/svelte.md) | v7.0.0 |
-| **turbo** | [turbo.md](.AGENTS/docs/libraries/turbo.md) | v2.9.6 |
-| **vitest** | [vitest.md](.AGENTS/docs/libraries/vitest.md) | v4.1.4 |
-| **@vitest/coverage-v8** | [vitest.md](.AGENTS/docs/libraries/vitest.md) | v4.1.4 |
-| **xstate** | [xstate.md](.AGENTS/docs/libraries/xstate.md) | v5.30.0 |
-| **zod** | [zod.md](.AGENTS/docs/libraries/zod.md) | v4.3.6 |
-| **@testing-library/svelte** | [testing-library.md](.AGENTS/docs/libraries/testing-library.md) | v5.3.1 |
-| **@testing-library/jest-dom** | [testing-library.md](.AGENTS/docs/libraries/testing-library.md) | v6.9.1 |
-| **@testing-library/user-event** | [testing-library.md](.AGENTS/docs/libraries/testing-library.md) | v14.6.1 |
-| **jsdom** | [jsdom.md](.AGENTS/docs/libraries/jsdom.md) | v29.0.2 |
-| **@types/jsdom** | [jsdom.md](.AGENTS/docs/libraries/jsdom.md) | v28.0.1 |
-| **vite** | [vite.md](.AGENTS/docs/libraries/vite.md) | v8.0.8 |
+| **@biomejs/biome** | [biome.md](.AGENTS/docs/libraries/biome.md) | v2.5.15 |
+| **@colyseus/bun-websockets** | [colyseus.md](.AGENTS/docs/libraries/colyseus.md) | v0.18.3 |
+| **@colyseus/core** | [colyseus.md](.AGENTS/docs/libraries/colyseus.md) | v0.18.18 |
+| **@colyseus/schema** | [colyseus-schema.md](.AGENTS/docs/libraries/colyseus-schema.md) | v5.0.35 |
+| **@colyseus/sdk** | [colyseus.md](.AGENTS/docs/libraries/colyseus.md) | v0.18.4 |
+| **@colyseus/ws-transport** | [colyseus.md](.AGENTS/docs/libraries/colyseus.md) | v0.18.4 |
+| *Colyseus test harness (own)* | [colyseus-testing.md](.AGENTS/docs/libraries/colyseus-testing.md) | `@partygame/server/testing` |
+| **svelte** | [svelte.md](.AGENTS/docs/libraries/svelte.md) | v5.57.1 |
+| **@sveltejs/vite-plugin-svelte** | [svelte.md](.AGENTS/docs/libraries/svelte.md) | v7.3.1 |
+| **turbo** | [turbo.md](.AGENTS/docs/libraries/turbo.md) | v2.11.5 |
+| **vitest** | [vitest.md](.AGENTS/docs/libraries/vitest.md) | v4.1.11 |
+| **@vitest/coverage-v8** | [vitest-coverage.md](.AGENTS/docs/libraries/vitest-coverage.md) | v4.1.11 |
+| **xstate** | [xstate.md](.AGENTS/docs/libraries/xstate.md) | v5.33.2 |
+| **zod** | [zod.md](.AGENTS/docs/libraries/zod.md) | v4.6.5 |
+| **@testing-library/svelte** | [testing-library.md](.AGENTS/docs/libraries/testing-library.md) | v5.4.2 |
+| **@testing-library/jest-dom** | [testing-library.md](.AGENTS/docs/libraries/testing-library.md) | v6.10.0 |
+| **jsdom** | [jsdom.md](.AGENTS/docs/libraries/jsdom.md) | v29.1.1 |
+| **@types/jsdom** | [jsdom.md](.AGENTS/docs/libraries/jsdom.md) | v28.0.3 |
+| **vite** | [vite.md](.AGENTS/docs/libraries/vite.md) | v8.3.1 |
 | **typescript** | [typescript.md](.AGENTS/docs/libraries/typescript.md) | v6.0.3 |
-| **pino** | (reference only) | v9.x |
 
 ## Development Workflow
 
@@ -74,27 +87,31 @@ Library-specific documentation is maintained in `.AGENTS/docs/libraries/`. Each 
 | Layer              | Technology          |
 | ------------------ | ------------------- |
 | Runtime            | Bun                 |
-| Multiplayer        | Colyseus 0.17       |
-| State Machine      | XState v5.30        |
-| Validation         | Zod v4              |
-| Frontend           | Svelte 5 (Runes)    |
-| Testing            | Vitest v4 + fast-check |
-| Linting/Formatting | Biome v2            |
-| Logging            | Pino                |
+| Multiplayer        | Colyseus 0.18 (`@colyseus/core` 0.18.18, `@colyseus/schema` 5) |
+| State Machine      | XState v5.33        |
+| Validation         | Zod v4.6            |
+| Frontend           | Svelte 5.57 (Runes), Vite 8 |
+| Testing            | Vitest v4.1 (`FakeHost` for rules, real Colyseus server for rooms, Testing Library for screens) |
+| Linting/Formatting | Biome v2.5          |
 
 ## MVP Checklist
 
 - [x] Phase 0: Monorepo Scaffold & Tooling
-- [x] Phase 1: Core DSL (`defineGame`, `phase`, `action`)
-- [x] Phase 2: Server-side Room Logic & State Machine Sync
-- [x] Phase 3: Role-based State Visibility (StateView)
-- [x] Phase 4: Svelte 5 Client SDK
+- [x] Phase 1: Core DSL (`defineGame`, `actionFactory`; phases, actions, options, timers)
+- [x] Phase 2: Server-side Room Logic; `GameRuntime` driven by an XState actor, built-in Lobby
+- [x] Phase 3: Per-player private state (StateView, `.view()` fields); votes hidden until the reveal
+- [x] Phase 4: Svelte 5 Client SDK (`GameConnectionManager`)
 - [x] Phase 5: Reference Game Implementation (WitClash)
-- [x] Phase 6: Playable loop — Welcome, Waiting Room, Category Voting, Prompting, Answer Voting, Results
-- [x] Phase 7: Reconnection (playerId + reconnectionToken)
+- [x] Phase 6: Playable loop: Welcome, Waiting Room, Category Voting, Prompting, Answer Voting, Reveal, Results
+- [x] Phase 7: Reconnection (SDK token reconnect, or a new session with the same `playerId`)
 - [x] Phase 8: Host-editable content
-- [ ] Phase 9: Persistence provider (Firebase/Supabase)
-- [ ] Phase 10: QR code join
+- [x] Phase 8b (plan 10): spectator join option, host `KICK_PLAYER` and `SET_OPTIONS`, request/response actions (`ActionResult`), mid-game joiners wait for the next round (`JoinNextRound` screen), no-answer forfeits, no repeat prompts. The UI uses all three: TV view, host remove buttons, lobby settings form.
+- [ ] Phase 9: Persistence provider (Firebase/Supabase); the old `database/` package was deleted, nothing replaces it yet
+- [x] Phase 10: QR code join (`uqr` renders the waiting-room QR of `<origin>/?code=ABCD`; `?code=` auto-joins, `?tv=` auto-watches)
+- [x] Phase 11a (plan 10 stage 8): TV view (`manager.isSpectator`, `main.tv` layout), host remove button with confirm, lobby settings form
+- [x] Phase 11b (plan 10 stage 8): Results podium (ties share a step, leavers marked, tie-breaker badge), best-answer award, per-player progress and typing badges (`SET_TYPING` from Prompting and TieBreakerPrompting)
+- [x] Plan 10 stage 7: 4-bot playtest re-run, code review, fixes
+- [x] Plan 10 stage 9: lifecycle review fixes, 4-bot playtest A-G pass
 
 ## Troubleshooting
 
@@ -104,105 +121,67 @@ Library-specific documentation is maintained in `.AGENTS/docs/libraries/`. Each 
 - **Fix:** Upgrade to `^7.0.0` (supports Vite 8's rolldown optimizer)
 - **Reference:** `games/wit-clash/package.json`
 
-### Turbo Deprecation
-- **Issue:** `--parallel` flag deprecated
-- **Fix:** Remove flag - turbo runs tasks in parallel by default
-- **Reference:** `package.json` script `dev:all`
-
-### GameRoom Player Creation on Join
-- **Issue:** `Failed to join game: TypeError: Cannot read properties of undefined (reading 'name')`
-- **Cause:** 
-  - `GameRoom.onJoin` tried to retrieve a player from `state.players` that didn't exist (no player creation)
-  - Missing null checks for `this.gameDefinition` which could also cause undefined access errors
-- **Fix:** 
-  - **0779e03:** Added player creation in `onJoin` handler (`packages/server/src/rooms/GameRoom.ts:65-71`)
-  - **Current:** Added null checks for `this.gameDefinition` in `onCreate()` and `onJoin()` with clear error messages
-  - **Current:** Added comprehensive logging to track room lifecycle and player creation
-- **Testing:** 
-  - Tests mocked at the wrong level (mocked entire `colyseus` module) so they passed despite the bug
-  - Added unit tests in `GameRoom.test.ts` and improved `connection.test.ts`
-  - Added integration tests in `GameRoom.integration.test.ts` with 7 new tests covering player creation and error scenarios
-- **Logging:** Added `[GameRoom]` prefixed logging at INFO, ERROR, and DEBUG levels for debugging
-
-### Colyseus Schema Serialization Error (Bun)
-- **Issue:** `TypeError: undefined is not an object (evaluating 'type[Symbol.metadata]')` during serialization.
-- **Cause:** Legacy `defineTypes` shorthand for arrays (e.g., `["string"]`) fails in Bun due to missing/unresolved metadata required by Colyseus 0.17+ schema engine.
-- **Fix:** Use modern `@type` decorators instead of `defineTypes`. For arrays, use the explicit object format: `@type({ array: "string" })`.
-- **Reference:** `packages/server/src/schema/GameStateSchema.ts`
-
-### TypeScript Build Configuration
-- **Issue:** `tsc` not outputting to `dist/` directory despite `outDir` config
-- **Fix:** Delete `tsconfig.tsbuildinfo` to force fresh build - turbo caching was skipping compilation
-- **Reference:** `packages/server/tsconfig.tsbuildinfo`
-
-### Colyseus v0.17 Client/Server Version Mismatch
-- **Issue:** `joinOrCreate` fails with `Cannot read properties of undefined (reading 'name')` - client expects `response.room.name` but server returns `name` directly at top level
-- **Cause:** Using `colyseus.js` v0.16 client with Colyseus v0.17 server. v0.17 changed the seat reservation response format and the client package was renamed from `colyseus.js` to `@colyseus/sdk`
-- **Fix:** Upgraded client from `colyseus.js: ^0.16.0` to `@colyseus/sdk: ^0.17.26` in `packages/game-client/package.json` and updated all imports from `"colyseus.js"` to `"@colyseus/sdk"`
-- **Files:** `packages/game-client/package.json`, `packages/game-client/src/*.ts`, `packages/game-client/tests/*.test.ts`
-- **Reference:** [Colyseus Migration Guide v0.17](https://docs.colyseus.io/migrating/0.17)
-
-### Vitest v4 Mocking Changes
-- **Issue:** Vitest v4 changed how mocks are hoisted, causing `ReferenceError: Cannot access 'MockClient' before initialization` when mock classes are defined at module level
-- **Cause:** In Vitest v4, `vi.mock()` factory functions are hoisted to the top of the file, so any variables (including class definitions) referenced in the mock must be defined inside the factory function
-- **Fix:** Move mock class definitions inside the `vi.mock()` factory function. Use prototype methods instead of instance properties to allow tests to modify `Client.prototype.joinOrCreate`
-- **Files:** `packages/game-client/tests/GameClient.test.ts`, `packages/game-client/tests/connection.test.ts`, `packages/game-client/tests/state.test.ts`
-- **Reference:** [Vitest Migration Guide v4](https://vitest.dev/guide/migration.html#vi-mock-changes)
-
-### Biome v2 Configuration Changes
-- **Issue:** Biome v2 has different configuration keys - `organizeImports` was removed/renamed, `noConsoleLog` rule no longer exists
-- **Cause:** Biome v2 reorganized configuration structure and rule names
-- **Fix:** Removed unsupported `organizeImports` top-level key, removed `noConsoleLog` from suspicious rules section
-- **Files:** `biome.json`
-- **Reference:** [Biome Migration Guide](https://biomejs.dev/guides/migrate-to-v2/)
-
-### TypeScript 6.0 Compatibility
-- **Issue:** TypeScript 6.0 has stricter type checking and new features
-- **Fix:** No code changes required - all existing code passes with TypeScript 6.0.2
-- **Files:** `package.json`, `packages/*/package.json`, `games/wit-clash/package.json`
-
-### WitClash Lobby Multi-step Joining
-- **Pattern:** Implemented a three-step lobby joining flow:
-  1. **Connection Step:** Host auto-creates room via `manager.create()` (if `createGameOnLoad` prop is set), guests join via `manager.join(roomCode)`.
-  2. **Name Entry Step:** Once connected, players enter a nickname. This sends `SET_NAME` to the server.
-  3. **Waiting Room:** Players only appear in the lobby list once `isReady` is true (set after `SET_NAME`).
-- **Implementation:** 
-  - `GameConnectionManager` (Svelte 5 SDK) uses `$state` runes for `connectionStatus` and `room`.
-  - Server-side `GameRoom` generates a 4-letter `roomCode` and handles `SET_NAME` messages.
-  - `isReady` property on `PlayerSchema` controls player visibility in the lobby list.
+### Colyseus Schema 5 is decorator-free
+- **Rule:** Define state with `schema({ field: t.string().default("") }, "Name")` and extend with `BaseGameState.extend({ ... }, "Name")`. `experimentalDecorators`, `emitDecoratorMetadata`, `useDefineForClassFields: false`, Vitest `ts-transform` plugins and `oxc: false` were deleted. Do not reintroduce them.
+- **Limits:** 63 fields per schema class; primitive collection elements are type names (`t.map("number")`).
+- **Reference:** `packages/shared/src/schema/BaseGameState.ts`, `.AGENTS/docs/libraries/colyseus-schema.md`
 
 ### Browser shows "Connection Error / Disconnected from server" on every load
-- **Issue:** Every visitor, host or guest, saw the error screen. The app was unusable.
-- **Cause:** A render deadlock in `App.svelte`. `connectionStatus` initialises to `"disconnected"`, and `App.svelte` rendered `<Lobby>` only when `"connected"` while routing `"disconnected"` to an error page. But `<Lobby>` owned the entire Host/Join UI and the auto-create effect — the component that starts a connection was mounted only after a connection existed. Nothing could ever connect.
-- **The server was never at fault.** A live probe confirmed room creation, 4-letter codes, `/api/resolve-code`, second-player join, host/player roles and `SET_NAME` all worked. Do not re-debug the backend for this symptom.
-- **Fix:** `AppViewModel.screen` routes every non-connected status to the Welcome screen; errors render as a dismissible banner there, never as a destination.
-- **Reference:** `games/wit-clash/ui/viewmodels/AppViewModel.svelte.ts`, `.AGENTS/plans/03-screen-router.md`
+- **Cause (was):** the component that starts a connection was mounted only after a connection existed, so nothing could ever connect.
+- **Rule:** `AppViewModel.screen` routes every non-connected status to the Welcome screen; errors render as a dismissible toast, never as a destination. Do not re-debug the backend for this symptom.
+- **Reference:** `games/wit-clash/ui/viewmodels/AppViewModel.ts`
 
-### Client actions silently rejected
-- **Issue:** Buttons appeared to work but the game never advanced.
-- **Cause:** Three naming schemes. The client sent `START_GAME`, the Zod `GameActionSchema` accepted only `StartGame`, and the phase definitions used a third set. `safeParse` failed and `machine.send` was never reached.
-- **Fix:** All action names are `SCREAMING_SNAKE_CASE` in the schema, the phase definitions and the client. Adding an action means editing all three.
-- **Reference:** `packages/shared/src/schemas/game-actions.ts`, `.AGENTS/plans/01-action-protocol.md`
+### Never mock the module under test
+- **Rule:** Rule tests drive the real `GameRuntime` through `FakeHost` with the real `WitClashState`; room tests boot a real Colyseus server with `bootTestServer`; UI tests use a real state object through `StubRoom`. Mocking `colyseus` and the schema decorator hid real bugs twice (a missing player on join, a no-op schema serialiser).
+- **Reference:** `games/wit-clash/tests/game/support.ts`, `packages/server/src/testing/index.ts`
 
-### Over-mocking makes tests vacuous
-- **Issue:** `vitest.setup.ts` globally replaced `@colyseus/schema`'s `type` decorator with a no-op, so every schema test asserted against plain objects with no serialiser.
-- **Cause:** A workaround for a Bun decorator bug — but Vitest runs on Node, where it is unnecessary.
-- **Fix:** Mock removed. `GameStateSchema.test.ts` now asserts `Symbol.metadata` exists, which fails loudly if anyone re-adds it.
-- **Rule:** Never mock the module under test. This is the second time it hid a real bug — see the GameRoom `onJoin` entry above.
+### Svelte coverage and template text
+- **Rule:** In `.svelte` templates, text mixing literal and interpolated values is written as one template literal: `{`Matchup ${vm.n} of ${vm.total}`}`, never `Matchup {vm.n} of {vm.total}`.
+- **Cause:** The Svelte compiler emits `${vm.n ?? ''}` for each bare interpolation in mixed text. The unreachable `''` side shows up as an uncovered v8 branch. A template literal is known to be defined, so no fallback is emitted.
+- **Biome:** `html.experimentalFullSupportEnabled` is on, so Svelte templates are linted and the old `.svelte` unused-import override is gone. Every `<button>` needs `type="button"` (`a11y/useButtonType`).
 
-### Biome False Positives
-- `Lobby.svelte` currently has `biome-ignore` for `isHost` being "unused" despite its usage in the template; Biome's Svelte 5 support is still maturing.
+### A `$derived` that returns a schema instance never re-runs
+- **Cause:** Colyseus mutates schema instances in place and `$derived` deduplicates by identity, so `$derived(state.matchups[i])` readers never update.
+- **Fix:** Expose plain getters, or derive primitives and fresh snapshots (`[...state.items].map(...)`), as the viewmodels do.
+- **Reference:** `docs/framework/README.md` (Reactivity)
 
-### Type Casting in Server
-- `GameRoom.onJoin` uses manual casting for `options.name` as `options` is `Record<string, unknown>`.
+### Production bundle shipped Svelte's dev runtime
+- **Cause:** `resolve.conditions: ["browser", "development"]` applied to every mode.
+- **Fix:** `development` is added only for `vite serve`; the build emits component CSS to a file. Both changes cut about 11 kB of JS from the bundle.
+- **Reference:** `games/wit-clash/vite.config.ts`
+
+### UI integration tests and the global `WebSocket`
+- **Cause:** Node's built-in `WebSocket` dispatches events jsdom's `Event` does not recognise, and `@colyseus/sdk` picks its WebSocket once, at import.
+- **Fix:** `games/wit-clash/tests/setup.ts` hides the global while the SDK is first imported so it falls back to `ws`.
+
+### StateView entries must be hidden before they are deleted
+- **Cause:** `GameRoom` remembers every ref passed to `ctx.showTo` and re-adds it to a reconnecting client's view.
+- **Rule:** call `ctx.hideFrom(playerId, entry)` before deleting a `.view()` entry from the state.
+- **Reference:** `packages/server/src/rooms/GameRoom.ts`
 
 ## Extension Points
 
-| To add… | Do this |
+Paths are relative to `games/wit-clash/` unless they start with `packages/`. Tests go next to the layer you touch: `tests/game/` (rules, via `Table` in `tests/game/support.ts`), `tests/viewmodels/`, `tests/screens/`.
+
+| To add... | Do this |
 |---|---|
-| A category or prompt | Drop a `.jsonc` file into `games/wit-clash/content/categories/` and restart the server. No code change. |
-| A game phase/screen | Add the phase to `games/wit-clash/index.ts`, one line to `PHASE_TO_SCREEN` in `AppViewModel.svelte.ts`, and a screen component. |
-| A client action | Add it to `GameActionSchema`, the phase's `actions`, and a `room.send("ACTION", …)` call. All three, `SCREAMING_SNAKE_CASE`. |
-| A scoring rule | Edit `packages/core/src/scoring.ts`. All score mutation goes through `awardPoints`. |
-| A timed phase | Set `state.phaseEndsAt` server-side and use the `Countdown` view model client-side. The server always owns the clock. |
-| Quiplash-style prompt pairing | Answers already carry a per-answer id and server-private authorship. Add a `promptId` to `AnswerSchema` and assign prompts per player in `enterPrompting`. |
+| A category or prompt | Drop a `.jsonc` file into `content/categories/` and restart the server. No code. Category ids and prompt ids must be unique across all files (used-prompt tracking is by id). |
+| A game phase | 1. Add the name to `PHASE` in `src/phaseNames.ts`. 2. Create `src/phases/<Name>.ts` exporting a `WitClashPhase` (`onEnter`, `duration` + `onTimeout`, `onRosterChange`, `actions`). 3. Add one line to `phases` in `src/game.ts`. 4. Add any synced field to `src/state.ts` (the client contract) and server-only data to `src/private.ts`. Move between phases with `ctx.transition(PHASE.X)` only. |
+| A screen for a phase | 1. `ui/viewmodels/<Name>ViewModel.ts` (reads `manager.state`, never recomputes rules). 2. `ui/screens/<Name>.svelte`. 3. One entry in `PHASE_SCREENS` in `ui/screens/index.ts`: `[PHASE.X]: { component, waitingLabel }` (a missing phase is a compile error). `AppViewModel` routes, `App.svelte` renders and `JoinNextRound` labels from that table. A screen must also render with no seat (`manager.isSpectator`, the TV display): no inputs, progress shown large. |
+| A client action | 1. Name in `ACTION` (`src/actionNames.ts`, `SCREAMING_SNAKE_CASE`; `START_GAME`, `KICK_PLAYER`, `SET_OPTIONS` are reserved). 2. zod payload schema and payload type in `src/actions.ts`. 3. `[ACTION.X]: defineAction({ from, payload, handler })` in the accepting phase's `actions`. 4. `manager.sendAction(ACTION.X, payload)` from a viewmodel; it resolves with an `ActionResult` and rejections also land in `manager.lastServerError`. Reject with `ctx.reject(ErrorCode.NOT_ALLOWED, "why")`. |
+| An option | Add the field, default and range to `WitClashOptionsSchema` in `src/options.ts` (the single source). Read it as `ctx.options.<name>` in phases. The client reads the published `state.options` JSON through the same schema (see `LobbySettingsViewModel`). The lobby settings form is generated from the same schema (`ui/optionFields.ts` reads the bounds through `z.toJSONSchema`): every bounded numeric field gets a labelled number input for the host and a read-only line for everyone else, so a new numeric option needs no UI edit. The host changes options with the built-in `SET_OPTIONS`. |
+| A timed phase | Set `duration` (ms, or a function of `ctx`) and `onTimeout` on the phase; the runtime writes `state.phaseEndsAt` and the server owns the clock. Client side: `manager.countdown()`, as in `ui/viewmodels/CategoryVoteViewModel.ts`. |
+| A scoring rule | Edit `src/scoring.ts` (`calculateMatchupAwards`, `settleMatchup`, constants). Points are applied in `src/phases/MatchupReveal.ts` through `awardPoints` from `@partygame/core`. |
+| A whole new game | 1. `games/<name>/` with its own `package.json` (copy `games/wit-clash/package.json`; the `games/*` workspace and turbo pick it up), `tsconfig.json`, `vite.config.ts`, `index.html`. 2. `src/state.ts` extending `BaseGameState` from `@partygame/shared/schema`; `src/private.ts`; `src/phaseNames.ts`, `src/actionNames.ts`, `src/actions.ts` (`actionFactory`); `src/phases/*.ts`; `src/game.ts` with `defineGame`. 3. `server.ts`: `startServer({ games: [{ roomName, definition, stateClass }] })` from `@partygame/server/bun`. 4. `ui/`: a `GameConnectionManager<YourState>` in `main.ts` with its own `storagePrefix`, plus screens and viewmodels. 5. Add its vitest configs to `projects` in the root `vitest.config.mts`. `launch.ts` is wit-clash specific (`GAME_DIR`). Guide: `docs/framework/README.md`. |
+| A framework feature | Host built-ins live in `packages/core/src/runtime/lobby.ts`; the runtime in `packages/core/src/runtime/GameRuntime.ts`; seats, reconnection and views in `packages/server/src/rooms/GameRoom.ts`; wire names and error codes in `packages/shared/src/protocol.ts`. The runtime stays Colyseus-free: new needs go through the `RuntimeHost` interface (`packages/core/src/runtime/types.ts`) and `FakeHost`. |
+
+<!-- BEGIN:turborepo-agent-rules -->
+
+# This is NOT the Turborepo you know
+
+Turborepo configuration, task behavior, and CLI commands can vary between installed versions and may differ from your training data. Resolve the `turbo` package from this file's directory or relevant workspace; in monorepos, it may not be visible from the repository root. For example, run `node -p "require.resolve('turbo/package.json')"` from a workspace that depends on `turbo`.
+
+Read `docs/README.md` inside that installed package first, then read the relevant pages from its `docs/` directory before changing Turborepo configuration or commands. Heed deprecation notices. These bundled docs match the installed package version and are available without network access.
+
+This block is written and re-added by `turbo` before repository-scoped commands when an AI agent is detected. In the Turborepo source repository, its template is defined in `crates/turborepo-cli/src/cli/agent_guidance.rs`. Removing the managed block while updates are enabled means a later qualifying invocation will add it again. Set `"agentGuidance": false` in the root `turbo.json` or `turbo.jsonc` to opt out; this does not remove an existing block. Keep the block committed with your work to avoid an uncommitted change on the next agent invocation.
+<!-- END:turborepo-agent-rules -->

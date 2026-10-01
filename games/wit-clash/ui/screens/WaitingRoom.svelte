@@ -1,45 +1,69 @@
 <script lang="ts">
-import type { GameConnectionManager } from "@partygame/game-client/connection";
+import { untrack } from "svelte";
+import LobbySettings from "../components/LobbySettings.svelte";
+import NameInput from "../components/NameInput.svelte";
+import QrCode from "../components/QrCode.svelte";
+import type { WitClashManager } from "../manager.js";
 import { WaitingRoomViewModel } from "../viewmodels/WaitingRoomViewModel.svelte.js";
 
-const { manager }: { manager: GameConnectionManager } = $props();
+const { manager }: { manager: WitClashManager } = $props();
 
-// svelte-ignore state_referenced_locally -- manager is a stable long-lived instance, never reassigned by the parent
-const vm = new WaitingRoomViewModel(manager);
+const vm = untrack(() => new WaitingRoomViewModel(manager));
 
-$effect(() => {
-  return () => vm.destroy();
-});
+$effect(() => () => vm.destroy());
 </script>
 
 <div class="waiting-room">
+  {#if vm.notice}
+    <p class="notice" role="status">{vm.notice}</p>
+  {/if}
+
   <div class="room-info">
     <p>Room Code</p>
     <div class="room-code-display">
       <span class="room-code">{vm.roomCode}</span>
-      <button class="copy-btn" onclick={() => vm.copyCode()}>Copy</button>
+      {#if !vm.isSpectator}
+        <button type="button" class="copy-btn" onclick={() => vm.copyCode()}>Copy</button>
+      {/if}
+    </div>
+    <div class="qr-box">
+      <QrCode text={vm.shareUrl} />
     </div>
     <p class="share-instructions">
-      Share this link:
+      Scan to join, or open
       <code>{vm.shareUrl}</code>
     </p>
   </div>
 
   <div class="players-section">
-    <h3>Players ({vm.players.length}/{vm.minPlayers}+)</h3>
+    <h3>{`Players (${vm.readyCount} ready, ${vm.minPlayers} to ${vm.maxPlayers} needed)`}</h3>
+    {#if vm.spectatorCount > 0}
+      <p class="watching">{`${vm.spectatorCount} watching on a TV`}</p>
+    {/if}
     <ul class="player-list">
-      {#each vm.players as player}
-        <li class:current-player={player.id === vm.localPlayer?.id} class:disconnected={!player.isConnected}>
-          <span class="player-name">{player.name ?? "Unknown"}</span>
+      {#each vm.players as player (player.id)}
+        <li class:current-player={player.isMe} class:disconnected={!player.isConnected}>
+          <span class="player-name">{player.isReady ? player.name : "Choosing a name..."}</span>
           <div class="badges">
-            {#if player.id === vm.localPlayer?.id}
+            {#if player.isMe}
               <span class="you-badge">(You)</span>
             {/if}
-            {#if player.role === "host"}
+            {#if player.isHost}
               <span class="host-badge">Host</span>
             {/if}
             {#if !player.isConnected}
               <span class="disconnected-badge">(Disconnected)</span>
+            {/if}
+            {#if vm.canKick(player)}
+              {#if vm.kickCandidate === player.id}
+                <span class="kick-confirm">Remove?</span>
+                <button type="button" class="kick-yes" onclick={() => vm.confirmKick()}>Yes</button>
+                <button type="button" class="kick-no" onclick={() => vm.cancelKick()}>No</button>
+              {:else}
+                <button type="button" class="kick-btn" onclick={() => vm.askKick(player.id)}>
+                  {`Remove ${player.name || "player"}`}
+                </button>
+              {/if}
             {/if}
           </div>
         </li>
@@ -47,30 +71,26 @@ $effect(() => {
     </ul>
   </div>
 
-  <div class="your-name">
-    <label for="playerName">Your name</label>
-    <input
-      id="playerName"
-      type="text"
-      placeholder="Enter your name"
-      maxlength="20"
-      value={vm.draftName}
-      oninput={(e) => vm.setName((e.target as HTMLInputElement).value)}
-    />
-  </div>
+  <LobbySettings {manager} />
+
+  {#if !vm.isSpectator}
+    <NameInput field={vm.nameField} />
+  {/if}
 
   {#if vm.isHost}
     <div class="host-controls">
-      <button class="start-btn" disabled={!vm.canStart} onclick={() => vm.start()}>
-        Start Game ({vm.readyCount}/{vm.minPlayers})
+      <button type="button" class="start-btn" disabled={!vm.canStart} onclick={() => vm.start()}>
+        {`Start Game (${vm.readyCount}/${vm.minPlayers})`}
       </button>
-      {#if vm.readyCount < vm.minPlayers}
-        <p class="hint">Need at least {vm.minPlayers} players to start</p>
+      {#if !vm.canStart}
+        <p class="hint">{`Need at least ${vm.minPlayers} players to start`}</p>
       {/if}
     </div>
   {:else}
-    <p class="waiting-msg">Waiting for host to start the game...</p>
+    <p class="waiting-msg">Waiting for the host to start the game...</p>
   {/if}
+
+  <button type="button" class="leave-btn" onclick={() => vm.leave()}>Leave game</button>
 </div>
 
 <style>
@@ -154,6 +174,42 @@ $effect(() => {
     color: #444;
   }
 
+  .watching {
+    margin: 0 0 12px;
+    color: #666;
+    font-size: 0.9rem;
+  }
+
+  .qr-box {
+    width: 180px;
+    margin: 0 auto;
+  }
+
+  .kick-btn,
+  .kick-yes,
+  .kick-no {
+    border: none;
+    border-radius: 6px;
+    padding: 4px 10px;
+    cursor: pointer;
+    font-size: 0.8rem;
+  }
+
+  .kick-btn,
+  .kick-no {
+    background: #e0e0e0;
+  }
+
+  .kick-yes {
+    background: #b91c1c;
+    color: white;
+  }
+
+  .kick-confirm {
+    font-size: 0.85rem;
+    color: #b91c1c;
+  }
+
   .player-list {
     list-style: none;
     padding: 0;
@@ -212,28 +268,22 @@ $effect(() => {
     font-size: 0.8rem;
   }
 
-  .your-name {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .your-name label {
-    font-size: 0.9rem;
-    color: #666;
-  }
-
-  .your-name input {
-    padding: 10px 14px;
-    font-size: 1rem;
-    border: 2px solid #eee;
+  .notice {
+    margin: 0;
+    padding: 10px 16px;
     border-radius: 8px;
-    transition: border-color 0.2s;
+    background: #fff3e0;
+    color: #e65100;
+    text-align: center;
   }
 
-  .your-name input:focus {
-    outline: none;
-    border-color: #2196F3;
+  .leave-btn {
+    align-self: center;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    background: #e0e0e0;
+    cursor: pointer;
   }
 
   .host-controls {

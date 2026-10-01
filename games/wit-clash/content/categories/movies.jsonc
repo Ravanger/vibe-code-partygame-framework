@@ -3,23 +3,108 @@
   "name": "Movies",
   "emoji": "🎬",
   "prompts": [
-    { "id": "movies-1", "text": "A movie sequel nobody asked for." },
-    { "id": "movies-2", "text": "The worst possible tagline for a romantic comedy." },
-    { "id": "movies-3", "text": "What the villain was thinking during the hero's big speech." },
-    { "id": "movies-4", "text": "A horror movie where the monster is just mildly inconvenienced." },
-    { "id": "movies-5", "text": "The director's commentary excuse for a terrible plot hole." },
-    { "id": "movies-6", "text": "A superhero whose only power is showing up late." },
-    { "id": "movies-7", "text": "The rejected title of a famous blockbuster." },
+    {
+      "id": "movies-1",
+      "text": "The sequel nobody asked for, with a subtitle that makes it worse."
+    },
+    {
+      "id": "movies-2",
+      "text": "The worst tagline for a romantic comedy about two rival accountants."
+    },
+    { "id": "movies-3", "text": "What the villain is thinking during the hero's big speech." },
+    { "id": "movies-4", "text": "A horror movie where the monster is only mildly inconvenienced." },
+    { "id": "movies-5", "text": "The director's commentary excuse for a gaping plot hole." },
+    { "id": "movies-6", "text": "A superhero whose only power is arriving fashionably late." },
+    { "id": "movies-7", "text": "The rejected working title of a famous blockbuster." },
     {
       "id": "movies-8",
-      "text": "What the extras are whispering about in the background of the scene."
-    }
+      "text": "What the extras whisper in the background of a very serious scene."
+    },
+    { "id": "movies-9", "text": "A famous movie title made worse by adding one word." },
+    {
+      "id": "movies-10",
+      "text": "The worst thing to shout in the theater during the big proposal scene."
+    },
+    { "id": "movies-11", "text": "A trailer voiceover for a film about your Tuesday." },
+    { "id": "movies-12", "text": "The sidekick with the most suspiciously specific skill." },
+    {
+      "id": "movies-13",
+      "text": "The end-credits disclaimer for a film that clearly harmed something other than animals."
+    },
+    { "id": "movies-14", "text": "What the popcorn says to the soda during the sad part." },
+    {
+      "id": "movies-15",
+      "text": "The cheesy one-liner after defeating the final boss with a stapler."
+    },
+    { "id": "movies-16", "text": "A job for a rom-com leading man that ruins the romance." },
+    { "id": "movies-17", "text": "A disaster movie where the disaster is oddly minor." },
+    { "id": "movies-18", "text": "The most pretentious entry at a film festival." },
+    { "id": "movies-19", "text": "What the dog in the movie knew all along." },
+    { "id": "movies-20", "text": "The kids' cartoon sequel nobody was emotionally ready for." },
+    {
+      "id": "movies-21",
+      "text": "The thing real people do constantly that action heroes never do."
+    },
+    { "id": "movies-22", "text": "What the stunt double says about the star in the break room." },
+    {
+      "id": "movies-23",
+      "text": "Why the Western showdown at high noon got pushed back to 12:30."
+    },
+    { "id": "movies-24", "text": "The line that guarantees the heist fails." },
+    { "id": "movies-25", "text": "The tagline of a thriller set entirely in a bakery." },
+    {
+      "id": "movies-26",
+      "text": "The real reason the film ended on a cliffhanger, according to the accountant."
+    },
+    { "id": "movies-27", "text": "What the monster's mom says after the horror movie ends." },
+    {
+      "id": "movies-28",
+      "text": "A movie genre made for people who fall asleep in the first ten minutes."
+    },
+    { "id": "movies-29", "text": "The member of the heist crew with the least useful specialty." },
+    {
+      "id": "movies-30",
+      "text": "The thing the horror-movie family finds in the attic and decides to keep anyway."
+    },
+    {
+      "id": "movies-31",
+      "text": "A movie review from someone who clearly only watched the trailer."
+    },
+    { "id": "movies-32", "text": "The wizard's side gig after the final battle." },
+    {
+      "id": "movies-33",
+      "text": "The snack that should get you banned from movie theaters for life."
+    },
+    {
+      "id": "movies-34",
+      "text": "The action hero's \"quiet retirement\" that somehow has an explosion every week."
+    },
+    {
+      "id": "movies-35",
+      "text": "The last scene of the biopic about your life, judging by your search history."
+    },
+    {
+      "id": "movies-36",
+      "text": "A talking-animal movie about the very adult problem of filing taxes."
+    },
+    { "id": "movies-37", "text": "The two most mismatched partners in buddy-cop history." },
+    {
+      "id": "movies-38",
+      "text": "The item the hero forgot at home before the final battle, and it really mattered."
+    },
+    { "id": "movies-39", "text": "The award category the Oscars urgently need." },
+    { "id": "movies-40", "text": "A wildly unnecessary tragic backstory for a minor character." }
   ],
   "tieBreakers": [
     {
       "id": "movies-tb-1",
       "text": "An Oscar acceptance speech that goes completely off the rails."
     },
-    { "id": "movies-tb-2", "text": "The post-credits scene everyone walked out before seeing." }
+    {
+      "id": "movies-tb-2",
+      "text": "What happens in the post-credits scene everyone walked out before seeing."
+    },
+    { "id": "movies-tb-3", "text": "A one-sentence pitch for the worst movie ever greenlit." },
+    { "id": "movies-tb-4", "text": "The twist ending nobody saw coming, or wanted." }
   ]
 }
