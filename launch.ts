@@ -6,6 +6,8 @@
  *   bun run launch:dev [--no-browser]     same as above
  *   bun run launch:host [--no-browser]    dev, plus the LAN addresses guests join on
  *   bun run launch:prod [--no-browser]    build the client, serve it on http://localhost:3000
+ *   bun run launch:bots [--no-browser]    dev, plus a room opened for you: the browser lands in it and
+ *                                         3 bots join once you enter your name (any mode: --bots[=1..7])
  *
  * Ctrl+C stops everything. If any child dies, the rest is stopped and the launcher exits with 1.
  */
@@ -18,6 +20,7 @@ import { connect } from "node:net";
 import { networkInterfaces } from "node:os";
 import { extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { BotTable } from "./games/wit-clash/bots/botTable.js";
 
 const ROOT = fileURLToPath(new URL(".", import.meta.url));
 const GAME_DIR = join(ROOT, "games", "wit-clash");
@@ -48,6 +51,7 @@ const MIME: Record<string, string> = {
 const children = new Set<ChildProcess>();
 let httpServer: Server | undefined;
 let stopping = false;
+let botTable: BotTable | undefined;
 
 const log = (message: string): void => console.log(`[Launch] ${message}`);
 const sleep = (ms: number): Promise<void> => new Promise((done) => setTimeout(done, ms));
@@ -70,6 +74,14 @@ function shutdown(code: number): never {
   for (const child of children) killTree(child);
   httpServer?.close();
   process.exit(code);
+}
+
+let stopRequested = false;
+function stop(code: number): void {
+  if (stopRequested) return;
+  stopRequested = true;
+  const leaving = botTable?.leave().catch(() => undefined);
+  Promise.race([leaving, sleep(1000)]).finally(() => shutdown(code));
 }
 
 function fail(message: string): never {
@@ -218,7 +230,31 @@ function openBrowser(url: string): void {
   child.unref();
 }
 
-async function launch(mode: Mode, shouldOpenBrowser: boolean): Promise<void> {
+async function startBots(
+  count: number,
+  clientUrl: string,
+  shouldOpenBrowser: boolean,
+): Promise<void> {
+  const table = new BotTable({
+    endpoint: `ws://localhost:${GAME_SERVER_PORT}`,
+    apiPort: API_SERVER_PORT,
+    bot: { log: (line) => console.log(`[Bots] ${line}`) },
+  });
+  botTable = table;
+  const code = await table.open();
+  const url = `${clientUrl}/?code=${code}`;
+  log(`Room ${code}: bots join once you have entered your name`);
+  if (shouldOpenBrowser) openBrowser(url);
+  else log(`Open ${url}`);
+  const bots = await table.seatBots({ count });
+  for (const bot of bots) log(`${bot.name} joined ${code}`);
+}
+
+async function launch(
+  mode: Mode,
+  shouldOpenBrowser: boolean,
+  botCount: number | undefined,
+): Promise<void> {
   const clientPort = mode === "prod" ? PRODUCTION_PORT : CLIENT_DEV_PORT;
   await assertPortsFree({
     "game server": GAME_SERVER_PORT,
@@ -238,22 +274,33 @@ async function launch(mode: Mode, shouldOpenBrowser: boolean): Promise<void> {
     for (const lan of lanUrls(clientPort)) log(`Guests on this network: ${lan}`);
   }
   log("Press Ctrl+C to stop");
-  if (shouldOpenBrowser) openBrowser(url);
+  if (botCount === undefined) {
+    if (shouldOpenBrowser) openBrowser(url);
+    return;
+  }
+  startBots(botCount, url, shouldOpenBrowser).catch((error: unknown) =>
+    log(`Bots stopped: ${error instanceof Error ? error.message : String(error)}`),
+  );
 }
 
+const USAGE = "Usage: bun run launch.ts [dev|host|prod] [--no-browser] [--bots[=1..7]]";
 const args = process.argv.slice(2);
-const flags = new Set(args.filter((arg) => arg.startsWith("--")));
+const flags = args.filter((arg) => arg.startsWith("--"));
 const positional = args.filter((arg) => !arg.startsWith("--"));
 const modeArg = positional[0] ?? "dev";
-const unknownFlags = [...flags].filter((flag) => flag !== "--no-browser");
+const botsFlag = flags.find((flag) => flag === "--bots" || flag.startsWith("--bots="));
+const botCount = botsFlag === undefined ? undefined : Number(botsFlag.split("=")[1] ?? "3");
+const unknownFlags = flags.filter((flag) => flag !== "--no-browser" && flag !== botsFlag);
+const badBots =
+  botCount !== undefined && !(Number.isInteger(botCount) && botCount >= 1 && botCount <= 7);
 
-if (!isMode(modeArg) || positional.length > 1 || unknownFlags.length > 0) {
-  console.error("Usage: bun run launch.ts [dev|host|prod] [--no-browser]");
+if (!isMode(modeArg) || positional.length > 1 || unknownFlags.length > 0 || badBots) {
+  console.error(USAGE);
   process.exit(2);
 }
 
-process.on("SIGINT", () => shutdown(0));
-process.on("SIGTERM", () => shutdown(0));
-launch(modeArg, !flags.has("--no-browser")).catch((error: unknown) =>
+process.on("SIGINT", () => stop(0));
+process.on("SIGTERM", () => stop(0));
+launch(modeArg, !flags.includes("--no-browser"), botCount).catch((error: unknown) =>
   fail(error instanceof Error ? error.message : String(error)),
 );

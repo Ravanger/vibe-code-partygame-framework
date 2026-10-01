@@ -16,10 +16,12 @@
     "format": "biome format --write .",
     "typecheck": "turbo typecheck",
     "dev": "turbo run dev dev:server",
+    "bots": "bun run games/wit-clash/bots/cli.ts",
     "launch": "bun run launch.ts",
     "launch:dev": "bun run launch.ts dev",
     "launch:host": "bun run launch.ts host",
     "launch:prod": "bun run launch.ts prod",
+    "launch:bots": "bun run launch.ts dev --bots",
     "test:coverage": "vitest run --coverage",
     "typecheck:launch": "tsc --noEmit -p tsconfig.json",
     "verify": "biome check . && tsc --noEmit -p tsconfig.json && tsc --noEmit -p games/wit-clash/tsconfig.verify.json && vitest run --coverage"

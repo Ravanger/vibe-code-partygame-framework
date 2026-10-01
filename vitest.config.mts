@@ -14,7 +14,12 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "html", "lcov"],
       reportsDirectory: "./coverage",
-      include: ["packages/*/src/**/*.ts", "games/*/src/**/*.ts", "games/*/ui/**/*.{ts,svelte}"],
+      include: [
+        "packages/*/src/**/*.ts",
+        "games/*/src/**/*.ts",
+        "games/*/ui/**/*.{ts,svelte}",
+        "games/*/bots/**/*.ts",
+      ],
       exclude: [
         "**/node_modules/**",
         "**/dist/**",
@@ -25,6 +30,7 @@ export default defineConfig({
         "games/wit-clash/ui/main.ts",
         "packages/server/src/bun.ts",
         "games/wit-clash/server.ts",
+        "games/wit-clash/bots/cli.ts",
       ],
       thresholds: { lines: 100, functions: 100, branches: 100, statements: 100 },
     },

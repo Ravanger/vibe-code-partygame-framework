@@ -41,6 +41,8 @@
 | `bun run lint` | `biome check .` through the local binary (`./node_modules/.bin/biome.exe check .` on Windows; not `npx`) |
 | `bun run test:coverage` | `vitest run --coverage` over all projects, 100% thresholds |
 | `bun run verify` | lint, typecheck of `launch.ts` and the game, coverage |
+| `bun run launch:bots` | dev launch that also opens a room, lands your browser in it and seats 3 bots once you enter your name (`launch.ts <mode> --bots[=1..7]`) |
+| `bun run bots <CODE> [count]` | WitClash bots join a room created in the browser and play every turn (`--endpoint`, `--api-port`); Ctrl+C removes them |
 | `bun run launch` / `launch:host` / `launch:prod` | game server (2567), API (3001), Vite (5173) or built client (3000); `--no-browser` to skip opening one |
 
 ## Library Documentation References

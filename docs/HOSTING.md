@@ -9,7 +9,7 @@ bun run launch
 
 `bun run launch` starts the game server, the code-lookup API and the Vite client, waits until each answers, and opens
 `http://localhost:5173`. Click **Host Game**: you get a four-letter room code and a share link
-(`http://<host>:5173/?code=ABCD`) that joins a guest straight into your room. Each player enters a name. The game takes 3 to 8 players: the host presses **Start Game**, and it also starts by itself once at least 3
+(`http://<host>:5173/?code=ABCD`) that joins a guest straight into your room. Each player enters a name. The game takes 3 to 8 players: the host presses **Start Game** once at least 3
 players are in and every one of them has entered a name.
 
 Press Ctrl+C to stop everything. If any of the three processes dies, the launcher stops the rest and exits with an error.
@@ -52,6 +52,16 @@ ipconfig getifaddr en0
 # Linux
 hostname -I
 ```
+
+## Playtesting alone
+
+```bash
+bun run launch:bots          # dev stack + your room; 3 bots join once you enter your name
+bun run bots ABCD 3          # add 3 bots (1 to 7) to a room you already created
+```
+
+You are the host: press Start Game (3 or more players, bots included) and Next Round; the game does not start by itself. The bots answer and vote on their own.
+For another number of bots use `bun run launch --bots=N` (1 to 7); `bun run bots` takes `--endpoint` and `--api-port`. Ctrl+C removes the bots.
 
 ## Joining by QR Code
 

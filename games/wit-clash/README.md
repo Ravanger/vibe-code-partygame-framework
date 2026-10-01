@@ -20,6 +20,7 @@ src/
   content/           category files (.jsonc) loader
   loadContent.ts     loads and validates the content directory for server.ts
 ui/                  Svelte client, built on @partygame/game-client (see below)
+bots/                dev tool: BotPlayer, joinBots, BotTable and the `bun run bots` CLI (see "Playtesting alone")
 server.ts            Bun entry: loads the content, then startServer from @partygame/server/bun
 content/categories/  host-editable .jsonc categories, at least 3 needed
 ```
@@ -179,6 +180,16 @@ bun run launch         # repo root: game server, API and Vite, waits until all a
 bun run dev            # repo root: Vite client and game server through turbo
 bun run dev:server     # this package: game server only (bun --hot server.ts)
 ```
+
+## Playtesting alone
+
+```bash
+bun run launch:bots          # dev stack + your room; 3 bots join once you enter your name
+bun run bots ABCD 3          # add 3 bots (1 to 7) to a room you already created
+```
+
+You are the host: press Start Game (3 or more players, bots included) and Next Round; the game does not start by itself. The bots answer and vote on their own.
+For another number of bots use `bun run launch --bots=N` (1 to 7); `bun run bots` takes `--endpoint` and `--api-port`. Ctrl+C removes the bots.
 
 ## Client (`ui/`)
 
