@@ -4,7 +4,6 @@ import { PHASE } from "../phaseNames.js";
 import type { WitClashContext, WitClashPhase } from "../private.js";
 import { Round } from "../round.js";
 import { TieBreakerFlow } from "../tieBreakerFlow.js";
-import { endGameActions } from "./endGame.js";
 
 const revealWhenDone = (ctx: WitClashContext): void => {
   if (ctx.state.votesCast >= ctx.state.votesExpected) ctx.transition(PHASE.TieBreakerReveal);
@@ -28,7 +27,6 @@ export const TieBreakerVoting: WitClashPhase = {
     revealWhenDone(ctx);
   },
   actions: {
-    ...endGameActions,
     [ACTION.CAST_VOTE]: defineAction({
       from: "player",
       payload: CastVoteSchema,

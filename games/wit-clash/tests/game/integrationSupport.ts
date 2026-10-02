@@ -1,10 +1,13 @@
 import type { Room } from "@colyseus/core";
-import type { Room as ClientRoom } from "@colyseus/sdk";
 import {
   bootTestServer,
-  collectMessages,
+  joinPlayer,
+  seatPlayers,
   sleep,
+  stateOf,
+  type TestPlayer,
   type TestServer,
+  testPlayerId,
   waitUntil,
 } from "@partygame/server/testing";
 import { createWitClashGame } from "../../src/game.js";
@@ -13,7 +16,9 @@ import { WitClashState } from "../../src/state.js";
 import { makeCategories } from "./support.js";
 
 export const ROOM = ROOM_NAME;
-export const pid = (n: number): string => `player-000${n}`;
+export { testPlayerId as pid };
+
+export type Seated = TestPlayer<WitClashState>;
 
 export const bootWitClash = (reconnectMs = 1000): Promise<TestServer> =>
   bootTestServer({
@@ -27,58 +32,30 @@ export const bootWitClash = (reconnectMs = 1000): Promise<TestServer> =>
     reconnectMs,
   });
 
-export const serverState = (room: Room): WitClashState => room.state as WitClashState;
-export const clientState = (client: ClientRoom): WitClashState =>
-  client.state as unknown as WitClashState;
+export const serverState = (room: Room): WitClashState => stateOf(room, WitClashState);
 
-export interface Seated {
-  n: number;
-  client: ClientRoom;
-  errors: Array<{ code: string }>;
-}
-
-export async function join(t: TestServer, room: Room, n: number): Promise<Seated> {
-  const client = await t.join(room, { playerId: pid(n) });
-  const errors = collectMessages(client, "ERROR") as Array<{ code: string }>;
-  return { n, client, errors };
-}
-
-export const name = (who: Seated): void => who.client.send("SET_NAME", `P${who.n}`);
+export const join = (t: TestServer, room: Room, n: number): Promise<Seated> =>
+  joinPlayer(t, room, n, WitClashState);
 
 /** Joins and names one player. */
 export async function seat(t: TestServer, room: Room, n: number): Promise<Seated> {
   const who = await join(t, room, n);
-  name(who);
+  who.setName();
   return who;
 }
 
 /** Joins and names `count` players; the first (the host) then presses Start unless `start` is false. */
-export async function seatAll(
+export const seatAll = (
   t: TestServer,
   room: Room,
   count: number,
   start = true,
-): Promise<Seated[]> {
-  const seated: Seated[] = [];
-  for (let n = 1; n <= count; ++n) seated.push(await join(t, room, n));
-  for (const who of seated) name(who);
-  if (start) {
-    await waitUntil(
-      () => [...serverState(room).players.values()].filter((p) => p.isReady).length === count,
-      "everyone named",
-    );
-    act(seated[0] as Seated, "START_GAME");
-  }
-  return seated;
-}
-
-export const act = (who: Seated, type: string, fields: Record<string, unknown> = {}): void =>
-  who.client.send("ACTION", { type, ...fields });
+): Promise<Seated[]> => seatPlayers(t, room, { stateClass: WitClashState, count, start });
 
 export async function voteCategory(room: Room, players: Seated[]): Promise<void> {
   await waitUntil(() => serverState(room).phase === "CategorySelection", "category vote");
   const categoryId = serverState(room).categoryOptions[0]?.id;
-  for (const p of players) act(p, "VOTE_CATEGORY", { categoryId });
+  for (const p of players) p.act("VOTE_CATEGORY", { categoryId });
   await waitUntil(() => serverState(room).phase === "Prompting", "prompting");
 }
 
@@ -86,11 +63,11 @@ export async function voteCategory(room: Room, players: Seated[]): Promise<void>
 export async function answerAll(room: Room, players: Seated[]): Promise<void> {
   for (const p of players) {
     await waitUntil(
-      () => clientState(p.client).mine?.get(pid(p.n))?.prompts?.length === 2,
+      () => p.client.state.mine?.get(p.playerId)?.prompts?.length === 2,
       `prompts of ${p.n}`,
     );
-    for (const prompt of clientState(p.client).mine.get(pid(p.n))?.prompts ?? []) {
-      act(p, "SUBMIT_ANSWER", { matchupId: prompt.matchupId, answer: `answer ${p.n}` });
+    for (const prompt of p.client.state.mine.get(p.playerId)?.prompts ?? []) {
+      p.act("SUBMIT_ANSWER", { matchupId: prompt.matchupId, answer: `answer ${p.n}` });
     }
   }
   await waitUntil(() => serverState(room).phase === "MatchupVoting", "voting");
@@ -108,7 +85,7 @@ export async function playVoting(room: Room, players: Seated[]): Promise<void> {
       const index = state.activeMatchupIndex;
       const answerId = state.matchups[index]?.answers[0]?.id;
       for (const p of players)
-        if (state.mine.get(pid(p.n))?.canVote) act(p, "CAST_VOTE", { answerId });
+        if (state.mine.get(p.playerId)?.canVote) p.act("CAST_VOTE", { answerId });
       await waitUntil(
         () => state.phase !== "MatchupVoting" || state.activeMatchupIndex !== index,
         "voted",

@@ -6,7 +6,6 @@ export const ACTION = {
   NEXT_ROUND: "NEXT_ROUND",
   PLAY_AGAIN: "PLAY_AGAIN",
   SET_TYPING: "SET_TYPING",
-  END_GAME: "END_GAME",
 } as const;
 
 export type ActionName = (typeof ACTION)[keyof typeof ACTION];

@@ -3,11 +3,12 @@ import { makeCategories, nth, Table } from "./support.js";
 
 const typing = (t: Table): string[] => [...t.state.typing.keys()];
 
-const submitPrompt = (t: Table, playerId: string, index: number): void =>
+const submitPrompt = (t: Table, playerId: string, index: number): void => {
   t.act(playerId, "SUBMIT_ANSWER", {
     matchupId: nth([...t.mine(playerId).prompts], index).matchupId,
     answer: `${playerId} ${index}`,
   });
+};
 
 describe("SET_TYPING while answering prompts", () => {
   it("publishes who is typing and who stopped", () => {

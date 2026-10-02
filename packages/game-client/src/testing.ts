@@ -108,3 +108,13 @@ export class StubRoom<TState extends BaseGameState> implements RoomLike<TState> 
     return handlers;
   }
 }
+
+export {
+  addSeat,
+  type ConnectedClient,
+  type ConnectedClientOptions,
+  connectedClient,
+  type FetchStub,
+  fakeFetch,
+  type SeatConfig,
+} from "./testClient.js";

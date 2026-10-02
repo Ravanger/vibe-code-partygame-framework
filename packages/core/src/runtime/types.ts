@@ -116,6 +116,8 @@ export interface GameDefinition<
   /** After a player (re)connects: resend their private messages. */
   onPlayerSync?(ctx: GameContext<TState, TPrivate, TOptions>, playerId: string): void;
   onReturnToLobby?(ctx: GameContext<TState, TPrivate, TOptions>): void;
+  /** The host sent `END_GAME`; runs before `onReturnToLobby`. Use it to tell players why the game stopped. */
+  onEndGame?(ctx: GameContext<TState, TPrivate, TOptions>): void;
 }
 
 /** Everything the runtime needs from its environment. Implemented by the server; faked in tests. */

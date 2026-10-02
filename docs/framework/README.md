@@ -68,6 +68,7 @@ The runtime handles these host-only actions for you; do not declare them (`defin
 - `KICK_PLAYER { playerId }`: any phase, not yourself. The host implementation removes the seat, then `onRosterChange` runs. The ban is per `playerId`: a client that regenerates its id can rejoin.
 - `SET_OPTIONS { ...partial }`: Lobby only. The partial is merged into the current options and validated with `definition.options`
   (`INVALID_ACTION` on failure), then published. `ctx.options` reflects the new value.
+- `END_GAME`: any phase but the Lobby (`WRONG_PHASE` there). It runs `onEndGame(ctx)`, where a game can set a notice for the players, and then returns everyone to the Lobby as `ctx.returnToLobby()` does (`onReturnToLobby` runs, waiting joiners are let in). The hook cannot veto it.
 
 ### Roster changes and mid-game joiners
 Joins, leaves, disconnects, reconnects and ready changes call the current phase's `onRosterChange(ctx)`.
@@ -171,6 +172,31 @@ host.views, host.sent, host.broadcasts, host.kicked, host.published   // everyth
 host.rng = () => 0.99;                                    // steer random choices
 ```
 
+`TestTable` wraps that setup (seats `p1..pN`, the real runtime, a manual clock). Extend it with your game's scenario steps:
+
+```ts
+import { TestTable } from "@partygame/core/testing";
+
+class ButtonTable extends TestTable<ButtonState, ButtonPrivate, ButtonOptions> {
+  constructor(players = 3) {
+    super({ definition: ButtonGame, state: new ButtonState(), options: {}, players });
+  }
+
+  everyonePresses(): void {
+    for (const id of this.ids()) this.act(id, "PRESS");
+  }
+}
+
+const table = new ButtonTable();
+table.start();                       // p1 sends START_GAME; returns the ServerError if refused
+table.everyonePresses();
+table.act("p9", "PRESS");            // returns the refusal, or undefined
+table.errors("p1");                  // every ERROR p1 received
+table.tick(3_000);                   // advances the manual clock
+table.drop("p2"); table.rejoin("p2"); table.leave("p3"); table.joinLate("p5");
+table.phase; table.priv; table.state; table.host;
+```
+
 ### Structuring a bigger game
 Keep each phase in its own file exporting a `PhaseDefinition`, and let `defineGame` only assemble them. Put decisions that need no
 context (pairing, scoring, eligibility, tallies) in pure functions that take plain data and the rng, so they are testable
@@ -222,7 +248,7 @@ Call `hideFrom` before you delete an entry, or the room will try to re-add it on
 
 ### Testing a game
 ```ts
-import { bootTestServer, waitUntil, collectMessages } from "@partygame/server/testing";
+import { bootTestServer, waitUntil, collectMessages, seatPlayers, stateOf } from "@partygame/server/testing";
 
 const t = await bootTestServer({ games });            // free port, default transport, short reconnect window
 const room = await t.createRoom("button");            // server-side Room: inspect room.state
@@ -232,6 +258,17 @@ alice.send("ACTION", { type: "PRESS" });
 await waitUntil(() => room.state.phase === "Done", "finished");
 await t.shutdown();                                    // t.cleanup() between tests
 ```
+`t.joinAs(room, { playerId }, ButtonState)` joins with a typed client state. `seatPlayers` joins and names several players
+(`player-0001`, from `testPlayerId(n)`) and waits until the server sees each ready; `stateOf` reads the server-side state without a cast:
+
+```ts
+const [ann, bob] = await seatPlayers(t, room, { stateClass: ButtonState, count: 2, start: true });
+ann.act("PRESS");                                      // ACTION { type: "PRESS" }
+await waitUntil(() => stateOf(room, ButtonState).winner === ann.playerId, "winner");
+ann.client.state.winner;                               // the client's own typed view
+bob.errors;                                            // every well-formed ERROR bob received
+```
+`joinPlayer(t, room, n, stateClass)` joins one player without a name; `TestPlayer.setName(name?)` readies it.
 A runnable example is the fixture in `packages/server/tests/fixtures/buzzer.ts`.
 
 ## Client SDK
@@ -297,7 +334,28 @@ Joins are de-duplicated per code and mode, so watching and playing the same room
 ### Testing UI code
 `@partygame/game-client/testing` has `StubRoom`, an in-memory room around a real state object. `manager.attach(new StubRoom(state))`, mutate the state,
 call `room.patch()`. `room.requests`/`room.sent` record what the UI sent, `room.reply` sets the answer to `request`, and `push`, `dropConnection`,
-`reconnected`, `closed` fire server events. Integration tests boot a real server with `bootTestServer` from `@partygame/server/testing`
+`reconnected`, `closed` fire server events. `connectedClient` builds the usual fixture in one call, and `fakeFetch` stands in for the network:
+
+```ts
+import { addSeat, connectedClient, fakeFetch } from "@partygame/game-client/testing";
+import { vi } from "vitest";
+
+const c = connectedClient({
+  stateClass: ButtonState,
+  seat: { role: "host", name: "Ann" },                 // this client's seat; the name defaults to "Me"
+  phase: "Round",                                      // default "Lobby"
+  setup: (state) => { state.winner = "p2"; },          // before the manager attaches
+});
+addSeat(c.state, "other");                              // a ready, active, connected player
+c.state.winner = "other"; c.patch();                    // as Colyseus would after a patch
+c.manager; c.room; c.me;
+
+const net = fakeFetch({ roomId: "r1" });                // an Error or a string rejects instead
+vi.stubGlobal("fetch", net.fetch);
+net.urls;                                               // every URL requested
+```
+
+Integration tests boot a real server with `bootTestServer` from `@partygame/server/testing`
 (`t.endpoint`, and `await t.serveApi()` for the code-resolution API) and use real managers. Add `"@partygame/game-client/test-setup"` to the
 vitest `setupFiles`: it shims the storages and makes the SDK use `ws` under jsdom.
 
@@ -420,6 +478,30 @@ Optional strategy members: `narrate(state)` returns lines to print on every stat
 (host: Enter starts, `q` quits). `TerminalPlayerOptions` takes `now` and `quitWord`. `parseBotsArgs`, `runBotsCommand` and
 `ReadlinePrompter` back a game's `bots/cli.ts`; `@partygame/terminal/testing` has test doubles. Example:
 `games/wit-clash/terminal/witClashTerminal.ts` and `play.ts`.
+
+### All-bot demo run
+
+`DemoRun` plays one game by itself on its own server (free ports): a host bot, `bots` more bots and a narrating spectator, then prints
+`PASS` or `FAIL`. It is the regression check for a game's bot strategy: the run fails when the game does not finish in `timeoutMs`
+(default 180 s), when any bot action is refused, or when `problems(state)` reports something about the final state.
+
+```ts
+import { DemoRun } from "@partygame/terminal";
+
+const passed = await new DemoRun({
+  games: [{ roomName: "button", definition: ButtonGame, stateClass: ButtonState }],
+  kit: buttonKit,
+  bots: 2,
+  finished: (state) => state.phase === "Done",
+  narrate: (state) => (state.phase === "Done" ? [`${state.winner} won`] : []),
+  problems: (state) => (state.winner === "" ? ["nobody won"] : []),
+  out: console.log,
+}).run();
+process.exit(passed ? 0 : 1);
+```
+
+Optional: `roomOptions`, `bot` (pacing and `onOutcome`), `hostName`, `passMessage`, `timeoutMs`. Example:
+`games/wit-clash/terminal/witClashDemo.ts`.
 
 ## Launcher
 

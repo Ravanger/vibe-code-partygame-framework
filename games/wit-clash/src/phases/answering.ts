@@ -3,7 +3,6 @@ import { ACTION, defineAction, SetTypingSchema, SubmitAnswerSchema } from "../ac
 import { allAnswered } from "../drafts.js";
 import type { WitClashContext, WitClashPhase } from "../private.js";
 import { Round } from "../round.js";
-import { endGameActions } from "./endGame.js";
 
 export const answersComplete = (ctx: WitClashContext): boolean =>
   allAnswered(ctx.priv.assignments, ctx.priv.drafts, new Set(ctx.activePlayers().map((p) => p.id)));
@@ -12,7 +11,6 @@ export function answeringActions(
   finish: (ctx: WitClashContext) => void,
 ): NonNullable<WitClashPhase["actions"]> {
   return {
-    ...endGameActions,
     [ACTION.SUBMIT_ANSWER]: defineAction({
       from: "player",
       payload: SubmitAnswerSchema,

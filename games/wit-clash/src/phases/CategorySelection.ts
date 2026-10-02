@@ -6,7 +6,6 @@ import type { WitClashContext, WitClashPhase } from "../private.js";
 import { Round } from "../round.js";
 import { CategoryOption } from "../state.js";
 import { allHaveVoted, countVoted, tallyVotes } from "../tally.js";
-import { endGameActions } from "./endGame.js";
 
 const OPTION_COUNT = 3;
 
@@ -71,7 +70,6 @@ export const CategorySelection: WitClashPhase = {
     if (everyoneVoted(ctx)) resolve(ctx);
   },
   actions: {
-    ...endGameActions,
     [ACTION.VOTE_CATEGORY]: defineAction({
       from: "player",
       payload: VoteCategorySchema,

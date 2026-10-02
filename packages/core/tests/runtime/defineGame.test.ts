@@ -82,7 +82,7 @@ describe("defineGame", () => {
       phases: { Play: { actions: { START_GAME: { from: "host", payload, handler } } } },
     });
     expect(reserved).toContain("START_GAME");
-    for (const name of ["KICK_PLAYER", "SET_OPTIONS"]) {
+    for (const name of ["KICK_PLAYER", "SET_OPTIONS", "END_GAME"]) {
       const message = errorsOf({
         ...valid(),
         phases: { Play: { actions: { [name]: { from: "host", payload, handler } } } },

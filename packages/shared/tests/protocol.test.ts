@@ -3,6 +3,7 @@ import {
   ACTION_NAME_PATTERN,
   ActionEnvelopeSchema,
   ClientMessage,
+  END_GAME,
   ErrorCode,
   isActionResult,
   isServerError,
@@ -27,6 +28,7 @@ describe("protocol constants", () => {
     expect(START_GAME).toBe("START_GAME");
     expect(KICK_PLAYER).toBe("KICK_PLAYER");
     expect(SET_OPTIONS).toBe("SET_OPTIONS");
+    expect(END_GAME).toBe("END_GAME");
   });
 
   it("lists every error code as its own name", () => {

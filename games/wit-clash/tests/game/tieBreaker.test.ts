@@ -33,11 +33,12 @@ const topTwo = { p1: 500, p2: 500, p3: 100, p4: 0 };
 
 const current = (t: Table) => required(t.state.tieBreakers[t.state.tieBreakers.length - 1], "tb");
 
-const submit = (t: Table, playerId: string, answer = `${playerId} says hi`): void =>
+const submit = (t: Table, playerId: string, answer = `${playerId} says hi`): void => {
   t.act(playerId, "SUBMIT_ANSWER", {
     matchupId: nth([...t.mine(playerId).prompts], 0).matchupId,
     answer,
   });
+};
 
 const answerBy = (t: Table, playerId: string): string =>
   required(

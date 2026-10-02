@@ -38,6 +38,9 @@ export function createWitClashGame({ categories }: WitClashConfig) {
       [PHASE.TieBreakerReveal]: TieBreakerReveal,
       [PHASE.Results]: Results,
     },
+    onEndGame: (ctx) => {
+      ctx.state.notice = "The host ended the game.";
+    },
     onReturnToLobby: (ctx) => new Round(ctx).clearGame(),
   });
 }

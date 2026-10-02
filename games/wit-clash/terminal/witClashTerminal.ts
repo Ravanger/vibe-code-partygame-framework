@@ -1,4 +1,5 @@
 import { required } from "@partygame/core";
+import { END_GAME } from "@partygame/shared";
 import type { TerminalStrategy, TerminalTurn } from "@partygame/terminal";
 import { ACTION } from "../src/actionNames.js";
 import { PHASE } from "../src/phaseNames.js";
@@ -138,8 +139,8 @@ class WitClashTerminal implements TerminalStrategy<WitClashState> {
     const host = turn.isHost;
     const actions: Record<string, string> = host
       ? final
-        ? { a: ACTION.PLAY_AGAIN, e: ACTION.END_GAME }
-        : { n: ACTION.NEXT_ROUND, e: ACTION.END_GAME }
+        ? { a: ACTION.PLAY_AGAIN, e: END_GAME }
+        : { n: ACTION.NEXT_ROUND, e: END_GAME }
       : {};
     const menu = host
       ? final

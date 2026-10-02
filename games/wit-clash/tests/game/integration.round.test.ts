@@ -2,10 +2,8 @@
 import { type TestServer, waitUntil } from "@partygame/server/testing";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import {
-  act,
   answerAll,
   bootWitClash,
-  clientState,
   pid,
   playVoting,
   ROOM,
@@ -14,6 +12,7 @@ import {
   serverState,
   voteCategory,
 } from "./integrationSupport.js";
+import { nth } from "./support.js";
 
 let t: TestServer;
 beforeAll(async () => {
@@ -33,13 +32,10 @@ describe("a four-player round on a real server", () => {
     expect(state.isFinalRound).toBe(true);
     expect(state.scoreboard).toHaveLength(4);
     await waitUntil(
-      () => clientState(players[3]?.client as never).scoreboard?.length === 4,
+      () => nth(players, 3).client.state.scoreboard?.length === 4,
       "scoreboard synced",
     );
-    const seen = [...clientState(players[3]?.client as never).scoreboard].map((e) => [
-      e.playerId,
-      e.score,
-    ]);
+    const seen = [...nth(players, 3).client.state.scoreboard].map((e) => [e.playerId, e.score]);
     expect(seen).toEqual([...state.scoreboard].map((e) => [e.playerId, e.score]));
     expect(players.every((p) => p.errors.length === 0)).toBe(true);
   }, 30_000);
@@ -50,10 +46,10 @@ describe("a four-player round on a real server", () => {
     await voteCategory(room, players);
     for (const p of players) {
       await waitUntil(
-        () => clientState(p.client).mine?.get(pid(p.n))?.prompts?.length === 2,
+        () => p.client.state.mine?.get(pid(p.n))?.prompts?.length === 2,
         `prompts of ${p.n}`,
       );
-      expect([...clientState(p.client).mine.keys()]).toEqual([pid(p.n)]);
+      expect([...p.client.state.mine.keys()]).toEqual([pid(p.n)]);
     }
     expect(serverState(room).mine.size).toBe(4);
   });
@@ -69,14 +65,14 @@ describe("a four-player round on a real server", () => {
     ) as (typeof players)[number];
     const watcher = players.find((p) => p !== voter) as (typeof players)[number];
     const answerId = state.matchups[0]?.answers[0]?.id;
-    act(voter, "CAST_VOTE", { answerId });
-    await waitUntil(() => clientState(watcher.client).votesCast === 1, "count visible to others");
-    const seen = clientState(watcher.client);
+    voter.act("CAST_VOTE", { answerId });
+    await waitUntil(() => watcher.client.state.votesCast === 1, "count visible to others");
+    const seen = watcher.client.state;
     expect(seen.matchups[0]?.answers.every((a) => a.votes === 0 && a.authorId === "")).toBe(true);
     expect([...seen.mine.keys()]).toEqual([pid(watcher.n)]);
     expect(seen.mine.get(pid(watcher.n))?.matchupVote).toBe("");
     await waitUntil(
-      () => clientState(voter.client).mine?.get(pid(voter.n))?.matchupVote === answerId,
+      () => voter.client.state.mine?.get(pid(voter.n))?.matchupVote === answerId,
       "own vote echoed",
     );
   });
@@ -91,22 +87,22 @@ describe("a four-player round on a real server", () => {
     await answerAll(room, players);
     expect(serverState(room).votesExpected).toBe(2);
     expect(serverState(room).mine.has(pid(5))).toBe(false);
-    act(late, "CAST_VOTE", { answerId: serverState(room).matchups[0]?.answers[0]?.id });
+    late.act("CAST_VOTE", { answerId: serverState(room).matchups[0]?.answers[0]?.id });
     await waitUntil(() => late.errors.length === 1, "rejected");
     expect(late.errors[0]?.code).toBe("NOT_ACTIVE");
     await playVoting(room, players);
-    act(players[0] as never, "NEXT_ROUND");
+    nth(players, 0).act("NEXT_ROUND");
     await waitUntil(() => serverState(room).phase === "CategorySelection", "round two");
     expect(serverState(room).players.get(pid(5))?.isActive).toBe(true);
-    await waitUntil(() => clientState(late.client).mine?.has(pid(5)), "late player's own entry");
+    await waitUntil(() => late.client.state.mine?.has(pid(5)), "late player's own entry");
   }, 30_000);
 
   it("refuses START_GAME below the minimum player count", async () => {
     const room = await t.createRoom(ROOM);
-    const [host] = await seatAll(t, room, 2, false);
-    act(host as never, "START_GAME");
-    await waitUntil(() => (host?.errors.length ?? 0) === 1, "error");
-    expect(host?.errors[0]?.code).toBe("NOT_ENOUGH_PLAYERS");
+    const host = nth(await seatAll(t, room, 2, false), 0);
+    host.act("START_GAME");
+    await waitUntil(() => host.errors.length === 1, "error");
+    expect(host.errors[0]?.code).toBe("NOT_ENOUGH_PLAYERS");
     expect(serverState(room).phase).toBe("Lobby");
   });
 });

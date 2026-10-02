@@ -5,7 +5,6 @@ import { Round } from "../round.js";
 import { settleMatchup } from "../scoring.js";
 import { tallyVotes } from "../tally.js";
 import { TieBreakerFlow } from "../tieBreakerFlow.js";
-import { endGameActions } from "./endGame.js";
 
 const reveal = (ctx: WitClashContext): void => {
   const { state, priv } = ctx;
@@ -58,7 +57,6 @@ export const MatchupReveal: WitClashPhase = {
   onRosterChange: (ctx) => {
     new Round(ctx).endIfTooFewPlayers();
   },
-  actions: endGameActions,
   onTimeout: (ctx) => {
     const { activeMatchupIndex, matchups } = ctx.state;
     if (activeMatchupIndex + 1 < matchups.length) ctx.transition(PHASE.MatchupVoting);

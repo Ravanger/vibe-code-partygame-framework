@@ -1,6 +1,13 @@
-import { GameConnectionManager } from "@partygame/game-client";
-import { StubRoom } from "@partygame/game-client/testing";
-import { PlayerSchema } from "@partygame/shared/schema";
+import {
+  type ConnectedClient,
+  connectedClient as connectedClientOf,
+  type FetchStub,
+  fakeFetch,
+  type SeatConfig,
+} from "@partygame/game-client/testing";
+
+export { addSeat, type FetchStub, type SeatConfig } from "@partygame/game-client/testing";
+
 import { vi } from "vitest";
 import { ROOM_NAME } from "../../src/roomName.js";
 import {
@@ -12,28 +19,6 @@ import {
   ScoreEntry,
   WitClashState,
 } from "../../src/state.js";
-
-let clients = 0;
-
-export interface SeatConfig {
-  name?: string;
-  role?: "host" | "player";
-  isActive?: boolean;
-  isReady?: boolean;
-  isConnected?: boolean;
-}
-
-export function addSeat(state: WitClashState, id: string, config: SeatConfig = {}): PlayerSchema {
-  const seat = new PlayerSchema();
-  seat.id = id;
-  seat.name = config.name ?? id;
-  seat.role = config.role ?? "player";
-  seat.isActive = config.isActive ?? true;
-  seat.isReady = config.isReady ?? true;
-  seat.isConnected = config.isConnected ?? true;
-  state.players.set(id, seat);
-  return seat;
-}
 
 export function addMine(
   state: WitClashState,
@@ -76,34 +61,21 @@ export function scoreRow(
   return Object.assign(new ScoreEntry(), { playerId, name: playerId, score, ...over });
 }
 
-export interface Client {
-  manager: GameConnectionManager<WitClashState>;
-  state: WitClashState;
-  room: StubRoom<WitClashState>;
-  me: PlayerSchema;
-  /** Tells the manager the state changed, as Colyseus does after applying a patch. */
-  patch(): void;
-}
+export type Client = ConnectedClient<WitClashState>;
 
 /** A manager attached to an in-memory room whose state is a real WitClashState with this client seated. */
-export function connectedClient(seat: SeatConfig = {}, phase = "Lobby"): Client {
-  const manager = new GameConnectionManager<WitClashState>({
-    endpoint: "ws://localhost:2567",
+export const connectedClient = (seat: SeatConfig = {}, phase = "Lobby"): Client =>
+  connectedClientOf({
+    stateClass: WitClashState,
     roomName: ROOM_NAME,
-    storagePrefix: `ui${++clients}`,
-    rootSchema: WitClashState,
+    seat,
+    phase,
+    setup: (state) => {
+      state.minPlayers = 3;
+      state.maxPlayers = 8;
+      state.options = JSON.stringify({ totalRounds: 3 });
+    },
   });
-  const state = new WitClashState();
-  state.roomCode = "ABCD";
-  state.minPlayers = 3;
-  state.maxPlayers = 8;
-  state.phase = phase;
-  state.options = JSON.stringify({ totalRounds: 3 });
-  const me = addSeat(state, manager.playerId, { name: "Me", ...seat });
-  const room = new StubRoom(state);
-  manager.attach(room);
-  return { manager, state, room, me, patch: () => room.patch() };
-}
 
 /** The requests a client sent, leaving out the typing indicator that rides along with every answer. */
 export function withoutTyping(c: Client): Client["room"]["requests"] {
@@ -112,17 +84,9 @@ export function withoutTyping(c: Client): Client["room"]["requests"] {
   );
 }
 
-export interface FetchStub {
-  urls: string[];
-}
-
 /** Stands in for the network: records every requested URL and answers with `reply` (an Error or a string rejects). */
 export function stubFetch(reply: unknown): FetchStub {
-  const stub: FetchStub = { urls: [] };
-  vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
-    stub.urls.push(String(input instanceof Request ? input.url : input));
-    if (reply instanceof Error || typeof reply === "string") throw reply;
-    return new Response(JSON.stringify(reply), { headers: { "content-type": "application/json" } });
-  });
+  const stub = fakeFetch(reply);
+  vi.stubGlobal("fetch", stub.fetch);
   return stub;
 }

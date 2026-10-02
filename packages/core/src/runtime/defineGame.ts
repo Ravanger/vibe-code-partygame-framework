@@ -1,5 +1,6 @@
 import {
   ACTION_NAME_PATTERN,
+  END_GAME,
   KICK_PLAYER,
   LOBBY_PHASE,
   SET_OPTIONS,
@@ -8,7 +9,7 @@ import {
 import type { ActionDefinition, GameDefinition, PhaseState } from "./types.js";
 
 const PHASE_NAME = /^[A-Za-z][A-Za-z0-9_]*$/;
-const RESERVED_ACTIONS: readonly string[] = [START_GAME, KICK_PLAYER, SET_OPTIONS];
+const RESERVED_ACTIONS: readonly string[] = [START_GAME, KICK_PLAYER, SET_OPTIONS, END_GAME];
 
 /** Thrown by {@link defineGame}; the message lists every problem found. */
 export class GameDefinitionError extends Error {

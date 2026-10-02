@@ -1,7 +1,7 @@
 import { type BotOptions, DemoTable } from "@partygame/bots";
 import { witClashKit } from "../bots/witClashBot.js";
+import { isGameOver } from "../src/isGameOver.js";
 import type { WitClashOptions } from "../src/options.js";
-import { PHASE } from "../src/phaseNames.js";
 import type { WitClashState } from "../src/state.js";
 
 export const DEMO_ROOM_OPTIONS: WitClashOptions = {
@@ -38,5 +38,5 @@ export const createDemoTable = (options: WitClashDemoOptions): DemoTable<WitClas
     bots: options.bots,
     roomOptions: { ...DEMO_ROOM_OPTIONS, ...options.room },
     ...(options.bot ? { bot: options.bot } : {}),
-    isFinished: (state) => state.phase === PHASE.Results && state.isFinalRound,
+    isFinished: isGameOver,
   });

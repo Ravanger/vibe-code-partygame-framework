@@ -71,6 +71,9 @@ export const START_GAME = "START_GAME";
 /** Built-in host action `{ type, playerId }`: remove a player. Any phase; not yourself. */
 export const KICK_PLAYER = "KICK_PLAYER";
 
+/** Built-in host action: any phase but the Lobby; runs onEndGame, then returns everyone to the Lobby. */
+export const END_GAME = "END_GAME";
+
 /** Built-in host action `{ type, ...partialOptions }`: change the room options. Lobby only. */
 export const SET_OPTIONS = "SET_OPTIONS";
 

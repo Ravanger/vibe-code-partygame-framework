@@ -1,5 +1,6 @@
 import {
   ActionEnvelopeSchema,
+  END_GAME,
   ErrorCode,
   KICK_PLAYER,
   LOBBY_PHASE,
@@ -85,7 +86,10 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       hasStarted: () => this.hasStarted,
       rosterChanged: () => this.current.onRosterChange?.(this.context()),
     });
-    this.builtins = { [KICK_PLAYER]: this.lobby.kickAction() };
+    this.builtins = {
+      [KICK_PLAYER]: this.lobby.kickAction(),
+      [END_GAME]: this.lobby.endGameAction(),
+    };
     this.phases = { ...this.spec.phases, [LOBBY_PHASE]: this.lobby.phase() };
     this.current = this.phases[LOBBY_PHASE] as PhaseDefinition<TState, TPrivate, TOptions>;
     this.actor = createActor(this.buildMachine(), {

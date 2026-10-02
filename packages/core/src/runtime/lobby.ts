@@ -1,4 +1,4 @@
-import { ErrorCode, SET_OPTIONS, START_GAME } from "@partygame/shared";
+import { END_GAME, ErrorCode, LOBBY_PHASE, SET_OPTIONS, START_GAME } from "@partygame/shared";
 import { prettifyError, z } from "zod";
 import type {
   ActionDefinition,
@@ -19,7 +19,7 @@ export interface LobbyBindings<TState extends PhaseState, TPrivate, TOptions> {
   rosterChanged(): void;
 }
 
-/** The built-in `Lobby` phase (`START_GAME`, `SET_OPTIONS`, optional auto-start) and the `KICK_PLAYER` action every phase accepts. */
+/** The built-in `Lobby` phase (`START_GAME`, `SET_OPTIONS`, optional auto-start) and the `KICK_PLAYER` and `END_GAME` actions. */
 export class Lobby<TState extends PhaseState, TPrivate, TOptions> {
   constructor(private readonly bindings: LobbyBindings<TState, TPrivate, TOptions>) {}
 
@@ -55,6 +55,22 @@ export class Lobby<TState extends PhaseState, TPrivate, TOptions> {
           this.bindings.host.kick(playerId);
           this.bindings.rosterChanged();
         }
+      },
+    };
+  }
+
+  endGameAction(): ActionDefinition<TState, TPrivate, TOptions, unknown> {
+    const { definition } = this.bindings;
+    return {
+      from: "host",
+      payload: z.object({}),
+      handler: (ctx) => {
+        if (ctx.phase === LOBBY_PHASE) {
+          ctx.reject(ErrorCode.WRONG_PHASE, `${END_GAME} is not allowed in ${LOBBY_PHASE}`);
+          return;
+        }
+        definition.onEndGame?.(ctx);
+        ctx.returnToLobby();
       },
     };
   }

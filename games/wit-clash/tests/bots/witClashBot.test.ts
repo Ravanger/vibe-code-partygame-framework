@@ -1,4 +1,5 @@
 import { type BotOptions, type BotOutcome, BotPlayer, type BotRoom } from "@partygame/bots";
+import { END_GAME } from "@partygame/shared";
 import { describe, expect, it } from "vitest";
 import {
   BOT_ANSWERS,
@@ -293,7 +294,7 @@ describe("witClashBot as a player", () => {
     const types = room.actions().map((payload) => Reflect.get(payload, "type"));
     expect(types).not.toContain(ACTION.NEXT_ROUND);
     expect(types).not.toContain(ACTION.PLAY_AGAIN);
-    expect(types).not.toContain(ACTION.END_GAME);
+    expect(types).not.toContain(END_GAME);
     expect(types).not.toContain("START_GAME");
   });
 });

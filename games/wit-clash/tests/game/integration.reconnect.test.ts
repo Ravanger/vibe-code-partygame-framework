@@ -2,10 +2,8 @@
 import { type TestServer, waitUntil } from "@partygame/server/testing";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import {
-  act,
   answerAll,
   bootWitClash,
-  clientState,
   join,
   pid,
   ROOM,
@@ -28,12 +26,9 @@ describe("reconnection on a real server", () => {
     const players = await seatAll(t, room, 4);
     await voteCategory(room, players);
     const p2 = players[1] as (typeof players)[number];
-    await waitUntil(
-      () => clientState(p2.client).mine?.get(pid(2))?.prompts?.length === 2,
-      "prompts",
-    );
-    const first = clientState(p2.client).mine.get(pid(2))?.prompts[0]?.matchupId;
-    act(p2, "SUBMIT_ANSWER", { matchupId: first, answer: "before the drop" });
+    await waitUntil(() => p2.client.state.mine?.get(pid(2))?.prompts?.length === 2, "prompts");
+    const first = p2.client.state.mine.get(pid(2))?.prompts[0]?.matchupId;
+    p2.act("SUBMIT_ANSWER", { matchupId: first, answer: "before the drop" });
     await waitUntil(() => serverState(room).progress.get(pid(2)) === 1, "answer counted");
 
     const token = p2.client.reconnectionToken;
@@ -48,15 +43,12 @@ describe("reconnection on a real server", () => {
       () => serverState(room).players.get(pid(2))?.isConnected === true,
       "marked back",
     );
-    await waitUntil(
-      () => clientState(back).mine?.get(pid(2))?.prompts?.length === 2,
-      "prompts restored",
-    );
-    const restored = clientState(back).mine.get(pid(2));
+    await waitUntil(() => back.state.mine?.get(pid(2))?.prompts?.length === 2, "prompts restored");
+    const restored = back.state.mine.get(pid(2));
     expect(restored?.prompts[0]?.submitted).toBe(true);
     expect(restored?.prompts[1]?.submitted).toBe(false);
-    expect(clientState(back).progress.get(pid(2))).toBe(1);
-    expect([...clientState(back).mine.keys()]).toEqual([pid(2)]);
+    expect(back.state.progress.get(pid(2))).toBe(1);
+    expect([...back.state.mine.keys()]).toEqual([pid(2)]);
   });
 
   it("restores the private view when the player rejoins from a fresh session", async () => {
@@ -64,17 +56,11 @@ describe("reconnection on a real server", () => {
     const players = await seatAll(t, room, 4);
     await voteCategory(room, players);
     const p3 = players[2] as (typeof players)[number];
-    await waitUntil(
-      () => clientState(p3.client).mine?.get(pid(3))?.prompts?.length === 2,
-      "prompts",
-    );
+    await waitUntil(() => p3.client.state.mine?.get(pid(3))?.prompts?.length === 2, "prompts");
     await p3.client.leave(false);
     await waitUntil(() => serverState(room).players.get(pid(3))?.isConnected === false, "away");
     const fresh = await join(t, room, 3);
-    await waitUntil(
-      () => clientState(fresh.client).mine?.get(pid(3))?.prompts?.length === 2,
-      "restored",
-    );
+    await waitUntil(() => fresh.client.state.mine?.get(pid(3))?.prompts?.length === 2, "restored");
     expect(serverState(room).players.size).toBe(4);
   });
 });
@@ -85,7 +71,7 @@ describe("a player who leaves", () => {
     const players = await seatAll(t, room, 4);
     await waitUntil(() => serverState(room).phase === "CategorySelection", "voting");
     const categoryId = serverState(room).categoryOptions[0]?.id;
-    for (const p of players.slice(0, 3)) act(p, "VOTE_CATEGORY", { categoryId });
+    for (const p of players.slice(0, 3)) p.act("VOTE_CATEGORY", { categoryId });
     await waitUntil(() => serverState(room).categoryOptions[0]?.votes === 3, "three votes");
     expect(serverState(room).phase).toBe("CategorySelection");
     await (players[3] as (typeof players)[number]).client.leave(true);
@@ -99,12 +85,9 @@ describe("a player who leaves", () => {
     await (players[3] as (typeof players)[number]).client.leave(false);
     await waitUntil(() => serverState(room).players.get(pid(4))?.isConnected === false, "away");
     for (const p of players.slice(0, 3)) {
-      await waitUntil(
-        () => clientState(p.client).mine?.get(pid(p.n))?.prompts?.length === 2,
-        "prompts",
-      );
-      for (const prompt of clientState(p.client).mine.get(pid(p.n))?.prompts ?? []) {
-        act(p, "SUBMIT_ANSWER", { matchupId: prompt.matchupId, answer: "a" });
+      await waitUntil(() => p.client.state.mine?.get(pid(p.n))?.prompts?.length === 2, "prompts");
+      for (const prompt of p.client.state.mine.get(pid(p.n))?.prompts ?? []) {
+        p.act("SUBMIT_ANSWER", { matchupId: prompt.matchupId, answer: "a" });
       }
     }
     await waitUntil(() => serverState(room).phase !== "Prompting", "prompting finished");

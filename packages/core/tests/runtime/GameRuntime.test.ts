@@ -719,6 +719,59 @@ describe("KICK_PLAYER", () => {
   });
 });
 
+describe("END_GAME", () => {
+  const withHook = () =>
+    setup2({ onEndGame: (ctx) => ctx.state.log.push(`onEndGame:${ctx.phase}`) });
+  const startedWithHook = () => {
+    const ctx = withHook();
+    ctx.runtime.dispatch("p1", { type: "START_GAME" });
+    ctx.state.log.length = 0;
+    return ctx;
+  };
+
+  it("runs onEndGame before onReturnToLobby and lands in the Lobby", () => {
+    const { runtime, host, state } = startedWithHook();
+    const activations = host.activations;
+    expect(runtime.dispatch("p1", { type: "END_GAME" })).toBeUndefined();
+    expect(runtime.phase).toBe("Lobby");
+    expect(state.log).toEqual(["onEndGame:Play", "lobby:Play"]);
+    expect(host.activations).toBe(activations + 1);
+    host.advance(10_000);
+    expect(state.log).toEqual(["onEndGame:Play", "lobby:Play"]);
+  });
+
+  it("is host only", () => {
+    const { runtime, host, state } = startedWithHook();
+    runtime.dispatch("p2", { type: "END_GAME" });
+    expect(host.errorsTo("p2")[0]).toMatchObject({ code: "UNAUTHORIZED", action: "END_GAME" });
+    expect(runtime.phase).toBe("Play");
+    expect(state.log).toEqual([]);
+  });
+
+  it("is refused in the Lobby", () => {
+    const { runtime, state } = withHook();
+    expect(runtime.dispatch("p1", { type: "END_GAME" })).toEqual({
+      code: "WRONG_PHASE",
+      message: "END_GAME is not allowed in Lobby",
+      action: "END_GAME",
+    });
+    expect(state.log).toEqual([]);
+  });
+
+  it("returns to the Lobby without an onEndGame hook", () => {
+    const { runtime } = inPlay();
+    runtime.dispatch("p1", { type: "END_GAME" });
+    expect(runtime.phase).toBe("Lobby");
+  });
+
+  it("lets the host start again", () => {
+    const { runtime } = inPlay();
+    runtime.dispatch("p1", { type: "END_GAME" });
+    runtime.dispatch("p1", { type: "START_GAME" });
+    expect(runtime.phase).toBe("Play");
+  });
+});
+
 describe("SET_OPTIONS", () => {
   it("merges, validates, publishes and updates ctx.options in the Lobby", () => {
     const { runtime, host, state } = setup2();

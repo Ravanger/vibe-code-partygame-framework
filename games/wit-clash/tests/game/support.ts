@@ -1,5 +1,4 @@
-import { GameRuntime } from "@partygame/core";
-import { FakeHost } from "@partygame/core/testing";
+import { TestTable } from "@partygame/core/testing";
 import {
   type Category,
   type CategoryRepository,
@@ -47,45 +46,14 @@ export interface TableConfig {
 }
 
 /** A WitClash room driven through the real runtime and the real state schema, with a manual clock. */
-export class Table {
-  readonly host = new FakeHost();
-  readonly state = new WitClashState();
-  readonly runtime: GameRuntime<WitClashState, WitClashPrivate, WitClashOptions>;
-
+export class Table extends TestTable<WitClashState, WitClashPrivate, WitClashOptions> {
   constructor(config: TableConfig = {}) {
-    for (let i = 1; i <= (config.players ?? 4); ++i) this.host.seat(`p${i}`);
-    this.runtime = new GameRuntime({
-      definition: createWitClashGame({
-        categories: config.categories ?? makeCategories(),
-      }),
-      state: this.state,
+    super({
+      definition: createWitClashGame({ categories: config.categories ?? makeCategories() }),
+      state: new WitClashState(),
       options: WitClashOptionsSchema.parse(config.options ?? {}),
-      host: this.host,
+      players: config.players ?? 4,
     });
-  }
-
-  get phase(): string {
-    return this.state.phase;
-  }
-
-  get priv(): WitClashPrivate {
-    return this.runtime.priv;
-  }
-
-  ids(): string[] {
-    return this.host.seats.map((s) => s.id);
-  }
-
-  act(playerId: string, type: string, fields: Record<string, unknown> = {}): void {
-    this.runtime.dispatch(playerId, { type, ...fields });
-  }
-
-  errors(playerId: string): Array<{ code: string }> {
-    return this.host.errorsTo(playerId) as Array<{ code: string }>;
-  }
-
-  tick(ms: number): void {
-    this.host.advance(ms);
   }
 
   mine(playerId: string): PlayerPrivate {
@@ -94,32 +62,6 @@ export class Table {
 
   matchup(): Matchup {
     return this.state.matchups[this.state.activeMatchupIndex] as Matchup;
-  }
-
-  start(): void {
-    this.act("p1", "START_GAME");
-  }
-
-  leave(playerId: string): void {
-    this.host.kick(playerId);
-    this.runtime.rosterChanged();
-  }
-
-  drop(playerId: string): void {
-    const seat = this.host.seats.find((s) => s.id === playerId);
-    if (seat) seat.isConnected = false;
-    this.runtime.rosterChanged();
-  }
-
-  rejoin(playerId: string): void {
-    const seat = this.host.seats.find((s) => s.id === playerId);
-    if (seat) seat.isConnected = true;
-    this.runtime.rosterChanged();
-  }
-
-  joinLate(playerId: string): void {
-    this.host.seat(playerId, { isActive: false });
-    this.runtime.rosterChanged();
   }
 
   /** Everyone votes for the first offered category; the phase moves on to Prompting. */

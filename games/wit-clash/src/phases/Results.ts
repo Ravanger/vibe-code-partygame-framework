@@ -3,7 +3,6 @@ import { ACTION, defineAction, NoPayloadSchema } from "../actions.js";
 import { PHASE } from "../phaseNames.js";
 import type { WitClashPhase } from "../private.js";
 import { Round } from "../round.js";
-import { endGameActions } from "./endGame.js";
 
 export const Results: WitClashPhase = {
   onEnter: (ctx) => {
@@ -18,7 +17,6 @@ export const Results: WitClashPhase = {
     round.writeScoreboard();
   },
   actions: {
-    ...endGameActions,
     [ACTION.NEXT_ROUND]: defineAction({
       from: "host",
       payload: NoPayloadSchema,

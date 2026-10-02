@@ -22,7 +22,7 @@ src/
 ui/                  Svelte client, built on @partygame/game-client (see below)
 launch.ts            launcher config (`@partygame/launcher`); `bun run launch` reaches it through `scripts/game.ts`
 bots/                WitClash bot strategy (`witClashBot.ts`, on `@partygame/bots`) and the `bun run bots` CLI (see "Playtesting alone")
-terminal/            `play.ts` (a human at a readline prompt) and `demo.ts` (all-bot game, narrated and checked); see "Play in the terminal"
+terminal/            `play.ts` (a human at a readline prompt) and `demo.ts` + `witClashDemo.ts` (all-bot game, narrated and checked); see "Play in the terminal"
 server.ts            Bun entry: loads the content, then startServer from @partygame/server/bun
 content/categories/  host-editable .jsonc categories, at least 3 needed
 ```
@@ -209,7 +209,7 @@ bun run demo                      # `demo` script of this package; from the root
 ```
 
 You answer and vote by typing; `q` quits (`/q` while writing an answer). `play` takes `--bots=N` (0 to 7), `--name=You`, `--endpoint=ws://host:2567 --api-port=3001`.
-`demo` checks that every final score equals the points shown in the reveals and that no bot action was refused.
+`demo` is `witClashDemo` (`terminal/witClashDemo.ts`) on the framework `DemoRun`: it checks that every final score equals the points shown in the reveals and that no bot action was refused.
 
 ## Client (`ui/`)
 

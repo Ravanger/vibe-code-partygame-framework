@@ -1,6 +1,5 @@
-import { LOBBY_PHASE } from "@partygame/shared";
-import { ACTION } from "../../src/actionNames.js";
-import { PHASE } from "../../src/phaseNames.js";
+import { END_GAME, LOBBY_PHASE } from "@partygame/shared";
+import { isGameOver } from "../../src/isGameOver.js";
 import type { WitClashManager } from "../manager.js";
 
 /** Leave and, for the host, end the game: shown on every screen except the lobby, which has its own leave button. */
@@ -22,7 +21,7 @@ export class GameControlsViewModel {
 
   get isGameOver(): boolean {
     const state = this.manager.state;
-    return state?.phase === PHASE.Results && state.isFinalRound;
+    return state !== undefined && isGameOver(state);
   }
 
   get canEndGame(): boolean {
@@ -49,7 +48,7 @@ export class GameControlsViewModel {
 
   async confirmEnd(): Promise<void> {
     this.closeMenu();
-    if (this.canEndGame) await this.manager.sendAction(ACTION.END_GAME);
+    if (this.canEndGame) await this.manager.sendAction(END_GAME);
   }
 
   async leave(): Promise<void> {

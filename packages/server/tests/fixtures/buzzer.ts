@@ -79,6 +79,11 @@ export const BuzzerGame = defineGame<BuzzerState, BuzzerPrivate, BuzzerOptions>(
             if (ctx.activePlayers().every((p) => ctx.priv.buzzed.has(p.id))) ctx.transition("Done");
           },
         }),
+        JUNK: action({
+          from: "player",
+          payload: z.object({}),
+          handler: (ctx) => ctx.send(ctx.playerId, "ERROR", "junk"),
+        }),
         BOOM: action({
           from: "player",
           payload: z.object({}),

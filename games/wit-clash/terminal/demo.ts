@@ -1,6 +1,6 @@
 import { contentDir, loadContent } from "../src/loadContent.js";
 import { CliArgs } from "./CliArgs.js";
-import { DemoRun } from "./DemoRun.js";
+import { witClashDemo } from "./witClashDemo.js";
 
 const parsed = new CliArgs().demo(process.argv.slice(2));
 if (!parsed.ok) {
@@ -11,12 +11,5 @@ if (!parsed.ok) {
 const categories = await loadContent(
   contentDir(process.env, new URL("../server.ts", import.meta.url).href),
 );
-const passed = await new DemoRun({
-  ...parsed.value,
-  categories,
-  out: console.log,
-  thinkMs: [800, 2500],
-  reactMs: [500, 1500],
-  revealSeconds: 2,
-}).run();
+const passed = await witClashDemo({ ...parsed.value, categories, out: console.log }).run();
 process.exit(passed ? 0 : 1);

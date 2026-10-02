@@ -56,6 +56,15 @@ export class TestServer {
     return this.sdk.joinById(room.roomId, options);
   }
 
+  /** Like {@link TestServer.join}, with the client state typed as `stateClass`. */
+  joinAs<TState>(
+    room: Room,
+    options: TestJoinOptions,
+    stateClass: new () => TState,
+  ): Promise<ClientRoom<unknown, TState>> {
+    return this.sdk.joinById<TState>(room.roomId, options, stateClass);
+  }
+
   /** Start the `/api/resolve-code` HTTP API for this server's rooms on a free port; stopped by `shutdown()`. */
   async serveApi(): Promise<number> {
     const port = await freePort();
@@ -95,3 +104,13 @@ export async function bootTestServer(
   const endpoint = `ws://127.0.0.1:${port}`;
   return new TestServer(server, new ColyseusSDK(endpoint), roomCodeService, endpoint);
 }
+
+export {
+  collectErrors,
+  joinPlayer,
+  type SeatPlayersOptions,
+  seatPlayers,
+  stateOf,
+  TestPlayer,
+  testPlayerId,
+} from "./players.js";
