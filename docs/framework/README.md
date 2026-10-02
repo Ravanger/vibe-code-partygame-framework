@@ -204,6 +204,8 @@ without the runtime; phases are thin glue that reads the context, calls them, an
 names from constants so server and UI share them, and build actions with `actionFactory<State, Private, Options>()` once per
 game so each handler's `payload` is inferred from its zod schema. `games/wit-clash/src` is the worked example.
 
+Scores live in a `Record<playerId, number>` mutated only through `awardPoints(scores, playerId, points)`. `leaderboard(scores)` lists them best first (ties by `playerId`). `composeLeaderboard({ scores, seatedNames, rememberedNames, ids? })` returns `{ playerId, name, score, hasLeft }` for everyone in `ids` and `scores` (missing scores are 0): seated players first, then leavers, each group best first; the name comes from `seatedNames`, else `rememberedNames`, else `""`. Extend each entry with your own columns for the state the clients render.
+
 ## Server
 
 `@partygame/server` hosts any game on Colyseus. Your state class extends `BaseGameState` (`phase`, `phaseEndsAt`, `roomCode`,
@@ -433,6 +435,39 @@ export class LobbySettingsViewModel extends LobbySettingsBase<ButtonState> {
 ```
 
 To change a rule, subclass it and override a member, for example `banner`: `class AppViewModel extends AppRouter<ButtonState, typeof SCREENS> { override get banner() { ... } }` (`manager` and `screens` are `protected`).
+
+### Components
+
+`@partygame/game-ui/components` ships Svelte 5 source (no build step; import through the `svelte` export condition). `PlayerSticker` and `QrCode` have helpers on the main entry: `playerSticker`, `stickerLetter`, `qrCode`. `Podium` takes steps from `podiumSteps(rankRows(rows))`: `rankRows` adds competition ranks (1, 1, 3) to rows already in leaderboard order (a new rank group starts where `hasLeft` changes); `podiumSteps` keeps the top three rank groups among seated rows, labelled "1st"/"2nd"/"3rd", in display order second, first, third. Rows are `PodiumRow` (`playerId`, `name`, `score`, `rank`, `hasLeft`, `isMe`).
+
+| Component | Props |
+|---|---|
+| `StatusPanel` | `title: string`, `detail?: string`, `tone: "wait" \| "done" \| "info"` |
+| `Timer` | `seconds: number`, `total: number`, `announcement?: string` (polite live region text) |
+| `PlayerSticker` | `name: string`, `playerId: string`, `size?: number` (default 44), `ghost?: boolean` |
+| `Podium` | `steps: PodiumStep<TRow>[]` (from `podiumSteps`), `extra?: Snippet<[TRow]>` (rendered per occupant, e.g. a chip) |
+| `QrCode` | `text: string` |
+| `ActionBar` | `children: Snippet` |
+| `NameInput` | `field: NameField`, `focus?: boolean` |
+| `LobbySettings` | `vm: LobbySettingsViewModel<TState>` |
+| `GameControls` | `vm: GameControlsViewModel<TState>` |
+
+`LobbySettings` and `GameControls` render a viewmodel the game builds and passes in (`untrack(() => new GameControlsViewModel(manager, isGameOver))`).
+
+```svelte
+<script lang="ts">
+  import { ActionBar, StatusPanel, Timer } from "@partygame/game-ui/components";
+</script>
+
+<Timer seconds={12} total={30} />
+<StatusPanel title="Waiting for players" tone="wait" />
+<ActionBar><button type="button" class="btn">Go</button></ActionBar>
+```
+
+Theming contract: the package ships no stylesheet. The game's CSS defines these, and the components read them.
+
+- Custom properties: `--ink`, `--ink-soft`, `--white`, `--pink`, `--sun`, `--mint`, `--sky`, `--disabled`, `--tape-sky`, `--tape-mint` (`StatusPanel` sets `--tape` itself), `--fs-3`, `--fs-4`, `--fs-5`, `--font-display`, `--outline`, `--radius-card`, `--scrap-shadow`, `--scale` (optional multiplier, default 1), `--timer-size` (optional, default 96px).
+- Global classes: `card`, `taped`, `sticker`, `hand` (`StatusPanel`); `sr-only` (`Timer`); `action-bar` (`ActionBar` renders it and styles nothing, so the game styles the bar, e.g. `.action-bar > .btn` and `main.tv .action-bar`).
 
 ## Bots
 

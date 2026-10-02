@@ -1,6 +1,6 @@
 <script lang="ts">
+import { PlayerSticker } from "@partygame/game-ui/components";
 import type { ScoreRow } from "../viewmodels/Scoreboard.js";
-import PlayerSticker from "./PlayerSticker.svelte";
 
 const { rows }: { rows: ScoreRow[] } = $props();
 </script>

@@ -1,17 +1,21 @@
 <script lang="ts">
 import { WaitingRoomViewModel } from "@partygame/game-ui";
+import {
+  ActionBar,
+  LobbySettings,
+  NameInput,
+  PlayerSticker,
+  QrCode,
+  StatusPanel,
+} from "@partygame/game-ui/components";
 import { untrack } from "svelte";
-import ActionBar from "../components/ActionBar.svelte";
-import LobbySettings from "../components/LobbySettings.svelte";
-import NameInput from "../components/NameInput.svelte";
-import PlayerSticker from "../components/PlayerSticker.svelte";
-import QrCode from "../components/QrCode.svelte";
-import StatusPanel from "../components/StatusPanel.svelte";
 import type { WitClashManager } from "../manager.js";
+import { LobbySettingsViewModel } from "../viewmodels/LobbySettingsViewModel.svelte.js";
 
 const { manager }: { manager: WitClashManager } = $props();
 
 const vm = untrack(() => new WaitingRoomViewModel(manager));
+const settings = untrack(() => new LobbySettingsViewModel(manager));
 
 $effect(() => () => vm.destroy());
 </script>
@@ -95,7 +99,7 @@ $effect(() => () => vm.destroy());
       <NameInput field={vm.nameField} />
     {/if}
 
-    <LobbySettings {manager} />
+    <LobbySettings vm={settings} />
   </div>
 
   <button type="button" class="btn btn--ghost leave" onclick={() => vm.leave()}>Leave game</button>

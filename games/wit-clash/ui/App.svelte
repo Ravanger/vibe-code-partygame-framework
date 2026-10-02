@@ -1,15 +1,17 @@
 <script lang="ts">
+import { GameControls } from "@partygame/game-ui/components";
 import { untrack } from "svelte";
-import GameControls from "./components/GameControls.svelte";
 import type { WitClashManager } from "./manager.js";
 import { PHASE_SCREENS } from "./screens/index.js";
 import JoinNextRound from "./screens/JoinNextRound.svelte";
 import Welcome from "./screens/Welcome.svelte";
 import { AppViewModel } from "./viewmodels/AppViewModel.js";
+import { GameControlsViewModel } from "./viewmodels/GameControlsViewModel.svelte.js";
 
 const { manager }: { manager: WitClashManager } = $props();
 
 const vm = untrack(() => new AppViewModel(manager));
+const controls = untrack(() => new GameControlsViewModel(manager));
 const route = $derived(vm.screen);
 </script>
 
@@ -18,7 +20,7 @@ const route = $derived(vm.screen);
     <header>
       <span class="wordmark">WitClash</span>
       <span class="room-chip">{vm.roomCode}</span>
-      <GameControls {manager} />
+      <GameControls vm={controls} />
     </header>
   {/if}
 

@@ -1,14 +1,12 @@
 <script lang="ts">
+import { ActionBar, PlayerSticker, Podium, StatusPanel } from "@partygame/game-ui/components";
 import { untrack } from "svelte";
-import ActionBar from "../components/ActionBar.svelte";
 import MatchupCard from "../components/MatchupCard.svelte";
-import PlayerSticker from "../components/PlayerSticker.svelte";
-import Podium from "../components/Podium.svelte";
 import Scoreboard from "../components/Scoreboard.svelte";
-import StatusPanel from "../components/StatusPanel.svelte";
 import { confettiPieces } from "../confetti.js";
 import type { WitClashManager } from "../manager.js";
 import { ResultsViewModel } from "../viewmodels/ResultsViewModel.js";
+import type { ScoreRow } from "../viewmodels/Scoreboard.js";
 import { Spotlight } from "../viewmodels/Spotlight.svelte.js";
 
 const { manager }: { manager: WitClashManager } = $props();
@@ -57,7 +55,10 @@ $effect(() => () => spotlight.destroy());
 
   <div class="stage">
     <div class="podium-panel" class:faded={showBest}>
-      <Podium steps={vm.podiumSteps} />
+      {#snippet tieBreaker(player: ScoreRow)}
+        {#if player.wonTieBreaker}<span class="chip chip--sky">Won the tie-breaker</span>{/if}
+      {/snippet}
+      <Podium steps={vm.podiumSteps} extra={tieBreaker} />
     </div>
 
     {#if vm.bestAnswers.length > 0}

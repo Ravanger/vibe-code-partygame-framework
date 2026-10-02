@@ -1,11 +1,9 @@
-<script lang="ts">
-import { untrack } from "svelte";
-import type { WitClashManager } from "../manager.js";
-import { LobbySettingsViewModel } from "../viewmodels/LobbySettingsViewModel.svelte.js";
+<script lang="ts" generics="TState extends BaseGameState">
+import type { LobbySettingsViewModel } from "@partygame/game-ui";
+// biome-ignore lint/correctness/noUnusedImports: used by the generics attribute
+import type { BaseGameState } from "@partygame/shared/schema";
 
-const { manager }: { manager: WitClashManager } = $props();
-
-const vm = untrack(() => new LobbySettingsViewModel(manager));
+const { vm }: { vm: LobbySettingsViewModel<TState> } = $props();
 </script>
 
 <details class="settings card" open={vm.startsOpen}>

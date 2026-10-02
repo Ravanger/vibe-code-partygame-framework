@@ -220,8 +220,8 @@ manager.ts          the WitClashManager type
 App.svelte          screen router, error toast, "reconnecting" indicator, Leave game / End game controls outside the lobby
 screens/            one component per screen: Welcome, WaitingRoom, JoinNextRound, CategoryVote, Prompting,
                     MatchupVote, MatchupReveal, TieBreakerPrompting, TieBreakerVote, TieBreakerReveal, Results
-components/         MatchupCard, Scoreboard, Podium, ProgressBadges, LobbySettings, QrCode, NameInput, GameControls
-viewmodels/         one viewmodel per game screen (the name field, welcome, waiting room, lobby settings come from `@partygame/game-ui`), plus Scoreboard, Podium, MatchupRecap, AnswerProgress and TypingReporter helpers
+components/         WitClash-only pieces: MatchupCard, Scoreboard, ProgressBadges, VoteBoard, AnswerBox, NextUpBar, ScreenTitle
+viewmodels/         one viewmodel per game screen (the name field, welcome, waiting room, lobby settings come from `@partygame/game-ui`), plus Scoreboard (ranks via `rankRows`), MatchupRecap, AnswerProgress and TypingReporter helpers
 ```
 
 - Lobby, controls and phase routing come from `@partygame/game-ui`: `AppViewModel` is an `AppRouter` that only adds the matchup banner rule. It routes to a `PHASE_SCREENS` entry in `ui/screens/index.ts` (one entry per phase: component and mid-game waiting label). A seat with `isActive === false` outside the lobby gets
@@ -232,6 +232,7 @@ viewmodels/         one viewmodel per game screen (the name field, welcome, wait
   (`votesCast`/`votesExpected`, also in CategorySelection), eligibility (`mine.canVote`) and limits (`minPlayers`, `maxPlayers`, `options`) are published by the server.
 - Results shows a podium (top three places; tied players share a step, leavers are marked, `wonTieBreaker` gets a badge), the best-answer award (`state.bestAnswers`; several entries read "Shared best answer"), then the scoreboard. Prompting shows the winning category and tells a player who was dealt no prompt that they sit this round out and vote. Prompting and TieBreakerPrompting list each answering player's `n/answersPerPlayer`, a done tick and a "typing…" marker; the answer boxes send `SET_TYPING` once on the first keystroke and once after 2.5 s idle or on submit. All of it renders large in the TV layout.
 - Votes stay hidden while voting: only `votesCast`/`votesExpected` and your own highlighted vote show. Counts and authors appear in `MatchupReveal`.
+- Shared components (StatusPanel, Timer, PlayerSticker, QrCode, ActionBar, NameInput, LobbySettings, GameControls, Podium) come from `@partygame/game-ui/components` and take their look from the CSS variables and classes in `ui/app.css`. Results passes the "Won the tie-breaker" chip to `Podium` through its `extra` snippet.
 - Add a phase screen: a viewmodel, a screen component and one `PHASE_SCREENS` entry in `ui/screens/index.ts`.
 
 ## Tests

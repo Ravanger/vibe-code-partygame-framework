@@ -1,8 +1,7 @@
 <script lang="ts">
+import { StatusPanel, Timer } from "@partygame/game-ui/components";
 import { untrack } from "svelte";
 import ScreenTitle from "../components/ScreenTitle.svelte";
-import StatusPanel from "../components/StatusPanel.svelte";
-import Timer from "../components/Timer.svelte";
 import VoteBoard from "../components/VoteBoard.svelte";
 import type { WitClashManager } from "../manager.js";
 import { TieBreakerViewModel } from "../viewmodels/TieBreakerViewModel.svelte.js";

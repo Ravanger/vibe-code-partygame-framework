@@ -1,8 +1,8 @@
 <script lang="ts">
+import { StatusPanel } from "@partygame/game-ui/components";
 import { untrack } from "svelte";
 import MatchupCard from "../components/MatchupCard.svelte";
 import NextUpBar from "../components/NextUpBar.svelte";
-import StatusPanel from "../components/StatusPanel.svelte";
 import type { WitClashManager } from "../manager.js";
 import { MatchupRevealViewModel } from "../viewmodels/MatchupRevealViewModel.js";
 

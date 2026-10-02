@@ -1,4 +1,4 @@
-import { leaderboard } from "@partygame/core";
+import { composeLeaderboard } from "@partygame/core";
 import type { MatchupAward } from "./scoring.js";
 
 export interface ScoreRow {
@@ -30,26 +30,20 @@ export interface ScoreboardInput {
 
 /** Everyone who took part, seated players first and leavers below them, each group best first. Leavers keep their name and score. */
 export function composeScoreboard(input: ScoreboardInput): ScoreRow[] {
-  const ids = new Set([...input.activeIds, ...input.participantIds, ...Object.keys(input.scores)]);
-  const totals: Record<string, number> = {};
-  for (const id of ids) totals[id] = input.scores[id] ?? 0;
-  const seated = (playerId: string): boolean => input.seatedNames.has(playerId);
-  const ranked = leaderboard(totals);
-  const ordered = [
-    ...ranked.filter((r) => seated(r.playerId)),
-    ...ranked.filter((r) => !seated(r.playerId)),
-  ];
-  return ordered.map(({ playerId, score }) => {
-    const awards = input.awards.filter((a) => a.playerId === playerId);
+  const entries = composeLeaderboard({
+    scores: input.scores,
+    seatedNames: input.seatedNames,
+    rememberedNames: input.rememberedNames,
+    ids: [...input.activeIds, ...input.participantIds],
+  });
+  return entries.map((entry) => {
+    const awards = input.awards.filter((a) => a.playerId === entry.playerId);
     return {
-      playerId,
-      name: input.seatedNames.get(playerId) ?? input.rememberedNames[playerId] ?? "",
-      score,
+      ...entry,
       roundPoints: awards.reduce((n, a) => n + a.total, 0),
       matchupsWon: awards.filter((a) => a.isWinner).length,
       hadClash: awards.some((a) => a.isClash),
-      wonTieBreaker: playerId === input.tieBreakerWinnerId,
-      hasLeft: !seated(playerId),
+      wonTieBreaker: entry.playerId === input.tieBreakerWinnerId,
     };
   });
 }

@@ -1,6 +1,6 @@
 <script lang="ts">
+import { PlayerSticker } from "@partygame/game-ui/components";
 import type { RevealedMatchup } from "../viewmodels/MatchupRecap.js";
-import PlayerSticker from "./PlayerSticker.svelte";
 
 const {
   matchup,

@@ -1,11 +1,9 @@
-<script lang="ts">
-import { untrack } from "svelte";
-import type { WitClashManager } from "../manager.js";
-import { GameControlsViewModel } from "../viewmodels/GameControlsViewModel.svelte.js";
+<script lang="ts" generics="TState extends BaseGameState">
+import type { GameControlsViewModel } from "@partygame/game-ui";
+// biome-ignore lint/correctness/noUnusedImports: used by the generics attribute
+import type { BaseGameState } from "@partygame/shared/schema";
 
-const { manager }: { manager: WitClashManager } = $props();
-
-const vm = untrack(() => new GameControlsViewModel(manager));
+const { vm }: { vm: GameControlsViewModel<TState> } = $props();
 
 let root = $state<HTMLElement>();
 

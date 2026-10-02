@@ -14,7 +14,6 @@
     "@partygame/server": "workspace:*",
     "@partygame/shared": "workspace:*",
     "@partygame/terminal": "workspace:*",
-    "uqr": "^0.1.3",
     "zod": "^4.6.5"
   },
   "devDependencies": {

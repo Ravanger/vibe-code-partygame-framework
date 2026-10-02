@@ -1,10 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BestAnswer } from "../../src/state.js";
 import { AnswerProgress } from "../../ui/viewmodels/AnswerProgress.js";
-import { Podium } from "../../ui/viewmodels/Podium.js";
 import { PromptingViewModel } from "../../ui/viewmodels/PromptingViewModel.svelte.js";
 import { ResultsViewModel } from "../../ui/viewmodels/ResultsViewModel.js";
-import { Scoreboard } from "../../ui/viewmodels/Scoreboard.js";
 import { TieBreakerViewModel } from "../../ui/viewmodels/TieBreakerViewModel.svelte.js";
 import {
   addMine,
@@ -18,68 +16,6 @@ import {
 
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
-
-describe("Podium", () => {
-  function podium(...scores: number[]) {
-    const c = connectedClient({}, "Results");
-    scores.forEach((score, index) => {
-      c.state.scoreboard.push(scoreRow(`p${index}`, score, { name: `P${index}` }));
-    });
-    return new Podium(new Scoreboard(c.manager)).steps;
-  }
-
-  it("is empty without a scoreboard", () => {
-    expect(podium()).toEqual([]);
-  });
-
-  it("puts the winner in the middle, the runner-up on the left and third on the right", () => {
-    const steps = podium(300, 200, 100, 50);
-    expect(steps.map((s) => [s.rank, s.tier, s.label, s.players.map((p) => p.name)])).toEqual([
-      [2, 2, "2nd", ["P1"]],
-      [1, 1, "1st", ["P0"]],
-      [3, 3, "3rd", ["P2"]],
-    ]);
-  });
-
-  it("keeps leavers off the podium and ranks them below seated players", () => {
-    const c = connectedClient({}, "Results");
-    c.state.scoreboard.push(
-      scoreRow("a", 10, { name: "A" }),
-      scoreRow("g", 10, { name: "G", hasLeft: true }),
-    );
-    const board = new Scoreboard(c.manager);
-    expect(board.rows.map((r) => [r.name, r.rank])).toEqual([
-      ["A", 1],
-      ["G", 2],
-    ]);
-    expect(new Podium(board).steps.map((s) => s.players.map((p) => p.name))).toEqual([["A"]]);
-  });
-
-  it("shows a single player alone", () => {
-    expect(podium(10).map((s) => s.label)).toEqual(["1st"]);
-  });
-
-  it("shows two players", () => {
-    expect(podium(10, 5).map((s) => s.label)).toEqual(["2nd", "1st"]);
-  });
-
-  it("lets tied players share a step and gives the next tier the next step", () => {
-    const steps = podium(300, 300, 100, 100);
-    expect(steps.map((s) => [s.rank, s.tier, s.label, s.players.map((p) => p.name)])).toEqual([
-      [3, 2, "2nd", ["P2", "P3"]],
-      [1, 1, "1st", ["P0", "P1"]],
-    ]);
-  });
-
-  it("fills three steps by tier and labels steps by tier, not competition rank", () => {
-    const steps = podium(300, 300, 100, 50, 20);
-    expect(steps.map((s) => [s.tier, s.label, s.players.length])).toEqual([
-      [2, "2nd", 1],
-      [1, "1st", 2],
-      [3, "3rd", 1],
-    ]);
-  });
-});
 
 describe("ResultsViewModel copy", () => {
   it("words the champion line and the wait by the end of the game", () => {

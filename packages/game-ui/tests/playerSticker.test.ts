@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { playerSticker, STICKER_SHAPES, stickerLetter } from "../ui/playerSticker.js";
+import { playerSticker, STICKER_SHAPES, stickerLetter } from "../src/playerSticker.js";
 
 describe("playerSticker", () => {
   it("is stable for a player", () => {

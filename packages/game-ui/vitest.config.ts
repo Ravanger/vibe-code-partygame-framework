@@ -2,7 +2,7 @@ import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-  plugins: [svelte()],
+  plugins: [svelte({ emitCss: false })],
   resolve: { conditions: ["browser"] },
   test: {
     name: "@partygame/game-ui",
@@ -10,6 +10,6 @@ export default defineConfig({
     include: ["tests/**/*.test.ts"],
     setupFiles: ["./vitest.setup.ts"],
     fileParallelism: false,
-    coverage: { include: ["src/**/*.ts"] },
+    coverage: { include: ["src/**/*.{ts,svelte}"] },
   },
 });

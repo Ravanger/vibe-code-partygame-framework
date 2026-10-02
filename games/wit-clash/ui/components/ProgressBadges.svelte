@@ -1,6 +1,6 @@
 <script lang="ts">
+import { PlayerSticker } from "@partygame/game-ui/components";
 import type { ProgressRow } from "../viewmodels/AnswerProgress.js";
-import PlayerSticker from "./PlayerSticker.svelte";
 
 const { rows }: { rows: ProgressRow[] } = $props();
 </script>

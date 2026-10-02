@@ -1,7 +1,7 @@
+import { type PodiumStep, podiumSteps } from "@partygame/game-ui";
 import { ACTION } from "../../src/actionNames.js";
 import type { WitClashManager } from "../manager.js";
 import { MatchupRecap, type RevealedMatchup } from "./MatchupRecap.js";
-import { Podium, type PodiumStep } from "./Podium.js";
 import { Scoreboard, type ScoreRow } from "./Scoreboard.js";
 
 export interface BestAnswerView {
@@ -14,17 +14,15 @@ export interface BestAnswerView {
 
 export class ResultsViewModel {
   readonly scoreboard: Scoreboard;
-  private readonly podium: Podium;
   private readonly recap: MatchupRecap;
 
   constructor(private readonly manager: WitClashManager) {
     this.scoreboard = new Scoreboard(manager);
     this.recap = new MatchupRecap(manager);
-    this.podium = new Podium(this.scoreboard);
   }
 
-  get podiumSteps(): PodiumStep[] {
-    return this.podium.steps;
+  get podiumSteps(): PodiumStep<ScoreRow>[] {
+    return podiumSteps(this.scoreboard.rows);
   }
 
   get bestAnswers(): BestAnswerView[] {

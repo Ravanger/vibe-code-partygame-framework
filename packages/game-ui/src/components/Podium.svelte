@@ -1,10 +1,12 @@
-<script lang="ts">
-import type { PodiumStep } from "../viewmodels/Podium.js";
+<script lang="ts" generics="TRow extends PodiumRow">
+// biome-ignore lint/correctness/noUnusedImports: used by the generics attribute
+import type { PodiumRow, PodiumStep } from "@partygame/game-ui";
+import type { Snippet } from "svelte";
 import PlayerSticker from "./PlayerSticker.svelte";
 
-const { steps }: { steps: PodiumStep[] } = $props();
+const { steps, extra }: { steps: PodiumStep<TRow>[]; extra?: Snippet<[TRow]> } = $props();
 
-const stickerSize = (step: PodiumStep): number => {
+const stickerSize = (step: PodiumStep<TRow>): number => {
   if (step.players.length > 1) return 36;
   return step.tier === 1 ? 64 : 52;
 };
@@ -25,9 +27,7 @@ const stickerSize = (step: PodiumStep): number => {
               {#if player.isMe}
                 <span class="you hand">&larr; you</span>
               {/if}
-              {#if player.wonTieBreaker}
-                <span class="chip chip--sky">Won the tie-breaker</span>
-              {/if}
+              {#if extra}{@render extra(player)}{/if}
               <span class="occupant-score">{`${player.score} pts`}</span>
             </div>
           {/each}

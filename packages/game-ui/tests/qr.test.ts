@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { qrCode } from "../ui/qr.js";
+import { qrCode } from "../src/qr.js";
 
 describe("qrCode", () => {
   it("draws the dark modules as horizontal runs on a square grid", () => {

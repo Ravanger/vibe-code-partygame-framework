@@ -21,6 +21,7 @@ export default defineConfig({
       reportsDirectory: "./coverage",
       include: [
         "packages/*/src/**/*.ts",
+        "packages/game-ui/src/**/*.svelte",
         "games/*/src/**/*.ts",
         "games/*/ui/**/*.{ts,svelte}",
         "games/*/bots/**/*.ts",
