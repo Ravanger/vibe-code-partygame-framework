@@ -41,6 +41,7 @@
 | `bun run lint` | `biome check .` through the local binary (`./node_modules/.bin/biome.exe check .` on Windows; not `npx`) |
 | `bun run test:coverage` | `vitest run --coverage` over all projects, 100% thresholds |
 | `bun run verify` | lint, typecheck of `launch.ts` and the game, coverage |
+| `bun run launch:demo` | dev launch that also opens a watch-only room (room option `seats`) where a host bot and N bots (`--demo[=2..7]`, default 3) play one game; the browser opens `/?tv=CODE`, the TV stays on the final Results. Excludes `--bots`. `terminal/DemoTable.ts` |
 | `bun run launch:bots` | dev launch that also opens a room, lands your browser in it and seats 3 bots once you enter your name (`launch.ts <mode> --bots[=1..7]`) |
 | `bun run bots <CODE> [count]` | WitClash bots join a room created in the browser and play every turn (`--endpoint`, `--api-port`); Ctrl+C removes them |
 | `bun run cli:play [--bots=N] [--name=You] [--join=ABCD]` / `cli:demo [--bots=N] [--rounds=R]` | WitClash in the terminal (`games/wit-clash/terminal/`): play with bots on a server it finds or starts / narrated all-bot game that prints PASS or FAIL |

@@ -10,6 +10,8 @@ export interface JoinBotsOptions {
   endpoint: string;
   apiPort: number;
   bot?: BotOptions;
+  /** playerIds for the bots in order; a random one when the list runs out. */
+  playerIds?: readonly string[];
   timeoutMs?: number;
 }
 
@@ -28,12 +30,12 @@ export class BotJoiner {
   async join(): Promise<BotPlayer[]> {
     const roomId = await this.locator.resolve(this.options.code);
     const bots: BotPlayer[] = [];
-    for (let i = 0; i < this.options.count; ++i) bots.push(await this.joinOne(roomId));
+    for (let i = 0; i < this.options.count; ++i) bots.push(await this.joinOne(roomId, i));
     return bots;
   }
 
-  private async joinOne(roomId: string): Promise<BotPlayer> {
-    const playerId = crypto.randomUUID();
+  private async joinOne(roomId: string, index: number): Promise<BotPlayer> {
+    const playerId = this.options.playerIds?.[index] ?? crypto.randomUUID();
     const room = await this.client.joinById<WitClashState>(roomId, { playerId }, WitClashState);
     await this.until(() => room.state.roomCode !== "", "the room state");
     const name = this.freeName(room.state);

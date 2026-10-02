@@ -13,6 +13,7 @@ import {
   JoinOptionsSchema,
   LOBBY_PHASE,
   type ServerError as ProtocolError,
+  RoomOptionsSchema,
   ServerMessage,
   SetNameSchema,
 } from "@partygame/shared";
@@ -21,7 +22,7 @@ import { PlayerSchema } from "@partygame/shared/schema";
 import type { RoomCodeService } from "../services/RoomCodeService.js";
 
 const SPECTATOR_SLOTS = 32;
-const FRAMEWORK_KEYS = ["playerId", "name", "spectator"];
+const FRAMEWORK_KEYS = ["playerId", "name", "spectator", "seats"];
 const SPECTATOR_ERROR: ProtocolError = {
   code: ErrorCode.UNAUTHORIZED,
   message: "Spectators cannot act",
@@ -46,6 +47,7 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
   private readonly playerOf = new Map<string, string>();
   private readonly spectators = new Set<string>();
   private readonly kicked = new Set<string>();
+  private seatList: Set<string> | undefined;
   private readonly views = new Map<string, StateView>();
   private readonly viewRefs = new Map<string, Set<Schema>>();
 
@@ -55,6 +57,9 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
 
   onCreate(options: Record<string, unknown>): void {
     const { definition, stateClass, roomCodeService } = this.config;
+    const roomOptions = RoomOptionsSchema.safeParse(options);
+    if (!roomOptions.success) throw new ServerError(4400, "Invalid room options");
+    if (roomOptions.data.seats) this.seatList = new Set(roomOptions.data.seats);
     this.autoDispose = false;
     this.maxClients = definition.maxPlayers + SPECTATOR_SLOTS;
     const rawOptions = Object.fromEntries(
@@ -86,6 +91,9 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     if (!parsed.success) throw new ServerError(4400, "Invalid join options");
     const { playerId, name, spectator } = parsed.data;
     if (this.kicked.has(playerId)) throw new ServerError(4403, "You were removed from this room");
+    if (!spectator && this.seatList && !this.seatList.has(playerId)) {
+      throw new ServerError(4403, "This room is watch-only");
+    }
     const view = new StateView();
     client.view = view;
     this.views.set(client.sessionId, view);

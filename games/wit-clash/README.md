@@ -192,6 +192,12 @@ bun run bots ABCD 3          # add 3 bots (1 to 7) to a room you already created
 You are the host: press Start Game (3 or more players, bots included) and Next Round; the game does not start by itself. The bots answer and vote on their own.
 For another number of bots use `bun run launch --bots=N` (1 to 7); `bun run bots` takes `--endpoint` and `--api-port`. Ctrl+C removes the bots.
 
+```bash
+bun run launch:demo          # watch-only room: bots play one game, the browser opens its TV view
+```
+
+`--demo=N` sets the bots (2 to 7, default 3), plus a host bot. Nobody can take a seat; the TV stays on the final results. Ctrl+C stops it. Not combinable with `--bots`.
+
 ## Play in the terminal
 
 ```bash

@@ -97,6 +97,14 @@ export const JoinOptionsSchema = z.object({
   spectator: z.boolean().optional(),
 });
 
+/**
+ * Framework keys a client may pass when creating a room. `seats` makes the room watch-only for
+ * everyone else: only the listed playerIds can take a seat, spectators still join.
+ */
+export const RoomOptionsSchema = z.object({
+  seats: z.array(PlayerIdSchema).optional(),
+});
+
 /** Body of `GET /api/resolve-code`: the room id, or why the code did not resolve. */
 export const ResolveCodeResponseSchema = z.union([
   z.object({ roomId: z.string() }),

@@ -72,6 +72,22 @@ describe("joinBots", () => {
     expect(bots.map((bot) => bot.name)).toEqual(["Bot 2", "Bot 3"]);
   });
 
+  it("uses the given playerIds first, then random ones", async () => {
+    const host = await createRoom("Host");
+    bots.push(
+      ...(await joinBots({
+        code: host.state.roomCode,
+        count: 2,
+        endpoint: t.endpoint,
+        apiPort,
+        playerIds: ["given-player-0001"],
+      })),
+    );
+    expect(bots[0]?.playerId).toBe("given-player-0001");
+    expect(bots[1]?.playerId).not.toBe("given-player-0001");
+    expect(host.state.players.has("given-player-0001")).toBe(true);
+  });
+
   it("leave() removes the bot from the room", async () => {
     const host = await createRoom("Host");
     const [bot] = await join(host, 1);

@@ -28,7 +28,7 @@ export class GameClient {
   async create(
     playerId: string,
     name: string,
-    options: Partial<WitClashOptions> = {},
+    options: Partial<WitClashOptions> & { seats?: string[] } = {},
   ): Promise<Room<WitClashState>> {
     const room = await this.client.create<WitClashState>(
       ROOM_NAME,

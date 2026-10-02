@@ -12,6 +12,7 @@ import {
   PlayerIdSchema,
   ResolveCodeResponseSchema,
   RoomCodeSchema,
+  RoomOptionsSchema,
   SET_OPTIONS,
   ServerMessage,
   SetNameSchema,
@@ -94,6 +95,17 @@ describe("PlayerIdSchema", () => {
   it("rejects outside the range", () => {
     expect(PlayerIdSchema.safeParse("a".repeat(7)).success).toBe(false);
     expect(PlayerIdSchema.safeParse("a".repeat(65)).success).toBe(false);
+  });
+});
+
+describe("RoomOptionsSchema", () => {
+  it("accepts a list of player ids, or none, and ignores game options", () => {
+    expect(RoomOptionsSchema.parse({ seats: ["a".repeat(8)], totalRounds: 2 })).toEqual({
+      seats: ["a".repeat(8)],
+    });
+    expect(RoomOptionsSchema.parse({})).toEqual({});
+    expect(RoomOptionsSchema.safeParse({ seats: ["short"] }).success).toBe(false);
+    expect(RoomOptionsSchema.safeParse({ seats: "a".repeat(8) }).success).toBe(false);
   });
 });
 

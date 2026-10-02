@@ -119,6 +119,42 @@ describe("HostBot", () => {
     expect(room.sent).toEqual([{ type: "NEXT_ROUND" }, { type: "NEXT_ROUND" }]);
   });
 
+  it("waits the configured pause before moving to the next round", async () => {
+    const queue: Array<{ run: () => void; ms: number }> = [];
+    const { room } = setup({
+      nextRoundDelayMs: 4000,
+      schedule: (run, ms) => {
+        queue.push({ run, ms });
+        return () => undefined;
+      },
+    });
+    room.state.phase = PHASE.Results;
+    room.state.roundNumber = 1;
+    room.changed();
+    room.changed();
+    await tick();
+    expect(room.sent).toEqual([]);
+    expect(queue.map((entry) => entry.ms)).toEqual([4000]);
+    queue[0]?.run();
+    await tick();
+    expect(room.sent).toEqual([{ type: "NEXT_ROUND" }]);
+  });
+
+  it("uses a real timer for the pause, and leaving cancels it", async () => {
+    const { room, bot } = setup({ nextRoundDelayMs: 20 });
+    room.state.phase = PHASE.Results;
+    room.state.roundNumber = 1;
+    room.changed();
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    expect(room.sent).toHaveLength(1);
+
+    room.state.roundNumber = 2;
+    room.changed();
+    await bot.leave();
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    expect(room.sent).toHaveLength(1);
+  });
+
   it("leaves the room", async () => {
     const { room, bot } = setup();
     await bot.leave();

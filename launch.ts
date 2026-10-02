@@ -8,6 +8,8 @@
  *   bun run launch:prod [--no-browser]    build the client, serve it on http://localhost:3000
  *   bun run launch:bots [--no-browser]    dev, plus a room opened for you: the browser lands in it and
  *                                         3 bots join once you enter your name (any mode: --bots[=1..7])
+ *   bun run launch:demo [--no-browser]    dev, plus a watch-only room that bots play by themselves; the browser
+ *                                         opens its TV view (any mode: --demo[=2..7] bots, default 3)
  *
  * Ctrl+C stops everything. If any child dies, the rest is stopped and the launcher exits with 1.
  */
@@ -21,6 +23,11 @@ import { networkInterfaces } from "node:os";
 import { extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { BotTable } from "./games/wit-clash/bots/botTable.js";
+import {
+  DEMO_BOT_OPTIONS,
+  DEMO_NEXT_ROUND_MS,
+  DemoTable,
+} from "./games/wit-clash/terminal/DemoTable.js";
 
 const ROOT = fileURLToPath(new URL(".", import.meta.url));
 const GAME_DIR = join(ROOT, "games", "wit-clash");
@@ -51,7 +58,7 @@ const MIME: Record<string, string> = {
 const children = new Set<ChildProcess>();
 let httpServer: Server | undefined;
 let stopping = false;
-let botTable: BotTable | undefined;
+let botTable: { leave(): Promise<void> } | undefined;
 
 const log = (message: string): void => console.log(`[Launch] ${message}`);
 const sleep = (ms: number): Promise<void> => new Promise((done) => setTimeout(done, ms));
@@ -250,10 +257,34 @@ async function startBots(
   for (const bot of bots) log(`${bot.name} joined ${code}`);
 }
 
+async function startDemo(
+  count: number,
+  clientUrl: string,
+  shouldOpenBrowser: boolean,
+): Promise<void> {
+  const table = new DemoTable({
+    endpoint: `ws://localhost:${GAME_SERVER_PORT}`,
+    apiPort: API_SERVER_PORT,
+    bots: count,
+    bot: { ...DEMO_BOT_OPTIONS, log: (line) => console.log(`[Bots] ${line}`) },
+    nextRoundDelayMs: DEMO_NEXT_ROUND_MS,
+  });
+  botTable = table;
+  const code = await table.open();
+  const url = `${clientUrl}/?tv=${code}`;
+  log(`Demo room ${code}: watch-only, ${count + 1} bots play one game`);
+  if (shouldOpenBrowser) openBrowser(url);
+  else log(`Open ${url}`);
+  await table.seatBots();
+  await table.finished();
+  log("Demo finished; Ctrl+C to exit");
+}
+
 async function launch(
   mode: Mode,
   shouldOpenBrowser: boolean,
   botCount: number | undefined,
+  demoCount: number | undefined,
 ): Promise<void> {
   const clientPort = mode === "prod" ? PRODUCTION_PORT : CLIENT_DEV_PORT;
   await assertPortsFree({
@@ -274,6 +305,12 @@ async function launch(
     for (const lan of lanUrls(clientPort)) log(`Guests on this network: ${lan}`);
   }
   log("Press Ctrl+C to stop");
+  if (demoCount !== undefined) {
+    startDemo(demoCount, url, shouldOpenBrowser).catch((error: unknown) =>
+      log(`Demo stopped: ${error instanceof Error ? error.message : String(error)}`),
+    );
+    return;
+  }
   if (botCount === undefined) {
     if (shouldOpenBrowser) openBrowser(url);
     return;
@@ -283,24 +320,35 @@ async function launch(
   );
 }
 
-const USAGE = "Usage: bun run launch.ts [dev|host|prod] [--no-browser] [--bots[=1..7]]";
+const USAGE =
+  "Usage: bun run launch.ts [dev|host|prod] [--no-browser] [--bots[=1..7] | --demo[=2..7]]";
 const args = process.argv.slice(2);
 const flags = args.filter((arg) => arg.startsWith("--"));
 const positional = args.filter((arg) => !arg.startsWith("--"));
 const modeArg = positional[0] ?? "dev";
 const botsFlag = flags.find((flag) => flag === "--bots" || flag.startsWith("--bots="));
 const botCount = botsFlag === undefined ? undefined : Number(botsFlag.split("=")[1] ?? "3");
-const unknownFlags = flags.filter((flag) => flag !== "--no-browser" && flag !== botsFlag);
+const demoFlag = flags.find((flag) => flag === "--demo" || flag.startsWith("--demo="));
+const demoCount = demoFlag === undefined ? undefined : Number(demoFlag.split("=")[1] ?? "3");
+const unknownFlags = flags.filter(
+  (flag) => flag !== "--no-browser" && flag !== botsFlag && flag !== demoFlag,
+);
 const badBots =
   botCount !== undefined && !(Number.isInteger(botCount) && botCount >= 1 && botCount <= 7);
+const badDemo =
+  demoCount !== undefined && !(Number.isInteger(demoCount) && demoCount >= 2 && demoCount <= 7);
 
-if (!isMode(modeArg) || positional.length > 1 || unknownFlags.length > 0 || badBots) {
+if (!isMode(modeArg) || positional.length > 1 || unknownFlags.length > 0 || badBots || badDemo) {
   console.error(USAGE);
+  process.exit(2);
+}
+if (botsFlag !== undefined && demoFlag !== undefined) {
+  console.error("--demo and --bots cannot be combined: --demo opens its own watch-only room.");
   process.exit(2);
 }
 
 process.on("SIGINT", () => stop(0));
 process.on("SIGTERM", () => stop(0));
-launch(modeArg, !flags.includes("--no-browser"), botCount).catch((error: unknown) =>
+launch(modeArg, !flags.includes("--no-browser"), botCount, demoCount).catch((error: unknown) =>
   fail(error instanceof Error ? error.message : String(error)),
 );
