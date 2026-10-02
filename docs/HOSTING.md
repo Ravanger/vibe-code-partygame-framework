@@ -63,6 +63,16 @@ bun run bots ABCD 3          # add 3 bots (1 to 7) to a room you already created
 You are the host: press Start Game (3 or more players, bots included) and Next Round; the game does not start by itself. The bots answer and vote on their own.
 For another number of bots use `bun run launch --bots=N` (1 to 7); `bun run bots` takes `--endpoint` and `--api-port`. Ctrl+C removes the bots.
 
+## Play in the terminal
+
+```bash
+bun run cli:play                  # host a room; 3 bots join; uses the server on 2567/3001 or starts its own
+bun run cli:play --join=ABCD      # join a room as a normal player
+bun run cli:demo                  # all-bot game, narrated; prints PASS/FAIL (--bots=N total players, --rounds=R)
+```
+
+You are the host in `cli:play`; browser players can join the same room with the printed code while Vite runs.
+
 ## Joining by QR Code
 
 The waiting room shows a QR code of `<address>/?code=ABCD` next to the room code. Players scan it with their phone camera and land in the room; the

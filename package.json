@@ -17,6 +17,8 @@
     "typecheck": "turbo typecheck",
     "dev": "turbo run dev dev:server",
     "bots": "bun run games/wit-clash/bots/cli.ts",
+    "cli:play": "bun run games/wit-clash/terminal/play.ts",
+    "cli:demo": "bun run games/wit-clash/terminal/demo.ts",
     "launch": "bun run launch.ts",
     "launch:dev": "bun run launch.ts dev",
     "launch:host": "bun run launch.ts host",

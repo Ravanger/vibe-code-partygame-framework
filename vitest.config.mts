@@ -19,6 +19,7 @@ export default defineConfig({
         "games/*/src/**/*.ts",
         "games/*/ui/**/*.{ts,svelte}",
         "games/*/bots/**/*.ts",
+        "games/*/terminal/**/*.ts",
       ],
       exclude: [
         "**/node_modules/**",
@@ -31,6 +32,8 @@ export default defineConfig({
         "packages/server/src/bun.ts",
         "games/wit-clash/server.ts",
         "games/wit-clash/bots/cli.ts",
+        "games/wit-clash/terminal/demo.ts",
+        "games/wit-clash/terminal/play.ts",
       ],
       thresholds: { lines: 100, functions: 100, branches: 100, statements: 100 },
     },

@@ -21,6 +21,7 @@ src/
   loadContent.ts     loads and validates the content directory for server.ts
 ui/                  Svelte client, built on @partygame/game-client (see below)
 bots/                dev tool: BotPlayer, joinBots, BotTable and the `bun run bots` CLI (see "Playtesting alone")
+terminal/            `cli:play` (a human at a readline prompt) and `cli:demo` (all-bot game, narrated and checked); see "Play in the terminal"
 server.ts            Bun entry: loads the content, then startServer from @partygame/server/bun
 content/categories/  host-editable .jsonc categories, at least 3 needed
 ```
@@ -190,6 +191,17 @@ bun run bots ABCD 3          # add 3 bots (1 to 7) to a room you already created
 
 You are the host: press Start Game (3 or more players, bots included) and Next Round; the game does not start by itself. The bots answer and vote on their own.
 For another number of bots use `bun run launch --bots=N` (1 to 7); `bun run bots` takes `--endpoint` and `--api-port`. Ctrl+C removes the bots.
+
+## Play in the terminal
+
+```bash
+bun run cli:play                  # host a room; 3 bots join; uses the server on 2567/3001 or starts its own
+bun run cli:play --join=ABCD      # join a room as a normal player
+bun run cli:demo                  # all-bot game, narrated; prints PASS/FAIL (--bots=N total players, --rounds=R)
+```
+
+You answer and vote by typing; `q` quits (`/q` while writing an answer). `cli:play` takes `--bots=N` (0 to 7), `--name=You`, `--endpoint=ws://host:2567 --api-port=3001`.
+`cli:demo` checks that every final score equals the points shown in the reveals and that no bot action was refused.
 
 ## Client (`ui/`)
 

@@ -1,4 +1,4 @@
-import { ClientMessage } from "@partygame/shared";
+import { ClientMessage, isActionResult } from "@partygame/shared";
 import { ACTION } from "../src/actionNames.js";
 import { PHASE } from "../src/phaseNames.js";
 import type { Matchup, PlayerPrivate, WitClashState } from "../src/state.js";
@@ -10,6 +10,21 @@ export interface BotRoom {
   leave(consented: boolean): Promise<unknown>;
 }
 
+/** What came back for one action a bot sent. `ok` is false for a rejection and for a failed request. */
+export interface BotOutcome {
+  bot: string;
+  type: string;
+  ok: boolean;
+  detail: string;
+}
+
+export const outcomeOf = (bot: string, type: string, result: unknown): BotOutcome => ({
+  bot,
+  type,
+  ok: isActionResult(result) && result.ok,
+  detail: JSON.stringify(result),
+});
+
 export type DelayRange = readonly [minMs: number, maxMs: number];
 
 export interface BotOptions {
@@ -19,6 +34,7 @@ export interface BotOptions {
   answerDelayMs?: DelayRange;
   voteDelayMs?: DelayRange;
   log?: (line: string) => void;
+  onOutcome?: (outcome: BotOutcome) => void;
 }
 
 export const BOT_ANSWERS: readonly string[] = [
@@ -46,6 +62,7 @@ export class BotPlayer {
   private readonly answerDelayMs: DelayRange;
   private readonly voteDelayMs: DelayRange;
   private readonly log: (line: string) => void;
+  private readonly onOutcome: (outcome: BotOutcome) => void;
   private phase = "";
 
   constructor(
@@ -64,6 +81,7 @@ export class BotPlayer {
     this.answerDelayMs = options.answerDelayMs ?? DEFAULT_ANSWER_DELAY;
     this.voteDelayMs = options.voteDelayMs ?? DEFAULT_VOTE_DELAY;
     this.log = options.log ?? (() => undefined);
+    this.onOutcome = options.onOutcome ?? (() => undefined);
     room.onStateChange(() => this.react());
     this.react();
   }
@@ -159,8 +177,14 @@ export class BotPlayer {
   private act(verb: string, type: string, payload: object, detail: string): void {
     this.room
       .request(ClientMessage.ACTION, { ...payload, type })
-      .then((result) => this.log(`${this.name} ${verb} ${detail} -> ${JSON.stringify(result)}`))
-      .catch((error: unknown) => this.log(`${this.name} ${type} failed: ${String(error)}`));
+      .then((result) => {
+        this.log(`${this.name} ${verb} ${detail} -> ${JSON.stringify(result)}`);
+        this.onOutcome(outcomeOf(this.name, type, result));
+      })
+      .catch((error: unknown) => {
+        this.log(`${this.name} ${type} failed: ${String(error)}`);
+        this.onOutcome({ bot: this.name, type, ok: false, detail: String(error) });
+      });
   }
 
   private once(key: string, run: () => void): void {

@@ -16,6 +16,7 @@
     "ui/**/*.svelte",
     "tests/**/*.ts",
     "server.ts",
-    "bots/**/*.ts"
+    "bots/**/*.ts",
+    "terminal/**/*.ts"
   ]
 }

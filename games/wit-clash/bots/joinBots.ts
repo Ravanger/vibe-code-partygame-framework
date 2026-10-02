@@ -1,7 +1,8 @@
 import { Client } from "@colyseus/sdk";
-import { ClientMessage, ResolveCodeResponseSchema } from "@partygame/shared";
+import { ClientMessage } from "@partygame/shared";
 import { WitClashState } from "../src/state.js";
 import { type BotOptions, BotPlayer } from "./BotPlayer.js";
+import { RoomLocator } from "./RoomLocator.js";
 
 export interface JoinBotsOptions {
   code: string;
@@ -17,26 +18,18 @@ const DEFAULT_TIMEOUT_MS = 5000;
 /** Joins `count` bots, named "Bot 1", "Bot 2", ..., skipping names the room already uses. */
 export class BotJoiner {
   private readonly client: Client;
+  private readonly locator: RoomLocator;
 
   constructor(private readonly options: JoinBotsOptions) {
     this.client = new Client(options.endpoint);
+    this.locator = new RoomLocator(options.endpoint, options.apiPort);
   }
 
   async join(): Promise<BotPlayer[]> {
-    const roomId = await this.resolveRoomId();
+    const roomId = await this.locator.resolve(this.options.code);
     const bots: BotPlayer[] = [];
     for (let i = 0; i < this.options.count; ++i) bots.push(await this.joinOne(roomId));
     return bots;
-  }
-
-  private async resolveRoomId(): Promise<string> {
-    const { endpoint, apiPort, code } = this.options;
-    const host = new URL(endpoint).hostname;
-    const response = await fetch(`http://${host}:${apiPort}/api/resolve-code?code=${code}`);
-    const body = ResolveCodeResponseSchema.safeParse(await response.json());
-    if (!body.success) throw new Error("Unexpected reply from the game server");
-    if ("roomId" in body.data) return body.data.roomId;
-    throw new Error(body.data.error);
   }
 
   private async joinOne(roomId: string): Promise<BotPlayer> {

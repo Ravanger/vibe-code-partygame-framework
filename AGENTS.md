@@ -43,6 +43,7 @@
 | `bun run verify` | lint, typecheck of `launch.ts` and the game, coverage |
 | `bun run launch:bots` | dev launch that also opens a room, lands your browser in it and seats 3 bots once you enter your name (`launch.ts <mode> --bots[=1..7]`) |
 | `bun run bots <CODE> [count]` | WitClash bots join a room created in the browser and play every turn (`--endpoint`, `--api-port`); Ctrl+C removes them |
+| `bun run cli:play [--bots=N] [--name=You] [--join=ABCD]` / `cli:demo [--bots=N] [--rounds=R]` | WitClash in the terminal (`games/wit-clash/terminal/`): play with bots on a server it finds or starts / narrated all-bot game that prints PASS or FAIL |
 | `bun run launch` / `launch:host` / `launch:prod` | game server (2567), API (3001), Vite (5173) or built client (3000); `--no-browser` to skip opening one |
 
 ## Library Documentation References

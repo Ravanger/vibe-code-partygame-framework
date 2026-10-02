@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type BotOptions, BotPlayer, type BotRoom } from "../../bots/BotPlayer.js";
+import { type BotOptions, type BotOutcome, BotPlayer, type BotRoom } from "../../bots/BotPlayer.js";
 import { ACTION } from "../../src/actionNames.js";
 import { PHASE } from "../../src/phaseNames.js";
 import {
@@ -231,6 +231,47 @@ describe("BotPlayer", () => {
     clock.flush();
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(lines.some((line) => line.includes("SUBMIT_ANSWER failed: Error: closed"))).toBe(true);
+  });
+
+  it("reports the outcome of every action, rejections and failures included", async () => {
+    const outcomes: BotOutcome[] = [];
+    const { room, clock } = setup({ onOutcome: (outcome) => outcomes.push(outcome) });
+    mineOf(room).prompts.push(prompt("m1"));
+    const rejected = { ok: false, error: { code: "NOT_ALLOWED", message: "no" } };
+    room.reply = async () => rejected;
+    enter(room, PHASE.Prompting);
+    clock.flush();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    room.reply = async () => {
+      throw new Error("closed");
+    };
+    enter(room, PHASE.TieBreakerPrompting);
+    clock.flush();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(outcomes.map(({ type, ok }) => [type, ok])).toEqual([
+      [ACTION.SET_TYPING, false],
+      [ACTION.SUBMIT_ANSWER, false],
+      [ACTION.SET_TYPING, false],
+      [ACTION.SUBMIT_ANSWER, false],
+    ]);
+    expect(outcomes[1]?.detail).toContain("NOT_ALLOWED");
+    expect(outcomes[3]?.detail).toBe("Error: closed");
+  });
+
+  it("counts an accepted action as ok", async () => {
+    const outcomes: BotOutcome[] = [];
+    const { room, clock } = setup({ onOutcome: (outcome) => outcomes.push(outcome) });
+    mineOf(room).prompts.push(prompt("m1"));
+    enter(room, PHASE.Prompting);
+    clock.flush();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(outcomes.every((outcome) => outcome.ok)).toBe(true);
+    expect(outcomes[0]).toEqual({
+      bot: "Bot 1",
+      type: ACTION.SET_TYPING,
+      ok: true,
+      detail: '{"ok":true}',
+    });
   });
 
   it("uses real timers by default and cancels them on leave", async () => {
