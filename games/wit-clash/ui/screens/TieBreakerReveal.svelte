@@ -1,6 +1,9 @@
 <script lang="ts">
 import { untrack } from "svelte";
 import MatchupCard from "../components/MatchupCard.svelte";
+import NextUpBar from "../components/NextUpBar.svelte";
+import ScreenTitle from "../components/ScreenTitle.svelte";
+import StatusPanel from "../components/StatusPanel.svelte";
 import type { WitClashManager } from "../manager.js";
 import { TieBreakerViewModel } from "../viewmodels/TieBreakerViewModel.svelte.js";
 
@@ -11,30 +14,21 @@ const vm = untrack(() => new TieBreakerViewModel(manager));
 $effect(() => () => vm.destroy());
 </script>
 
-<div class="reveal">
-  <h1>Tie-breaker!</h1>
+<div class="reveal-screen">
+  <ScreenTitle title="Tie-breaker!" />
   {#if vm.revealed}
-    <MatchupCard matchup={vm.revealed} />
-    <p class="next">{`Next up in ${vm.secondsLeft}s`}</p>
+    <MatchupCard matchup={vm.revealed} myVoteId={vm.myVoteId} flip />
+    <NextUpBar seconds={vm.secondsLeft} total={vm.totalSeconds} />
   {:else}
-    <div class="waiting">Revealing...</div>
+    <StatusPanel tone="wait" title="Revealing..." />
   {/if}
 </div>
 
 <style>
-  .reveal {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 20px;
+  .reveal-screen {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 20px;
-    text-align: center;
-  }
-
-  .next,
-  .waiting {
-    margin: 0;
-    color: #666;
+    gap: 1.25rem;
   }
 </style>

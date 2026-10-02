@@ -1,6 +1,7 @@
 import { LOBBY_PHASE, type ServerError } from "@partygame/shared";
+import { PHASE } from "../../src/phaseNames.js";
 import type { WitClashManager } from "../manager.js";
-import { isKnownPhase, type KnownPhase } from "../screens/index.js";
+import { isKnownPhase, type KnownPhase, PHASE_SCREENS } from "../screens/index.js";
 
 export type Route =
   | { kind: "welcome" }
@@ -24,6 +25,20 @@ export class AppViewModel {
       return { kind: "join-next-round" };
     }
     return isKnownPhase(phase) ? { kind: "phase", phase } : { kind: "connecting" };
+  }
+
+  get screenKey(): string {
+    const route = this.screen;
+    return route.kind === "phase" ? route.phase : route.kind;
+  }
+
+  get banner(): string {
+    const route = this.screen;
+    if (route.kind !== "phase") return "";
+    const laterMatchup = (this.manager.state?.activeMatchupIndex ?? 0) > 0;
+    return route.phase === PHASE.MatchupVoting && laterMatchup
+      ? ""
+      : PHASE_SCREENS[route.phase].banner;
   }
 
   get isSpectator(): boolean {

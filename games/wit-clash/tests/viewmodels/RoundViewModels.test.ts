@@ -110,6 +110,7 @@ describe("PromptingViewModel", () => {
     expect(vm.roundLabel).toBe("Round 1 of 3");
     expect(vm.secondsLeft).toBe(90);
     expect(vm.isUrgent).toBe(false);
+    expect(vm.totalSeconds).toBe(90);
     expect(vm.answersIn).toBe(1);
     expect(vm.answersExpected).toBe(4);
     vm.destroy();
@@ -190,6 +191,35 @@ describe("PromptingViewModel", () => {
     vm.destroy();
   });
 
+  it("shows the form until everything is in, and again while editing", async () => {
+    const { c, mine, vm } = writing();
+    expect(vm.showForm).toBe(true);
+    for (const p of mine.prompts) p.submitted = true;
+    c.patch();
+    expect(vm.showForm).toBe(false);
+    vm.goTo(1);
+    vm.startEditing();
+    expect(vm.showForm).toBe(true);
+    expect(vm.currentIndex).toBe(0);
+    vm.setDraft("Changed");
+    await vm.submit();
+    expect(vm.currentIndex).toBe(1);
+    expect(vm.showForm).toBe(true);
+    vm.setDraft("Again");
+    await vm.submit();
+    expect(vm.showForm).toBe(false);
+    vm.destroy();
+  });
+
+  it("announces the countdown at 30, 10 and 5 seconds", () => {
+    const { c, vm } = writing();
+    expect(vm.announcement).toBe("");
+    countdownTo(c, 10);
+    c.patch();
+    expect(vm.announcement).toBe("10 seconds remaining");
+    vm.destroy();
+  });
+
   it("copes with no prompts yet and no room", () => {
     const c = connectedClient({}, "Prompting");
     const vm = new PromptingViewModel(c.manager);
@@ -232,6 +262,8 @@ describe("MatchupVoteViewModel", () => {
     expect(vm.votesExpected).toBe(3);
     expect(vm.secondsLeft).toBe(20);
     expect(vm.isUrgent).toBe(false);
+    expect(vm.totalSeconds).toBe(20);
+    expect(vm.announcement).toBe("");
     vm.destroy();
   });
 
@@ -312,19 +344,46 @@ describe("MatchupRevealViewModel and Results recap", () => {
   }
 
   it("shows who wrote what, the counts and the winner as the server published them", () => {
-    const { vm } = revealed();
+    const { c, vm } = revealed();
     expect(vm.matchup).toEqual({
       promptText: "Name a fruit",
       isForfeit: false,
       isClash: true,
       answers: [
-        { id: "a1", text: "Mango", votes: 3, authorName: "Me", isWinner: true, isMine: true },
-        { id: "a2", text: "Kiwi", votes: 0, authorName: "Zed", isWinner: false, isMine: false },
+        {
+          id: "a1",
+          text: "Mango",
+          votes: 3,
+          authorId: c.manager.playerId,
+          authorName: "Me",
+          isWinner: true,
+          isMine: true,
+        },
+        {
+          id: "a2",
+          text: "Kiwi",
+          votes: 0,
+          authorId: "other-1234",
+          authorName: "Zed",
+          isWinner: false,
+          isMine: false,
+        },
       ],
     });
     expect(vm.matchupNumber).toBe(1);
     expect(vm.totalMatchups).toBe(2);
     expect(vm.secondsLeft).toBe(5);
+    expect(vm.totalSeconds).toBe(5);
+    vm.destroy();
+  });
+
+  it("remembers who I voted for", () => {
+    const { c, vm } = revealed();
+    expect(vm.myVoteId).toBe("");
+    addMine(c.state, c.manager.playerId, { matchupVote: "a2" });
+    expect(vm.myVoteId).toBe("a2");
+    c.manager.dispose();
+    expect(vm.myVoteId).toBe("");
     vm.destroy();
   });
 

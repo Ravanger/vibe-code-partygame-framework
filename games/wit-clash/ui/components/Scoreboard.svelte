@@ -1,127 +1,140 @@
 <script lang="ts">
 import type { ScoreRow } from "../viewmodels/Scoreboard.js";
+import PlayerSticker from "./PlayerSticker.svelte";
 
 const { rows }: { rows: ScoreRow[] } = $props();
 </script>
 
-<div class="scoreboard">
+<ol class="scoreboard" aria-label="Scoreboard">
   {#each rows as entry (entry.playerId)}
-    <div class="score-row" class:first={entry.rank === 1} class:is-me={entry.isMe} class:left={entry.hasLeft}>
-      <div class="rank">{`#${entry.rank}`}</div>
-      <div class="name">{`${entry.name}${entry.hasLeft ? " (left)" : ""}`}</div>
-      <div class="round-points" class:positive={entry.roundPoints > 0}>
+    <li class="score-row card" class:first={entry.rank === 1} class:is-me={entry.isMe} class:left={entry.hasLeft}>
+      <span class="rank">{`#${entry.rank}`}</span>
+      <PlayerSticker name={entry.name} playerId={entry.playerId} size={40} />
+      <div class="who">
+        <span class="name">{`${entry.name}${entry.hasLeft ? " (left)" : ""}`}</span>
+        <span class="stats">
+          {`${entry.matchupsWon}W`}
+          {#if entry.isMe}
+            <span class="you hand">&larr; you</span>
+          {/if}
+          {#if entry.wonTieBreaker}
+            <span class="chip chip--sky">TIE-BREAKER</span>
+          {/if}
+          {#if entry.hadClash}
+            <span class="chip chip--pink">CLASH</span>
+          {/if}
+        </span>
+      </div>
+      <span class="chip round-points" class:positive={entry.roundPoints > 0}>
         {`${entry.roundPoints > 0 ? "+" : ""}${entry.roundPoints}`}
-      </div>
-      <div class="stats">
-        {`${entry.matchupsWon}W`}
-        {#if entry.wonTieBreaker}
-          <span class="tie-badge">TIE-BREAKER</span>
-        {/if}
-        {#if entry.hadClash}
-          <span class="clash-badge">CLASH</span>
-        {/if}
-      </div>
-      <div class="total-score">{entry.score}</div>
-    </div>
+      </span>
+      <span class="total-score">{entry.score}</span>
+    </li>
   {/each}
-</div>
+</ol>
 
 <style>
   .scoreboard {
+    list-style: none;
+    margin: 0;
+    padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 0.75rem;
   }
 
   .score-row {
     display: grid;
-    grid-template-columns: 40px 1fr 70px 100px 70px;
+    grid-template-columns: auto auto minmax(0, 1fr) auto auto;
     align-items: center;
-    padding: 12px 16px;
-    background: #f9fafb;
-    border-radius: 12px;
-    border: 2px solid transparent;
-    gap: 12px;
+    gap: 10px;
+    padding: 0.5rem 0.75rem;
+    box-shadow: 2px 3px 0 var(--ink);
   }
 
   .score-row.first {
-    background: linear-gradient(135deg, #fef3c7 0%, #fef9c3 100%);
-    border-color: #f59e0b;
-    font-weight: 600;
+    background: var(--sun);
   }
 
-  .score-row.is-me {
-    border-color: #667eea;
-    background: #f5f3ff;
+  .score-row.is-me:not(.first) {
+    background: var(--paper);
   }
 
   .score-row.left {
-    opacity: 0.6;
+    opacity: 0.65;
   }
 
   .rank {
-    font-weight: 700;
-    font-size: 1.1rem;
-    color: #666;
+    min-width: 2ch;
+    font-family: var(--font-display);
+    font-size: calc(var(--fs-3) * var(--scale, 1));
+    color: var(--ink-soft);
+  }
+
+  .first .rank {
+    color: var(--ink);
+  }
+
+  .who {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
   }
 
   .name {
-    font-weight: 500;
-    color: #333;
-  }
-
-  .round-points {
-    font-weight: 600;
-    color: #666;
-    text-align: center;
-  }
-
-  .round-points.positive {
-    color: #16a34a;
+    overflow-wrap: anywhere;
+    font-family: var(--font-display);
+    font-size: calc(var(--fs-3) * var(--scale, 1));
+    line-height: 1.15;
   }
 
   .stats {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 6px;
-    font-size: 0.9rem;
-    color: #666;
+    color: var(--ink-soft);
+    font-size: calc(var(--fs-1) * var(--scale, 1));
   }
 
-  .tie-badge {
-    background: #7c3aed;
-    color: white;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 0.7rem;
-    font-weight: 700;
+  .first .stats {
+    color: var(--ink);
   }
 
-  .clash-badge {
-    background: #f59e0b;
-    color: white;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 0.7rem;
-    font-weight: 700;
+  .you {
+    font-size: calc(var(--fs-2) * var(--scale, 1));
+  }
+
+  .round-points {
+    background: var(--white);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .round-points.positive {
+    background: var(--mint);
   }
 
   .total-score {
-    font-weight: 700;
-    font-size: 1.2rem;
-    color: #333;
+    font-family: var(--font-display);
+    font-size: calc(var(--fs-4) * var(--scale, 1));
+    min-width: 2.4ch;
     text-align: right;
+    font-variant-numeric: tabular-nums;
   }
 
-  @media (max-width: 600px) {
+  @media (max-width: 380px) {
     .score-row {
-      grid-template-columns: 35px 1fr 55px 60px;
-      gap: 8px;
-      padding: 10px 12px;
+      grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+      gap: 6px;
+      padding: 0.5rem;
     }
+  }
 
-    .stats {
-      display: none;
-    }
+  :global(main.tv) .scoreboard {
+    gap: 0.5rem;
+  }
+
+  :global(main.tv) .score-row {
+    padding: 0.25rem 0.75rem;
   }
 </style>

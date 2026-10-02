@@ -1,6 +1,11 @@
 <script lang="ts">
 import { untrack } from "svelte";
+import ActionBar from "../components/ActionBar.svelte";
+import AnswerBox from "../components/AnswerBox.svelte";
 import ProgressBadges from "../components/ProgressBadges.svelte";
+import ScreenTitle from "../components/ScreenTitle.svelte";
+import StatusPanel from "../components/StatusPanel.svelte";
+import Timer from "../components/Timer.svelte";
 import type { WitClashManager } from "../manager.js";
 import { TieBreakerViewModel } from "../viewmodels/TieBreakerViewModel.svelte.js";
 
@@ -12,96 +17,68 @@ $effect(() => () => vm.destroy());
 </script>
 
 <div class="tie-breaker">
-  <h1>Tie-breaker!</h1>
-  <p class="tied">{`Tied for the lead: ${vm.contenderNames.join(", ")}`}</p>
-  <div class="timer" class:urgent={vm.isUrgent}>{`${vm.secondsLeft}s`}</div>
-  <h2 class="prompt">{vm.promptText}</h2>
+  <div class="top">
+    <span class="chip chip--paper">{`Tied for the lead: ${vm.contenderNames.join(", ")}`}</span>
+    <Timer seconds={vm.secondsLeft} total={vm.totalSeconds} announcement={vm.announcement} />
+  </div>
+
+  <ScreenTitle title="Tie-breaker!" />
+
+  <div class="question card taped">
+    <h2>{vm.promptText}</h2>
+  </div>
+
   <ProgressBadges rows={vm.progress.rows} />
 
   {#if vm.isContender}
-    <textarea
-      class="answer-input"
-      placeholder="Type your answer..."
-      aria-label="Your answer"
-      maxlength="200"
+    <p class="how hand">Write the funniest answer you can</p>
+    <AnswerBox
       value={vm.draft}
-      oninput={(e) => vm.setDraft(e.currentTarget.value)}
-    ></textarea>
-    <div class="footer">
-      <span>{`${vm.charsRemaining} chars left`}</span>
-      <button type="button" disabled={!vm.canSubmit} onclick={() => vm.submit()}>
+      remaining={vm.charsRemaining}
+      oninput={(value) => vm.setDraft(value)}
+      onsubmit={() => vm.submit()}
+    />
+    <ActionBar>
+      <button type="button" class="btn btn--primary btn--big" disabled={!vm.canSubmit} onclick={() => vm.submit()}>
         {vm.hasSubmitted ? "Update" : "Submit"}
       </button>
-    </div>
+    </ActionBar>
   {:else}
-    <p class="notice">Sit tight while the tied players answer.</p>
+    <StatusPanel tone="wait" title="Sit tight while the tied players answer." />
   {/if}
 </div>
 
 <style>
   .tie-breaker {
-    max-width: 700px;
-    margin: 0 auto;
-    padding: 20px;
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 1rem;
+  }
+
+  .top {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .question {
+    --tilt: -1deg;
     text-align: center;
   }
 
-  .timer {
-    font-size: 2.5rem;
-    font-weight: bold;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .timer.urgent {
-    color: #f57c00;
-  }
-
-  .prompt {
+  h2 {
     margin: 0;
-    font-size: 1.8rem;
-    line-height: 1.4;
+    font-size: calc(var(--fs-4) * var(--scale, 1));
+    line-height: 1.25;
   }
 
-  .answer-input {
-    width: 100%;
-    min-height: 120px;
-    padding: 16px;
-    font-size: 1.1rem;
-    border: 2px solid #e0e0e0;
-    border-radius: 12px;
-    font-family: inherit;
-    box-sizing: border-box;
-  }
-
-  .footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  button {
-    padding: 12px 32px;
-    font-size: 1rem;
-    font-weight: 600;
-    border: none;
-    border-radius: 8px;
-    background: #667eea;
-    color: white;
-    cursor: pointer;
-  }
-
-  button:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-  }
-
-  .notice,
-  .tied {
+  .how {
     margin: 0;
-    color: #666;
-    font-style: italic;
+    color: var(--ink-soft);
+    font-size: var(--fs-3);
+    text-align: center;
   }
 </style>

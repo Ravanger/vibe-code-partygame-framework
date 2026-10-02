@@ -15,6 +15,10 @@ export class LobbySettingsViewModel {
     return this.manager.isHost;
   }
 
+  get startsOpen(): boolean {
+    return this.canEdit || this.manager.isSpectator;
+  }
+
   /** What the field shows: what the host is typing, else what the server published. */
   valueOf(key: string): string {
     return this.drafts[key] ?? String(this.published()[key] ?? "");

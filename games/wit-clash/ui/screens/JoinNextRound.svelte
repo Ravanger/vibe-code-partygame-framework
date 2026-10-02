@@ -2,6 +2,7 @@
 import { untrack } from "svelte";
 import NameInput from "../components/NameInput.svelte";
 import Scoreboard from "../components/Scoreboard.svelte";
+import StatusPanel from "../components/StatusPanel.svelte";
 import type { WitClashManager } from "../manager.js";
 import { JoinNextRoundViewModel } from "../viewmodels/JoinNextRoundViewModel.js";
 
@@ -15,14 +16,14 @@ $effect(() => () => vm.destroy());
 <div class="join-next-round">
   <h1>{vm.heading}</h1>
   {#if vm.hint}
-    <p class="hint">{vm.hint}</p>
+    <p class="hint hand">{vm.hint}</p>
   {/if}
   {#if vm.needsName}
-    <NameInput field={vm.nameField} />
+    <NameInput field={vm.nameField} focus />
   {/if}
-  <p class="status">{`${vm.phaseLabel}.`}</p>
+  <StatusPanel tone="wait" title={`${vm.phaseLabel}.`} />
   {#if vm.roundLabel}
-    <p class="round">{vm.roundLabel}</p>
+    <p class="round"><span class="chip">{vm.roundLabel}</span></p>
   {/if}
 
   {#if vm.scoreboard.rows.length > 0}
@@ -32,25 +33,36 @@ $effect(() => () => vm.destroy());
 
 <style>
   .join-next-round {
-    max-width: 600px;
-    margin: 0 auto;
-    padding: 20px;
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    text-align: center;
+    gap: 1.5rem;
   }
 
   h1 {
     margin: 0;
-    font-size: 1.8rem;
-    color: #333;
+    font-size: calc(var(--fs-5) * var(--scale, 1));
+    line-height: 1.1;
+    text-align: center;
+    text-decoration: underline wavy var(--pink) 3px;
+    text-underline-offset: 8px;
   }
 
-  .hint,
-  .status,
+  .hint {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: calc(var(--fs-3) * var(--scale, 1));
+    text-align: center;
+  }
+
   .round {
     margin: 0;
-    color: #666;
+    text-align: center;
+  }
+
+  :global(main.tv) .join-next-round {
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
   }
 </style>

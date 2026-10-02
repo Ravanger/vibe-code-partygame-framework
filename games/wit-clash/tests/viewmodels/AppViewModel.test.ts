@@ -114,3 +114,43 @@ describe("AppViewModel", () => {
     expect(vm.error?.code).toBe(ErrorCode.KICKED);
   });
 });
+
+describe("AppViewModel screen key and banner", () => {
+  it("keys the screen by phase, and by route outside the phases", () => {
+    const c = connectedClient({}, "Prompting");
+    const vm = new AppViewModel(c.manager);
+    expect(vm.screenKey).toBe("Prompting");
+    c.state.phase = "Intermission";
+    expect(vm.screenKey).toBe("connecting");
+    c.manager.status = "disconnected";
+    expect(vm.screenKey).toBe("welcome");
+  });
+
+  it("slaps the vote banner on the first matchup of a round only, and none on the verdict", () => {
+    const c = connectedClient({}, "MatchupVoting");
+    const vm = new AppViewModel(c.manager);
+    c.state.activeMatchupIndex = 0;
+    expect(vm.banner).toBe("VOTE TIME!");
+    c.state.activeMatchupIndex = 1;
+    expect(vm.banner).toBe("");
+    c.state.phase = "MatchupReveal";
+    expect(vm.banner).toBe("");
+    c.state.phase = "Prompting";
+    expect(vm.banner).toBe("GET WRITING!");
+    c.manager.dispose();
+    c.manager.status = "connected";
+    expect(vm.banner).toBe("");
+  });
+
+  it("announces the phase with its banner, and nothing in the lobby or off the phases", () => {
+    const c = connectedClient({}, "MatchupVoting");
+    const vm = new AppViewModel(c.manager);
+    expect(vm.banner).toBe("VOTE TIME!");
+    c.state.phase = "MatchupReveal";
+    expect(vm.banner).toBe("");
+    c.state.phase = "Lobby";
+    expect(vm.banner).toBe("");
+    c.manager.status = "disconnected";
+    expect(vm.banner).toBe("");
+  });
+});

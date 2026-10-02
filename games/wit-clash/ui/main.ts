@@ -1,3 +1,5 @@
+import "@fontsource/lilita-one";
+import "@fontsource/gochi-hand";
 import "./app.css";
 import { GameConnectionManager } from "@partygame/game-client";
 import { mount } from "svelte";

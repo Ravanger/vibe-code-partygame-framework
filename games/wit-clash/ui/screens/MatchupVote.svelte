@@ -1,5 +1,8 @@
 <script lang="ts">
 import { untrack } from "svelte";
+import StatusPanel from "../components/StatusPanel.svelte";
+import Timer from "../components/Timer.svelte";
+import VoteBoard from "../components/VoteBoard.svelte";
 import type { WitClashManager } from "../manager.js";
 import { MatchupVoteViewModel } from "../viewmodels/MatchupVoteViewModel.js";
 
@@ -12,166 +15,73 @@ $effect(() => () => vm.destroy());
 
 <div class="matchup-vote">
   {#if vm.choices.length === 0}
-    <div class="waiting">Waiting for matchup...</div>
+    <StatusPanel tone="wait" title="Waiting for matchup..." />
   {:else}
-    <div class="header">
-      <span class="progress">{`Matchup ${vm.matchupNumber} of ${vm.totalMatchups}`}</span>
-      <div class="timer" class:urgent={vm.isUrgent}>{`${vm.secondsLeft}s`}</div>
+    <div class="top">
+      <span class="chip chip--paper">{`Matchup ${vm.matchupNumber} of ${vm.totalMatchups}`}</span>
+      <Timer seconds={vm.secondsLeft} total={vm.totalSeconds} announcement={vm.announcement} />
     </div>
 
-    <h2 class="prompt">{vm.promptText}</h2>
+    <div class="question card taped">
+      <h2>{vm.promptText}</h2>
+    </div>
 
     {#if vm.isSpectator}
-      <p class="notice">Cast your votes on your phones.</p>
+      <StatusPanel tone="info" title="Cast your votes on your phones." />
     {:else if vm.isOwnMatchup}
-      <p class="notice">This one is yours. Sit tight while the others vote.</p>
+      <StatusPanel tone="wait" title="This one is yours. Sit tight while the others vote." />
     {:else if vm.isForfeit}
-      <p class="notice">Only one answer came in — no vote needed.</p>
+      <StatusPanel tone="info" title="Only one answer came in — no vote needed." />
     {:else if !vm.canVote}
-      <p class="notice">You cannot vote on this one.</p>
+      <StatusPanel tone="info" title="You cannot vote on this one." />
+    {:else}
+      <p class="how hand">Tap the funnier answer</p>
     {/if}
 
-    <div class="answers">
-      {#each vm.choices as choice (choice.id)}
-        <button type="button"
-          class="answer-card"
-          class:selected={choice.isMine}
-          disabled={!vm.canVote}
-          onclick={() => vm.vote(choice.id)}
-          aria-pressed={choice.isMine}
-        >
-          <p class="text">{choice.text}</p>
-        </button>
-      {/each}
-    </div>
+    <VoteBoard choices={vm.choices} canVote={vm.canVote} onvote={(id) => vm.vote(id)} />
 
-    <p class="footer">{`${vm.votesCast} of ${vm.votesExpected} voted`}</p>
+    <p class="turnout"><span class="chip chip--paper">{`${vm.votesCast} of ${vm.votesExpected} voted`}</span></p>
   {/if}
 </div>
 
 <style>
   .matchup-vote {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 20px;
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 1.25rem;
   }
 
-  .waiting {
-    text-align: center;
-    color: #666;
-    padding: 40px;
-    font-size: 1.2rem;
-  }
-
-  .header {
+  .top {
     display: flex;
-    flex-direction: column;
+    justify-content: space-between;
     align-items: center;
-    gap: 4px;
-    color: #666;
   }
 
-  .timer {
-    font-size: 3rem;
-    font-weight: bold;
-    color: #333;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .timer.urgent {
-    color: #f57c00;
-    animation: pulse 1s ease-in-out infinite;
-  }
-
-  @keyframes pulse {
-    0%,
-    100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.7;
-    }
-  }
-
-  .prompt {
+  .question {
+    --tilt: -1deg;
     text-align: center;
-    font-size: 1.8rem;
-    color: #333;
-    margin: 0;
-    line-height: 1.4;
   }
 
-  .notice {
+  h2 {
+    margin: 0;
+    font-size: calc(var(--fs-4) * var(--scale, 1));
+    line-height: 1.25;
+  }
+
+  :global(main.tv) h2 {
+    font-size: calc(var(--fs-5) * var(--scale, 1));
+  }
+
+  .how {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: calc(var(--fs-3) * var(--scale, 1));
     text-align: center;
-    margin: 0;
-    color: #666;
-    font-style: italic;
   }
 
-  .answers {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
-  }
-
-  @media (max-width: 600px) {
-    .answers {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  .answer-card {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px 16px;
-    border: 3px solid #e0e0e0;
-    border-radius: 16px;
-    background: white;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-    min-height: 120px;
-  }
-
-  .answer-card:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-    border-color: #667eea;
-  }
-
-  .answer-card:focus-visible {
-    outline: 3px solid #667eea;
-    outline-offset: 2px;
-  }
-
-  .answer-card:disabled {
-    cursor: not-allowed;
-    opacity: 0.7;
-  }
-
-  .answer-card.selected {
-    border-color: #667eea;
-    background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
-    opacity: 1;
-  }
-
-  .text {
-    font-size: 1.1rem;
-    color: #333;
+  .turnout {
+    margin: auto 0 0;
     text-align: center;
-    margin: 0;
-    line-height: 1.5;
-  }
-
-  .footer {
-    text-align: center;
-    font-size: 1rem;
-    color: #666;
-    margin: 0;
   }
 </style>

@@ -72,9 +72,10 @@ export class DemoRun {
     this.options.out(`Room ${code}: ${players} players, ${rounds} round${rounds === 1 ? "" : "s"}`);
     const spectator = await client.watch(code, crypto.randomUUID());
     this.leavers.push(() => spectator.leave());
-    spectator.onStateChange(() => {
+    const narrate = () => {
       for (const line of this.narrator.update(spectator.state)) this.options.out(line);
-    });
+    };
+    spectator.onStateChange(narrate);
     const host = new HostBot(hostRoom, hostId, "Host Bot", {
       ...botOptions,
       expectedPlayers: players,
@@ -88,12 +89,16 @@ export class DemoRun {
       bot: botOptions,
     });
     this.leavers.push(...bots.map((bot) => () => bot.leave()));
-    await waitFor(
-      () => spectator.state.phase === PHASE.Results && spectator.state.isFinalRound,
-      "the final results",
-      timeoutMs,
-      100,
-    );
+    try {
+      await waitFor(
+        () => spectator.state.phase === PHASE.Results && spectator.state.isFinalRound,
+        "the final results",
+        timeoutMs,
+        100,
+      );
+    } finally {
+      spectator.onStateChange.remove(narrate);
+    }
     return spectator;
   }
 

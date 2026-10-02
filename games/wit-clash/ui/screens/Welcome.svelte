@@ -13,125 +13,152 @@ $effect(() => {
 });
 </script>
 
-<div class="welcome">
-  <h1>WitClash</h1>
+<div class="welcome stack">
+  <div class="hero">
+    <h1 class="wordmark">WitClash</h1>
+    <p class="tagline">Write funny answers. Vote for the best. Win bragging rights.</p>
+  </div>
 
   {#if vm.localError}
-    <p class="error" role="alert">
+    <div class="error card" role="alert">
       <span>{vm.localError}</span>
       <button type="button" class="dismiss" onclick={() => vm.dismissError()} aria-label="Dismiss">&times;</button>
-    </p>
+    </div>
   {/if}
 
-  <button type="button" class="host-btn" disabled={vm.busy} onclick={() => vm.host()}>Host Game</button>
+  <button type="button" class="btn btn--primary btn--big" disabled={vm.busy} onclick={() => vm.host()}>Host Game</button>
+
+  <p class="divider"><span>or join a game</span></p>
 
   <div class="join-section">
     <input
       type="text"
-      placeholder="Enter code"
+      placeholder="CODE"
       aria-label="Game code"
       maxlength="4"
+      inputmode="text"
+      autocapitalize="characters"
+      autocomplete="off"
+      spellcheck="false"
       value={vm.code}
       oninput={(e) => vm.setCode(e.currentTarget.value)}
     />
-    <button type="button" disabled={vm.busy || !vm.codeIsValid} onclick={() => vm.join()}>Join</button>
+    <button type="button" class="btn btn--secondary btn--big" disabled={vm.busy || !vm.codeIsValid} onclick={() => vm.join()}>Join</button>
   </div>
-  <button type="button" class="watch-btn" disabled={vm.busy || !vm.codeIsValid} onclick={() => vm.watch()}>
+
+  <button type="button" class="btn btn--ghost" disabled={vm.busy || !vm.codeIsValid} onclick={() => vm.watch()}>
     Watch on a TV
   </button>
 </div>
 
 <style>
   .welcome {
-    max-width: 500px;
-    margin: 0 auto;
-    padding: 40px 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    align-items: center;
+    margin: auto 0;
+    padding-top: 24px;
   }
 
-  h1 {
+  .hero {
+    position: relative;
+    text-align: center;
+  }
+
+  .wordmark {
+    position: relative;
+    display: inline-block;
     margin: 0;
-    font-size: 2rem;
+    padding: 0.1em 0.5em;
+    border: var(--outline);
+    border-radius: var(--radius-card);
+    background: var(--pink);
+    color: var(--white);
+    -webkit-text-stroke: 2px var(--ink);
+    paint-order: stroke fill;
+    box-shadow: var(--scrap-shadow);
+    font-size: var(--fs-7);
+    letter-spacing: 0.04em;
+    line-height: 1.3;
+    text-transform: uppercase;
+    transform: rotate(-2deg);
+  }
+
+  .wordmark::before {
+    content: "";
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    width: 96px;
+    height: 26px;
+    background: var(--tape-sun);
+    transform: translateX(-50%) rotate(3deg);
+  }
+
+  .tagline {
+    margin: 1.4rem 0 0;
+    color: var(--ink-soft);
+    font-size: var(--fs-4);
+    line-height: 1.2;
   }
 
   .error {
-    color: #b91c1c;
-    background: #fee2e2;
-    padding: 10px 16px;
-    border-radius: 8px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 12px;
+    background: var(--danger);
+    color: var(--white);
+    padding: 0.5rem 1rem;
   }
 
   .dismiss {
+    min-width: 44px;
+    min-height: 44px;
+    border: none;
     background: none;
-    border: none;
     color: inherit;
-    font-size: 1.3rem;
-    cursor: pointer;
-    padding: 0 4px;
-    flex-shrink: 0;
-  }
-
-
-  .host-btn {
-    padding: 14px 32px;
-    font-size: 1.1rem;
-    font-weight: 600;
-    border: none;
-    border-radius: 12px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    font-size: var(--fs-4);
     cursor: pointer;
   }
 
-  .host-btn:disabled {
-    background: #ccc;
-    cursor: not-allowed;
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0;
+    color: var(--ink-soft);
+    font-family: var(--font-hand);
+    font-size: var(--fs-3);
+  }
+
+  .divider::before,
+  .divider::after {
+    content: "";
+    flex: 1;
+    border-top: 3px dashed var(--ink-soft);
   }
 
   .join-section {
     display: flex;
-    gap: 8px;
+    gap: 0.75rem;
   }
 
   .join-section input {
-    padding: 10px 14px;
-    font-size: 1rem;
-    border: 2px solid #eee;
-    border-radius: 8px;
+    flex: 1;
+    min-width: 0;
+    height: 56px;
+    padding: 0 1rem;
+    border: var(--outline);
+    border-radius: var(--radius-btn);
+    background: var(--white);
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-size: var(--fs-5);
+    letter-spacing: 0.3em;
+    text-align: center;
     text-transform: uppercase;
   }
 
-  .join-section button {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 8px;
-    background: #f0f0f0;
-    cursor: pointer;
+  .join-section input::placeholder {
+    color: var(--ink-soft);
+    opacity: 0.6;
   }
-
-  .watch-btn {
-    padding: 10px 20px;
-    border: 2px solid #eee;
-    border-radius: 8px;
-    background: white;
-    cursor: pointer;
-  }
-
-  .watch-btn:disabled {
-    color: #aaa;
-    cursor: not-allowed;
-  }
-
-  .join-section button:disabled {
-    color: #aaa;
-    cursor: not-allowed;
-  }
-
 </style>

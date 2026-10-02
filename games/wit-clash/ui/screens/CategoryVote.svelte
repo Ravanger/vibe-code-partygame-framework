@@ -1,5 +1,7 @@
 <script lang="ts">
 import { untrack } from "svelte";
+import ScreenTitle from "../components/ScreenTitle.svelte";
+import Timer from "../components/Timer.svelte";
 import type { WitClashManager } from "../manager.js";
 import { CategoryVoteViewModel } from "../viewmodels/CategoryVoteViewModel.js";
 
@@ -11,153 +13,171 @@ $effect(() => () => vm.destroy());
 </script>
 
 <div class="category-vote">
-  <p class="round-info">{vm.roundLabel}</p>
-  <h1>Pick a category</h1>
-
-  <div class="timer" class:urgent={vm.isUrgent}>
-    <span class="sr-only" aria-live="polite" aria-atomic="true">{vm.announcement}</span>
-    {`${vm.secondsLeft}s`}
+  <div class="top">
+    <span class="chip chip--paper">{vm.roundLabel}</span>
+    <Timer seconds={vm.secondsLeft} total={vm.totalSeconds} announcement={vm.announcement} />
   </div>
+
+  <ScreenTitle title="Pick a category" hint="Tap the one you want to write about. Most votes wins." />
 
   <div class="cards">
     {#each vm.options as option (option.id)}
-      <button type="button"
-        class="card"
+      <button
+        type="button"
+        class="pick card"
         class:selected={vm.myVote === option.id}
         disabled={vm.isSpectator}
         onclick={() => vm.vote(option.id)}
         aria-pressed={vm.myVote === option.id}
       >
+        {#if vm.myVote === option.id}
+          <span class="sticker stamp" aria-hidden="true">MY PICK</span>
+        {/if}
         <span class="emoji">{option.emoji}</span>
-        <span class="name">{option.name}</span>
-        <span class="votes">{`${option.votes} vote${option.votes !== 1 ? "s" : ""}`}</span>
+        <span class="label">{option.name}</span>
+        <span class="tally">
+          <span class="pips" aria-hidden="true">
+            {#each Array.from({ length: option.votes }) as _, pip (pip)}
+              <i></i>
+            {/each}
+          </span>
+          <span class="count">{`${option.votes} vote${option.votes !== 1 ? "s" : ""}`}</span>
+        </span>
       </button>
     {/each}
   </div>
 
-  <p class="footer">{`${vm.votesCast} of ${vm.votesExpected} voted`}</p>
+  <p class="turnout"><span class="chip chip--paper">{`${vm.votesCast} of ${vm.votesExpected} voted`}</span></p>
 </div>
 
 <style>
   .category-vote {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 20px;
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 1.25rem;
   }
 
-  h1 {
-    text-align: center;
-    font-size: 2rem;
-    margin: 0;
-    color: #333;
-  }
-
-  .round-info {
-    text-align: center;
-    margin: 0;
-    color: #666;
-  }
-
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-  }
-
-  .timer {
-    text-align: center;
-    font-size: 3rem;
-    font-weight: bold;
-    color: #333;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .timer.urgent {
-    color: #f57c00;
-    animation: pulse 1s ease-in-out infinite;
-  }
-
-  @keyframes pulse {
-    0%, 100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.7;
-    }
+  .top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
 
   .cards {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-  }
-
-  @media (max-width: 600px) {
-    .cards {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  .card {
     display: flex;
     flex-direction: column;
+    gap: 0.9rem;
+  }
+
+  .pick {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
     align-items: center;
-    gap: 8px;
-    padding: 24px 16px;
-    border: 3px solid #e0e0e0;
-    border-radius: 16px;
-    background: white;
+    gap: 0.75rem;
+    min-height: 4.5rem;
+    max-height: 7.5rem;
+    padding: 0.6rem 1rem;
+    font: inherit;
+    text-align: left;
     cursor: pointer;
-    transition: all 0.15s ease;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   }
 
-  .card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-    border-color: #667eea;
+  .pick:disabled {
+    color: var(--ink);
+    cursor: default;
   }
 
-  .card:active {
-    transform: translateY(0);
+  .pick.selected {
+    background: var(--sun);
   }
 
-  .card:focus-visible {
-    outline: 3px solid #667eea;
-    outline-offset: 2px;
-  }
-
-  .card.selected {
-    border-color: #667eea;
-    background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+  .stamp {
+    position: absolute;
+    top: -1rem;
+    right: -0.3rem;
+    font-size: var(--fs-2);
   }
 
   .emoji {
-    font-size: 3rem;
+    font-size: calc(var(--fs-6) * var(--scale, 1));
+    line-height: 1;
   }
 
-  .name {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #333;
+  .label {
+    font-family: var(--font-display);
+    font-size: calc(var(--fs-3) * var(--scale, 1));
+    line-height: 1.2;
+    overflow-wrap: anywhere;
   }
 
-  .votes {
-    font-size: 0.9rem;
-    color: #666;
+  .tally {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.2rem;
+    font-size: calc(var(--fs-1) * var(--scale, 1));
   }
 
-  .footer {
+  .pips {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 3px;
+    max-width: 6rem;
+  }
+
+  .pips i {
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--ink);
+    border-radius: 50%;
+    background: var(--pink);
+  }
+
+  .turnout {
+    margin: auto 0 0;
     text-align: center;
-    font-size: 1rem;
-    color: #666;
-    margin: 0;
+  }
+
+  @keyframes stamp-pop {
+    0% {
+      transform: scale(0.94);
+    }
+    60% {
+      transform: scale(1.04);
+    }
+    100% {
+      transform: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .pick.selected {
+      animation: stamp-pop 0.25s ease-out;
+    }
+  }
+
+  :global(main.tv) .cards {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 2rem;
+  }
+
+  :global(main.tv) .pick {
+    flex: 1;
+    grid-template-columns: 1fr;
+    justify-items: center;
+    max-height: none;
+    padding: 2rem 1rem;
+    text-align: center;
+  }
+
+  :global(main.tv) .tally {
+    align-items: center;
+  }
+
+  :global(main.tv) .emoji {
+    font-size: 6rem;
   }
 </style>

@@ -1,218 +1,336 @@
 <script lang="ts">
 import { untrack } from "svelte";
+import ActionBar from "../components/ActionBar.svelte";
 import MatchupCard from "../components/MatchupCard.svelte";
+import PlayerSticker from "../components/PlayerSticker.svelte";
 import Podium from "../components/Podium.svelte";
 import Scoreboard from "../components/Scoreboard.svelte";
+import StatusPanel from "../components/StatusPanel.svelte";
+import { confettiPieces } from "../confetti.js";
 import type { WitClashManager } from "../manager.js";
 import { ResultsViewModel } from "../viewmodels/ResultsViewModel.js";
+import { Spotlight } from "../viewmodels/Spotlight.svelte.js";
 
 const { manager }: { manager: WitClashManager } = $props();
 
 const vm = untrack(() => new ResultsViewModel(manager));
+const pieces = confettiPieces(40);
+const spotlight = new Spotlight(() => (vm.isSpectator && vm.bestAnswers.length > 0 ? 2 : 1));
+const showBest = $derived(spotlight.isActive && spotlight.current === 1);
+
+$effect(() => () => spotlight.destroy());
 </script>
 
-<div class="results">
+<div class="results" class:final={vm.isFinalRound}>
   {#if vm.isFinalRound}
-    <h1>Game Over!</h1>
-    {#if vm.champions.length > 0}
-      <div class="winner-banner">
-        <span class="trophy" role="img" aria-label="Trophy">&#127942;</span>
-        <span>
-          {`${vm.champions.map((c) => c.name).join(" & ")} ${vm.champions.length > 1 ? "win" : "wins"} with ${vm.champions[0]?.score} points!`}
-        </span>
-      </div>
-    {/if}
-  {:else}
-    <h1>{`${vm.roundLabel} Results`}</h1>
-  {/if}
-
-  <Podium steps={vm.podiumSteps} />
-
-  {#if vm.bestAnswers.length > 0}
-    <section class="best-answers" aria-label={vm.bestAnswerTitle}>
-      <h2>{vm.bestAnswerTitle}</h2>
-      {#each vm.bestAnswers as best}
-        <figure class="best-answer">
-          <figcaption class="best-prompt">{best.promptText}</figcaption>
-          <blockquote class="best-text">{best.text}</blockquote>
-          <div class="best-meta">
-            <span class="best-author">{`by ${best.authorName}${best.isMine ? " (you)" : ""}`}</span>
-            <span class="best-votes">{`${best.votes} vote${best.votes !== 1 ? "s" : ""}`}</span>
-          </div>
-        </figure>
+    <div class="confetti" aria-hidden="true">
+      {#each pieces as piece}
+        <i
+          style:left={`${piece.left}%`}
+          style:animation-delay={`${piece.delay}s`}
+          style:animation-duration={`${piece.duration}s`}
+          style:--drift={`${piece.drift}vw`}
+          style:background={piece.color}
+        ></i>
       {/each}
-    </section>
+    </div>
   {/if}
 
-  <div class="matchup-recap">
-    {#each vm.matchups as matchup}
-      <MatchupCard {matchup} />
-    {/each}
+  <div class="head">
+    {#if vm.isFinalRound}
+      <h1>Game Over!</h1>
+      {#if vm.champions.length > 0}
+        <div class="winner-banner card taped">
+          <span class="winner-stickers">
+            {#each vm.champions as champion (champion.playerId)}
+              <PlayerSticker name={champion.name} playerId={champion.playerId} size={64} />
+            {/each}
+          </span>
+          <span class="winner-line">{vm.championLine}</span>
+          <span class="trophy" role="img" aria-label="Trophy">&#127942;</span>
+        </div>
+      {/if}
+    {:else}
+      <h1>{`${vm.roundLabel} Results`}</h1>
+    {/if}
   </div>
 
-  <Scoreboard rows={vm.scoreboard.rows} />
+  <div class="stage">
+    <div class="podium-panel" class:faded={showBest}>
+      <Podium steps={vm.podiumSteps} />
+    </div>
+
+    {#if vm.bestAnswers.length > 0}
+      <section class="best-answers" class:faded={spotlight.isActive && !showBest} aria-label={vm.bestAnswerTitle} style:--count={vm.bestAnswers.length}>
+        <h2 class="sticker">{vm.bestAnswerTitle}</h2>
+        {#each vm.bestAnswers as best}
+          <figure class="best-answer card taped">
+            <figcaption class="best-prompt">{best.promptText}</figcaption>
+            <blockquote class="best-text">{best.text}</blockquote>
+            <div class="best-meta">
+              <span class="best-author">{`by ${best.authorName}${best.isMine ? " (you)" : ""}`}</span>
+              <span class="chip">{`${best.votes} vote${best.votes !== 1 ? "s" : ""}`}</span>
+            </div>
+          </figure>
+        {/each}
+      </section>
+    {/if}
+  </div>
+
+  <div class="board">
+    <Scoreboard rows={vm.scoreboard.rows} />
+
+    {#if vm.matchups.length > 0}
+      <details class="recap card">
+        <summary>Matchup recap</summary>
+        <div class="matchup-recap">
+          {#each vm.matchups as matchup}
+            <MatchupCard {matchup} />
+          {/each}
+        </div>
+      </details>
+    {/if}
+
+    {#if !vm.isHost}
+      <StatusPanel tone="wait" title={vm.waitingText} />
+    {/if}
+  </div>
 
   {#if vm.showNextRound}
-    <div class="actions">
-      <button type="button" class="btn next-round" onclick={() => vm.nextRound()}>Next Round</button>
-    </div>
+    <ActionBar>
+      <button type="button" class="btn btn--primary btn--big" onclick={() => vm.nextRound()}>Next Round</button>
+    </ActionBar>
   {:else if vm.showPlayAgain}
-    <div class="actions">
-      <button type="button" class="btn play-again" onclick={() => vm.playAgain()}>Play Again</button>
-    </div>
-  {:else}
-    <p class="waiting">
-      {vm.isFinalRound ? "Waiting for host to start a new game..." : "Waiting for host to continue..."}
-    </p>
+    <ActionBar>
+      <button type="button" class="btn btn--primary btn--big" onclick={() => vm.playAgain()}>Play Again</button>
+    </ActionBar>
   {/if}
 </div>
 
 <style>
   .results {
-    max-width: 700px;
-    margin: 0 auto;
-    padding: 20px;
+    position: relative;
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 1.75rem;
+  }
+
+  .head,
+  .stage,
+  .board {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
   }
 
   h1 {
-    text-align: center;
-    font-size: 2rem;
-    color: #333;
     margin: 0;
+    font-size: calc(var(--fs-5) * var(--scale, 1));
+    line-height: 1.1;
+    text-align: center;
+    text-decoration: underline wavy var(--pink) 3px;
+    text-underline-offset: 8px;
   }
 
   .winner-banner {
-    text-align: center;
-    padding: 20px;
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-    border-radius: 16px;
-    font-size: 1.4rem;
-    font-weight: 600;
-    color: #92400e;
+    --tape: var(--tape-mint);
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    box-shadow: 0 4px 16px rgba(146, 64, 14, 0.15);
+    gap: 0.75rem;
+    background: var(--sun);
+    text-align: center;
+  }
+
+  .winner-stickers {
+    display: inline-flex;
+    gap: 0.25rem;
+  }
+
+  .winner-line {
+    font-family: var(--font-display);
+    font-size: calc(var(--fs-4) * var(--scale, 1));
+    line-height: 1.15;
   }
 
   .trophy {
-    font-size: 2rem;
+    font-size: calc(var(--fs-5) * var(--scale, 1));
   }
 
   .best-answers {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    text-align: center;
+    align-items: center;
+    gap: 1.25rem;
   }
 
   .best-answers h2 {
     margin: 0;
-    color: #92400e;
-    font-size: 1.3rem;
   }
 
   .best-answer {
+    --tape: var(--tape-sky);
+    width: 100%;
     margin: 0;
-    padding: 16px 20px;
-    background: #fffbeb;
-    border: 2px solid #f59e0b;
-    border-radius: 16px;
+    background: var(--sun);
+    text-align: center;
   }
 
   .best-prompt {
-    color: #666;
-    font-size: 0.95rem;
+    color: var(--ink-soft);
+    font-family: var(--font-hand);
+    font-size: calc(var(--fs-3) * var(--scale, 1));
   }
 
   .best-text {
-    margin: 8px 0;
-    font-size: 1.5rem;
+    margin: 0.5rem 0;
+    font-size: calc(var(--fs-4) * var(--scale, 1));
     font-weight: 700;
-    color: #333;
   }
 
   .best-meta {
     display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     justify-content: center;
-    gap: 16px;
-    color: #666;
+    gap: 0.75rem;
+    font-size: calc(var(--fs-2) * var(--scale, 1));
   }
 
-  :global(main.tv) .best-answers h2 {
-    font-size: 2.4rem;
+  .best-meta .chip {
+    background: var(--white);
   }
 
-  :global(main.tv) .best-prompt,
-  :global(main.tv) .best-meta {
-    font-size: 1.8rem;
-  }
-
-  :global(main.tv) .best-text {
-    font-size: 3rem;
+  .recap summary {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    font-family: var(--font-display);
+    font-size: calc(var(--fs-3) * var(--scale, 1));
+    cursor: pointer;
   }
 
   .matchup-recap {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 1rem;
+    margin-top: 0.75rem;
   }
 
-  .actions {
-    display: flex;
+  .confetti {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 20;
+  }
+
+  .confetti i {
+    display: none;
+    position: absolute;
+    top: -3vh;
+    width: 10px;
+    height: 16px;
+    border: 2px solid var(--ink);
+  }
+
+  @keyframes fall {
+    from {
+      transform: translate(0, 0) rotate(0deg);
+      opacity: 1;
+    }
+    to {
+      transform: translate(var(--drift), 108vh) rotate(720deg);
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .confetti i {
+      display: block;
+      animation: fall linear 1 both;
+    }
+  }
+
+  :global(main.tv) .results {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      "head head"
+      "stage board";
+    align-items: start;
+    gap: 1.5rem 3rem;
+  }
+
+  :global(main.tv) .results .head {
+    grid-area: head;
+    flex-direction: row;
     justify-content: center;
-    padding: 16px 0;
+    align-items: center;
+    gap: 2rem;
   }
 
-  .btn {
-    padding: 14px 32px;
-    font-size: 1.1rem;
-    font-weight: 600;
-    border: none;
-    border-radius: 12px;
-    cursor: pointer;
-    color: white;
-    transition: all 0.15s ease;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  :global(main.tv) .results .stage {
+    grid-area: stage;
+    display: grid;
+    align-items: center;
   }
 
-  .btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  :global(main.tv) .results .stage > * {
+    grid-area: 1 / 1;
   }
 
-  .btn:focus-visible {
-    outline: 3px solid #667eea;
-    outline-offset: 2px;
+  .faded {
+    opacity: 0;
+    visibility: hidden;
   }
 
-  .next-round {
-    background: linear-gradient(135deg, #667eea 0%, #7c3aed 100%);
-  }
-
-  .play-again {
-    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-  }
-
-  .waiting {
-    text-align: center;
-    color: #666;
-    font-size: 1rem;
-    padding: 20px;
-    margin: 0;
-  }
-
-  @media (max-width: 600px) {
-    h1 {
-      font-size: 1.5rem;
-    }
-
-    .winner-banner {
-      font-size: 1.1rem;
+  @media (prefers-reduced-motion: no-preference) {
+    .podium-panel,
+    .best-answers {
+      transition:
+        opacity 0.8s ease,
+        visibility 0.8s;
     }
   }
+
+  :global(main.tv) .results .board {
+    grid-area: board;
+    gap: 1rem;
+  }
+
+  :global(main.tv) .winner-banner {
+    padding: 0.5rem 1.5rem;
+  }
+
+  :global(main.tv) .best-answers {
+    display: grid;
+    grid-template-columns: repeat(var(--count), minmax(0, 1fr));
+    gap: 1.25rem 1rem;
+  }
+
+  :global(main.tv) .best-answers h2 {
+    grid-column: 1 / -1;
+    justify-self: center;
+  }
+
+  :global(main.tv) .best-answer {
+    padding: 0.75rem 1rem;
+  }
+
+  :global(main.tv) .best-prompt {
+    font-size: calc(var(--fs-2) * var(--scale, 1));
+  }
+
+  :global(main.tv) .best-text {
+    font-size: calc(var(--fs-3) * var(--scale, 1));
+  }
+
+  :global(main.tv) .results .recap {
+    display: none;
+  }
+
 </style>

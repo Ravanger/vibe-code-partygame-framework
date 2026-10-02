@@ -1,6 +1,8 @@
 <script lang="ts">
 import { untrack } from "svelte";
 import MatchupCard from "../components/MatchupCard.svelte";
+import NextUpBar from "../components/NextUpBar.svelte";
+import StatusPanel from "../components/StatusPanel.svelte";
 import type { WitClashManager } from "../manager.js";
 import { MatchupRevealViewModel } from "../viewmodels/MatchupRevealViewModel.js";
 
@@ -11,37 +13,26 @@ const vm = untrack(() => new MatchupRevealViewModel(manager));
 $effect(() => () => vm.destroy());
 </script>
 
-<div class="reveal">
+<div class="reveal-screen">
   {#if vm.matchup}
-    <p class="progress">{`Matchup ${vm.matchupNumber} of ${vm.totalMatchups}`}</p>
-    <MatchupCard matchup={vm.matchup} />
-    <p class="next">{`Next up in ${vm.secondsLeft}s`}</p>
+    <p class="count"><span class="chip chip--paper">{`Matchup ${vm.matchupNumber} of ${vm.totalMatchups}`}</span></p>
+    <MatchupCard matchup={vm.matchup} myVoteId={vm.myVoteId} flip />
+    <NextUpBar seconds={vm.secondsLeft} total={vm.totalSeconds} />
   {:else}
-    <div class="waiting">Revealing...</div>
+    <StatusPanel tone="wait" title="Revealing..." />
   {/if}
 </div>
 
 <style>
-  .reveal {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 20px;
+  .reveal-screen {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 1.25rem;
   }
 
-  .progress,
-  .next {
-    text-align: center;
-    color: #666;
+  .count {
     margin: 0;
-  }
-
-  .waiting {
     text-align: center;
-    color: #666;
-    padding: 40px;
-    font-size: 1.2rem;
   }
 </style>

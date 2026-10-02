@@ -1,8 +1,8 @@
-import type { Countdown } from "@partygame/game-client";
 import { ACTION } from "../../src/actionNames.js";
 import type { CastVotePayload } from "../../src/actions.js";
 import type { Matchup } from "../../src/state.js";
 import type { WitClashManager } from "../manager.js";
+import { PhaseClock } from "./PhaseClock.js";
 
 export interface VoteChoice {
   id: string;
@@ -12,10 +12,10 @@ export interface VoteChoice {
 
 /** Voting on the active matchup. Who wrote what, and the counts, stay hidden until the reveal. */
 export class MatchupVoteViewModel {
-  private readonly countdown: Countdown;
+  private readonly clock: PhaseClock;
 
   constructor(private readonly manager: WitClashManager) {
-    this.countdown = manager.countdown();
+    this.clock = new PhaseClock(manager, "voteSeconds");
   }
 
   private get matchup(): Matchup | undefined {
@@ -73,11 +73,19 @@ export class MatchupVoteViewModel {
   }
 
   get secondsLeft(): number {
-    return this.countdown.secondsLeft;
+    return this.clock.secondsLeft;
   }
 
   get isUrgent(): boolean {
-    return this.countdown.isUrgent;
+    return this.clock.isUrgent;
+  }
+
+  get announcement(): string {
+    return this.clock.announcement;
+  }
+
+  get totalSeconds(): number {
+    return this.clock.totalSeconds;
   }
 
   async vote(answerId: string): Promise<void> {
@@ -86,6 +94,6 @@ export class MatchupVoteViewModel {
   }
 
   destroy(): void {
-    this.countdown.destroy();
+    this.clock.destroy();
   }
 }

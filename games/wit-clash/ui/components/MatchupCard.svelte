@@ -1,106 +1,236 @@
 <script lang="ts">
 import type { RevealedMatchup } from "../viewmodels/MatchupRecap.js";
+import PlayerSticker from "./PlayerSticker.svelte";
 
-const { matchup }: { matchup: RevealedMatchup } = $props();
+const {
+  matchup,
+  myVoteId = "",
+  flip = false,
+}: { matchup: RevealedMatchup; myVoteId?: string; flip?: boolean } = $props();
 </script>
 
-<div class="matchup-card">
-  <div class="prompt">{matchup.promptText}</div>
+<div class="matchup-card" class:flip={flip}>
+  <div class="question card taped">
+    <p class="question-text">{matchup.promptText}</p>
+  </div>
   {#if matchup.isForfeit}
-    <p class="forfeit">Won by forfeit: nobody else answered.</p>
+    <p class="forfeit hand">Won by forfeit: nobody else answered.</p>
   {/if}
-  <div class="answers">
-    {#each matchup.answers as answer (answer.id)}
-      <div class="answer-card" class:winner={answer.isWinner} class:clash={answer.isWinner && matchup.isClash}>
-        <div class="answer-text">{answer.text}</div>
-        <div class="answer-meta">
-          <span class="author">{`by ${answer.authorName}${answer.isMine ? " (you)" : ""}`}</span>
+  <div class="face-off">
+    {#each matchup.answers as answer, index (answer.id)}
+      {#if index === 1}
+        <span class="vs" aria-hidden="true">VS</span>
+      {/if}
+      <article
+        class="reply card"
+        class:winner={answer.isWinner}
+        class:clash={answer.isWinner && matchup.isClash}
+        style:--delay={`${index * 0.6}s`}
+      >
+        <div class="stickers">
+          {#if answer.id === myVoteId}
+            <span class="sticker sticker--pick" aria-hidden="true">MY PICK</span>
+          {/if}
+          {#if answer.isWinner && matchup.isClash}
+            <span class="sticker sticker--clash">CLASH!</span>
+          {/if}
+          {#if matchup.isForfeit && !answer.isWinner}
+            <span class="sticker sticker--out">NO SHOW</span>
+          {/if}
+        </div>
+        <p class="words">{answer.text}</p>
+        <div class="meta">
+          <PlayerSticker name={answer.authorName} playerId={answer.authorId} size={34} />
+          <span class="by">{`by ${answer.authorName}${answer.isMine ? " (you)" : ""}`}</span>
           {#if !matchup.isForfeit}
-            <span class="votes">{`${answer.votes} vote${answer.votes !== 1 ? "s" : ""}`}</span>
+            <span class="chip chip--paper">{`${answer.votes} vote${answer.votes !== 1 ? "s" : ""}`}</span>
           {/if}
           {#if answer.isWinner}
             <span class="trophy" role="img" aria-label="Winner">&#127942;</span>
           {/if}
-          {#if answer.isWinner && matchup.isClash}
-            <span class="clash-badge">CLASH!</span>
-          {/if}
         </div>
-      </div>
+      </article>
     {/each}
   </div>
 </div>
 
 <style>
   .matchup-card {
-    background: #f9fafb;
-    border-radius: 12px;
-    padding: 16px;
-    border: 1px solid #e5e7eb;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
   }
 
-  .prompt {
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 12px;
-    font-size: 1.1rem;
+  .question {
+    --tilt: -1deg;
+    text-align: center;
+  }
+
+  .question-text {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: calc(var(--fs-4) * var(--scale, 1));
+    line-height: 1.25;
   }
 
   .forfeit {
-    margin: 0 0 12px;
-    color: #92400e;
-    font-style: italic;
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: calc(var(--fs-3) * var(--scale, 1));
+    text-align: center;
   }
 
-  .answers {
+  .face-off {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    gap: 0.5rem;
+    margin-top: 1rem;
   }
 
-  @media (max-width: 600px) {
-    .answers {
-      grid-template-columns: 1fr;
+  .vs {
+    z-index: 1;
+    justify-self: center;
+    margin: -0.9rem 0;
+    padding: 0.1rem 0.85rem;
+    border: var(--outline);
+    border-radius: var(--radius-pill);
+    background: var(--pink);
+    box-shadow: 2px 3px 0 var(--ink);
+    font-family: var(--font-display);
+    font-size: calc(var(--fs-3) * var(--scale, 1));
+    transform: rotate(-6deg);
+  }
+
+  .reply {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding-top: 1.25rem;
+  }
+
+  .reply.winner {
+    background: var(--sun);
+  }
+
+  .stickers {
+    position: absolute;
+    top: -1.1rem;
+    right: -0.4rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.4rem;
+    font-size: var(--fs-2);
+  }
+
+  .stickers .sticker {
+    font-size: calc(var(--fs-2) * var(--scale, 1));
+  }
+
+  .sticker--clash {
+    background: var(--pink);
+  }
+
+  .sticker--pick {
+    background: var(--sky);
+  }
+
+  .sticker--out {
+    background: var(--disabled);
+  }
+
+  .words {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    text-align: center;
+    font-size: calc(var(--fs-3) * var(--scale, 1));
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: calc(var(--fs-1) * var(--scale, 1));
+  }
+
+  .by {
+    font-weight: 700;
+  }
+
+  .trophy {
+    font-size: calc(var(--fs-6) * var(--scale, 1));
+    line-height: 1;
+  }
+
+  @keyframes flip-in {
+    from {
+      opacity: 0;
+      transform: perspective(700px) rotateX(-85deg);
+    }
+    to {
+      opacity: 1;
+      transform: none;
     }
   }
 
-  .answer-card {
-    padding: 12px;
-    border-radius: 8px;
-    background: white;
-    border: 2px solid #e5e7eb;
+  @keyframes trophy-pop {
+    0% {
+      transform: scale(0) rotate(-30deg);
+    }
+    70% {
+      transform: scale(1.25) rotate(8deg);
+    }
+    100% {
+      transform: none;
+    }
   }
 
-  .answer-card.winner {
-    border-color: #f59e0b;
-    background: #fef3c7;
+  @media (prefers-reduced-motion: no-preference) {
+    .flip .reply {
+      transform-origin: top center;
+      animation: flip-in 0.45s ease-out backwards;
+      animation-delay: var(--delay);
+    }
+
+    .flip .stickers .sticker,
+    .flip .trophy {
+      animation-fill-mode: backwards;
+      animation-delay: calc(var(--delay) + 0.5s);
+    }
+
+    .flip .trophy {
+      animation-name: trophy-pop;
+      animation-duration: 0.5s;
+    }
   }
 
-  .answer-card.clash {
-    border-color: #ef4444;
-    background: #fee2e2;
+  :global(main.tv) .face-off {
+    grid-template-columns: 1fr auto 1fr;
+    align-items: stretch;
+    gap: 1.5rem;
+    margin-top: 2.5rem;
   }
 
-  .answer-text {
-    margin-bottom: 8px;
-    color: #1f2937;
-    font-size: 0.95rem;
+  :global(main.tv) .vs {
+    align-self: center;
+    margin: 0;
   }
 
-  .answer-meta {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.85rem;
-    color: #6b7280;
-    flex-wrap: wrap;
+  :global(main.tv) .question-text {
+    font-size: calc(var(--fs-5) * var(--scale, 1));
   }
 
-  .clash-badge {
-    background: #ef4444;
-    color: white;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 0.7rem;
-    font-weight: 700;
+  :global(main.tv) .words {
+    font-size: calc(var(--fs-4) * var(--scale, 1));
+  }
+
+  :global(main.tv) .reply {
+    min-height: 28dvh;
   }
 </style>

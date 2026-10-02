@@ -1,7 +1,7 @@
 # Party Game Framework (vibe-coded)
 
 > **Goal:** A flexible, modern, TypeScript-first framework for building immersive, multi-device social party games.
-> **Status:** Playable end to end. Plan 10 (framework inversion) stages 1-7 are done: XState-driven `GameRuntime`, generic Colyseus `GameRoom`, generic Svelte SDK, WitClash as a game on top; 4-bot playtest and review fixes landed. Stage 8 (QR join, TV view, kick/settings UI, podium, best-answer award, progress and typing badges) is done. Stage 9 (lifecycle review fixes: name entry for late joiners, minimum players, host `END_GAME`, spectator resume, seated-only podium, `NAME_TAKEN`, spectator-only rooms dispose) is done; open: persistence (Phase 9). Plan: `.AGENTS/plans/10-framework-inversion.md`.
+> **Status:** Playable end to end. Plan 10 (framework inversion) stages 1-7 are done: XState-driven `GameRuntime`, generic Colyseus `GameRoom`, generic Svelte SDK, WitClash as a game on top; 4-bot playtest and review fixes landed. Stage 8 (QR join, TV view, kick/settings UI, podium, best-answer award, progress and typing badges) is done. Stage 9 (lifecycle review fixes: name entry for late joiners, minimum players, host `END_GAME`, spectator resume, seated-only podium, `NAME_TAKEN`, spectator-only rooms dispose) is done; Plan 12 (UI redesign, "House Party" look: paper, tape, player stickers, sparkler timer, phase banners; UX fixes from `.AGENTS/plans/12-redesign-audit.md`) is done. Open: persistence (Phase 9), i18n, plugins (`.AGENTS/plans/13-hoisting-scan.md`). Plans: `.AGENTS/plans/10-framework-inversion.md`, `.AGENTS/plans/12-redesign.md`.
 
 ## !Note: Internal agent files (checklists, logs, notes, memories, etc.) should go in the `.AGENTS/` directory
 

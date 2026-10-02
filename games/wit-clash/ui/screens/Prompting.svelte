@@ -1,6 +1,10 @@
 <script lang="ts">
 import { untrack } from "svelte";
+import ActionBar from "../components/ActionBar.svelte";
+import AnswerBox from "../components/AnswerBox.svelte";
 import ProgressBadges from "../components/ProgressBadges.svelte";
+import StatusPanel from "../components/StatusPanel.svelte";
+import Timer from "../components/Timer.svelte";
 import type { WitClashManager } from "../manager.js";
 import { PromptingViewModel } from "../viewmodels/PromptingViewModel.svelte.js";
 
@@ -9,250 +13,166 @@ const { manager }: { manager: WitClashManager } = $props();
 const vm = untrack(() => new PromptingViewModel(manager));
 
 $effect(() => () => vm.destroy());
-
-function handleKeydown(e: KeyboardEvent) {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    void vm.submit();
-  }
-}
 </script>
 
 <div class="prompting">
-  <div class="header">
-    <div class="round-info">
-      <span>{vm.roundLabel}</span>
+  <div class="top">
+    <div class="chips">
+      <span class="chip chip--paper">{vm.roundLabel}</span>
       {#if vm.categoryLabel}
-        <span class="category">{vm.categoryLabel}</span>
+        <span class="chip">{vm.categoryLabel}</span>
       {/if}
     </div>
-    <div class="timer" class:urgent={vm.isUrgent}>{`${vm.secondsLeft}s`}</div>
+    <Timer seconds={vm.secondsLeft} total={vm.totalSeconds} announcement={vm.announcement} />
   </div>
 
-  <ProgressBadges rows={vm.progress.rows} />
-
   {#if vm.isSpectator}
-    <div class="waiting spectating">{`${vm.answersIn} of ${vm.answersExpected} answers in`}</div>
+    <p class="tv-count">{`${vm.answersIn} of ${vm.answersExpected} answers in`}</p>
+    <ProgressBadges rows={vm.progress.rows} />
   {:else if vm.isSittingOut}
-    <div class="waiting">You're sitting this round out — you'll vote on the answers.</div>
+    <StatusPanel tone="info" title="You're sitting this round out — you'll vote on the answers." />
+    <ProgressBadges rows={vm.progress.rows} />
+  {:else if !vm.showForm}
+    <StatusPanel
+      tone="done"
+      title="All answers in!"
+      detail={`Waiting for the others: ${vm.answersIn} of ${vm.answersExpected} answers in`}
+    />
+    <ProgressBadges rows={vm.progress.rows} />
+    <button type="button" class="btn btn--ghost edit" onclick={() => vm.startEditing()}>Edit answers</button>
   {:else}
-    <div class="prompt-nav">
+    <ProgressBadges rows={vm.progress.rows} />
+
+    <div class="tabs">
       {#each vm.prompts as prompt, index (prompt.matchupId)}
-        <button type="button"
-          class="nav-dot"
+        <button
+          type="button"
+          class="btn tab"
           class:active={vm.currentIndex === index}
           class:done={prompt.submitted}
-          aria-label="Prompt {index + 1}"
+          aria-label={`Prompt ${index + 1}`}
+          aria-pressed={vm.currentIndex === index}
           onclick={() => vm.goTo(index)}
         >
-          {index + 1}
+          {`Prompt ${index + 1}`}
+          {#if prompt.submitted}
+            <span aria-hidden="true">&#10003;</span>
+          {/if}
         </button>
       {/each}
     </div>
 
-    <div class="prompt-section">
-      <h2 class="prompt-text">{vm.current?.promptText}</h2>
-
-      <textarea
-        class="answer-input"
-        placeholder="Type your answer..."
-        aria-label="Your answer"
-        maxlength="200"
-        value={vm.draft}
-        oninput={(e) => vm.setDraft(e.currentTarget.value)}
-        onkeydown={handleKeydown}
-      ></textarea>
-
-      <div class="input-footer">
-        <span class:low={vm.charsRemaining < 20}>{`${vm.charsRemaining} chars left`}</span>
-        <button type="button" class="submit-btn" onclick={() => vm.submit()} disabled={!vm.canSubmit}>
-          {vm.current?.submitted ? "Update" : "Submit"}
-        </button>
+    {#key vm.currentIndex}
+      <div class="question card taped">
+        <h2>{vm.current?.promptText}</h2>
       </div>
-    </div>
+    {/key}
+    <p class="how hand">Write the funniest answer you can</p>
 
-    {#if vm.allSubmitted}
-      <div class="all-done">
-        {`All answers in! Waiting for the others: ${vm.answersIn} of ${vm.answersExpected} answers in`}
-      </div>
-    {/if}
+    <AnswerBox
+      value={vm.draft}
+      remaining={vm.charsRemaining}
+      oninput={(value) => vm.setDraft(value)}
+      onsubmit={() => vm.submit()}
+    />
+
+    <ActionBar>
+      <button type="button" class="btn btn--primary btn--big" onclick={() => vm.submit()} disabled={!vm.canSubmit}>
+        {vm.current?.submitted ? "Update" : "Submit"}
+      </button>
+    </ActionBar>
   {/if}
 </div>
 
 <style>
   .prompting {
-    max-width: 700px;
-    margin: 0 auto;
-    padding: 20px;
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 1rem;
   }
 
-  .header {
+  .top {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 0.5rem;
   }
 
-  .round-info {
-    font-size: 1.1rem;
-    color: #666;
-    font-weight: 500;
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
   }
 
-  .category {
-    display: block;
-    font-size: 1.3rem;
-    color: #333;
-    font-weight: 600;
+  .tabs {
+    display: flex;
+    gap: 0.6rem;
   }
 
-  .timer {
-    font-size: 2.5rem;
-    font-weight: bold;
-    color: #333;
-    font-variant-numeric: tabular-nums;
+  .tab {
+    flex: 1;
+    min-height: 44px;
+    box-shadow: 0 3px 0 var(--ink);
   }
 
-  .timer.urgent {
-    color: #f57c00;
-    animation: pulse 1s ease-in-out infinite;
+  .tab.active {
+    background: var(--sun);
   }
 
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
+  .tab.done:not(.active) {
+    background: var(--mint);
   }
 
-  .waiting {
+  .question {
+    --tilt: -1deg;
     text-align: center;
-    color: #666;
-    padding: 40px;
-    font-size: 1.2rem;
   }
 
-  .prompt-nav {
-    display: flex;
-    justify-content: center;
-    gap: 12px;
-  }
-
-  .prompt-section {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .prompt-text {
-    font-size: 1.8rem;
-    color: #333;
+  h2 {
     margin: 0;
+    font-size: calc(var(--fs-4) * var(--scale, 1));
+    line-height: 1.25;
+  }
+
+  :global(main.tv) h2 {
+    font-size: calc(var(--fs-5) * var(--scale, 1));
+  }
+
+  .how {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: var(--fs-3);
     text-align: center;
-    line-height: 1.4;
   }
 
-  .answer-input {
-    width: 100%;
-    min-height: 120px;
-    padding: 16px;
-    font-size: 1.1rem;
-    border: 2px solid #e0e0e0;
-    border-radius: 12px;
-    resize: vertical;
-    font-family: inherit;
-    transition: border-color 0.15s ease;
-    box-sizing: border-box;
+  .edit {
+    align-self: center;
   }
 
-  .answer-input:focus {
-    outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
-  }
-
-  .answer-input:disabled {
-    background: #f5f5f5;
-    cursor: not-allowed;
-  }
-
-  .input-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .input-footer span {
-    font-size: 0.9rem;
-    color: #888;
-  }
-
-  .input-footer span.low {
-    color: #e53935;
-    font-weight: 600;
-  }
-
-  .submit-btn {
-    padding: 12px 32px;
-    font-size: 1rem;
-    font-weight: 600;
-    border: none;
-    border-radius: 8px;
-    background: #667eea;
-    color: white;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .submit-btn:hover:not(:disabled) {
-    background: #5a67d8;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-  }
-
-  .submit-btn:active:not(:disabled) {
-    transform: translateY(0);
-  }
-
-  .submit-btn:focus-visible {
-    outline: 3px solid #667eea;
-    outline-offset: 2px;
-  }
-
-  .submit-btn:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-  }
-
-  .all-done {
+  .tv-count {
+    margin: 0 0 1.5rem;
+    font-family: var(--font-display);
+    font-size: calc(var(--fs-5) * var(--scale, 1));
     text-align: center;
-    padding: 20px;
-    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-    border-radius: 12px;
-    color: #2e7d32;
-    font-size: 1.1rem;
-    font-weight: 500;
   }
 
-  .prompt-nav .nav-dot {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: 2px solid #e0e0e0;
-    background: white;
-    cursor: pointer;
-    font-weight: 600;
-    color: #999;
+  @keyframes wobble {
+    0%,
+    100% {
+      transform: rotate(-1deg);
+    }
+    30% {
+      transform: rotate(1.5deg) scale(1.02);
+    }
+    60% {
+      transform: rotate(-2deg);
+    }
   }
 
-  .prompt-nav .nav-dot.done {
-    border-color: #22c55e;
-    color: #16a34a;
-  }
-
-  .prompt-nav .nav-dot.active {
-    border-color: #667eea;
-    background: #667eea;
-    color: white;
+  @media (prefers-reduced-motion: no-preference) {
+    .question {
+      animation: wobble 0.45s ease-out;
+    }
   }
 </style>

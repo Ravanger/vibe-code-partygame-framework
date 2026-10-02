@@ -6,46 +6,94 @@ import { GameControlsViewModel } from "../viewmodels/GameControlsViewModel.svelt
 const { manager }: { manager: WitClashManager } = $props();
 
 const vm = untrack(() => new GameControlsViewModel(manager));
+
+let root = $state<HTMLElement>();
+
+function closeOnOutsideClick(event: MouseEvent): void {
+  if (vm.menuOpen && !event.composedPath().some((node) => node === root)) vm.closeMenu();
+}
+
+function closeOnEscape(event: KeyboardEvent): void {
+  if (event.key === "Escape") vm.closeMenu();
+}
 </script>
 
+<svelte:window onclick={closeOnOutsideClick} onkeydown={closeOnEscape} />
+
 {#if vm.isVisible}
-  <div class="game-controls">
-    {#if vm.canEndGame}
-      {#if vm.confirmingEnd}
-        <span class="confirm">End the game for everyone?</span>
-        <button type="button" class="yes" onclick={() => vm.confirmEnd()}>Yes</button>
-        <button type="button" onclick={() => vm.cancelEnd()}>No</button>
-      {:else}
-        <button type="button" onclick={() => vm.askEnd()}>End game</button>
+  <div class="game-controls" bind:this={root}>
+    {#if vm.isSpectator}
+      <button type="button" class="btn btn--ghost leave-small" onclick={() => vm.leave()}>Leave game</button>
+    {:else}
+      <button
+        type="button"
+        class="btn menu-btn"
+        aria-label="Game menu"
+        aria-haspopup="true"
+        aria-expanded={vm.menuOpen}
+        onclick={() => vm.toggleMenu()}
+      >&#8943;</button>
+      {#if vm.menuOpen}
+        <div class="popover card">
+          {#if vm.canEndGame}
+            {#if vm.confirmingEnd}
+              <p class="confirm">End the game for everyone?</p>
+              <div class="confirm-actions">
+                <button type="button" class="btn btn--danger" onclick={() => vm.confirmEnd()}>Yes</button>
+                <button type="button" class="btn" onclick={() => vm.cancelEnd()}>No</button>
+              </div>
+            {:else}
+              <button type="button" class="btn btn--danger" onclick={() => vm.askEnd()}>End game</button>
+            {/if}
+          {/if}
+          <button type="button" class="btn" onclick={() => vm.leave()}>Leave game</button>
+        </div>
       {/if}
     {/if}
-    <button type="button" onclick={() => vm.leave()}>Leave game</button>
   </div>
 {/if}
 
 <style>
   .game-controls {
+    position: relative;
+  }
+
+  .menu-btn {
+    min-width: 44px;
+    padding: 0 0.6rem;
+    font-size: var(--fs-4);
+    line-height: 1;
+  }
+
+  .leave-small {
+    min-height: 36px;
+    font-size: var(--fs-1);
+    padding: 0.2rem 0.7rem;
+  }
+
+  .popover {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 10px);
+    z-index: 20;
     display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  button {
-    border: none;
-    border-radius: 6px;
-    padding: 4px 10px;
-    background: #e0e0e0;
-    cursor: pointer;
-    font-size: 0.8rem;
-  }
-
-  .yes {
-    background: #b91c1c;
-    color: white;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-width: 220px;
+    padding: 0.9rem;
   }
 
   .confirm {
-    font-size: 0.85rem;
-    color: #b91c1c;
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .confirm-actions {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .confirm-actions .btn {
+    flex: 1;
   }
 </style>

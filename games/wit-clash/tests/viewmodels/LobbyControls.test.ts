@@ -214,3 +214,102 @@ describe("GameControlsViewModel", () => {
     expect(leave).toHaveBeenCalledOnce();
   });
 });
+
+describe("WaitingRoomViewModel name and join info", () => {
+  it("decides once whether the name card goes first", () => {
+    const c = connectedClient({ name: "", isReady: false });
+    const vm = new WaitingRoomViewModel(c.manager);
+    expect(vm.nameFirst).toBe(true);
+    expect(vm.needsName).toBe(true);
+    c.me.isReady = true;
+    expect(vm.nameFirst).toBe(true);
+    expect(vm.needsName).toBe(false);
+    expect(new WaitingRoomViewModel(c.manager).nameFirst).toBe(false);
+  });
+
+  it("shows the QR and code card to the host and the TV only", () => {
+    const host = connectedClient({ role: "host" });
+    expect(new WaitingRoomViewModel(host.manager).showJoinInfo).toBe(true);
+    const guest = connectedClient();
+    expect(new WaitingRoomViewModel(guest.manager).showJoinInfo).toBe(false);
+    guest.state.players.delete(guest.manager.playerId);
+    expect(new WaitingRoomViewModel(guest.manager).showJoinInfo).toBe(true);
+  });
+
+  it("tells a named guest to wait for the host, nobody else", () => {
+    const guest = connectedClient();
+    expect(new WaitingRoomViewModel(guest.manager).showWaitingPanel).toBe(true);
+    guest.me.isReady = false;
+    expect(new WaitingRoomViewModel(guest.manager).showWaitingPanel).toBe(false);
+    expect(
+      new WaitingRoomViewModel(connectedClient({ role: "host" }).manager).showWaitingPanel,
+    ).toBe(false);
+    guest.me.isReady = true;
+    guest.state.players.delete(guest.manager.playerId);
+    expect(new WaitingRoomViewModel(guest.manager).showWaitingPanel).toBe(false);
+  });
+});
+
+describe("LobbySettingsViewModel.startsOpen", () => {
+  it("is open for the host and the TV, and folded for a player", () => {
+    expect(new LobbySettingsViewModel(connectedClient({ role: "host" }).manager).startsOpen).toBe(
+      true,
+    );
+    const guest = connectedClient();
+    expect(new LobbySettingsViewModel(guest.manager).startsOpen).toBe(false);
+    guest.state.players.delete(guest.manager.playerId);
+    expect(new LobbySettingsViewModel(guest.manager).startsOpen).toBe(true);
+  });
+});
+
+describe("GameControlsViewModel menu and game over", () => {
+  it("opens and closes the menu, dropping a pending confirmation", () => {
+    const c = connectedClient({ role: "host" }, "Prompting");
+    const vm = new GameControlsViewModel(c.manager);
+    vm.toggleMenu();
+    expect(vm.menuOpen).toBe(true);
+    vm.askEnd();
+    vm.toggleMenu();
+    expect(vm.menuOpen).toBe(false);
+    expect(vm.confirmingEnd).toBe(false);
+    vm.toggleMenu();
+    vm.askEnd();
+    vm.closeMenu();
+    expect(vm.menuOpen).toBe(false);
+    expect(vm.confirmingEnd).toBe(false);
+  });
+
+  it("closes the menu when leaving or ending", async () => {
+    const c = connectedClient({ role: "host" }, "Prompting");
+    vi.spyOn(c.manager, "leave").mockResolvedValue();
+    const vm = new GameControlsViewModel(c.manager);
+    vm.toggleMenu();
+    await vm.leave();
+    expect(vm.menuOpen).toBe(false);
+    vm.toggleMenu();
+    await vm.confirmEnd();
+    expect(vm.menuOpen).toBe(false);
+  });
+
+  it("is over only on the final results, and then the host cannot end it", () => {
+    const c = connectedClient({ role: "host" }, "Results");
+    const vm = new GameControlsViewModel(c.manager);
+    expect(vm.isGameOver).toBe(false);
+    expect(vm.canEndGame).toBe(true);
+    c.state.isFinalRound = true;
+    expect(vm.isGameOver).toBe(true);
+    expect(vm.canEndGame).toBe(false);
+    c.state.phase = "Prompting";
+    expect(vm.isGameOver).toBe(false);
+    c.manager.dispose();
+    expect(vm.isGameOver).toBe(false);
+  });
+
+  it("knows a TV display", () => {
+    const c = connectedClient({}, "Prompting");
+    const vm = new GameControlsViewModel(c.manager);
+    expect(vm.isSpectator).toBe(false);
+    c.state.players.delete(c.manager.playerId);
+    expect(vm.isSpectator).toBe(true);
+  });
+});

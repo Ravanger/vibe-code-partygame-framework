@@ -15,8 +15,11 @@ const box = $derived(`${-margin} ${-margin} ${code.size + margin * 2} ${code.siz
 
 <style>
   .qr {
+    display: block;
     width: 100%;
     height: auto;
-    border-radius: 8px;
+    border: var(--outline);
+    border-radius: var(--radius-card);
+    box-shadow: var(--scrap-shadow);
   }
 </style>

@@ -41,6 +41,17 @@ describe("Category vote screen", () => {
     expect(screen.getByText("1 of 4 voted")).toBeInTheDocument();
   });
 
+  it("marks my pick with a sticker and shows the votes as pips", () => {
+    const { container } = render(CategoryVote, { manager: categories().manager });
+    expect(screen.getAllByText("MY PICK")).toHaveLength(1);
+    expect(container.querySelectorAll(".pips i")).toHaveLength(1);
+  });
+
+  it("burns a sparkler for the voting time", () => {
+    const { container } = render(CategoryVote, { manager: categories().manager });
+    expect(container.querySelector(".sparkler")).toBeInTheDocument();
+  });
+
   it("votes when a card is clicked", async () => {
     const c = categories();
     render(CategoryVote, { manager: c.manager });
@@ -111,14 +122,40 @@ describe("Prompting screen", () => {
     expect(withoutTyping(c)).toHaveLength(1);
   });
 
-  it("jumps between prompts and shows what the server accepted", async () => {
+  it("jumps between prompts and ticks the ones the server accepted", async () => {
+    const { c, mine } = writing();
+    const [first] = mine.prompts;
+    if (first) first.submitted = true;
+    render(Prompting, { manager: c.manager });
+    expect(screen.getByRole("button", { name: "Update" })).toBeInTheDocument();
+    const tab = screen.getByRole("button", { name: "Prompt 1" });
+    expect(tab).toHaveAttribute("aria-pressed", "true");
+    expect(tab).toHaveTextContent("✓");
+    await fireEvent.click(screen.getByRole("button", { name: "Prompt 2" }));
+    expect(screen.getByRole("heading", { name: "Second prompt" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Submit" })).toBeInTheDocument();
+  });
+
+  it("collapses into a done note once everything is in, and reopens to edit", async () => {
     const { c, mine } = writing();
     for (const p of mine.prompts) p.submitted = true;
     render(Prompting, { manager: c.manager });
+    expect(screen.getByText(/all answers in/i)).toBeInTheDocument();
+    expect(screen.getByText("Waiting for the others: 0 of 2 answers in")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Your answer")).not.toBeInTheDocument();
+    await fireEvent.click(screen.getByRole("button", { name: "Edit answers" }));
+    expect(screen.getByLabelText("Your answer")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Update" })).toBeInTheDocument();
-    expect(screen.getByText(/all answers in/i)).toHaveTextContent("0 of 2 answers in");
-    await fireEvent.click(screen.getByRole("button", { name: "Prompt 2" }));
-    expect(screen.getByRole("heading", { name: "Second prompt" })).toBeInTheDocument();
+  });
+
+  it("shows a TV the count and the strip, without any input", () => {
+    const c = connectedClient({}, "Prompting");
+    c.state.players.delete(c.manager.playerId);
+    c.state.answersPerPlayer = 2;
+    c.state.progress.set("zed-12345", 1);
+    render(Prompting, { manager: c.manager });
+    expect(screen.getByText("1 of 2 answers in")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Your answer")).not.toBeInTheDocument();
   });
 });
 
@@ -145,6 +182,28 @@ describe("Matchup vote screen", () => {
     expect(screen.getByText("1 of 3 voted")).toBeInTheDocument();
     expect(screen.getByText("Matchup 1 of 1")).toBeInTheDocument();
     expect(screen.queryByText(/by /)).not.toBeInTheDocument();
+  });
+
+  it("slaps VOTED! on my pick and says how to switch", () => {
+    render(MatchupVote, {
+      manager: voting({ canVote: true, isOwnMatchup: false, matchupVote: "a2" }).manager,
+    });
+    expect(screen.getByText("VOTED!")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(/tap the other one to switch/i);
+  });
+
+  it("asks for a vote until one is cast, and sends a TV to the phones", () => {
+    const open = render(MatchupVote, {
+      manager: voting({ canVote: true, isOwnMatchup: false }).manager,
+    });
+    expect(screen.getByText("Tap the funnier answer")).toBeInTheDocument();
+    expect(screen.queryByText("VOTED!")).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    open.unmount();
+    const tv = voting({ canVote: false, isOwnMatchup: false });
+    tv.state.players.delete(tv.manager.playerId);
+    render(MatchupVote, { manager: tv.manager });
+    expect(screen.getByText("Cast your votes on your phones.")).toBeInTheDocument();
   });
 
   it("casts a vote", async () => {
@@ -209,6 +268,28 @@ describe("Matchup reveal screen", () => {
     expect(screen.getByText("2 votes")).toBeInTheDocument();
     expect(screen.getByText("CLASH!")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Winner" })).toBeInTheDocument();
+    expect(screen.getByText(/next up in 0s/i)).toBeInTheDocument();
+  });
+
+  it("marks the answer I voted for", () => {
+    const c = connectedClient({}, "MatchupReveal");
+    c.state.matchups.push(
+      matchup(
+        "m1",
+        "Name a fruit",
+        [
+          answer("a1", "Mango", { authorId: "zed-12345", authorName: "Zed", isWinner: true }),
+          answer("a2", "Kiwi", { authorId: "amy-12345", authorName: "Amy" }),
+        ],
+        { isRevealed: true },
+      ),
+    );
+    c.state.activeMatchupIndex = 0;
+    addMine(c.state, c.manager.playerId, { matchupVote: "a2" });
+    render(MatchupReveal, { manager: c.manager });
+    expect(screen.getAllByText("MY PICK")).toHaveLength(1);
+    expect(screen.queryByText("NO SHOW")).not.toBeInTheDocument();
+    expect(screen.queryByText("CLASH!")).not.toBeInTheDocument();
   });
 
   it("shows a forfeit as one, without vote counts", () => {
@@ -227,6 +308,7 @@ describe("Matchup reveal screen", () => {
     c.state.activeMatchupIndex = 0;
     render(MatchupReveal, { manager: c.manager });
     expect(screen.getByText(/won by forfeit/i)).toBeInTheDocument();
+    expect(screen.getByText("NO SHOW")).toBeInTheDocument();
     expect(screen.queryByText(/votes?$/)).not.toBeInTheDocument();
   });
 

@@ -1,10 +1,12 @@
 import { LOBBY_PHASE } from "@partygame/shared";
 import { ACTION } from "../../src/actionNames.js";
+import { PHASE } from "../../src/phaseNames.js";
 import type { WitClashManager } from "../manager.js";
 
 /** Leave and, for the host, end the game: shown on every screen except the lobby, which has its own leave button. */
 export class GameControlsViewModel {
   confirmingEnd = $state(false);
+  menuOpen = $state(false);
 
   constructor(private readonly manager: WitClashManager) {}
 
@@ -14,8 +16,27 @@ export class GameControlsViewModel {
     return connected && state !== undefined && state.phase !== LOBBY_PHASE;
   }
 
+  get isSpectator(): boolean {
+    return this.manager.isSpectator;
+  }
+
+  get isGameOver(): boolean {
+    const state = this.manager.state;
+    return state?.phase === PHASE.Results && state.isFinalRound;
+  }
+
   get canEndGame(): boolean {
-    return this.isVisible && this.manager.isHost;
+    return this.isVisible && this.manager.isHost && !this.isGameOver;
+  }
+
+  toggleMenu(): void {
+    this.menuOpen = !this.menuOpen;
+    this.confirmingEnd = false;
+  }
+
+  closeMenu(): void {
+    this.menuOpen = false;
+    this.confirmingEnd = false;
   }
 
   askEnd(): void {
@@ -27,11 +48,12 @@ export class GameControlsViewModel {
   }
 
   async confirmEnd(): Promise<void> {
-    this.confirmingEnd = false;
+    this.closeMenu();
     if (this.canEndGame) await this.manager.sendAction(ACTION.END_GAME);
   }
 
   async leave(): Promise<void> {
+    this.closeMenu();
     await this.manager.leave();
   }
 }

@@ -56,8 +56,25 @@ export class ResultsViewModel {
       : [];
   }
 
+  get championLine(): string {
+    const [first] = this.champions;
+    if (first === undefined) return "";
+    const names = this.champions.map((champion) => champion.name).join(" & ");
+    return `${names} ${this.champions.length > 1 ? "win" : "wins"} with ${first.score} points!`;
+  }
+
+  get waitingText(): string {
+    return this.isFinalRound
+      ? "Waiting for host to start a new game..."
+      : "Waiting for host to continue...";
+  }
+
   get matchups(): RevealedMatchup[] {
     return this.recap.all;
+  }
+
+  get isSpectator(): boolean {
+    return this.manager.isSpectator;
   }
 
   get isHost(): boolean {

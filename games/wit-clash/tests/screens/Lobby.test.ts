@@ -70,10 +70,9 @@ describe("Waiting room", () => {
     return c;
   }
 
-  it("shows the code, the players and the round count", () => {
+  it("shows the players and the round count for a named player", () => {
     const { manager } = lobby("player");
     render(WaitingRoom, { manager });
-    expect(screen.getByText("ABCD")).toBeInTheDocument();
     expect(screen.getByText("Friend 0")).toBeInTheDocument();
     expect(screen.getByText("(You)")).toBeInTheDocument();
     expect(screen.getByText("Total rounds")).toBeInTheDocument();
@@ -133,7 +132,7 @@ describe("Waiting room", () => {
   it("copies the room code", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal("navigator", { clipboard: { writeText } });
-    render(WaitingRoom, { manager: lobby("player").manager });
+    render(WaitingRoom, { manager: lobby("host").manager });
     await fireEvent.click(screen.getByRole("button", { name: "Copy" }));
     expect(writeText).toHaveBeenCalledWith("ABCD");
     vi.unstubAllGlobals();

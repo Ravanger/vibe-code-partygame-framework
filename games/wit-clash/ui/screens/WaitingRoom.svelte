@@ -1,8 +1,11 @@
 <script lang="ts">
 import { untrack } from "svelte";
+import ActionBar from "../components/ActionBar.svelte";
 import LobbySettings from "../components/LobbySettings.svelte";
 import NameInput from "../components/NameInput.svelte";
+import PlayerSticker from "../components/PlayerSticker.svelte";
 import QrCode from "../components/QrCode.svelte";
+import StatusPanel from "../components/StatusPanel.svelte";
 import type { WitClashManager } from "../manager.js";
 import { WaitingRoomViewModel } from "../viewmodels/WaitingRoomViewModel.svelte.js";
 
@@ -14,317 +17,265 @@ $effect(() => () => vm.destroy());
 </script>
 
 <div class="waiting-room">
-  {#if vm.notice}
-    <p class="notice" role="status">{vm.notice}</p>
-  {/if}
-
-  <div class="room-info">
-    <p>Room Code</p>
-    <div class="room-code-display">
-      <span class="room-code">{vm.roomCode}</span>
-      {#if !vm.isSpectator}
-        <button type="button" class="copy-btn" onclick={() => vm.copyCode()}>Copy</button>
-      {/if}
-    </div>
-    <div class="qr-box">
-      <QrCode text={vm.shareUrl} />
-    </div>
-    <p class="share-instructions">
-      Scan to join, or open
-      <code>{vm.shareUrl}</code>
-    </p>
-  </div>
-
-  <div class="players-section">
-    <h3>{`Players (${vm.readyCount} ready, ${vm.minPlayers} to ${vm.maxPlayers} needed)`}</h3>
-    {#if vm.spectatorCount > 0}
-      <p class="watching">{`${vm.spectatorCount} watching on a TV`}</p>
+  <div class="col">
+    {#if vm.notice}
+      <p class="notice" role="status">{vm.notice}</p>
     {/if}
-    <ul class="player-list">
-      {#each vm.players as player (player.id)}
-        <li class:current-player={player.isMe} class:disconnected={!player.isConnected}>
-          <span class="player-name">{player.isReady ? player.name : "Choosing a name..."}</span>
-          <div class="badges">
-            {#if player.isMe}
-              <span class="you-badge">(You)</span>
-            {/if}
-            {#if player.isHost}
-              <span class="host-badge">Host</span>
-            {/if}
-            {#if !player.isConnected}
-              <span class="disconnected-badge">(Disconnected)</span>
-            {/if}
-            {#if vm.canKick(player)}
-              {#if vm.kickCandidate === player.id}
-                <span class="kick-confirm">Remove?</span>
-                <button type="button" class="kick-yes" onclick={() => vm.confirmKick()}>Yes</button>
-                <button type="button" class="kick-no" onclick={() => vm.cancelKick()}>No</button>
-              {:else}
-                <button type="button" class="kick-btn" onclick={() => vm.askKick(player.id)}>
-                  {`Remove ${player.name || "player"}`}
-                </button>
-              {/if}
-            {/if}
-          </div>
-        </li>
-      {/each}
-    </ul>
+
+    {#if vm.nameFirst && !vm.isSpectator}
+      <NameInput field={vm.nameField} focus />
+    {/if}
+
+    {#if vm.showJoinInfo}
+      <div class="room-info card taped">
+        <p class="caption">Room Code</p>
+        <div class="room-code-display">
+          <span class="room-code">{vm.roomCode}</span>
+          {#if !vm.isSpectator}
+            <button type="button" class="btn btn--secondary" onclick={() => vm.copyCode()}>Copy</button>
+          {/if}
+        </div>
+        <div class="qr-box">
+          <QrCode text={vm.shareUrl} />
+        </div>
+        <p class="share-instructions">
+          Scan to join, or open
+          <code>{vm.shareUrl}</code>
+        </p>
+      </div>
+    {/if}
+
+    {#if vm.showWaitingPanel}
+      <StatusPanel tone="wait" title="Waiting for the host to start the game..." />
+    {/if}
   </div>
 
-  <LobbySettings {manager} />
+  <div class="col">
+    <div class="players-section card">
+      <h2>{`Players (${vm.readyCount} ready, ${vm.minPlayers} to ${vm.maxPlayers} needed)`}</h2>
+      {#if vm.spectatorCount > 0}
+        <p class="watching hand">{`${vm.spectatorCount} watching on a TV`}</p>
+      {/if}
+      <ul class="player-list">
+        {#each vm.players as player (player.id)}
+          <li class:current-player={player.isMe} class:disconnected={!player.isConnected}>
+            <PlayerSticker name={player.name} playerId={player.id} ghost={!player.isReady} size={48} />
+            <span class="player-name">{player.isReady ? player.name : "Choosing a name..."}</span>
+            <div class="badges">
+              {#if player.isMe}
+                <span class="chip chip--sky">(You)</span>
+              {/if}
+              {#if player.isHost}
+                <span class="chip"><span aria-hidden="true">&#128081;</span> Host</span>
+              {/if}
+              {#if !player.isConnected}
+                <span class="chip chip--paper">(Disconnected)</span>
+              {/if}
+              {#if vm.canKick(player)}
+                {#if vm.kickCandidate === player.id}
+                  <span class="kick-confirm">Remove?</span>
+                  <button type="button" class="btn btn--danger" onclick={() => vm.confirmKick()}>Yes</button>
+                  <button type="button" class="btn" onclick={() => vm.cancelKick()}>No</button>
+                {:else}
+                  <button
+                    type="button"
+                    class="btn kick-btn"
+                    aria-label={`Remove ${player.name || "player"}`}
+                    onclick={() => vm.askKick(player.id)}
+                  >&#10005;</button>
+                {/if}
+              {/if}
+            </div>
+          </li>
+        {/each}
+      </ul>
+    </div>
 
-  {#if !vm.isSpectator}
-    <NameInput field={vm.nameField} />
-  {/if}
+    {#if !vm.nameFirst && !vm.isSpectator}
+      <NameInput field={vm.nameField} />
+    {/if}
+
+    <LobbySettings {manager} />
+  </div>
+
+  <button type="button" class="btn btn--ghost leave" onclick={() => vm.leave()}>Leave game</button>
 
   {#if vm.isHost}
-    <div class="host-controls">
-      <button type="button" class="start-btn" disabled={!vm.canStart} onclick={() => vm.start()}>
+    {#if !vm.canStart}
+      <p class="hint hand">{`Need at least ${vm.minPlayers} players to start`}</p>
+    {/if}
+    <ActionBar>
+      <button type="button" class="btn btn--primary btn--big" disabled={!vm.canStart} onclick={() => vm.start()}>
         {`Start Game (${vm.readyCount}/${vm.minPlayers})`}
       </button>
-      {#if !vm.canStart}
-        <p class="hint">{`Need at least ${vm.minPlayers} players to start`}</p>
-      {/if}
-    </div>
-  {:else}
-    <p class="waiting-msg">Waiting for the host to start the game...</p>
+    </ActionBar>
   {/if}
-
-  <button type="button" class="leave-btn" onclick={() => vm.leave()}>Leave game</button>
 </div>
 
 <style>
   .waiting-room {
-    max-width: 600px;
-    margin: 0 auto;
-    padding: 20px;
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 1.5rem;
+  }
+
+  .col {
+    display: contents;
+  }
+
+  .notice {
+    margin: 0;
+  }
+
+  .caption {
+    margin: 0;
+    color: var(--ink-soft);
+    font-family: var(--font-hand);
+    font-size: calc(var(--fs-3) * var(--scale, 1));
+    text-align: center;
   }
 
   .room-info {
     text-align: center;
   }
 
-  .room-info p {
-    margin: 0 0 10px;
-    color: #666;
-  }
-
   .room-code-display {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    margin: 15px 0;
+    gap: 12px;
+    margin: 0.25rem 0 0.75rem;
   }
 
   .room-code {
-    font-family: monospace;
-    font-size: 3rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 15px 25px;
-    border-radius: 12px;
-    font-weight: bold;
-    letter-spacing: 8px;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-  }
-
-  .copy-btn {
-    padding: 8px 16px;
-    border: none;
-    border-radius: 6px;
-    background: #f0f0f0;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: background 0.2s;
-  }
-
-  .copy-btn:hover {
-    background: #e0e0e0;
-  }
-
-  .share-instructions {
-    font-size: 0.9rem;
-    color: #666;
-    margin-top: 10px;
-  }
-
-  .share-instructions code {
-    background: #f5f5f5;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-family: monospace;
-    font-size: 0.85rem;
-    word-break: break-all;
-  }
-
-  .players-section {
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  }
-
-  .players-section h3 {
-    margin: 0 0 15px;
-    color: #444;
-  }
-
-  .watching {
-    margin: 0 0 12px;
-    color: #666;
-    font-size: 0.9rem;
+    font-family: var(--font-display);
+    font-size: calc(var(--fs-7) * var(--scale, 1));
+    letter-spacing: 0.2em;
+    line-height: 1.1;
+    text-indent: 0.2em;
   }
 
   .qr-box {
-    width: 180px;
+    width: min(220px, 60%);
     margin: 0 auto;
   }
 
-  .kick-btn,
-  .kick-yes,
-  .kick-no {
-    border: none;
-    border-radius: 6px;
-    padding: 4px 10px;
-    cursor: pointer;
-    font-size: 0.8rem;
+  .share-instructions {
+    margin: 0.9rem 0 0;
+    color: var(--ink-soft);
+    font-size: calc(var(--fs-2) * var(--scale, 1));
   }
 
-  .kick-btn,
-  .kick-no {
-    background: #e0e0e0;
+  .share-instructions code {
+    display: block;
+    margin-top: 0.25rem;
+    font-weight: 700;
+    word-break: break-all;
   }
 
-  .kick-yes {
-    background: #b91c1c;
-    color: white;
+  h2 {
+    margin: 0 0 0.75rem;
+    font-size: calc(var(--fs-3) * var(--scale, 1));
   }
 
-  .kick-confirm {
-    font-size: 0.85rem;
-    color: #b91c1c;
+  .watching {
+    margin: 0 0 0.5rem;
+    color: var(--ink-soft);
+    font-size: calc(var(--fs-3) * var(--scale, 1));
   }
 
   .player-list {
     list-style: none;
-    padding: 0;
     margin: 0;
+    padding: 0;
   }
 
   .player-list li {
-    padding: 10px 14px;
-    background: #f5f5f5;
-    margin-bottom: 8px;
-    border-radius: 8px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
+    gap: 12px;
+    min-height: 56px;
+    padding: 4px 0;
+    border-bottom: 2px dashed var(--ink-soft);
   }
 
-  .player-list li.current-player {
-    background: #e3f2fd;
-    border: 2px solid #2196F3;
+  .player-list li:last-child {
+    border-bottom: none;
   }
 
   .player-list li.disconnected {
     opacity: 0.6;
-    background: #fff3e0;
   }
 
   .player-name {
-    font-weight: 500;
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-family: var(--font-display);
+    font-size: calc(var(--fs-3) * var(--scale, 1));
   }
 
   .badges {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
     gap: 6px;
-    align-items: center;
-    flex-shrink: 0;
   }
 
-  .you-badge {
-    color: #2196F3;
-    font-size: 0.85rem;
-    font-weight: bold;
+  .kick-btn {
+    min-width: 44px;
+    padding: 0;
   }
 
-  .host-badge {
-    background: #ffd700;
-    color: #333;
-    font-size: 0.7rem;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-weight: bold;
+  .kick-confirm {
+    font-family: var(--font-hand);
+    font-size: var(--fs-3);
   }
 
-  .disconnected-badge {
-    color: #f57c00;
-    font-size: 0.8rem;
-  }
-
-  .notice {
-    margin: 0;
-    padding: 10px 16px;
-    border-radius: 8px;
-    background: #fff3e0;
-    color: #e65100;
-    text-align: center;
-  }
-
-  .leave-btn {
+  .leave {
     align-self: center;
-    padding: 8px 16px;
-    border: none;
-    border-radius: 6px;
-    background: #e0e0e0;
-    cursor: pointer;
-  }
-
-  .host-controls {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .start-btn {
-    padding: 14px 32px;
-    font-size: 1.2rem;
-    border: none;
-    border-radius: 8px;
-    background: #ff5722;
-    color: white;
-    cursor: pointer;
-    font-weight: bold;
-    transition: transform 0.1s, background 0.2s;
-  }
-
-  .start-btn:active {
-    transform: scale(0.98);
-  }
-
-  .start-btn:disabled {
-    background: #ccc;
-    cursor: not-allowed;
   }
 
   .hint {
-    font-size: 0.85rem;
-    color: #777;
     margin: 0;
+    color: var(--ink-soft);
+    font-size: var(--fs-3);
+    text-align: center;
   }
 
-  .waiting-msg {
-    text-align: center;
-    font-style: italic;
-    color: #666;
-    font-size: 1.1rem;
-    margin-top: 10px;
+  :global(main.tv) .waiting-room {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    align-content: center;
+    gap: 3rem;
+  }
+
+  :global(main.tv) .col {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  :global(main.tv) .qr-box {
+    width: min(360px, 60%);
+  }
+
+  :global(main.tv) .player-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 2rem;
+  }
+
+  :global(main.tv) .player-list li {
+    border-bottom: none;
+  }
+
+  :global(main.tv) .leave {
+    grid-column: 1 / -1;
+    justify-self: end;
+    min-height: 36px;
+    font-size: var(--fs-1);
   }
 </style>

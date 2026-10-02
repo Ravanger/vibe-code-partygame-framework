@@ -1,8 +1,8 @@
-import type { Countdown } from "@partygame/game-client";
 import { ACTION, ANSWER_MAX_LENGTH } from "../../src/actionNames.js";
 import type { SubmitAnswerPayload } from "../../src/actions.js";
 import type { WitClashManager } from "../manager.js";
 import { AnswerProgress } from "./AnswerProgress.js";
+import { PhaseClock } from "./PhaseClock.js";
 import { TypingReporter } from "./TypingReporter.js";
 
 export interface PromptView {
@@ -13,13 +13,14 @@ export interface PromptView {
 
 export class PromptingViewModel {
   currentIndex = $state(0);
+  private editing = $state(false);
   private readonly drafts = $state<Record<string, string>>({});
-  private readonly countdown: Countdown;
+  private readonly clock: PhaseClock;
   private readonly typing: TypingReporter;
   readonly progress: AnswerProgress;
 
   constructor(private readonly manager: WitClashManager) {
-    this.countdown = manager.countdown();
+    this.clock = new PhaseClock(manager, "promptSeconds");
     this.typing = new TypingReporter(manager);
     this.progress = new AnswerProgress(manager);
   }
@@ -70,6 +71,10 @@ export class PromptingViewModel {
     return prompts.length > 0 && prompts.every((p) => p.submitted);
   }
 
+  get showForm(): boolean {
+    return !this.allSubmitted || this.editing;
+  }
+
   get answersIn(): number {
     return [...(this.manager.state?.progress.values() ?? [])].reduce((sum, n) => sum + n, 0);
   }
@@ -85,11 +90,19 @@ export class PromptingViewModel {
   }
 
   get secondsLeft(): number {
-    return this.countdown.secondsLeft;
+    return this.clock.secondsLeft;
   }
 
   get isUrgent(): boolean {
-    return this.countdown.isUrgent;
+    return this.clock.isUrgent;
+  }
+
+  get announcement(): string {
+    return this.clock.announcement;
+  }
+
+  get totalSeconds(): number {
+    return this.clock.totalSeconds;
   }
 
   setDraft(value: string): void {
@@ -108,7 +121,14 @@ export class PromptingViewModel {
       answer: this.draft.trim(),
     };
     const result = await this.manager.sendAction(ACTION.SUBMIT_ANSWER, payload);
-    if (result.ok && this.currentIndex < this.prompts.length - 1) ++this.currentIndex;
+    if (!result.ok) return;
+    if (this.currentIndex < this.prompts.length - 1) ++this.currentIndex;
+    else this.editing = false;
+  }
+
+  startEditing(): void {
+    this.currentIndex = 0;
+    this.editing = true;
   }
 
   goTo(index: number): void {
@@ -117,6 +137,6 @@ export class PromptingViewModel {
 
   destroy(): void {
     this.typing.stop();
-    this.countdown.destroy();
+    this.clock.destroy();
   }
 }

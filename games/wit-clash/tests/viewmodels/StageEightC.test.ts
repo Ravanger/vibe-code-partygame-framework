@@ -34,10 +34,10 @@ describe("Podium", () => {
 
   it("puts the winner in the middle, the runner-up on the left and third on the right", () => {
     const steps = podium(300, 200, 100, 50);
-    expect(steps.map((s) => [s.rank, s.label, s.players.map((p) => p.name)])).toEqual([
-      [2, "2nd", ["P1"]],
-      [1, "1st", ["P0"]],
-      [3, "3rd", ["P2"]],
+    expect(steps.map((s) => [s.rank, s.tier, s.label, s.players.map((p) => p.name)])).toEqual([
+      [2, 2, "2nd", ["P1"]],
+      [1, 1, "1st", ["P0"]],
+      [3, 3, "3rd", ["P2"]],
     ]);
   });
 
@@ -63,12 +63,34 @@ describe("Podium", () => {
     expect(podium(10, 5).map((s) => s.label)).toEqual(["2nd", "1st"]);
   });
 
-  it("lets tied players share a step and skips the places they occupy", () => {
+  it("lets tied players share a step and gives the next tier the next step", () => {
     const steps = podium(300, 300, 100, 100);
-    expect(steps.map((s) => [s.rank, s.players.map((p) => p.name)])).toEqual([
-      [3, ["P2", "P3"]],
-      [1, ["P0", "P1"]],
+    expect(steps.map((s) => [s.rank, s.tier, s.label, s.players.map((p) => p.name)])).toEqual([
+      [3, 2, "2nd", ["P2", "P3"]],
+      [1, 1, "1st", ["P0", "P1"]],
     ]);
+  });
+
+  it("fills three steps by tier and labels steps by tier, not competition rank", () => {
+    const steps = podium(300, 300, 100, 50, 20);
+    expect(steps.map((s) => [s.tier, s.label, s.players.length])).toEqual([
+      [2, "2nd", 1],
+      [1, "1st", 2],
+      [3, "3rd", 1],
+    ]);
+  });
+});
+
+describe("ResultsViewModel copy", () => {
+  it("words the champion line and the wait by the end of the game", () => {
+    const c = connectedClient({}, "Results");
+    const vm = new ResultsViewModel(c.manager);
+    expect(vm.championLine).toBe("");
+    expect(vm.waitingText).toBe("Waiting for host to continue...");
+    c.state.isFinalRound = true;
+    c.state.scoreboard.push(scoreRow("a", 5, { name: "Ann" }), scoreRow("b", 5, { name: "Bo" }));
+    expect(vm.championLine).toBe("Ann & Bo win with 5 points!");
+    expect(vm.waitingText).toBe("Waiting for host to start a new game...");
   });
 });
 

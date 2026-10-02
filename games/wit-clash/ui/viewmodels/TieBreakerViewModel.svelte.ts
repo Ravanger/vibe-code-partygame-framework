@@ -1,10 +1,11 @@
-import type { Countdown } from "@partygame/game-client";
 import { ACTION, ANSWER_MAX_LENGTH } from "../../src/actionNames.js";
 import type { CastVotePayload, SubmitAnswerPayload } from "../../src/actions.js";
+import { PHASE } from "../../src/phaseNames.js";
 import type { Matchup } from "../../src/state.js";
 import type { WitClashManager } from "../manager.js";
 import { AnswerProgress } from "./AnswerProgress.js";
 import { MatchupRecap, type RevealedMatchup } from "./MatchupRecap.js";
+import { type DurationOption, PhaseClock } from "./PhaseClock.js";
 import { TypingReporter } from "./TypingReporter.js";
 
 export interface TieBreakerChoice {
@@ -16,13 +17,13 @@ export interface TieBreakerChoice {
 /** The final tie-breaker: contenders answer, everyone else votes, then the result is shown. */
 export class TieBreakerViewModel {
   private draftText = $state("");
-  private readonly countdown: Countdown;
+  private readonly clock: PhaseClock;
   private readonly recap: MatchupRecap;
   private readonly typing: TypingReporter;
   readonly progress: AnswerProgress;
 
   constructor(private readonly manager: WitClashManager) {
-    this.countdown = manager.countdown();
+    this.clock = new PhaseClock(manager, this.durationOption());
     this.recap = new MatchupRecap(manager);
     this.typing = new TypingReporter(manager);
     this.progress = new AnswerProgress(manager);
@@ -35,6 +36,16 @@ export class TieBreakerViewModel {
 
   private get mine() {
     return this.manager.state?.mine.get(this.manager.playerId);
+  }
+
+  private durationOption(): DurationOption {
+    const phase = this.manager.state?.phase;
+    if (phase === PHASE.TieBreakerPrompting) return "promptSeconds";
+    return phase === PHASE.TieBreakerVoting ? "voteSeconds" : "revealSeconds";
+  }
+
+  get myVoteId(): string {
+    return this.mine?.matchupVote ?? "";
   }
 
   get promptText(): string {
@@ -94,11 +105,19 @@ export class TieBreakerViewModel {
   }
 
   get secondsLeft(): number {
-    return this.countdown.secondsLeft;
+    return this.clock.secondsLeft;
   }
 
   get isUrgent(): boolean {
-    return this.countdown.isUrgent;
+    return this.clock.isUrgent;
+  }
+
+  get announcement(): string {
+    return this.clock.announcement;
+  }
+
+  get totalSeconds(): number {
+    return this.clock.totalSeconds;
   }
 
   setDraft(value: string): void {
@@ -121,6 +140,6 @@ export class TieBreakerViewModel {
 
   destroy(): void {
     this.typing.stop();
-    this.countdown.destroy();
+    this.clock.destroy();
   }
 }

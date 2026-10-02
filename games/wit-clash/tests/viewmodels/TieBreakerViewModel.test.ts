@@ -27,6 +27,32 @@ function tieBreaker(phase: string) {
   return { c, vm: new TieBreakerViewModel(c.manager) };
 }
 
+describe("TieBreakerViewModel clock", () => {
+  it("runs on the option of the phase it is shown in", () => {
+    const expected: Record<string, number> = {
+      TieBreakerPrompting: 40,
+      TieBreakerVoting: 25,
+      TieBreakerReveal: 6,
+    };
+    for (const [phase, seconds] of Object.entries(expected)) {
+      const c = connectedClient({}, phase);
+      c.state.options = JSON.stringify({ promptSeconds: 40, voteSeconds: 25, revealSeconds: 6 });
+      const vm = new TieBreakerViewModel(c.manager);
+      expect(vm.totalSeconds).toBe(seconds);
+      expect(vm.announcement).toBe("");
+      vm.destroy();
+    }
+  });
+
+  it("knows who I voted for", () => {
+    const { c, vm } = tieBreaker("TieBreakerReveal");
+    expect(vm.myVoteId).toBe("");
+    addMine(c.state, c.manager.playerId, { matchupVote: "a2" });
+    expect(vm.myVoteId).toBe("a2");
+    vm.destroy();
+  });
+});
+
 describe("TieBreakerViewModel answering", () => {
   it("describes the current tie-breaker and who is in it", () => {
     const { c, vm } = tieBreaker("TieBreakerPrompting");
@@ -173,8 +199,24 @@ describe("TieBreakerViewModel reveal", () => {
       isForfeit: false,
       isClash: false,
       answers: [
-        { id: "a1", text: "Pigeon", votes: 2, authorName: "Me", isWinner: true, isMine: true },
-        { id: "a2", text: "Heron", votes: 1, authorName: "Zed", isWinner: false, isMine: false },
+        {
+          id: "a1",
+          text: "Pigeon",
+          votes: 2,
+          authorId: c.manager.playerId,
+          authorName: "Me",
+          isWinner: true,
+          isMine: true,
+        },
+        {
+          id: "a2",
+          text: "Heron",
+          votes: 1,
+          authorId: "zed-12345",
+          authorName: "Zed",
+          isWinner: false,
+          isMine: false,
+        },
       ],
     });
     vm.destroy();

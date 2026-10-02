@@ -1,19 +1,32 @@
 <script lang="ts">
 import type { PodiumStep } from "../viewmodels/Podium.js";
+import PlayerSticker from "./PlayerSticker.svelte";
 
 const { steps }: { steps: PodiumStep[] } = $props();
+
+const stickerSize = (step: PodiumStep): number => {
+  if (step.players.length > 1) return 36;
+  return step.tier === 1 ? 64 : 52;
+};
 </script>
 
 {#if steps.length > 0}
   <ol class="podium" aria-label="Podium">
     {#each steps as step (step.rank)}
-      <li class={`step place-${step.rank}`}>
+      <li class={`step tier-${step.tier}`}>
         <div class="occupants">
           {#each step.players as player (player.playerId)}
             <div class="occupant" class:is-me={player.isMe}>
+              {#if step.tier === 1}
+                <span class="star" aria-hidden="true">&#9733;</span>
+              {/if}
+              <PlayerSticker name={player.name} playerId={player.playerId} size={stickerSize(step)} />
               <span class="occupant-name">{player.name}</span>
+              {#if player.isMe}
+                <span class="you hand">&larr; you</span>
+              {/if}
               {#if player.wonTieBreaker}
-                <span class="tie-badge">Won the tie-breaker</span>
+                <span class="chip chip--sky">Won the tie-breaker</span>
               {/if}
               <span class="occupant-score">{`${player.score} pts`}</span>
             </div>
@@ -29,11 +42,11 @@ const { steps }: { steps: PodiumStep[] } = $props();
   .podium {
     list-style: none;
     margin: 0;
-    padding: 0;
+    padding: 0.5rem 0 0;
     display: flex;
     justify-content: center;
     align-items: flex-end;
-    gap: 8px;
+    gap: 6px;
   }
 
   .step {
@@ -41,15 +54,16 @@ const { steps }: { steps: PodiumStep[] } = $props();
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: 8px;
+    gap: 6px;
     min-width: 0;
   }
 
   .occupants {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
+    flex-flow: row wrap;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 0.5rem 0.75rem;
   }
 
   .occupant {
@@ -57,86 +71,116 @@ const { steps }: { steps: PodiumStep[] } = $props();
     flex-direction: column;
     align-items: center;
     gap: 2px;
+    min-width: 0;
+    max-width: 100%;
     text-align: center;
-    overflow-wrap: anywhere;
+  }
+
+  .star {
+    color: var(--sun);
+    -webkit-text-stroke: 2px var(--ink);
+    paint-order: stroke fill;
+    font-size: calc(var(--fs-4) * var(--scale, 1));
+    line-height: 1;
   }
 
   .occupant-name {
-    font-weight: 700;
-    font-size: 1.1rem;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--font-display);
+    font-size: calc(var(--fs-3) * var(--scale, 1));
+    line-height: 1.15;
   }
 
-  .occupant.is-me .occupant-name {
-    color: #667eea;
+  .is-me .occupant-name {
+    text-decoration: underline wavy var(--pink) 3px;
+    text-underline-offset: 4px;
+  }
+
+  .you {
+    color: var(--ink-soft);
+    font-size: calc(var(--fs-2) * var(--scale, 1));
   }
 
   .occupant-score {
-    color: #666;
+    color: var(--ink-soft);
     font-variant-numeric: tabular-nums;
-  }
-
-  .tie-badge {
-    font-size: 0.7rem;
     font-weight: 700;
-    padding: 2px 8px;
-    border-radius: 999px;
-  }
-
-  .tie-badge {
-    background: #7c3aed;
-    color: white;
+    font-size: calc(var(--fs-1) * var(--scale, 1));
   }
 
   .block {
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    padding-top: 8px;
-    border-radius: 12px 12px 0 0;
-    font-size: 1.6rem;
-    font-weight: 800;
-    color: white;
-    background: linear-gradient(180deg, #667eea 0%, #7c3aed 100%);
+    padding-top: 6px;
+    border: var(--outline);
+    border-bottom: none;
+    border-radius: var(--radius-card) var(--radius-card) 0 0;
+    background: var(--sky);
+    color: var(--ink);
+    box-shadow: var(--scrap-shadow);
+    font-family: var(--font-display);
+    font-size: calc(var(--fs-5) * var(--scale, 1));
   }
 
-  .place-1 .block {
-    height: 140px;
-    background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+  .tier-1 .block {
+    height: calc(150px * var(--scale, 1));
+    background: var(--sun);
   }
 
-  .place-2 .block {
-    height: 100px;
+  .tier-2 .block {
+    height: calc(108px * var(--scale, 1));
   }
 
-  .place-3 .block {
-    height: 70px;
-    background: linear-gradient(180deg, #b45309 0%, #92400e 100%);
+  .tier-3 .block {
+    height: calc(78px * var(--scale, 1));
+    background: var(--pink);
   }
 
-  :global(main.tv) .occupant-name {
-    font-size: 2.4rem;
+  :global(main.tv) .tier-1 .block {
+    height: 17dvh;
   }
 
-  :global(main.tv) .occupant-score {
-    font-size: 1.8rem;
+  :global(main.tv) .tier-2 .block {
+    height: 12dvh;
   }
 
-  :global(main.tv) .tie-badge {
-    font-size: 1.2rem;
+  :global(main.tv) .tier-3 .block {
+    height: 8dvh;
   }
 
-  :global(main.tv) .place-1 .block {
-    height: 260px;
-    font-size: 3rem;
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(40px);
+    }
+    60% {
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
   }
 
-  :global(main.tv) .place-2 .block {
-    height: 190px;
-    font-size: 3rem;
-  }
+  @media (prefers-reduced-motion: no-preference) {
+    .step {
+      animation: rise 0.6s ease-out both;
+    }
 
-  :global(main.tv) .place-3 .block {
-    height: 130px;
-    font-size: 3rem;
+    .tier-2 {
+      animation-delay: 0.15s;
+    }
+
+    .tier-1 {
+      animation-delay: 0.3s;
+    }
+
+    .tier-3 {
+      animation-delay: 0s;
+    }
   }
 </style>

@@ -1,13 +1,13 @@
-import type { Countdown } from "@partygame/game-client";
 import type { WitClashManager } from "../manager.js";
 import { MatchupRecap, type RevealedMatchup } from "./MatchupRecap.js";
+import { PhaseClock } from "./PhaseClock.js";
 
 export class MatchupRevealViewModel {
-  private readonly countdown: Countdown;
+  private readonly clock: PhaseClock;
   private readonly recap: MatchupRecap;
 
   constructor(private readonly manager: WitClashManager) {
-    this.countdown = manager.countdown();
+    this.clock = new PhaseClock(manager, "revealSeconds");
     this.recap = new MatchupRecap(manager);
   }
 
@@ -24,10 +24,18 @@ export class MatchupRevealViewModel {
   }
 
   get secondsLeft(): number {
-    return this.countdown.secondsLeft;
+    return this.clock.secondsLeft;
+  }
+
+  get totalSeconds(): number {
+    return this.clock.totalSeconds;
+  }
+
+  get myVoteId(): string {
+    return this.manager.state?.mine.get(this.manager.playerId)?.matchupVote ?? "";
   }
 
   destroy(): void {
-    this.countdown.destroy();
+    this.clock.destroy();
   }
 }

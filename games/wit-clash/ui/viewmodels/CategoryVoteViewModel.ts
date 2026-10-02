@@ -1,8 +1,6 @@
-import type { Countdown } from "@partygame/game-client";
 import { ACTION } from "../../src/actionNames.js";
 import type { WitClashManager } from "../manager.js";
-
-const ANNOUNCE_AT = [30, 10, 5];
+import { PhaseClock } from "./PhaseClock.js";
 
 export interface CategoryChoice {
   id: string;
@@ -12,10 +10,10 @@ export interface CategoryChoice {
 }
 
 export class CategoryVoteViewModel {
-  private readonly countdown: Countdown;
+  private readonly clock: PhaseClock;
 
   constructor(private readonly manager: WitClashManager) {
-    this.countdown = manager.countdown();
+    this.clock = new PhaseClock(manager, "categoryVoteSeconds");
   }
 
   get isSpectator(): boolean {
@@ -49,15 +47,19 @@ export class CategoryVoteViewModel {
   }
 
   get secondsLeft(): number {
-    return this.countdown.secondsLeft;
+    return this.clock.secondsLeft;
   }
 
   get isUrgent(): boolean {
-    return this.countdown.isUrgent;
+    return this.clock.isUrgent;
   }
 
   get announcement(): string {
-    return ANNOUNCE_AT.includes(this.secondsLeft) ? `${this.secondsLeft} seconds remaining` : "";
+    return this.clock.announcement;
+  }
+
+  get totalSeconds(): number {
+    return this.clock.totalSeconds;
   }
 
   async vote(categoryId: string): Promise<void> {
@@ -65,6 +67,6 @@ export class CategoryVoteViewModel {
   }
 
   destroy(): void {
-    this.countdown.destroy();
+    this.clock.destroy();
   }
 }

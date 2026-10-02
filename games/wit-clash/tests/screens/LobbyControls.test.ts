@@ -43,11 +43,75 @@ describe("Welcome screen TV mode", () => {
 });
 
 describe("Waiting room QR, removal and settings", () => {
-  it("shows a QR code of the join link next to the code", () => {
-    render(WaitingRoom, { manager: lobby("player").manager });
+  it("shows the host a QR code of the join link next to the code", () => {
+    render(WaitingRoom, { manager: lobby("host").manager });
     const qr = screen.getByRole("img", { name: /qr code/i });
     expect(qr.querySelector("path")?.getAttribute("d")).toMatch(/^M1 1h7v1h-7z/);
     expect(screen.getByText(`${window.location.origin}/?code=ABCD`)).toBeInTheDocument();
+    expect(screen.getByText("Room Code")).toBeInTheDocument();
+  });
+
+  it("does not show a code chip for a named non-host player", () => {
+    render(WaitingRoom, { manager: lobby("player").manager });
+    expect(screen.queryByRole("img", { name: /qr code/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Copy" })).not.toBeInTheDocument();
+    expect(screen.queryByText("ABCD", { selector: ".code-chip" })).not.toBeInTheDocument();
+  });
+
+  it("puts the name card first and focused for a joiner without a name, and keeps it there", async () => {
+    const c = connectedClient({ name: "", isReady: false });
+    addSeat(c.state, "bob-12345", { name: "Bob" });
+    const { container } = render(WaitingRoom, { manager: c.manager });
+    const input = screen.getByLabelText("Your name");
+    expect(input).toHaveFocus();
+    expect(
+      container.querySelector(".waiting-room")?.firstElementChild?.firstElementChild,
+    ).toContainElement(input);
+    expect(screen.queryByText(/waiting for the host/i)).not.toBeInTheDocument();
+    expect(screen.getByText("Choosing a name...")).toBeInTheDocument();
+    c.me.isReady = true;
+    c.me.name = "Maya";
+    c.patch();
+    expect(screen.getByLabelText("Your name")).toBe(input);
+    expect(await screen.findByText(/waiting for the host/i)).toBeInTheDocument();
+  });
+
+  it("puts the name below the players once a player has one", () => {
+    const { container } = render(WaitingRoom, { manager: lobby("player").manager });
+    const input = screen.getByLabelText("Your name");
+    expect(input).not.toHaveFocus();
+    expect(
+      container.querySelector(".waiting-room")?.firstElementChild?.firstElementChild,
+    ).not.toContainElement(input);
+  });
+
+  it("shows a named guest the waiting panel above the players list", () => {
+    render(WaitingRoom, { manager: lobby("player").manager });
+    const waiting = screen.getByText(/waiting for the host/i);
+    const players = screen.getByRole("heading", { name: /players/i });
+    expect(
+      waiting.compareDocumentPosition(players) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("opens the settings for the host and the TV, and folds them for players", () => {
+    const host = render(WaitingRoom, { manager: lobby("host").manager });
+    expect(host.container.querySelector("details")).toHaveAttribute("open");
+    expect(screen.getByText("Game settings")).toBeInTheDocument();
+    host.unmount();
+    const guest = render(WaitingRoom, { manager: lobby("player").manager });
+    expect(guest.container.querySelector("details")).not.toHaveAttribute("open");
+    guest.unmount();
+    const c = connectedClient({});
+    c.state.players.delete(c.manager.playerId);
+    const tv = render(WaitingRoom, { manager: c.manager });
+    expect(tv.container.querySelector("details")).toHaveAttribute("open");
+  });
+
+  it("shows a disclosure marker on the settings summary", () => {
+    render(WaitingRoom, { manager: lobby("player").manager });
+    const summary = screen.getByText("Game settings");
+    expect(summary.classList.contains("summary-with-marker")).toBe(true);
   });
 
   it("asks twice before removing a player, and can back out", async () => {

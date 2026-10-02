@@ -39,6 +39,18 @@ describe("Tie-breaker answering screen", () => {
     ]);
   });
 
+  it("submits on Enter and lets Shift+Enter through", async () => {
+    const c = tieBreaker("TieBreakerPrompting");
+    addMine(c.state, c.manager.playerId).prompts.push(prompt("tb1", "Name a bird"));
+    render(TieBreakerPrompting, { manager: c.manager });
+    const box = screen.getByLabelText("Your answer");
+    await fireEvent.input(box, { target: { value: "Owl" } });
+    await fireEvent.keyDown(box, { key: "Enter", shiftKey: true });
+    expect(withoutTyping(c)).toEqual([]);
+    await fireEvent.keyDown(box, { key: "Enter" });
+    expect(withoutTyping(c)).toHaveLength(1);
+  });
+
   it("offers an update once the answer is in", () => {
     const c = tieBreaker("TieBreakerPrompting");
     addMine(c.state, c.manager.playerId).prompts.push(prompt("tb1", "Name a bird", true));
@@ -95,11 +107,13 @@ describe("Tie-breaker reveal screen", () => {
       answer("a2", "Heron", { votes: 1, authorId: "zed-12345", authorName: "Zed" }),
     );
     if (current) current.isRevealed = true;
+    addMine(c.state, c.manager.playerId, { matchupVote: "a1" });
     render(TieBreakerReveal, { manager: c.manager });
     expect(screen.getByText("by Me (you)")).toBeInTheDocument();
     expect(screen.getByText("2 votes")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Winner" })).toBeInTheDocument();
     expect(screen.getByText(/next up in/i)).toBeInTheDocument();
+    expect(screen.getByText("MY PICK")).toBeInTheDocument();
   });
 
   it("waits until it is revealed", () => {

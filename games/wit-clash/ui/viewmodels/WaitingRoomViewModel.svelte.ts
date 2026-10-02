@@ -14,9 +14,24 @@ export interface LobbyPlayer {
 export class WaitingRoomViewModel {
   kickCandidate = $state<string | undefined>(undefined);
   readonly nameField: NameField;
+  /** Decided once, so the name card does not jump away while its owner is typing. */
+  readonly nameFirst: boolean;
 
   constructor(private readonly manager: WitClashManager) {
     this.nameField = new NameField(manager);
+    this.nameFirst = this.needsName;
+  }
+
+  get needsName(): boolean {
+    return this.manager.me()?.isReady === false;
+  }
+
+  get showJoinInfo(): boolean {
+    return this.isHost || this.isSpectator;
+  }
+
+  get showWaitingPanel(): boolean {
+    return !this.isHost && !this.isSpectator && !this.needsName;
   }
 
   get draftName(): string {

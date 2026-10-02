@@ -5,6 +5,7 @@ export interface RevealedAnswer {
   id: string;
   text: string;
   votes: number;
+  authorId: string;
   authorName: string;
   isWinner: boolean;
   isMine: boolean;
@@ -42,6 +43,7 @@ export class MatchupRecap {
         id: a.id,
         text: a.text,
         votes: a.votes,
+        authorId: a.authorId,
         authorName: a.authorName,
         isWinner: a.isWinner,
         isMine: a.authorId === this.manager.playerId,
