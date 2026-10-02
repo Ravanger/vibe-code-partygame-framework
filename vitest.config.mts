@@ -7,6 +7,7 @@ export default defineConfig({
       "packages/core/vitest.config.ts",
       "packages/server/vitest.config.ts",
       "packages/game-client/vitest.config.ts",
+      "packages/game-ui/vitest.config.ts",
       "packages/bots/vitest.config.ts",
       "packages/terminal/vitest.config.ts",
       "packages/launcher/vitest.config.ts",

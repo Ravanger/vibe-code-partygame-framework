@@ -1,5 +1,6 @@
+import type { GameConnectionManager } from "@partygame/game-client";
 import { joinUrl, KICK_PLAYER, START_GAME } from "@partygame/shared";
-import type { WitClashManager } from "../manager.js";
+import type { BaseGameState } from "@partygame/shared/schema";
 import { NameField } from "./NameField.svelte.js";
 
 export interface LobbyPlayer {
@@ -11,13 +12,13 @@ export interface LobbyPlayer {
   isMe: boolean;
 }
 
-export class WaitingRoomViewModel {
+export class WaitingRoomViewModel<TState extends BaseGameState> {
   kickCandidate = $state<string | undefined>(undefined);
-  readonly nameField: NameField;
+  readonly nameField: NameField<TState>;
   /** Decided once, so the name card does not jump away while its owner is typing. */
   readonly nameFirst: boolean;
 
-  constructor(private readonly manager: WitClashManager) {
+  constructor(private readonly manager: GameConnectionManager<TState>) {
     this.nameField = new NameField(manager);
     this.nameFirst = this.needsName;
   }

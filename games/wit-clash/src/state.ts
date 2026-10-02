@@ -93,7 +93,6 @@ export const WitClashState = BaseGameState.extend(
   {
     categoryOptions: t.array(CategoryOption),
     selectedCategory: t.string().default(""),
-    notice: t.string().default(""),
     roundNumber: t.number().default(0),
     totalRounds: t.number().default(3),
     isFinalRound: t.boolean().default(false),

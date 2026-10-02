@@ -1,7 +1,7 @@
+import { NameField } from "@partygame/game-ui";
 import { LOBBY_PHASE } from "@partygame/shared";
 import type { WitClashManager } from "../manager.js";
 import { isKnownPhase, PHASE_SCREENS } from "../screens/index.js";
-import { NameField } from "./NameField.svelte.js";
 import { Scoreboard } from "./Scoreboard.js";
 
 /** For someone who joined mid-game and plays from the next round on. */

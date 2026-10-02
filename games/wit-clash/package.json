@@ -9,6 +9,7 @@
     "@partygame/bots": "workspace:*",
     "@partygame/core": "workspace:*",
     "@partygame/game-client": "workspace:*",
+    "@partygame/game-ui": "workspace:*",
     "@partygame/launcher": "workspace:*",
     "@partygame/server": "workspace:*",
     "@partygame/shared": "workspace:*",

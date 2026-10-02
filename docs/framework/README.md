@@ -207,7 +207,7 @@ game so each handler's `payload` is inferred from its zod schema. `games/wit-cla
 ## Server
 
 `@partygame/server` hosts any game on Colyseus. Your state class extends `BaseGameState` (`phase`, `phaseEndsAt`, `roomCode`,
-`serverNow`, `spectatorCount`, `options` as JSON, `minPlayers`, `maxPlayers`, `players` keyed by `playerId`).
+`serverNow`, `spectatorCount`, `options` as JSON, `notice` (a message for the room, e.g. why it is back in the lobby; the framework never writes it, your `onEndGame`/`onReturnToLobby` do), `minPlayers`, `maxPlayers`, `players` keyed by `playerId`).
 State uses `@colyseus/schema` 5's decorator-free `schema()`; no compiler flags are needed:
 
 ```ts
@@ -358,6 +358,81 @@ net.urls;                                               // every URL requested
 Integration tests boot a real server with `bootTestServer` from `@partygame/server/testing`
 (`t.endpoint`, and `await t.serveApi()` for the code-resolution API) and use real managers. Add `"@partygame/game-client/test-setup"` to the
 vitest `setupFiles`: it shims the storages and makes the SDK use `ws` under jsdom.
+
+## Game UI viewmodels
+
+`@partygame/game-ui` holds the generic client viewmodels (Svelte 5 runes, no components), typed on `GameConnectionManager<TState extends BaseGameState>`. Import it through the `svelte` export condition (Vite with the Svelte plugin), like `game-client`.
+
+| Class | What |
+|---|---|
+| `NameField` | A text draft that sends `setName` after a pause in typing (`new NameField(manager, debounceMs = 250)`). |
+| `GameControlsViewModel` | Leave and host-only end-game menu, visible in every phase except the lobby. |
+| `WelcomeViewModel` | The join screen: host, join by 4-letter code, watch as a TV, and auto-join from a `?code=` or `?tv=` link (`new WelcomeViewModel(manager, urlCode?, urlTvCode?)`). |
+| `LobbySettingsViewModel` | The host's options form, generated from the game's options schema (`OptionFields` builds the fields). |
+| `AppRouter` | Routes the connection status and room phase to a screen of your screen table (see below). `createAppRouter(manager, screens)` builds one. |
+| `WaitingRoomViewModel` | The lobby: seats (`LobbyPlayer`), ready count, host-only start and kick (with confirmation), name field, share URL, copy code, `notice`. |
+
+The waiting room reads `players`, `minPlayers`, `maxPlayers`, `canStart`, `spectatorCount` and `notice` from `BaseGameState`. The framework never writes `notice`; a game sets it (for example in `onEndGame` or `onReturnToLobby`) to say why the room is back in the lobby, and the waiting room shows it.
+
+The game plugs its rules in through the constructor. `GameControlsViewModel` takes an `isGameOver` predicate (default: never over); the host cannot end a game that is over:
+
+```ts
+import { GameControlsViewModel as GameControlsBase } from "@partygame/game-ui";
+
+export class GameControlsViewModel extends GameControlsBase<ButtonState> {
+  constructor(manager: GameConnectionManager<ButtonState>) {
+    super(manager, (state) => state.phase === "Done");
+  }
+}
+```
+
+`LobbySettingsViewModel` takes the same options schema you pass to `defineGame`, optional `defaults` shown until the server publishes valid options, and optional `labels`. Every bounded numeric option (`.min()` and `.max()`) appears in the form with no UI work; a field is labelled from its camelCase key ("Turn seconds") unless `labels` overrides it:
+
+```ts
+import { LobbySettingsViewModel as LobbySettingsBase } from "@partygame/game-ui";
+
+export class LobbySettingsViewModel extends LobbySettingsBase<ButtonState> {
+  constructor(manager: GameConnectionManager<ButtonState>) {
+    super(manager, {
+      schema: ButtonOptionsSchema,
+      defaults: { turnSeconds: 20 },
+      labels: { turnSeconds: "Seconds per turn" },
+    });
+  }
+}
+```
+
+`createAppRouter(manager, screens)` is the app shell's router. `screens` maps each phase name to your component and an optional `banner` (shown for a moment when the room enters the phase). `router.screen` is a `Route`: `welcome` (not connected), `connecting` (a phase missing from the table), `join-next-round` (a seat marked inactive outside the lobby) or `phase`. A client with no seat (the TV) passes through to the phase screen; `reconnecting` keeps the current screen. Also exposed: `screenKey`, `banner`, `phase`, `isSpectator`, `isReconnecting`, `roomCode`, `error` and `dismissError()`.
+
+```svelte
+<script lang="ts">
+  import { LOBBY_PHASE } from "@partygame/shared";
+  import { createAppRouter } from "@partygame/game-ui";
+  import Lobby from "./Lobby.svelte";
+  import Round from "./Round.svelte";
+  import Welcome from "./Welcome.svelte";
+  import { manager } from "./manager.js";
+
+  const SCREENS = {
+    [LOBBY_PHASE]: { component: Lobby, banner: "" },
+    Round: { component: Round, banner: "GO!" },
+  } satisfies Record<string, { component: unknown; banner?: string }>;
+
+  const router = createAppRouter(manager, SCREENS);
+  const route = $derived(router.screen);
+</script>
+
+{#if route.kind === "phase"}
+  {@const Screen = SCREENS[route.phase].component}
+  <Screen {manager} />
+{:else if route.kind === "welcome"}
+  <Welcome {manager} />
+{:else}
+  <p>Connecting...</p>
+{/if}
+```
+
+To change a rule, subclass it and override a member, for example `banner`: `class AppViewModel extends AppRouter<ButtonState, typeof SCREENS> { override get banner() { ... } }` (`manager` and `screens` are `protected`).
 
 ## Bots
 

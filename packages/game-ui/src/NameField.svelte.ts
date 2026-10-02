@@ -1,13 +1,16 @@
+import type { GameConnectionManager } from "@partygame/game-client";
 import { NAME_MAX_LENGTH } from "@partygame/shared";
-import type { WitClashManager } from "../manager.js";
+import type { BaseGameState } from "@partygame/shared/schema";
 
-const NAME_DEBOUNCE_MS = 250;
-
-export class NameField {
+/** A text draft that tells the server the name after a pause in typing. */
+export class NameField<TState extends BaseGameState = BaseGameState> {
   draft = $state("");
   private timer: ReturnType<typeof setTimeout> | undefined;
 
-  constructor(private readonly manager: WitClashManager) {
+  constructor(
+    private readonly manager: GameConnectionManager<TState>,
+    private readonly debounceMs = 250,
+  ) {
     this.draft = manager.me()?.name ?? "";
   }
 
@@ -19,7 +22,7 @@ export class NameField {
     if (!trimmed) return;
     this.timer = setTimeout(
       () => this.manager.setName(trimmed.slice(0, NAME_MAX_LENGTH)),
-      NAME_DEBOUNCE_MS,
+      this.debounceMs,
     );
   }
 

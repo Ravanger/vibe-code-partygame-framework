@@ -1,4 +1,5 @@
 <script lang="ts">
+import { WaitingRoomViewModel } from "@partygame/game-ui";
 import { untrack } from "svelte";
 import ActionBar from "../components/ActionBar.svelte";
 import LobbySettings from "../components/LobbySettings.svelte";
@@ -7,7 +8,6 @@ import PlayerSticker from "../components/PlayerSticker.svelte";
 import QrCode from "../components/QrCode.svelte";
 import StatusPanel from "../components/StatusPanel.svelte";
 import type { WitClashManager } from "../manager.js";
-import { WaitingRoomViewModel } from "../viewmodels/WaitingRoomViewModel.svelte.js";
 
 const { manager }: { manager: WitClashManager } = $props();
 

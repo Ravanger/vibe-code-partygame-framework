@@ -10,6 +10,7 @@ export const BaseGameState = schema(
     serverNow: t.number().default(0),
     spectatorCount: t.number().default(0),
     options: t.string().default("{}"),
+    notice: t.string().default(""),
     minPlayers: t.number().default(0),
     maxPlayers: t.number().default(0),
     canStart: t.boolean().default(false),

@@ -221,10 +221,10 @@ App.svelte          screen router, error toast, "reconnecting" indicator, Leave 
 screens/            one component per screen: Welcome, WaitingRoom, JoinNextRound, CategoryVote, Prompting,
                     MatchupVote, MatchupReveal, TieBreakerPrompting, TieBreakerVote, TieBreakerReveal, Results
 components/         MatchupCard, Scoreboard, Podium, ProgressBadges, LobbySettings, QrCode, NameInput, GameControls
-viewmodels/         one viewmodel per screen, plus Scoreboard, Podium, MatchupRecap, AnswerProgress and TypingReporter helpers
+viewmodels/         one viewmodel per game screen (the name field, welcome, waiting room, lobby settings come from `@partygame/game-ui`), plus Scoreboard, Podium, MatchupRecap, AnswerProgress and TypingReporter helpers
 ```
 
-- `AppViewModel` routes to a `PHASE_SCREENS` entry in `ui/screens/index.ts` (one entry per phase: component and mid-game waiting label). A seat with `isActive === false` outside the lobby gets
+- Lobby, controls and phase routing come from `@partygame/game-ui`: `AppViewModel` is an `AppRouter` that only adds the matchup banner rule. It routes to a `PHASE_SCREENS` entry in `ui/screens/index.ts` (one entry per phase: component and mid-game waiting label). A seat with `isActive === false` outside the lobby gets
   `JoinNextRound`: the current phase and the scoreboard, read-only, plus the name input when the seat has no name yet (and "next game" wording during the last round). Any non-connected status shows `Welcome`; a kick leaves its `KICKED` error in the toast.
 - Viewmodels read `manager.state` (typed `WitClashState`) and `state.mine.get(manager.playerId)`; actions go through
   `manager.sendAction(ACTION.X, payload)` with the constants and payload types from `src/actionNames.ts` / `src/actions.ts`.

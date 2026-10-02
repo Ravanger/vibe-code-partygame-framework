@@ -14,6 +14,7 @@ describe("BaseGameState", () => {
       serverNow: 0,
       spectatorCount: 0,
       options: "{}",
+      notice: "",
       minPlayers: 0,
       maxPlayers: 0,
       canStart: false,

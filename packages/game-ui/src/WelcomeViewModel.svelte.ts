@@ -1,13 +1,14 @@
+import type { GameConnectionManager } from "@partygame/game-client";
 import { RoomCodeSchema } from "@partygame/shared";
-import type { WitClashManager } from "../manager.js";
+import type { BaseGameState } from "@partygame/shared/schema";
 
-export class WelcomeViewModel {
+export class WelcomeViewModel<TState extends BaseGameState> {
   code = $state("");
   localError = $state<string | undefined>(undefined);
   private autoJoined = false;
 
   constructor(
-    private readonly manager: WitClashManager,
+    private readonly manager: GameConnectionManager<TState>,
     private readonly urlCode?: string,
     private readonly urlTvCode?: string,
   ) {}

@@ -1,8 +1,8 @@
 <script lang="ts">
+import { WelcomeViewModel } from "@partygame/game-ui";
 import { untrack } from "svelte";
 import { readUrlCode, readUrlTvCode } from "../config.js";
 import type { WitClashManager } from "../manager.js";
-import { WelcomeViewModel } from "../viewmodels/WelcomeViewModel.svelte.js";
 
 const { manager }: { manager: WitClashManager } = $props();
 

@@ -1,6 +1,6 @@
 <script lang="ts">
+import type { NameField } from "@partygame/game-ui";
 import { NAME_MAX_LENGTH } from "@partygame/shared";
-import type { NameField } from "../viewmodels/NameField.svelte.js";
 
 const { field, focus = false }: { field: NameField; focus?: boolean } = $props();
 
