@@ -1,10 +1,6 @@
-import { defineConfig } from "vitest/config";
+import { nodeTestConfig } from "@partygame/config/vitest";
 
-export default defineConfig({
-  test: {
-    include: ["tests/**/*.test.ts"],
-    coverage: {
-      include: ["src/**/*.ts"],
-    },
-  },
+export default nodeTestConfig({
+  name: "@partygame/shared",
+  coverage: ["src/**/*.ts"],
 });

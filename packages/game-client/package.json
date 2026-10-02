@@ -29,6 +29,7 @@
   },
   "devDependencies": {
     "@colyseus/schema": "^5.0.35",
+    "@partygame/config": "workspace:*",
     "@partygame/core": "workspace:*",
     "@partygame/server": "workspace:*",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",

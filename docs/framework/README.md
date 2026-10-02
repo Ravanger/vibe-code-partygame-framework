@@ -669,6 +669,36 @@ and a terminal it asks (`Pick a game [1-N]:`; empty input or end of input exits 
 `bun run launch my-game --demo`, or `bun run scripts/game.ts launch my-game dev --demo`. A missing entry prints
 `<game> has no <command> entry (<path>)` and exits 2.
 
+## Config presets
+
+`@partygame/config` (add it as a devDependency) holds the build and test config so a game's config files are one-liners. It is built to `dist/`; `vite`, `vitest`, `svelte` and `@sveltejs/vite-plugin-svelte` are peer dependencies.
+
+| Subpath | Gives |
+|---|---|
+| `/vite` | `defineGameViteConfig({ port?, overrides? })`: Svelte plugin, LAN-reachable dev server (default port 5173), the `development` resolve condition only for `vite serve`; `overrides` is merged last |
+| `/vitest` | `uiTestConfig(options)` (jsdom + Svelte, default `setupFiles` jest-dom and `@partygame/game-client/test-setup`) and `nodeTestConfig(options)`; options are `{ name, coverage, include?, exclude?, setupFiles?, overrides? }` |
+| `/svelte` | `svelteConfig`: `vitePreprocess()` and runes mode |
+| `/tsconfig.base.json`, `/tsconfig.game.json` | the shared compiler options, and the game's (bundler resolution, `isolatedModules`, `verbatimModuleSyntax`, test types) |
+
+```ts
+// vite.config.ts
+import { defineGameViteConfig } from "@partygame/config/vite";
+export default defineGameViteConfig();
+
+// vitest.config.ts (UI tests); nodeTestConfig for rules, bots and terminal tests
+import { uiTestConfig } from "@partygame/config/vitest";
+export default uiTestConfig({ name: "my-game", coverage: ["src/**/*.ts", "ui/**/*.ts"] });
+
+// svelte.config.js
+export { svelteConfig as default } from "@partygame/config/svelte";
+```
+
+```json
+{ "extends": "@partygame/config/tsconfig.game.json", "include": ["src/**/*.ts", "ui/**/*.ts", "ui/**/*.svelte", "tests/**/*.ts"] }
+```
+
+`include` defaults to `tests/**/*.test.ts`; `exclude` always adds `dist/**`, `node_modules/**` and `coverage/**`; a given `setupFiles` replaces the UI default. The root `vitest.config.mts` finds `games/*/vitest*.config.ts` by glob, so a new game needs no root edit.
+
 ## Helpers
 
 | Import | What |

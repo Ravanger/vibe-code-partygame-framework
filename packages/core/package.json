@@ -25,6 +25,7 @@
     "xstate": "^5.33.2"
   },
   "devDependencies": {
+    "@partygame/config": "workspace:*",
     "typescript": "^6.0.3",
     "vitest": "^4.1.11"
   }

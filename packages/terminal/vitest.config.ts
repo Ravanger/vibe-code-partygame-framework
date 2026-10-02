@@ -1,11 +1,6 @@
-import { defineConfig } from "vitest/config";
+import { nodeTestConfig } from "@partygame/config/vitest";
 
-export default defineConfig({
-  test: {
-    name: "@partygame/terminal",
-    include: ["tests/**/*.test.ts"],
-    exclude: ["dist/**", "node_modules/**"],
-    fileParallelism: false,
-    coverage: { include: ["src/**/*.ts"] },
-  },
+export default nodeTestConfig({
+  name: "@partygame/terminal",
+  coverage: ["src/**/*.ts"],
 });

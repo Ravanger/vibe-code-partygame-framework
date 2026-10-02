@@ -36,6 +36,7 @@
       "devDependencies": {
         "@colyseus/core": "^0.18.18",
         "@colyseus/sdk": "^0.18.4",
+        "@partygame/config": "workspace:*",
         "@sveltejs/vite-plugin-svelte": "^7.3.1",
         "@testing-library/jest-dom": "^6.10.0",
         "@testing-library/svelte": "^5.4.2",
@@ -55,11 +56,29 @@
       },
       "devDependencies": {
         "@colyseus/schema": "^5.0.35",
+        "@partygame/config": "workspace:*",
         "@partygame/core": "workspace:*",
         "@partygame/server": "workspace:*",
         "typescript": "^6.0.3",
         "vitest": "^4.1.11",
         "zod": "^4.6.5",
+      },
+    },
+    "packages/config": {
+      "name": "@partygame/config",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@sveltejs/vite-plugin-svelte": "^7.3.1",
+        "svelte": "^5.57.1",
+        "typescript": "^6.0.3",
+        "vite": "^8.3.1",
+        "vitest": "^4.1.11",
+      },
+      "peerDependencies": {
+        "@sveltejs/vite-plugin-svelte": "^7.3.1",
+        "svelte": "^5.57.1",
+        "vite": "^8.3.1",
+        "vitest": "^4.1.11",
       },
     },
     "packages/core": {
@@ -71,6 +90,7 @@
         "zod": "^4.6.5",
       },
       "devDependencies": {
+        "@partygame/config": "workspace:*",
         "typescript": "^6.0.3",
         "vitest": "^4.1.11",
       },
@@ -85,6 +105,7 @@
       },
       "devDependencies": {
         "@colyseus/schema": "^5.0.35",
+        "@partygame/config": "workspace:*",
         "@partygame/core": "workspace:*",
         "@partygame/server": "workspace:*",
         "@sveltejs/vite-plugin-svelte": "^7.3.1",
@@ -105,6 +126,7 @@
       },
       "devDependencies": {
         "@colyseus/schema": "^5.0.35",
+        "@partygame/config": "workspace:*",
         "@sveltejs/vite-plugin-svelte": "^7.3.1",
         "@testing-library/jest-dom": "^6.10.0",
         "@testing-library/svelte": "^5.4.2",
@@ -125,6 +147,7 @@
       "devDependencies": {
         "@colyseus/schema": "^5.0.35",
         "@colyseus/sdk": "^0.18.4",
+        "@partygame/config": "workspace:*",
         "@partygame/core": "workspace:*",
         "typescript": "^6.0.3",
         "vitest": "^4.1.11",
@@ -145,6 +168,7 @@
       },
       "devDependencies": {
         "@colyseus/ws-transport": "^0.18.4",
+        "@partygame/config": "workspace:*",
         "typescript": "^6.0.3",
         "vitest": "^4.1.11",
       },
@@ -157,6 +181,7 @@
         "zod": "^4.6.5",
       },
       "devDependencies": {
+        "@partygame/config": "workspace:*",
         "typescript": "^6.0.3",
         "vitest": "^4.1.11",
       },
@@ -172,6 +197,7 @@
       },
       "devDependencies": {
         "@colyseus/schema": "^5.0.35",
+        "@partygame/config": "workspace:*",
         "@partygame/core": "workspace:*",
         "typescript": "^6.0.3",
         "vitest": "^4.1.11",
@@ -291,6 +317,8 @@
     "@oxc-project/types": ["@oxc-project/types@0.152.0", "", {}, "sha512-oM/5rLBm2tPkg0iBgkH/FOeR3PCDpY19GTgAZjMFM8h9WI9VW7cLgzp6nwtarYKmovavIQZ+Fe/RKX/8C8O/Rw=="],
 
     "@partygame/bots": ["@partygame/bots@workspace:packages/bots"],
+
+    "@partygame/config": ["@partygame/config@workspace:packages/config"],
 
     "@partygame/core": ["@partygame/core@workspace:packages/core"],
 

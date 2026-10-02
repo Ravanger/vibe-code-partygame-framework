@@ -1,12 +1,7 @@
-import { defineConfig } from "vitest/config";
+import { nodeTestConfig } from "@partygame/config/vitest";
 
-export default defineConfig({
-  test: {
-    name: "wit-clash-game",
-    environment: "node",
-    include: ["tests/game/**/*.test.ts", "tests/bots/**/*.test.ts", "tests/terminal/**/*.test.ts"],
-    exclude: ["dist/**", "node_modules/**"],
-    fileParallelism: false,
-    coverage: { include: ["src/**/*.ts", "bots/**/*.ts", "terminal/**/*.ts"] },
-  },
+export default nodeTestConfig({
+  name: "wit-clash-game",
+  include: ["tests/game/**/*.test.ts", "tests/bots/**/*.test.ts", "tests/terminal/**/*.test.ts"],
+  coverage: ["src/**/*.ts", "bots/**/*.ts", "terminal/**/*.ts"],
 });

@@ -1,19 +1,7 @@
-import { svelte } from "@sveltejs/vite-plugin-svelte";
-import { defineConfig } from "vitest/config";
+import { uiTestConfig } from "@partygame/config/vitest";
 
-export default defineConfig({
-  resolve: {
-    conditions: ["browser"],
-  },
-  plugins: [svelte({ emitCss: false })],
-  test: {
-    environment: "jsdom",
-    globals: true,
-    include: ["tests/**/*.test.ts"],
-    exclude: ["dist/**", "node_modules/**", "tests/game/**", "tests/bots/**", "tests/terminal/**"],
-    setupFiles: ["../../vitest.setup.ts", "@partygame/game-client/test-setup"],
-    coverage: {
-      include: ["src/**/*.ts", "ui/**/*.ts"],
-    },
-  },
+export default uiTestConfig({
+  name: "wit-clash",
+  exclude: ["tests/game/**", "tests/bots/**", "tests/terminal/**"],
+  coverage: ["src/**/*.ts", "ui/**/*.ts"],
 });

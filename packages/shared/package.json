@@ -14,6 +14,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@partygame/config": "workspace:*",
     "typescript": "^6.0.3",
     "vitest": "^4.1.11"
   },

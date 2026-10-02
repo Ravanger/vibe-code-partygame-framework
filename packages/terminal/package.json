@@ -27,6 +27,7 @@
   },
   "devDependencies": {
     "@colyseus/schema": "^5.0.35",
+    "@partygame/config": "workspace:*",
     "@partygame/core": "workspace:*",
     "typescript": "^6.0.3",
     "vitest": "^4.1.11",

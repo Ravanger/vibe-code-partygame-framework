@@ -1,15 +1,7 @@
-import { svelte } from "@sveltejs/vite-plugin-svelte";
-import { defineConfig } from "vitest/config";
+import { uiTestConfig } from "@partygame/config/vitest";
 
-export default defineConfig({
-  plugins: [svelte()],
-  resolve: { conditions: ["browser"] },
-  test: {
-    name: "@partygame/game-client",
-    environment: "jsdom",
-    include: ["tests/**/*.test.ts"],
-    setupFiles: ["./vitest.setup.ts"],
-    fileParallelism: false,
-    coverage: { include: ["src/**/*.ts"] },
-  },
+export default uiTestConfig({
+  name: "@partygame/game-client",
+  coverage: ["src/**/*.ts"],
+  setupFiles: ["./vitest.setup.ts"],
 });

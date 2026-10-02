@@ -1,15 +1,5 @@
 {
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "strict": true,
-    "skipLibCheck": true,
-    "isolatedModules": true,
-    "verbatimModuleSyntax": true,
-    "types": ["vitest/globals", "jsdom", "vite/client", "@testing-library/jest-dom"]
-  },
+  "extends": "@partygame/config/tsconfig.game.json",
   "include": [
     "src/**/*.ts",
     "ui/**/*.ts",

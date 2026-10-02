@@ -1,16 +1,7 @@
-import { defineConfig } from "vitest/config";
+import { nodeTestConfig } from "@partygame/config/vitest";
 
-export default defineConfig({
-  test: {
-    name: "@partygame/server",
-    include: ["tests/**/*.test.ts"],
-    exclude: ["dist/**", "node_modules/**", "coverage/**"],
-    fileParallelism: false,
-    coverage: {
-      include: ["src/**/*.ts"],
-    },
-    deps: {
-      interopDefault: true,
-    },
-  },
+export default nodeTestConfig({
+  name: "@partygame/server",
+  coverage: ["src/**/*.ts"],
+  overrides: { test: { deps: { interopDefault: true } } },
 });
