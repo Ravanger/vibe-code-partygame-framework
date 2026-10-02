@@ -1,8 +1,9 @@
+import { type BotOptions, type BotPlayer, joinBots } from "@partygame/bots";
 import { joinUrl, tvUrl } from "@partygame/shared";
-import type { BotOptions, BotPlayer } from "../bots/BotPlayer.js";
-import { joinBots } from "../bots/joinBots.js";
+import { witClashKit } from "../bots/witClashBot.js";
 import type { CategoryRepository } from "../src/content/CategoryRepository.js";
 import type { WitClashOptions } from "../src/options.js";
+import type { WitClashState } from "../src/state.js";
 import { GameClient } from "./GameClient.js";
 import { GameServerHandle } from "./GameServerHandle.js";
 import type { Prompter } from "./Prompter.js";
@@ -89,9 +90,10 @@ export class PlaySession {
     }
   }
 
-  private async seatBots(code: string): Promise<BotPlayer[]> {
+  private async seatBots(code: string): Promise<BotPlayer<WitClashState>[]> {
     const { endpoint, apiPort, bots } = this.options;
     const seated = await joinBots({
+      ...witClashKit(),
       code,
       count: bots,
       endpoint,

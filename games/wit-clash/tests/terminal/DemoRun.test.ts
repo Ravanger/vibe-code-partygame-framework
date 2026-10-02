@@ -11,8 +11,8 @@ const run = (over: Partial<DemoOptions> = {}) => {
     rounds: 1,
     categories: makeCategories(4, 8, 2),
     out: (line) => lines.push(line),
-    answerDelayMs: [0, 30],
-    voteDelayMs: [0, 30],
+    thinkMs: [0, 30],
+    reactMs: [0, 30],
     revealSeconds: 1,
     ...over,
   });
@@ -33,7 +33,7 @@ describe("DemoRun", () => {
   }, 90_000);
 
   it("fails when the game does not finish in time", async () => {
-    const { demo, lines } = run({ timeoutMs: 50, answerDelayMs: [5000, 6000] });
+    const { demo, lines } = run({ timeoutMs: 50, thinkMs: [5000, 6000] });
     expect(await demo.run()).toBe(false);
     expect(lines.at(-1)).toMatch(/^FAIL: Timed out waiting for the final results/);
   }, 30_000);

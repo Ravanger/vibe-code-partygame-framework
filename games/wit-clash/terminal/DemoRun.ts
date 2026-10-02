@@ -1,13 +1,12 @@
 import type { Room } from "@colyseus/sdk";
+import { type BotOutcome, BotPlayer, type DelayRange, joinBots } from "@partygame/bots";
 import { waitFor } from "@partygame/shared";
-import type { BotOutcome, DelayRange } from "../bots/BotPlayer.js";
-import { joinBots } from "../bots/joinBots.js";
+import { witClashBot, witClashKit } from "../bots/witClashBot.js";
 import type { CategoryRepository } from "../src/content/CategoryRepository.js";
 import { PHASE } from "../src/phaseNames.js";
 import type { WitClashState } from "../src/state.js";
 import { GameClient } from "./GameClient.js";
 import { GameServerHandle } from "./GameServerHandle.js";
-import { HostBot } from "./HostBot.js";
 import { Narrator } from "./Narrator.js";
 
 export interface DemoOptions {
@@ -16,8 +15,8 @@ export interface DemoOptions {
   rounds: number;
   categories: CategoryRepository;
   out: (line: string) => void;
-  answerDelayMs: DelayRange;
-  voteDelayMs: DelayRange;
+  thinkMs: DelayRange;
+  reactMs: DelayRange;
   revealSeconds: number;
   timeoutMs?: number;
 }
@@ -56,8 +55,8 @@ export class DemoRun {
     const { players, rounds, revealSeconds, timeoutMs = DEFAULT_TIMEOUT_MS } = this.options;
     const client = new GameClient(server.endpoint, server.apiPort);
     const botOptions = {
-      answerDelayMs: this.options.answerDelayMs,
-      voteDelayMs: this.options.voteDelayMs,
+      thinkMs: this.options.thinkMs,
+      reactMs: this.options.reactMs,
       onOutcome: (outcome: BotOutcome) => this.record(outcome),
     };
     const hostId = crypto.randomUUID();
@@ -76,12 +75,13 @@ export class DemoRun {
       for (const line of this.narrator.update(spectator.state)) this.options.out(line);
     };
     spectator.onStateChange(narrate);
-    const host = new HostBot(hostRoom, hostId, "Host Bot", {
+    const host = new BotPlayer(hostRoom, hostId, "Host Bot", witClashBot(), {
       ...botOptions,
-      expectedPlayers: players,
+      host: { expectedPlayers: players },
     });
     this.leavers.push(() => host.leave());
     const bots = await joinBots({
+      ...witClashKit(),
       code,
       count: players - 1,
       endpoint: server.endpoint,

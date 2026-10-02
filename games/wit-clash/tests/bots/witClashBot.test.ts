@@ -1,7 +1,14 @@
+import { type BotOptions, type BotOutcome, BotPlayer, type BotRoom } from "@partygame/bots";
 import { describe, expect, it } from "vitest";
-import { type BotOptions, type BotOutcome, BotPlayer, type BotRoom } from "../../bots/BotPlayer.js";
+import {
+  BOT_ANSWERS,
+  type WitClashBotOptions,
+  witClashBot,
+  witClashKit,
+} from "../../bots/witClashBot.js";
 import { ACTION } from "../../src/actionNames.js";
 import { PHASE } from "../../src/phaseNames.js";
+import { ROOM_NAME } from "../../src/roomName.js";
 import {
   Answer,
   CategoryOption,
@@ -10,18 +17,24 @@ import {
   PromptAssignment,
   WitClashState,
 } from "../../src/state.js";
+import { tick } from "../terminal/support.js";
 
 const ME = "me-0000001";
 
-class FakeRoom implements BotRoom {
+class FakeRoom implements BotRoom<WitClashState> {
   readonly state = new WitClashState();
   readonly sent: Array<{ type: string; payload: object }> = [];
   readonly listeners: Array<() => void> = [];
+  readonly leavers: Array<() => void> = [];
   left = false;
   reply: () => Promise<unknown> = async () => ({ ok: true });
 
   onStateChange(callback: () => void): void {
     this.listeners.push(callback);
+  }
+
+  onLeave(callback: () => void): void {
+    this.leavers.push(callback);
   }
 
   request(type: string, payload: object): Promise<unknown> {
@@ -58,11 +71,11 @@ class Clock {
   }
 }
 
-const setup = (options: BotOptions = {}) => {
+const setup = (options: BotOptions = {}, strategy: WitClashBotOptions = {}) => {
   const room = new FakeRoom();
   const clock = new Clock();
   const lines: string[] = [];
-  const bot = new BotPlayer(room, ME, "Bot 1", {
+  const bot = new BotPlayer(room, ME, "Bot 1", witClashBot(strategy), {
     rng: () => 0,
     schedule: clock.schedule,
     log: (line) => lines.push(line),
@@ -98,7 +111,7 @@ const enter = (room: FakeRoom, phase: string, roundNumber = 1): void => {
   room.changed();
 };
 
-describe("BotPlayer", () => {
+describe("witClashBot as a player", () => {
   it("does nothing in the lobby and on the results screen", () => {
     const { room, clock } = setup();
     enter(room, "Lobby", 0);
@@ -107,8 +120,8 @@ describe("BotPlayer", () => {
     expect(room.sent).toEqual([]);
   });
 
-  it("votes for an option once per round after a delay in the configured range", () => {
-    const { room, clock } = setup({ voteDelayMs: [100, 300] });
+  it("votes for a category once per round after a delay in the configured range", async () => {
+    const { room, clock, lines } = setup({ reactMs: [100, 300] });
     room.state.categoryOptions.push(
       Object.assign(new CategoryOption(), { id: "a", name: "A" }),
       Object.assign(new CategoryOption(), { id: "b", name: "B" }),
@@ -124,6 +137,8 @@ describe("BotPlayer", () => {
     enter(room, PHASE.CategorySelection, 2);
     clock.flush();
     expect(room.sent).toHaveLength(2);
+    await tick();
+    expect(lines[0]).toBe('Bot 1 votes for A -> {"ok":true}');
   });
 
   it("plays again after the game returns to the lobby", () => {
@@ -155,22 +170,33 @@ describe("BotPlayer", () => {
   it.each([PHASE.Prompting, PHASE.TieBreakerPrompting])(
     "starts typing and answers every open prompt in %s",
     async (phase) => {
-      const { room, clock, lines } = setup();
-      const mine = mineOf(room);
-      mine.prompts.push(prompt("m1"), prompt("m2", true), prompt("m3"));
+      const { room, clock, lines } = setup({ thinkMs: [50, 90] });
+      mineOf(room).prompts.push(prompt("m1"), prompt("m2", true), prompt("m3"));
       enter(room, phase);
       room.changed();
       expect(room.actions()).toEqual([{ typing: true, type: ACTION.SET_TYPING }]);
+      expect(clock.queue.map((entry) => entry.ms)).toEqual([50, 50]);
       clock.flush();
       expect(room.actions().slice(1)).toEqual([
-        { matchupId: "m1", answer: expect.any(String), type: ACTION.SUBMIT_ANSWER },
-        { matchupId: "m3", answer: expect.any(String), type: ACTION.SUBMIT_ANSWER },
+        { matchupId: "m1", answer: BOT_ANSWERS[0], type: ACTION.SUBMIT_ANSWER },
+        { matchupId: "m3", answer: BOT_ANSWERS[0], type: ACTION.SUBMIT_ANSWER },
       ]);
-      await Promise.resolve();
-      await Promise.resolve();
-      expect(lines).toHaveLength(3);
+      await tick();
+      expect(lines).toEqual([
+        'Bot 1 types -> {"ok":true}',
+        'Bot 1 answers Prompt m1 -> {"ok":true}',
+        'Bot 1 answers Prompt m3 -> {"ok":true}',
+      ]);
     },
   );
+
+  it("falls back to an empty answer when the pick lands past the list", () => {
+    const { room, clock } = setup({ rng: () => 1 });
+    mineOf(room).prompts.push(prompt("m1"));
+    enter(room, PHASE.Prompting);
+    clock.flush();
+    expect(room.actions()[1]).toEqual({ matchupId: "m1", answer: "", type: ACTION.SUBMIT_ANSWER });
+  });
 
   it("stays quiet when it has no prompts or every prompt is submitted", () => {
     const { room, clock } = setup();
@@ -221,33 +247,20 @@ describe("BotPlayer", () => {
     expect(room.actions()).toEqual([{ answerId: "y2", type: ACTION.CAST_VOTE }]);
   });
 
-  it("logs rejections and failed requests", async () => {
-    const { room, clock, lines } = setup();
-    mineOf(room).prompts.push(prompt("m1"));
-    enter(room, PHASE.Prompting);
-    room.reply = async () => {
-      throw new Error("closed");
-    };
-    clock.flush();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(lines.some((line) => line.includes("SUBMIT_ANSWER failed: Error: closed"))).toBe(true);
-  });
-
-  it("reports the outcome of every action, rejections and failures included", async () => {
+  it("logs and reports rejections and failed requests", async () => {
     const outcomes: BotOutcome[] = [];
-    const { room, clock } = setup({ onOutcome: (outcome) => outcomes.push(outcome) });
+    const { room, clock, lines } = setup({ onOutcome: (outcome) => outcomes.push(outcome) });
     mineOf(room).prompts.push(prompt("m1"));
-    const rejected = { ok: false, error: { code: "NOT_ALLOWED", message: "no" } };
-    room.reply = async () => rejected;
+    room.reply = async () => ({ ok: false, error: { code: "NOT_ALLOWED", message: "no" } });
     enter(room, PHASE.Prompting);
     clock.flush();
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await tick();
     room.reply = async () => {
       throw new Error("closed");
     };
     enter(room, PHASE.TieBreakerPrompting);
     clock.flush();
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await tick();
     expect(outcomes.map(({ type, ok }) => [type, ok])).toEqual([
       [ACTION.SET_TYPING, false],
       [ACTION.SUBMIT_ANSWER, false],
@@ -255,42 +268,7 @@ describe("BotPlayer", () => {
       [ACTION.SUBMIT_ANSWER, false],
     ]);
     expect(outcomes[1]?.detail).toContain("NOT_ALLOWED");
-    expect(outcomes[3]?.detail).toBe("Error: closed");
-  });
-
-  it("counts an accepted action as ok", async () => {
-    const outcomes: BotOutcome[] = [];
-    const { room, clock } = setup({ onOutcome: (outcome) => outcomes.push(outcome) });
-    mineOf(room).prompts.push(prompt("m1"));
-    enter(room, PHASE.Prompting);
-    clock.flush();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(outcomes.every((outcome) => outcome.ok)).toBe(true);
-    expect(outcomes[0]).toEqual({
-      bot: "Bot 1",
-      type: ACTION.SET_TYPING,
-      ok: true,
-      detail: '{"ok":true}',
-    });
-  });
-
-  it("uses real timers by default and cancels them on leave", async () => {
-    const room = new FakeRoom();
-    const bot = new BotPlayer(room, ME, "Bot 1");
-    room.state.categoryOptions.push(Object.assign(new CategoryOption(), { id: "a" }));
-    enter(room, PHASE.CategorySelection);
-    await bot.leave();
-    expect(room.sent).toEqual([]);
-  });
-
-  it("logs nowhere unless asked to", async () => {
-    const room = new FakeRoom();
-    const bot = new BotPlayer(room, ME, "Bot 1", { voteDelayMs: [0, 0] });
-    room.state.categoryOptions.push(Object.assign(new CategoryOption(), { id: "a" }));
-    enter(room, PHASE.CategorySelection);
-    await new Promise((resolve) => setTimeout(resolve, 10));
-    expect(room.sent).toHaveLength(1);
-    await bot.leave();
+    expect(lines.some((line) => line.includes("SUBMIT_ANSWER failed: Error: closed"))).toBe(true);
   });
 
   it("leave() cancels pending actions and leaves the room", async () => {
@@ -303,7 +281,7 @@ describe("BotPlayer", () => {
     expect(room.left).toBe(true);
   });
 
-  it("never sends host-only actions", () => {
+  it("never sends host actions as a player", () => {
     const { room, clock } = setup();
     mineOf(room, { canVote: true }).prompts.push(prompt("m1"));
     room.state.matchups.push(matchup("m1", "a1", "a2"));
@@ -317,5 +295,58 @@ describe("BotPlayer", () => {
     expect(types).not.toContain(ACTION.PLAY_AGAIN);
     expect(types).not.toContain(ACTION.END_GAME);
     expect(types).not.toContain("START_GAME");
+  });
+});
+
+describe("witClashBot as the host", () => {
+  const hosting = (strategy: WitClashBotOptions = {}) => setup({ host: {} }, strategy);
+
+  it("moves to the next round once per round, and stops after the final one", async () => {
+    const { room, clock } = hosting();
+    enter(room, PHASE.Results, 1);
+    room.changed();
+    clock.flush();
+    enter(room, PHASE.Results, 2);
+    clock.flush();
+    room.state.roundNumber = 3;
+    room.state.isFinalRound = true;
+    room.changed();
+    clock.flush();
+    await tick();
+    expect(room.actions()).toEqual([{ type: ACTION.NEXT_ROUND }, { type: ACTION.NEXT_ROUND }]);
+  });
+
+  it("waits the configured pause before moving to the next round", async () => {
+    const { room, clock } = hosting({ nextRoundDelayMs: 4000 });
+    enter(room, PHASE.Results, 1);
+    room.changed();
+    expect(room.sent).toEqual([]);
+    expect(clock.queue.map((entry) => entry.ms)).toEqual([4000]);
+    clock.flush();
+    await tick();
+    expect(room.actions()).toEqual([{ type: ACTION.NEXT_ROUND }]);
+  });
+
+  it("does not advance outside the results", () => {
+    const { room, clock } = hosting();
+    enter(room, PHASE.Prompting);
+    clock.flush();
+    expect(room.sent).toEqual([]);
+  });
+
+  it("plays too when it hosts", () => {
+    const { room, clock } = hosting();
+    room.state.categoryOptions.push(Object.assign(new CategoryOption(), { id: "a", name: "A" }));
+    enter(room, PHASE.CategorySelection);
+    clock.flush();
+    expect(room.actions()).toEqual([{ categoryId: "a", type: ACTION.VOTE_CATEGORY }]);
+  });
+});
+
+describe("witClashKit", () => {
+  it("names the room and its state class", () => {
+    const kit = witClashKit({ nextRoundDelayMs: 1 });
+    expect(kit.roomName).toBe(ROOM_NAME);
+    expect(new kit.stateClass()).toBeInstanceOf(WitClashState);
   });
 });

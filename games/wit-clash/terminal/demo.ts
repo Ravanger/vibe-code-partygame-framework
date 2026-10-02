@@ -15,8 +15,8 @@ const passed = await new DemoRun({
   ...parsed.value,
   categories,
   out: console.log,
-  answerDelayMs: [800, 2500],
-  voteDelayMs: [500, 1500],
+  thinkMs: [800, 2500],
+  reactMs: [500, 1500],
   revealSeconds: 2,
 }).run();
 process.exit(passed ? 0 : 1);

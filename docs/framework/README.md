@@ -301,6 +301,55 @@ call `room.patch()`. `room.requests`/`room.sent` record what the UI sent, `room.
 (`t.endpoint`, and `await t.serveApi()` for the code-resolution API) and use real managers. Add `"@partygame/game-client/test-setup"` to the
 vitest `setupFiles`: it shims the storages and makes the SDK use `ws` under jsdom.
 
+## Bots
+
+`@partygame/bots` plays any game. You write a `BotStrategy` (what a bot does in your phases); the package joins, names, paces,
+de-duplicates, hosts and reports outcomes.
+
+```ts
+import { BotTable, DemoTable, joinBots, type BotKit, type BotStrategy } from "@partygame/bots";
+
+const pressBot: BotStrategy<ButtonState> = {
+  play: (turn) => {
+    if (turn.state.phase === "Round") turn.once("press", () => turn.later("react", () => turn.act("PRESS")));
+  },
+};
+
+export const buttonKit: BotKit<ButtonState> = { roomName: "button", stateClass: ButtonState, strategy: pressBot };
+```
+
+`play(turn)` runs on every state change; optional `host(turn)` runs first when the bot hosts (after the built-in `START_GAME`
+once `canStart` holds and `host.expectedPlayers` seats are named). `turn` has:
+
+| Member | What |
+|---|---|
+| `state`, `playerId`, `name` | the synced state and this bot |
+| `once(key, run)` | runs `run` the first time `key` is seen in this phase |
+| `later(speed, run)` | runs `run` after a `"think"`, `"react"` or `[min, max]` ms delay; cancelled on phase change or leave |
+| `act(type, payload?, note?)` | sends an action; the result goes to `log` and `onOutcome` |
+| `pick(items)` | a random item, `undefined` for an empty list |
+
+Tables take the kit plus `endpoint`, `apiPort` and optional `bot` (`BotOptions`):
+
+```ts
+const bots = await joinBots({ ...buttonKit, endpoint, apiPort, code: "ABCD", count: 3 });
+
+const table = new BotTable({ ...buttonKit, endpoint, apiPort });
+const code = await table.open();                 // empty room, watched by the table
+await table.seatBots({ count: 3 });              // once a human has joined and named themselves
+
+const demo = new DemoTable({ ...buttonKit, endpoint, apiPort, bots: 3, isFinished: (s) => s.phase === "Done" });
+await demo.open();                               // watch-only room (`seats`) with a host bot
+await demo.seatBots();
+await demo.finished();                           // rejects if the room closes
+await demo.leave();
+```
+
+Overridable: `BotOptions` `thinkMs` (default `[2000, 6000]`), `reactMs` (`[500, 2500]`), `rng`, `schedule(run, ms) => cancel`,
+`log`, `onOutcome`, `host.expectedPlayers`; `joinBots` `nameFor(n)` (default `Bot n`, taken names skipped), `playerIds`,
+`timeoutMs` (`BotTable` and `DemoTable` also take `nameFor` and `timeoutMs`); `DemoTable` `hostName`, `roomOptions`, `isFinished`. Every failure leaves the seats it took.
+Example: `games/wit-clash/bots/witClashBot.ts`.
+
 ## Helpers
 
 | Import | What |

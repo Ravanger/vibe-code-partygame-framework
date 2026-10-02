@@ -20,7 +20,7 @@ src/
   content/           category files (.jsonc) loader
   loadContent.ts     loads and validates the content directory for server.ts
 ui/                  Svelte client, built on @partygame/game-client (see below)
-bots/                dev tool: BotPlayer, joinBots, BotTable and the `bun run bots` CLI (see "Playtesting alone")
+bots/                WitClash bot strategy (`witClashBot.ts`, on `@partygame/bots`) and the `bun run bots` CLI (see "Playtesting alone")
 terminal/            `cli:play` (a human at a readline prompt) and `cli:demo` (all-bot game, narrated and checked); see "Play in the terminal"
 server.ts            Bun entry: loads the content, then startServer from @partygame/server/bun
 content/categories/  host-editable .jsonc categories, at least 3 needed

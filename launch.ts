@@ -22,13 +22,14 @@ import { connect } from "node:net";
 import { networkInterfaces } from "node:os";
 import { extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { BotTable } from "./games/wit-clash/bots/botTable.js";
+import { witClashKit } from "./games/wit-clash/bots/witClashBot.js";
 import { MAX_PLAYERS, MIN_PLAYERS } from "./games/wit-clash/src/playerLimits.js";
 import {
+  createDemoTable,
   DEMO_BOT_OPTIONS,
   DEMO_NEXT_ROUND_MS,
-  DemoTable,
 } from "./games/wit-clash/terminal/DemoTable.js";
+import { BotTable } from "./packages/bots/src/BotTable.js";
 import { joinUrl, tvUrl } from "./packages/shared/src/links.js";
 
 const ROOT = fileURLToPath(new URL(".", import.meta.url));
@@ -245,6 +246,7 @@ async function startBots(
   shouldOpenBrowser: boolean,
 ): Promise<void> {
   const table = new BotTable({
+    ...witClashKit(),
     endpoint: `ws://localhost:${GAME_SERVER_PORT}`,
     apiPort: API_SERVER_PORT,
     bot: { log: (line) => console.log(`[Bots] ${line}`) },
@@ -264,7 +266,7 @@ async function startDemo(
   clientUrl: string,
   shouldOpenBrowser: boolean,
 ): Promise<void> {
-  const table = new DemoTable({
+  const table = createDemoTable({
     endpoint: `ws://localhost:${GAME_SERVER_PORT}`,
     apiPort: API_SERVER_PORT,
     bots: count,

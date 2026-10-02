@@ -1,15 +1,13 @@
+import type { BotRoom } from "@partygame/bots";
 import { required } from "@partygame/core";
 import { ClientMessage, isActionResult, LOBBY_PHASE, START_GAME } from "@partygame/shared";
-import type { BotRoom } from "../bots/BotPlayer.js";
 import { ACTION } from "../src/actionNames.js";
 import { PHASE } from "../src/phaseNames.js";
 import type { WitClashState } from "../src/state.js";
 import { Narrator } from "./Narrator.js";
 import type { Prompter } from "./Prompter.js";
 
-export interface PlayerRoom extends BotRoom {
-  onLeave(callback: () => void): unknown;
-}
+export type PlayerRoom = BotRoom<WitClashState>;
 
 export interface TerminalPlayerOptions {
   now?: () => number;

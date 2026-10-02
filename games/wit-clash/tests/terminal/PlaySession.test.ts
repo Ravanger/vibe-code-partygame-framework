@@ -7,8 +7,8 @@ import { makeCategories } from "../game/support.js";
 import { freePort, ScriptedIo, tick } from "./support.js";
 
 const FAST = {
-  answerDelayMs: [0, 30],
-  voteDelayMs: [0, 30],
+  thinkMs: [0, 30],
+  reactMs: [0, 30],
 } as const;
 
 class ViteUp extends ServerProbe {

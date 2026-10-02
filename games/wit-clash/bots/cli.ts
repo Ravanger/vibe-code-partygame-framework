@@ -1,7 +1,8 @@
 import { parseArgs } from "node:util";
+import { joinBots } from "@partygame/bots";
 import { RoomCodeSchema } from "@partygame/shared";
 import { MAX_PLAYERS } from "../src/playerLimits.js";
-import { joinBots } from "./joinBots.js";
+import { witClashKit } from "./witClashBot.js";
 
 const USAGE =
   "Usage: bun run bots <CODE> [count=3] [--endpoint ws://localhost:2567] [--api-port 3001]";
@@ -29,6 +30,7 @@ if (
 }
 
 const bots = await joinBots({
+  ...witClashKit(),
   code: code.data,
   count,
   endpoint: values.endpoint,

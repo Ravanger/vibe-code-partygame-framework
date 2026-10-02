@@ -1,12 +1,9 @@
-import { StubRoom } from "@partygame/game-client/testing";
 import { waitFor } from "@partygame/shared";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { WitClashState } from "../../src/state.js";
 import { GameClient } from "../../terminal/GameClient.js";
 import { GameServerHandle } from "../../terminal/GameServerHandle.js";
 import { ServerProbe } from "../../terminal/ServerProbe.js";
 import { makeCategories } from "../game/support.js";
-import { tick } from "./support.js";
 
 const handle = new GameServerHandle(makeCategories());
 const probe = new ServerProbe();
@@ -62,17 +59,6 @@ describe("GameClient", () => {
     const host = await client.create(crypto.randomUUID(), "Ann", { totalRounds: 2 });
     expect(JSON.parse(host.state.options).totalRounds).toBe(2);
     await host.leave(true);
-  });
-
-  it("ignores an ERROR that is not a server error while waiting for the name", async () => {
-    const room = new StubRoom(new WitClashState());
-    room.state.roomCode = "ABCD";
-    const pending = client.claimName(room, "p-0000001", "Ann");
-    await tick();
-    room.push("ERROR", "garbage");
-    room.push("ERROR", { code: "NAME_TAKEN", message: "Name taken" });
-    await expect(pending).rejects.toThrow("Name taken");
-    expect(room.sent).toEqual([{ type: "SET_NAME", payload: "Ann" }]);
   });
 
   it("says when a code does not exist", async () => {

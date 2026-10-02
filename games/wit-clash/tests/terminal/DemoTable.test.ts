@@ -1,17 +1,22 @@
 import type { Room } from "@colyseus/sdk";
+import type { DemoTable } from "@partygame/bots";
 import { type TestServer, waitUntil } from "@partygame/server/testing";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { PHASE } from "../../src/phaseNames.js";
 import type { WitClashState } from "../../src/state.js";
-import { DEMO_ROOM_OPTIONS, DemoTable, type DemoTableOptions } from "../../terminal/DemoTable.js";
+import {
+  createDemoTable,
+  DEMO_ROOM_OPTIONS,
+  type WitClashDemoOptions,
+} from "../../terminal/DemoTable.js";
 import { GameClient } from "../../terminal/GameClient.js";
 import { bootWitClash } from "../game/integrationSupport.js";
 
 let t: TestServer;
 let apiPort: number;
-const tables: DemoTable[] = [];
+const tables: Array<DemoTable<WitClashState>> = [];
 const watchers: Array<Room<WitClashState>> = [];
-const FAST = { answerDelayMs: [0, 20], voteDelayMs: [0, 20] } as const;
+const FAST = { thinkMs: [0, 20], reactMs: [0, 20] } as const;
 
 beforeAll(async () => {
   t = await bootWitClash();
@@ -24,8 +29,8 @@ afterEach(async () => {
 });
 afterAll(() => t.shutdown());
 
-const newTable = (over: Partial<DemoTableOptions> = {}): DemoTable => {
-  const table = new DemoTable({
+const newTable = (over: Partial<WitClashDemoOptions> = {}): DemoTable<WitClashState> => {
+  const table = createDemoTable({
     endpoint: t.endpoint,
     apiPort,
     bots: 2,
@@ -93,7 +98,7 @@ describe("DemoTable", () => {
   });
 
   it("seats bots with their default pacing when none is given", async () => {
-    const table = new DemoTable({ endpoint: t.endpoint, apiPort, bots: 1 });
+    const table = createDemoTable({ endpoint: t.endpoint, apiPort, bots: 1 });
     tables.push(table);
     await table.open();
     expect(await table.seatBots()).toHaveLength(1);
