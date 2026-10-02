@@ -1,8 +1,6 @@
-import { readdir, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { shuffle } from "@partygame/core";
+import { loadJsoncDir } from "@partygame/server/content";
 import { z } from "zod";
-import { shuffle } from "../shuffle.js";
-import { stripJsonComments } from "./stripJsonComments.js";
 
 export const PromptSchema = z.object({ id: z.string().min(1), text: z.string().min(1) });
 
@@ -39,30 +37,7 @@ export function categoriesFromArray(categories: Category[]): CategoryRepository 
 
 /** Server-side only: touches node:fs. Clients receive categories via synced room state. */
 export async function loadCategoriesFromDir(dir: string): Promise<CategoryRepository> {
-  let files: string[];
-  try {
-    files = (await readdir(dir)).filter((f) => f.endsWith(".json") || f.endsWith(".jsonc"));
-  } catch {
-    throw new Error(`Category directory not found: ${dir}`);
-  }
-
-  const loaded: Category[] = [];
-  const seen = new Set<string>();
-
-  for (const file of files.sort()) {
-    const path = join(dir, file);
-    let parsed: Category;
-    try {
-      parsed = CategorySchema.parse(JSON.parse(stripJsonComments(await readFile(path, "utf-8"))));
-    } catch (e) {
-      console.warn(`[CategoryRepository] Skipping ${file}: ${(e as Error).message}`);
-      continue;
-    }
-    if (seen.has(parsed.id)) {
-      throw new Error(`Duplicate category id "${parsed.id}" in ${file}`);
-    }
-    seen.add(parsed.id);
-    loaded.push(parsed);
-  }
-  return new CategoryRepository(loaded);
+  return new CategoryRepository(
+    await loadJsoncDir(dir, CategorySchema, { idOf: (c) => c.id, label: "Category" }),
+  );
 }

@@ -1,7 +1,7 @@
 import type { Room } from "@colyseus/sdk";
+import { waitFor } from "@partygame/shared";
 import type { BotOptions, BotPlayer } from "../bots/BotPlayer.js";
 import { joinBots } from "../bots/joinBots.js";
-import { waitFor } from "../bots/waitFor.js";
 import type { WitClashOptions } from "../src/options.js";
 import { PHASE } from "../src/phaseNames.js";
 import type { WitClashState } from "../src/state.js";

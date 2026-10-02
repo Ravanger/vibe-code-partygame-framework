@@ -11,7 +11,7 @@ export default defineConfig({
     globals: true,
     include: ["tests/**/*.test.ts"],
     exclude: ["dist/**", "node_modules/**", "tests/game/**", "tests/bots/**", "tests/terminal/**"],
-    setupFiles: ["../../vitest.setup.ts", "./tests/setup.ts"],
+    setupFiles: ["../../vitest.setup.ts", "@partygame/game-client/test-setup"],
     coverage: {
       include: ["src/**/*.ts", "ui/**/*.ts"],
     },

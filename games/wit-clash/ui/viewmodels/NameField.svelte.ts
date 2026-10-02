@@ -1,7 +1,7 @@
+import { NAME_MAX_LENGTH } from "@partygame/shared";
 import type { WitClashManager } from "../manager.js";
 
 const NAME_DEBOUNCE_MS = 250;
-const NAME_MAX_LENGTH = 20;
 
 export class NameField {
   draft = $state("");

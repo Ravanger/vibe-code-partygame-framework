@@ -1,6 +1,6 @@
 import { StubRoom } from "@partygame/game-client/testing";
+import { waitFor } from "@partygame/shared";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { waitFor } from "../../bots/waitFor.js";
 import { WitClashState } from "../../src/state.js";
 import { GameClient } from "../../terminal/GameClient.js";
 import { GameServerHandle } from "../../terminal/GameServerHandle.js";
@@ -77,13 +77,5 @@ describe("GameClient", () => {
 
   it("says when a code does not exist", async () => {
     await expect(client.watch("QQQQ", crypto.randomUUID())).rejects.toThrow();
-  });
-});
-
-describe("waitFor", () => {
-  it("throws once the time is up", async () => {
-    await expect(waitFor(() => false, "never", 30, 5)).rejects.toThrow(
-      "Timed out waiting for never",
-    );
   });
 });

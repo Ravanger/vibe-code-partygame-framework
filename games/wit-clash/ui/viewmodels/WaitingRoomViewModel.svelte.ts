@@ -1,4 +1,4 @@
-import { KICK_PLAYER, START_GAME } from "@partygame/shared";
+import { joinUrl, KICK_PLAYER, START_GAME } from "@partygame/shared";
 import type { WitClashManager } from "../manager.js";
 import { NameField } from "./NameField.svelte.js";
 
@@ -86,7 +86,7 @@ export class WaitingRoomViewModel {
   }
 
   get shareUrl(): string {
-    return `${window.location.origin}${window.location.pathname}?code=${this.roomCode}`;
+    return joinUrl(`${window.location.origin}${window.location.pathname}`, this.roomCode);
   }
 
   canKick(player: LobbyPlayer): boolean {

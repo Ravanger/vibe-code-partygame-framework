@@ -1,5 +1,5 @@
 import { Client } from "@colyseus/sdk";
-import { ClientMessage } from "@partygame/shared";
+import { ClientMessage, waitFor } from "@partygame/shared";
 import { WitClashState } from "../src/state.js";
 import { type BotOptions, BotPlayer } from "./BotPlayer.js";
 import { RoomLocator } from "./RoomLocator.js";
@@ -37,10 +37,14 @@ export class BotJoiner {
   private async joinOne(roomId: string, index: number): Promise<BotPlayer> {
     const playerId = this.options.playerIds?.[index] ?? crypto.randomUUID();
     const room = await this.client.joinById<WitClashState>(roomId, { playerId }, WitClashState);
-    await this.until(() => room.state.roomCode !== "", "the room state");
+    await waitFor(() => room.state.roomCode !== "", "the room state", this.timeoutMs());
     const name = this.freeName(room.state);
     room.send(ClientMessage.SET_NAME, name);
-    await this.until(() => room.state.players.get(playerId)?.name === name, `the name ${name}`);
+    await waitFor(
+      () => room.state.players.get(playerId)?.name === name,
+      `the name ${name}`,
+      this.timeoutMs(),
+    );
     return new BotPlayer(room, playerId, name, this.options.bot);
   }
 
@@ -51,12 +55,8 @@ export class BotJoiner {
     return `Bot ${n}`;
   }
 
-  private async until(predicate: () => boolean, what: string): Promise<void> {
-    const deadline = Date.now() + (this.options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
-    while (!predicate()) {
-      if (Date.now() > deadline) throw new Error(`Timed out waiting for ${what}`);
-      await new Promise((resolve) => setTimeout(resolve, 20));
-    }
+  private timeoutMs(): number {
+    return this.options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }
 }
 

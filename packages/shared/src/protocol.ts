@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { NAME_MAX_LENGTH } from "./limits.js";
 
 /** Message names a client may send to the room. */
 export const ClientMessage = {
@@ -81,8 +82,8 @@ export const ActionEnvelopeSchema = z
   .object({ type: z.string().regex(ACTION_NAME_PATTERN) })
   .passthrough();
 
-/** Payload of `SET_NAME`: trimmed, 1 to 20 characters. */
-export const SetNameSchema = z.string().trim().min(1).max(20);
+/** Payload of `SET_NAME`: trimmed, 1 to {@link NAME_MAX_LENGTH} characters. */
+export const SetNameSchema = z.string().trim().min(1).max(NAME_MAX_LENGTH);
 
 /** Four-letter room code. */
 export const RoomCodeSchema = z.string().regex(/^[A-Z]{4}$/);

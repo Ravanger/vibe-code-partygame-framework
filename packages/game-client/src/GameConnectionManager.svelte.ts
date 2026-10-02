@@ -5,8 +5,8 @@ import {
   ErrorCode,
   isActionResult,
   isServerError,
-  ResolveCodeResponseSchema,
   RoomCodeSchema,
+  resolveRoomCode,
   type ServerError,
   ServerMessage,
 } from "@partygame/shared";
@@ -139,7 +139,7 @@ export class GameConnectionManager<TState extends BaseGameState = BaseGameState>
       `${clean}:${spectator ? "tv" : "player"}`,
       async () =>
         this.client.joinById<TState>(
-          await this.resolveRoomId(clean),
+          await resolveRoomCode(this.apiBase, clean),
           { ...options, playerId: this.playerId },
           this.options.rootSchema,
         ),
@@ -329,14 +329,6 @@ export class GameConnectionManager<TState extends BaseGameState = BaseGameState>
     this.spectating = false;
     this.detach("disconnected");
     await room?.leave(true);
-  }
-
-  private async resolveRoomId(code: string): Promise<string> {
-    const response = await fetch(`${this.apiBase}/api/resolve-code?code=${code}`);
-    const body = ResolveCodeResponseSchema.safeParse(await response.json());
-    if (!body.success) throw new Error("Unexpected reply from the game server");
-    if ("roomId" in body.data) return body.data.roomId;
-    throw new Error(body.data.error);
   }
 
   private detach(status?: ConnectionStatus): void {

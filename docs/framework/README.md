@@ -298,5 +298,16 @@ Joins are de-duplicated per code and mode, so watching and playing the same room
 `@partygame/game-client/testing` has `StubRoom`, an in-memory room around a real state object. `manager.attach(new StubRoom(state))`, mutate the state,
 call `room.patch()`. `room.requests`/`room.sent` record what the UI sent, `room.reply` sets the answer to `request`, and `push`, `dropConnection`,
 `reconnected`, `closed` fire server events. Integration tests boot a real server with `bootTestServer` from `@partygame/server/testing`
-(`t.endpoint`, and `await t.serveApi()` for the code-resolution API) and use real managers; under jsdom hide the global `WebSocket` while the SDK is first imported
-(see `games/wit-clash/tests/setup.ts`).
+(`t.endpoint`, and `await t.serveApi()` for the code-resolution API) and use real managers. Add `"@partygame/game-client/test-setup"` to the
+vitest `setupFiles`: it shims the storages and makes the SDK use `ws` under jsdom.
+
+## Helpers
+
+| Import | What |
+|---|---|
+| `@partygame/shared` | `waitFor(predicate, what, timeoutMs)` poll loop; `resolveRoomCode(apiBase, code)`; `joinUrl(base, code)` / `tvUrl(base, code)` share links; `NAME_MAX_LENGTH` |
+| `@partygame/core` | `shuffle(items, rng)`, `required(value, what)` |
+| `@partygame/server/node` | `freePort()`, `serveApi(codes, { port, host? })`: the code API on Node's `http` (the Bun entry serves its own) |
+| `@partygame/server/content` | `loadJsoncDir(dir, schema, { idOf, label })`: a folder of commented JSON files, validated, duplicate ids refused; `stripJsonComments` |
+| `@partygame/game-client` | `resolveEndpoints(overrides, pageHost)`, `readCodeParam(search, "code" \| "tv")` |
+| `@partygame/game-client/test-setup` | vitest `setupFiles` entry for jsdom: storage shims, SDK on `ws` (repo-internal, raw `.ts`) |

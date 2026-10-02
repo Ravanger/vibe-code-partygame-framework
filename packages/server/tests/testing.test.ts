@@ -13,7 +13,9 @@ describe("waitUntil", () => {
   });
 
   it("rejects with the label on timeout", async () => {
-    await expect(waitUntil(() => false, "never", 30, 5)).rejects.toThrow("waiting for: never");
+    await expect(waitUntil(() => false, "never", 30, 5)).rejects.toThrow(
+      "Timed out waiting for never",
+    );
   });
 });
 

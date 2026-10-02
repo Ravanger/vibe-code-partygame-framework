@@ -1,5 +1,6 @@
 import { parseArgs } from "node:util";
-import { RoomCodeSchema } from "@partygame/shared";
+import { NAME_MAX_LENGTH, RoomCodeSchema } from "@partygame/shared";
+import { MAX_PLAYERS, MIN_PLAYERS } from "../src/playerLimits.js";
 
 export type Parsed<T> = { ok: true; value: T } | { ok: false; error: string };
 
@@ -21,10 +22,8 @@ export interface PlayArgs {
 export const DEFAULT_ENDPOINT = "ws://localhost:2567";
 export const DEFAULT_API_PORT = 3001;
 
-const DEMO_USAGE =
-  "Usage: bun run cli:demo [--bots=3..8 (players in total, default 4)] [--rounds=1..10]";
-const PLAY_USAGE =
-  "Usage: bun run cli:play [--bots=0..7] [--name=You] [--join=ABCD] [--endpoint=ws://host:2567 --api-port=3001]";
+const DEMO_USAGE = `Usage: bun run cli:demo [--bots=${MIN_PLAYERS}..${MAX_PLAYERS} (players in total, default 4)] [--rounds=1..10]`;
+const PLAY_USAGE = `Usage: bun run cli:play [--bots=0..${MAX_PLAYERS - 1}] [--name=You] [--join=ABCD] [--endpoint=ws://host:2567 --api-port=3001]`;
 
 /** Command line parsing for the two terminal tools. */
 export class CliArgs {
@@ -33,7 +32,7 @@ export class CliArgs {
     if (!values) return { ok: false, error: DEMO_USAGE };
     const players = Number(values.bots ?? "4");
     const rounds = Number(values.rounds ?? "1");
-    if (!this.between(players, 3, 8) || !this.between(rounds, 1, 10)) {
+    if (!this.between(players, MIN_PLAYERS, MAX_PLAYERS) || !this.between(rounds, 1, 10)) {
       return { ok: false, error: DEMO_USAGE };
     }
     return { ok: true, value: { players, rounds } };
@@ -48,8 +47,8 @@ export class CliArgs {
     const apiPort = Number(values["api-port"] ?? DEFAULT_API_PORT);
     const endpoint = values.endpoint ?? DEFAULT_ENDPOINT;
     const valid =
-      this.between(bots, 0, 7) &&
-      this.between(name.length, 1, 20) &&
+      this.between(bots, 0, MAX_PLAYERS - 1) &&
+      this.between(name.length, 1, NAME_MAX_LENGTH) &&
       this.between(apiPort, 1, 65535) &&
       URL.canParse(endpoint) &&
       (join === undefined || RoomCodeSchema.safeParse(join).success);

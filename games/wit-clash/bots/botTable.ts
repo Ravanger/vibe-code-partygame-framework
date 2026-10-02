@@ -1,4 +1,6 @@
 import { Client, type Room } from "@colyseus/sdk";
+import { waitFor } from "@partygame/shared";
+import { ROOM_NAME } from "../src/roomName.js";
 import { WitClashState } from "../src/state.js";
 import type { BotOptions, BotPlayer } from "./BotPlayer.js";
 import { joinBots } from "./joinBots.js";
@@ -30,7 +32,7 @@ export class BotTable {
 
   async open(): Promise<string> {
     const room = await this.client.create<WitClashState>(
-      "wit_clash",
+      ROOM_NAME,
       { playerId: crypto.randomUUID(), spectator: true },
       WitClashState,
     );
@@ -75,12 +77,15 @@ export class BotTable {
     if (room && !this.roomGone) await room.leave();
   }
 
-  private async until(predicate: () => boolean, timeoutMs: number, what: string): Promise<void> {
-    const deadline = Date.now() + timeoutMs;
-    while (!predicate()) {
-      if (this.roomGone) throw new Error(`The room closed while waiting for ${what}`);
-      if (Date.now() > deadline) throw new Error(`Timed out waiting for ${what}`);
-      await new Promise((resolve) => setTimeout(resolve, POLL_MS));
-    }
+  private until(predicate: () => boolean, timeoutMs: number, what: string): Promise<void> {
+    return waitFor(
+      () => {
+        if (this.roomGone) throw new Error(`The room closed while waiting for ${what}`);
+        return predicate();
+      },
+      what,
+      timeoutMs,
+      POLL_MS,
+    );
   }
 }

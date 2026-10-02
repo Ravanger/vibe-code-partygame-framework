@@ -1,5 +1,6 @@
 import { parseArgs } from "node:util";
 import { RoomCodeSchema } from "@partygame/shared";
+import { MAX_PLAYERS } from "../src/playerLimits.js";
 import { joinBots } from "./joinBots.js";
 
 const USAGE =
@@ -16,8 +17,14 @@ const { values, positionals } = parseArgs({
 const code = RoomCodeSchema.safeParse((positionals[0] ?? "").toUpperCase());
 const count = Number(positionals[1] ?? "3");
 const apiPort = Number(values["api-port"]);
-if (!code.success || !Number.isInteger(count) || count < 1 || count > 7 || !(apiPort > 0)) {
-  console.error(`${USAGE}\nCODE is 4 letters; count is 1 to 7.`);
+if (
+  !code.success ||
+  !Number.isInteger(count) ||
+  count < 1 ||
+  count > MAX_PLAYERS - 1 ||
+  !(apiPort > 0)
+) {
+  console.error(`${USAGE}\nCODE is 4 letters; count is 1 to ${MAX_PLAYERS - 1}.`);
   process.exit(1);
 }
 

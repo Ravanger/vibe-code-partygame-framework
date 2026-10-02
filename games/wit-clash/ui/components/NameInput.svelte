@@ -1,4 +1,5 @@
 <script lang="ts">
+import { NAME_MAX_LENGTH } from "@partygame/shared";
 import type { NameField } from "../viewmodels/NameField.svelte.js";
 
 const { field, focus = false }: { field: NameField; focus?: boolean } = $props();
@@ -14,7 +15,7 @@ function takeFocus(node: HTMLInputElement): void {
     id="playerName"
     type="text"
     placeholder="Enter your name"
-    maxlength="20"
+    maxlength={NAME_MAX_LENGTH}
     autocomplete="nickname"
     value={field.draft}
     oninput={(e) => field.set(e.currentTarget.value)}

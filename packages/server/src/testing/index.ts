@@ -1,26 +1,21 @@
-import { createServer as createHttpServer, type Server as HttpServer } from "node:http";
-import { createServer } from "node:net";
+import type { Server as HttpServer } from "node:http";
 import { matchMaker, type Room, type Server } from "@colyseus/core";
 import { type Room as ClientRoom, ColyseusSDK } from "@colyseus/sdk";
-import { createApiHandler } from "../api/createApiHandler.js";
+import { waitFor } from "@partygame/shared";
 import { createGameServer, type GameServerOptions } from "../createGameServer.js";
+import { freePort, serveApi as serveApiOnNode } from "../node.js";
 import { RoomCodeService } from "../services/RoomCodeService.js";
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Poll until `predicate` holds. A patch tick is not a barrier; wait on the condition you care about. */
-export async function waitUntil(
+export function waitUntil(
   predicate: () => boolean,
   label = "condition",
   timeoutMs = 4000,
   stepMs = 10,
 ): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    if (predicate()) return;
-    await sleep(stepMs);
-  }
-  throw new Error(`waitUntil timed out after ${timeoutMs}ms waiting for: ${label}`);
+  return waitFor(predicate, label, timeoutMs, stepMs);
 }
 
 /** Record every message of `type` a client room receives. */
@@ -30,14 +25,6 @@ export function collectMessages(client: ClientRoom, type: string): unknown[] {
     received.push(payload);
   });
   return received;
-}
-
-async function freePort(): Promise<number> {
-  const probe = createServer();
-  await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve));
-  const { port } = probe.address() as { port: number };
-  await new Promise((resolve) => probe.close(resolve));
-  return port;
 }
 
 export interface TestJoinOptions {
@@ -71,15 +58,8 @@ export class TestServer {
 
   /** Start the `/api/resolve-code` HTTP API for this server's rooms on a free port; stopped by `shutdown()`. */
   async serveApi(): Promise<number> {
-    const handler = createApiHandler(this.roomCodeService);
-    const api = createHttpServer(async (req, res) => {
-      const response = handler(new Request(`http://127.0.0.1${req.url}`));
-      res.writeHead(response.status, Object.fromEntries(response.headers));
-      res.end(await response.text());
-    });
     const port = await freePort();
-    await new Promise<void>((resolve) => api.listen(port, "127.0.0.1", resolve));
-    this.apis.push(api);
+    this.apis.push(await serveApiOnNode(this.roomCodeService, { port, host: "127.0.0.1" }));
     return port;
   }
 
@@ -89,7 +69,12 @@ export class TestServer {
   }
 
   async shutdown(): Promise<void> {
-    await Promise.all(this.apis.map((api) => new Promise((resolve) => api.close(resolve))));
+    await Promise.all(
+      this.apis.map((api) => {
+        api.closeAllConnections();
+        return new Promise((resolve) => api.close(resolve));
+      }),
+    );
     await this.server.gracefullyShutdown(false);
   }
 }

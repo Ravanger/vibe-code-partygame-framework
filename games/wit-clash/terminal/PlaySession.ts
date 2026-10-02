@@ -1,3 +1,4 @@
+import { joinUrl, tvUrl } from "@partygame/shared";
 import type { BotOptions, BotPlayer } from "../bots/BotPlayer.js";
 import { joinBots } from "../bots/joinBots.js";
 import type { CategoryRepository } from "../src/content/CategoryRepository.js";
@@ -107,7 +108,7 @@ export class PlaySession {
       `${created ? "Room" : "Joined room"} ${code}${created ? " (you are the host)" : ""}`,
     );
     if (!created || !(await this.probe.answers(clientUrl))) return;
-    this.io.print(`Browser players can join at ${clientUrl}/?code=${code}`);
-    this.io.print(`TV view: ${clientUrl}/?tv=${code}`);
+    this.io.print(`Browser players can join at ${joinUrl(`${clientUrl}/`, code)}`);
+    this.io.print(`TV view: ${tvUrl(`${clientUrl}/`, code)}`);
   }
 }

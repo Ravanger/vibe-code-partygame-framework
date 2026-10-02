@@ -1,7 +1,7 @@
 # Party Game Framework (vibe-coded)
 
 > **Goal:** A flexible, modern, TypeScript-first framework for building immersive, multi-device social party games.
-> **Status:** Playable end to end. Plan 10 (framework inversion) stages 1-7 are done: XState-driven `GameRuntime`, generic Colyseus `GameRoom`, generic Svelte SDK, WitClash as a game on top; 4-bot playtest and review fixes landed. Stage 8 (QR join, TV view, kick/settings UI, podium, best-answer award, progress and typing badges) is done. Stage 9 (lifecycle review fixes: name entry for late joiners, minimum players, host `END_GAME`, spectator resume, seated-only podium, `NAME_TAKEN`, spectator-only rooms dispose) is done; Plan 12 (UI redesign, "House Party" look: paper, tape, player stickers, sparkler timer, phase banners; UX fixes from `.AGENTS/plans/12-redesign-audit.md`) is done. Open: persistence (Phase 9), i18n, plugins (`.AGENTS/plans/13-hoisting-scan.md`). Plans: `.AGENTS/plans/10-framework-inversion.md`, `.AGENTS/plans/12-redesign.md`.
+> **Status:** Playable end to end. Plan 10 (framework inversion) stages 1-7 are done: XState-driven `GameRuntime`, generic Colyseus `GameRoom`, generic Svelte SDK, WitClash as a game on top; 4-bot playtest and review fixes landed. Stage 8 (QR join, TV view, kick/settings UI, podium, best-answer award, progress and typing badges) is done. Stage 9 (lifecycle review fixes: name entry for late joiners, minimum players, host `END_GAME`, spectator resume, seated-only podium, `NAME_TAKEN`, spectator-only rooms dispose) is done; Plan 12 (UI redesign, "House Party" look: paper, tape, player stickers, sparkler timer, phase banners; UX fixes from `.AGENTS/plans/12-redesign-audit.md`) is done. Plan 14 (quick hoists into the framework packages) is done. Goal: WitClash keeps rules and logic only; packages stay extendable from the game. Next: plan 15, `@partygame/bots`. Open: persistence (Phase 9), i18n, plugins (`.AGENTS/plans/13-hoisting-scan.md`). Plans: `.AGENTS/plans/10-framework-inversion.md`, `.AGENTS/plans/12-redesign.md`.
 
 ## !Note: Internal agent files (checklists, logs, notes, memories, etc.) should go in the `.AGENTS/` directory
 
@@ -23,10 +23,10 @@
 
 ## Project Structure (Monorepo)
 
-- `packages/shared`: wire protocol (`protocol.ts`: message names, `ErrorCode`, `ActionResult`, zod schemas) and the browser-safe state classes (`@partygame/shared/schema`: `BaseGameState`, `PlayerSchema`).
-- `packages/core`: pure game runtime, no Colyseus: `defineGame`, `actionFactory`, `GameRuntime` (XState actor per room, built-in Lobby/`START_GAME`/`SET_OPTIONS`/`KICK_PLAYER`), `scoring.ts` helpers; `@partygame/core/testing` has `FakeHost`.
-- `packages/server`: generic Colyseus host: `createGameServer`, `GameRoom`, `createApiHandler` (`/api/resolve-code`), `RoomCodeService`; `@partygame/server/bun` (`startServer`) and `@partygame/server/testing` (`bootTestServer`).
-- `packages/game-client`: Svelte 5 SDK: `GameConnectionManager`, `Countdown`; `@partygame/game-client/testing` has `StubRoom`.
+- `packages/shared`: wire protocol (`protocol.ts`: message names, `ErrorCode`, `ActionResult`, zod schemas), helpers (`waitFor`, `resolveRoomCode`, `joinUrl`/`tvUrl`, `NAME_MAX_LENGTH`) and the browser-safe state classes (`@partygame/shared/schema`: `BaseGameState`, `PlayerSchema`).
+- `packages/core`: pure game runtime, no Colyseus: `defineGame`, `actionFactory`, `GameRuntime` (XState actor per room, built-in Lobby/`START_GAME`/`SET_OPTIONS`/`KICK_PLAYER`), `scoring.ts` helpers, `shuffle`/`required`; `@partygame/core/testing` has `FakeHost`.
+- `packages/server`: generic Colyseus host: `createGameServer`, `GameRoom`, `createApiHandler` (`/api/resolve-code`), `RoomCodeService`; `@partygame/server/bun` (`startServer`), `/node` (`freePort`, `serveApi`), `/content` (`loadJsoncDir`) and `/testing` (`bootTestServer`).
+- `packages/game-client`: Svelte 5 SDK: `GameConnectionManager`, `Countdown`, `resolveEndpoints`, `readCodeParam`; `/testing` has `StubRoom`, `/test-setup` is the vitest setup file for jsdom.
 - `packages/cli`: Scaffolding tool for new games **(planned, not yet created)**.
 - `games/wit-clash`: reference game (Quiplash-style). `src/` rules, `ui/` Svelte client, `server.ts` Bun entry, `content/categories/*.jsonc` host-editable prompts. See `games/wit-clash/README.md`.
 - `docs/`: `framework/README.md` (game author guide), `HOSTING.md` (running and LAN play).
@@ -156,7 +156,7 @@ Versions are what the consuming package resolves (checked against installed `pac
 
 ### UI integration tests and the global `WebSocket`
 - **Cause:** Node's built-in `WebSocket` dispatches events jsdom's `Event` does not recognise, and `@colyseus/sdk` picks its WebSocket once, at import.
-- **Fix:** `games/wit-clash/tests/setup.ts` hides the global while the SDK is first imported so it falls back to `ws`.
+- **Fix:** `packages/game-client/test-setup.ts` (exported as `@partygame/game-client/test-setup`; used by game-client's own tests and the game's vitest `setupFiles`) hides the global while the SDK is first imported so it falls back to `ws`, and shims the storages.
 
 ### StateView entries must be hidden before they are deleted
 - **Cause:** `GameRoom` remembers every ref passed to `ctx.showTo` and re-adds it to a reconnecting client's view.

@@ -1,5 +1,5 @@
+import { required } from "@partygame/core";
 import { describe, expect, it } from "vitest";
-import { required } from "../../src/required.js";
 import { makeCategories, nth, Table, type TableConfig } from "./support.js";
 
 const finalRound = (config: TableConfig = {}): TableConfig => ({

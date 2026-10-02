@@ -1,7 +1,6 @@
 import { Client, type Room } from "@colyseus/sdk";
-import { ClientMessage, isServerError, ServerMessage } from "@partygame/shared";
+import { ClientMessage, isServerError, ServerMessage, waitFor } from "@partygame/shared";
 import { RoomLocator } from "../bots/RoomLocator.js";
-import { waitFor } from "../bots/waitFor.js";
 import type { WitClashOptions } from "../src/options.js";
 import { ROOM_NAME } from "../src/roomName.js";
 import { WitClashState } from "../src/state.js";

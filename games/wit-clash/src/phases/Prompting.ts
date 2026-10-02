@@ -1,11 +1,10 @@
+import { required, shuffle } from "@partygame/core";
 import { classifyMatchup, draftsFor } from "../drafts.js";
 import { buildMatchups } from "../matchups.js";
 import { PHASE } from "../phaseNames.js";
 import type { WitClashContext, WitClashPhase } from "../private.js";
 import { pickPromptPool } from "../promptPool.js";
-import { required } from "../required.js";
 import { PLACEHOLDER_TEXT, Round } from "../round.js";
-import { shuffle } from "../shuffle.js";
 import { Answer, Matchup, PromptAssignment } from "../state.js";
 import { TieBreakerFlow } from "../tieBreakerFlow.js";
 import { answeringActions, answersComplete } from "./answering.js";

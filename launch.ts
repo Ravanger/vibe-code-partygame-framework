@@ -23,11 +23,13 @@ import { networkInterfaces } from "node:os";
 import { extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { BotTable } from "./games/wit-clash/bots/botTable.js";
+import { MAX_PLAYERS, MIN_PLAYERS } from "./games/wit-clash/src/playerLimits.js";
 import {
   DEMO_BOT_OPTIONS,
   DEMO_NEXT_ROUND_MS,
   DemoTable,
 } from "./games/wit-clash/terminal/DemoTable.js";
+import { joinUrl, tvUrl } from "./packages/shared/src/links.js";
 
 const ROOT = fileURLToPath(new URL(".", import.meta.url));
 const GAME_DIR = join(ROOT, "games", "wit-clash");
@@ -249,7 +251,7 @@ async function startBots(
   });
   botTable = table;
   const code = await table.open();
-  const url = `${clientUrl}/?code=${code}`;
+  const url = joinUrl(`${clientUrl}/`, code);
   log(`Room ${code}: bots join once you have entered your name`);
   if (shouldOpenBrowser) openBrowser(url);
   else log(`Open ${url}`);
@@ -271,7 +273,7 @@ async function startDemo(
   });
   botTable = table;
   const code = await table.open();
-  const url = `${clientUrl}/?tv=${code}`;
+  const url = tvUrl(`${clientUrl}/`, code);
   log(`Demo room ${code}: watch-only, ${count + 1} bots play one game`);
   if (shouldOpenBrowser) openBrowser(url);
   else log(`Open ${url}`);
@@ -320,8 +322,7 @@ async function launch(
   );
 }
 
-const USAGE =
-  "Usage: bun run launch.ts [dev|host|prod] [--no-browser] [--bots[=1..7] | --demo[=2..7]]";
+const USAGE = `Usage: bun run launch.ts [dev|host|prod] [--no-browser] [--bots[=1..${MAX_PLAYERS - 1}] | --demo[=${MIN_PLAYERS - 1}..${MAX_PLAYERS - 1}]]`;
 const args = process.argv.slice(2);
 const flags = args.filter((arg) => arg.startsWith("--"));
 const positional = args.filter((arg) => !arg.startsWith("--"));
@@ -334,9 +335,11 @@ const unknownFlags = flags.filter(
   (flag) => flag !== "--no-browser" && flag !== botsFlag && flag !== demoFlag,
 );
 const badBots =
-  botCount !== undefined && !(Number.isInteger(botCount) && botCount >= 1 && botCount <= 7);
+  botCount !== undefined &&
+  !(Number.isInteger(botCount) && botCount >= 1 && botCount <= MAX_PLAYERS - 1);
 const badDemo =
-  demoCount !== undefined && !(Number.isInteger(demoCount) && demoCount >= 2 && demoCount <= 7);
+  demoCount !== undefined &&
+  !(Number.isInteger(demoCount) && demoCount >= MIN_PLAYERS - 1 && demoCount <= MAX_PLAYERS - 1);
 
 if (!isMode(modeArg) || positional.length > 1 || unknownFlags.length > 0 || badBots || badDemo) {
   console.error(USAGE);

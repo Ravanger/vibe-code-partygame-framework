@@ -1,4 +1,4 @@
-/** Polls until `predicate` holds, or throws `Timed out waiting for <what>`. */
+/** Polls until `predicate` holds, or throws `Timed out waiting for <what>`. A throwing predicate aborts the wait. */
 export async function waitFor(
   predicate: () => boolean,
   what: string,

@@ -8,10 +8,11 @@ import {
   waitUntil,
 } from "@partygame/server/testing";
 import { createWitClashGame } from "../../src/game.js";
+import { ROOM_NAME } from "../../src/roomName.js";
 import { WitClashState } from "../../src/state.js";
 import { makeCategories } from "./support.js";
 
-export const ROOM = "wit_clash";
+export const ROOM = ROOM_NAME;
 export const pid = (n: number): string => `player-000${n}`;
 
 export const bootWitClash = (reconnectMs = 1000): Promise<TestServer> =>

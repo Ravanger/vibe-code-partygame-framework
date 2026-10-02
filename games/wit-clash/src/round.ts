@@ -1,8 +1,8 @@
+import { required } from "@partygame/core";
 import { pickBestAnswers } from "./bestAnswers.js";
 import { eligibleVoterIds } from "./eligibility.js";
 import { MIN_PLAYERS } from "./playerLimits.js";
 import type { WitClashContext } from "./private.js";
-import { required } from "./required.js";
 import { composeScoreboard } from "./scoreboard.js";
 import { BestAnswer, type Matchup, PlayerPrivate, ScoreEntry } from "./state.js";
 import { countVoted } from "./tally.js";

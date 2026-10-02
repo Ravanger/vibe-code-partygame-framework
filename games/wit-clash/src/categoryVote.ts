@@ -1,4 +1,4 @@
-import { required } from "./required.js";
+import { required } from "@partygame/core";
 
 export interface TalliedOption {
   id: string;

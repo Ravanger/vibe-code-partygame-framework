@@ -15,18 +15,26 @@
     "@colyseus/schema": "^5.0.35",
     "@partygame/core": "workspace:*",
     "@partygame/shared": "workspace:*",
-    "@colyseus/sdk": "^0.18.4"
+    "@colyseus/sdk": "^0.18.4",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@colyseus/ws-transport": "^0.18.4",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.11",
-    "zod": "^4.6.5"
+    "vitest": "^4.1.11"
   },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "default": "./dist/node.js"
+    },
+    "./content": {
+      "types": "./dist/content.d.ts",
+      "default": "./dist/content.js"
     },
     "./bun": {
       "types": "./dist/bun.d.ts",

@@ -1,7 +1,6 @@
-import { awardPoints } from "@partygame/core";
+import { awardPoints, required } from "@partygame/core";
 import { PHASE } from "../phaseNames.js";
 import type { WitClashContext, WitClashPhase } from "../private.js";
-import { required } from "../required.js";
 import { Round } from "../round.js";
 import { settleMatchup } from "../scoring.js";
 import { tallyVotes } from "../tally.js";

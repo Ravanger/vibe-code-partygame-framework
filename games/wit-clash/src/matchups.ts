@@ -1,5 +1,4 @@
-import { required } from "./required.js";
-import { shuffle } from "./shuffle.js";
+import { required, shuffle } from "@partygame/core";
 
 export interface PlannedMatchup {
   index: number;
