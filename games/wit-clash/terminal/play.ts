@@ -1,31 +1,14 @@
-import { createInterface, type Interface } from "node:readline/promises";
+import { createInterface } from "node:readline/promises";
+import { PlaySession, parsePlayArgs, ReadlinePrompter, TerminalPlayer } from "@partygame/terminal";
+import { witClashKit } from "../bots/witClashBot.js";
+import { witClashGame } from "../src/hostedGame.js";
 import { contentDir, loadContent } from "../src/loadContent.js";
-import { CliArgs } from "./CliArgs.js";
-import { PlaySession } from "./PlaySession.js";
-import type { Prompter } from "./Prompter.js";
+import { MAX_PLAYERS } from "../src/playerLimits.js";
+import { witClashTerminal } from "./witClashTerminal.js";
 
-class ReadlinePrompter implements Prompter {
-  private pending = "";
+const USAGE = `Usage: bun run play [--bots=0..${MAX_PLAYERS - 1}] [--name=You] [--join=ABCD] [--endpoint=ws://host:2567 --api-port=3001]`;
 
-  constructor(private readonly lines: Interface) {}
-
-  async ask(question: string, signal: AbortSignal): Promise<string> {
-    const prompt = question.slice(question.lastIndexOf("\n") + 1);
-    if (question.includes("\n")) process.stdout.write(`${question.slice(0, -prompt.length)}`);
-    this.pending = prompt;
-    try {
-      return await this.lines.question(prompt, { signal });
-    } finally {
-      if (this.pending === prompt) this.pending = "";
-    }
-  }
-
-  print(line: string): void {
-    process.stdout.write(`\r\x1b[K${line}\n${this.pending}${this.pending ? this.lines.line : ""}`);
-  }
-}
-
-const parsed = new CliArgs().play(process.argv.slice(2));
+const parsed = parsePlayArgs(process.argv.slice(2), { maxBots: MAX_PLAYERS - 1, usage: USAGE });
 if (!parsed.ok) {
   console.error(parsed.error);
   process.exit(2);
@@ -40,8 +23,9 @@ const session = new PlaySession(
   {
     ...parsed.value,
     startServer: usesDefaults && join === undefined,
-    categories,
-    bot: {},
+    kit: witClashKit(),
+    games: [witClashGame(categories)],
+    player: (room, playerId, io) => new TerminalPlayer(room, playerId, io, witClashTerminal()),
     clientUrl: "http://localhost:5173",
   },
   new ReadlinePrompter(lines),

@@ -9,8 +9,10 @@
     "@partygame/bots": "workspace:*",
     "@partygame/core": "workspace:*",
     "@partygame/game-client": "workspace:*",
+    "@partygame/launcher": "workspace:*",
     "@partygame/server": "workspace:*",
     "@partygame/shared": "workspace:*",
+    "@partygame/terminal": "workspace:*",
     "uqr": "^0.1.3",
     "zod": "^4.6.5"
   },
@@ -31,6 +33,7 @@
     "dev:server": "bun --hot server.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit && svelte-check --tsconfig ./tsconfig.json --threshold warning",
-    "build": "vite build"
+    "build": "vite build",
+    "demo": "bun run terminal/demo.ts"
   }
 }

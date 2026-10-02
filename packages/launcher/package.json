@@ -1,0 +1,31 @@
+{
+  "name": "@partygame/launcher",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.test.json"
+  },
+  "dependencies": {
+    "@partygame/bots": "workspace:*",
+    "@partygame/server": "workspace:*",
+    "@partygame/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@colyseus/schema": "^5.0.35",
+    "@colyseus/sdk": "^0.18.4",
+    "@partygame/core": "workspace:*",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.11",
+    "zod": "^4.6.5"
+  }
+}

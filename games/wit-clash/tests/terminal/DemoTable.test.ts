@@ -1,7 +1,9 @@
 import type { Room } from "@colyseus/sdk";
 import type { DemoTable } from "@partygame/bots";
 import { type TestServer, waitUntil } from "@partygame/server/testing";
+import { GameClient } from "@partygame/terminal";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { witClashKit } from "../../bots/witClashBot.js";
 import { PHASE } from "../../src/phaseNames.js";
 import type { WitClashState } from "../../src/state.js";
 import {
@@ -9,7 +11,6 @@ import {
   DEMO_ROOM_OPTIONS,
   type WitClashDemoOptions,
 } from "../../terminal/DemoTable.js";
-import { GameClient } from "../../terminal/GameClient.js";
 import { bootWitClash } from "../game/integrationSupport.js";
 
 let t: TestServer;
@@ -43,7 +44,10 @@ const newTable = (over: Partial<WitClashDemoOptions> = {}): DemoTable<WitClashSt
 };
 
 const watch = async (code: string): Promise<Room<WitClashState>> => {
-  const room = await new GameClient(t.endpoint, apiPort).watch(code, crypto.randomUUID());
+  const room = await new GameClient(t.endpoint, apiPort, witClashKit()).watch(
+    code,
+    crypto.randomUUID(),
+  );
   watchers.push(room);
   return room;
 };
@@ -71,7 +75,7 @@ describe("DemoTable", () => {
   it("is watch-only: spectators join, other players are refused", async () => {
     const table = newTable();
     const code = await table.open();
-    const client = new GameClient(t.endpoint, apiPort);
+    const client = new GameClient(t.endpoint, apiPort, witClashKit());
     await watch(code);
     await expect(client.join(code, crypto.randomUUID(), "Intruder")).rejects.toThrow(
       "This room is watch-only",

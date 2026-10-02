@@ -1,16 +1,18 @@
-import { type BotOptions, type BotPlayer, joinBots } from "@partygame/bots";
+import { type BotKit, type BotOptions, type BotPlayer, joinBots } from "@partygame/bots";
+import type { HostedGame } from "@partygame/server";
+import { type NodeServerHandle, ServerProbe, startNodeServer } from "@partygame/server/node";
 import { joinUrl, tvUrl } from "@partygame/shared";
-import { witClashKit } from "../bots/witClashBot.js";
-import type { CategoryRepository } from "../src/content/CategoryRepository.js";
-import type { WitClashOptions } from "../src/options.js";
-import type { WitClashState } from "../src/state.js";
-import { GameClient } from "./GameClient.js";
-import { GameServerHandle } from "./GameServerHandle.js";
+import type { BaseGameState } from "@partygame/shared/schema";
+import { GameClient, type GameRoomOf } from "./GameClient.js";
 import type { Prompter } from "./Prompter.js";
-import { ServerProbe } from "./ServerProbe.js";
-import { TerminalPlayer } from "./TerminalPlayer.js";
 
-export interface PlayOptions {
+/** One human at a terminal. `run` resolves when they quit or the room goes away. */
+export interface SessionPlayer {
+  run(): Promise<void>;
+  stop(): void;
+}
+
+export interface PlaySessionOptions<TState extends BaseGameState> {
   name: string;
   /** Bots to seat once the room exists; 0 for none. */
   bots: number;
@@ -20,20 +22,25 @@ export interface PlayOptions {
   apiPort: number;
   /** Start a game server on `endpoint`'s port when none answers there. */
   startServer: boolean;
-  categories: CategoryRepository;
+  /** Where the browser client runs; join and TV links are printed only when it answers. */
   clientUrl: string;
-  /** Options for a room this session creates; the game's defaults when omitted. */
-  roomOptions?: Partial<WitClashOptions>;
-  bot: BotOptions;
+  kit: BotKit<TState>;
+  /** Hosted by the server this session starts. */
+  games: HostedGame[];
+  /** Builds the player for the room this session is in. */
+  player: (room: GameRoomOf<TState>, playerId: string, io: Prompter) => SessionPlayer;
+  /** Create options for a room this session opens; the game's defaults when omitted. */
+  roomOptions?: object;
+  bot?: BotOptions;
 }
 
 /** One terminal player's evening: find or start a server, create or join a room, seat bots, play. */
-export class PlaySession {
-  private player: TerminalPlayer | undefined;
+export class PlaySession<TState extends BaseGameState> {
+  private player: SessionPlayer | undefined;
   private stopped = false;
 
   constructor(
-    private readonly options: PlayOptions,
+    private readonly options: PlaySessionOptions<TState>,
     private readonly io: Prompter,
     private readonly probe: ServerProbe = new ServerProbe(),
   ) {}
@@ -53,8 +60,8 @@ export class PlaySession {
     }
   }
 
-  private async server(): Promise<GameServerHandle | undefined> {
-    const { endpoint, apiPort, startServer } = this.options;
+  private async server(): Promise<NodeServerHandle | undefined> {
+    const { endpoint, apiPort, startServer, games } = this.options;
     const port = Number(new URL(endpoint).port);
     if (await this.probe.isGameServer(port, apiPort)) {
       this.io.print(`Using the game server on ${endpoint} (API port ${apiPort}).`);
@@ -62,45 +69,53 @@ export class PlaySession {
     }
     if (!startServer)
       throw new Error(`No game server answers on ${endpoint} (API port ${apiPort})`);
-    const handle = new GameServerHandle(this.options.categories, { port, apiPort });
-    await handle.start();
+    const handle = await startNodeServer({ games, port, apiPort });
     this.io.print(`Started a game server on ports ${port} and ${apiPort}; it stops when you quit.`);
     return handle;
   }
 
   private async play(): Promise<void> {
-    const { name, join, endpoint, apiPort, bots } = this.options;
-    const client = new GameClient(endpoint, apiPort);
+    const { name, join, endpoint, apiPort, bots, kit } = this.options;
+    const client = new GameClient(endpoint, apiPort, kit);
     const playerId = crypto.randomUUID();
     const room = join
       ? await client.join(join, playerId, name)
       : await client.create(playerId, name, this.options.roomOptions);
+    let seated: Promise<BotPlayer<TState>[]> = Promise.resolve([]);
     try {
       const code = room.state.roomCode;
       await this.banner(code, join === undefined);
-      const player = new TerminalPlayer(room, playerId, this.io);
+      const player = this.options.player(room, playerId, this.io);
       this.player = player;
       const playing = player.run();
       if (this.stopped) player.stop();
-      const seated = bots > 0 ? this.seatBots(code) : Promise.resolve([]);
+      if (bots > 0) {
+        seated = this.seatBots(code);
+        seated.catch(() => undefined);
+      }
       await playing;
-      await Promise.all((await seated).map((bot) => bot.leave()));
+      await seated;
     } finally {
+      const [outcome] = await Promise.allSettled([seated]);
+      if (outcome.status === "fulfilled") {
+        await Promise.allSettled(outcome.value.map((bot) => bot.leave()));
+      }
       await room.leave(true);
     }
   }
 
-  private async seatBots(code: string): Promise<BotPlayer<WitClashState>[]> {
-    const { endpoint, apiPort, bots } = this.options;
+  private async seatBots(code: string): Promise<BotPlayer<TState>[]> {
+    const { endpoint, apiPort, bots, kit, bot } = this.options;
     const seated = await joinBots({
-      ...witClashKit(),
+      stateClass: kit.stateClass,
+      strategy: kit.strategy,
       code,
       count: bots,
       endpoint,
       apiPort,
-      bot: this.options.bot,
+      ...(bot ? { bot } : {}),
     });
-    for (const bot of seated) this.io.print(`${bot.name} joined.`);
+    for (const each of seated) this.io.print(`${each.name} joined.`);
     return seated;
   }
 

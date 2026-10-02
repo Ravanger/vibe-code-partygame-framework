@@ -27,62 +27,6 @@ describe("CliArgs.demo", () => {
   ])("rejects %s with the usage", (flag) => {
     const parsed = args.demo([flag]);
     expect(parsed.ok).toBe(false);
-    if (!parsed.ok) expect(parsed.error).toContain("cli:demo");
-  });
-});
-
-describe("CliArgs.play", () => {
-  it("defaults to three bots on the local server", () => {
-    expect(args.play([])).toEqual({
-      ok: true,
-      value: {
-        name: "You",
-        bots: 3,
-        join: undefined,
-        endpoint: "ws://localhost:2567",
-        apiPort: 3001,
-        usesDefaults: true,
-      },
-    });
-  });
-
-  it("joins without bots unless they are asked for, and upper-cases the code", () => {
-    const joined = args.play(["--join=abcd"]);
-    expect(joined.ok && joined.value.join).toBe("ABCD");
-    expect(joined.ok && joined.value.bots).toBe(0);
-    const withBots = args.play(["--join=ABCD", "--bots=2"]);
-    expect(withBots.ok && withBots.value.bots).toBe(2);
-  });
-
-  it("takes a name and a custom server, which turns the defaults off", () => {
-    const parsed = args.play(["--name= Zed ", "--endpoint=ws://10.0.0.5:2567", "--api-port=4000"]);
-    expect(parsed).toEqual({
-      ok: true,
-      value: {
-        name: "Zed",
-        bots: 3,
-        join: undefined,
-        endpoint: "ws://10.0.0.5:2567",
-        apiPort: 4000,
-        usesDefaults: false,
-      },
-    });
-    const portOnly = args.play(["--api-port=4000"]);
-    expect(portOnly.ok && portOnly.value.usesDefaults).toBe(false);
-  });
-
-  it.each([
-    ["--bots=8"],
-    ["--bots=-1"],
-    ["--name="],
-    ["--name=123456789012345678901"],
-    ["--join=AB"],
-    ["--api-port=0"],
-    ["--endpoint=nonsense"],
-    ["--rounds=2"],
-  ])("rejects %s with the usage", (flag) => {
-    const parsed = args.play([flag]);
-    expect(parsed.ok).toBe(false);
-    if (!parsed.ok) expect(parsed.error).toContain("cli:play");
+    if (!parsed.ok) expect(parsed.error).toContain("demo [--bots");
   });
 });

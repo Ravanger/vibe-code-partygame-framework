@@ -20,8 +20,9 @@ src/
   content/           category files (.jsonc) loader
   loadContent.ts     loads and validates the content directory for server.ts
 ui/                  Svelte client, built on @partygame/game-client (see below)
+launch.ts            launcher config (`@partygame/launcher`); `bun run launch` reaches it through `scripts/game.ts`
 bots/                WitClash bot strategy (`witClashBot.ts`, on `@partygame/bots`) and the `bun run bots` CLI (see "Playtesting alone")
-terminal/            `cli:play` (a human at a readline prompt) and `cli:demo` (all-bot game, narrated and checked); see "Play in the terminal"
+terminal/            `play.ts` (a human at a readline prompt) and `demo.ts` (all-bot game, narrated and checked); see "Play in the terminal"
 server.ts            Bun entry: loads the content, then startServer from @partygame/server/bun
 content/categories/  host-editable .jsonc categories, at least 3 needed
 ```
@@ -177,7 +178,7 @@ Category files live in `content/categories/*.jsonc` (format: `content/categories
 `API_PORT` (3001). Hosting and LAN play: `docs/HOSTING.md`.
 
 ```
-bun run launch         # repo root: game server, API and Vite, waits until all answer
+bun run launch         # repo root: game server, API and Vite, waits until all answer (config: launch.ts)
 bun run dev            # repo root: Vite client and game server through turbo
 bun run dev:server     # this package: game server only (bun --hot server.ts)
 ```
@@ -201,13 +202,14 @@ bun run launch:demo          # watch-only room: bots play one game, the browser 
 ## Play in the terminal
 
 ```bash
-bun run cli:play                  # host a room; 3 bots join; uses the server on 2567/3001 or starts its own
-bun run cli:play --join=ABCD      # join a room as a normal player
-bun run cli:demo                  # all-bot game, narrated; prints PASS/FAIL (--bots=N total players, --rounds=R)
+bun run play                      # host a room; 3 bots join; uses the server on 2567/3001 or starts its own
+bun run play --join=ABCD          # join a room as a normal player
+bun run demo                      # `demo` script of this package; from the root: bun run --cwd games/wit-clash demo
+                                   # all-bot game, narrated; prints PASS/FAIL (--bots=N total players, --rounds=R)
 ```
 
-You answer and vote by typing; `q` quits (`/q` while writing an answer). `cli:play` takes `--bots=N` (0 to 7), `--name=You`, `--endpoint=ws://host:2567 --api-port=3001`.
-`cli:demo` checks that every final score equals the points shown in the reveals and that no bot action was refused.
+You answer and vote by typing; `q` quits (`/q` while writing an answer). `play` takes `--bots=N` (0 to 7), `--name=You`, `--endpoint=ws://host:2567 --api-port=3001`.
+`demo` checks that every final score equals the points shown in the reveals and that no bot action was refused.
 
 ## Client (`ui/`)
 

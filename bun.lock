@@ -26,8 +26,10 @@
         "@partygame/bots": "workspace:*",
         "@partygame/core": "workspace:*",
         "@partygame/game-client": "workspace:*",
+        "@partygame/launcher": "workspace:*",
         "@partygame/server": "workspace:*",
         "@partygame/shared": "workspace:*",
+        "@partygame/terminal": "workspace:*",
         "uqr": "^0.1.3",
         "zod": "^4.6.5",
       },
@@ -91,6 +93,23 @@
         "zod": "^4.6.5",
       },
     },
+    "packages/launcher": {
+      "name": "@partygame/launcher",
+      "version": "0.1.0",
+      "dependencies": {
+        "@partygame/bots": "workspace:*",
+        "@partygame/server": "workspace:*",
+        "@partygame/shared": "workspace:*",
+      },
+      "devDependencies": {
+        "@colyseus/schema": "^5.0.35",
+        "@colyseus/sdk": "^0.18.4",
+        "@partygame/core": "workspace:*",
+        "typescript": "^6.0.3",
+        "vitest": "^4.1.11",
+        "zod": "^4.6.5",
+      },
+    },
     "packages/server": {
       "name": "@partygame/server",
       "version": "0.1.0",
@@ -119,6 +138,23 @@
       "devDependencies": {
         "typescript": "^6.0.3",
         "vitest": "^4.1.11",
+      },
+    },
+    "packages/terminal": {
+      "name": "@partygame/terminal",
+      "version": "0.1.0",
+      "dependencies": {
+        "@colyseus/sdk": "^0.18.4",
+        "@partygame/bots": "workspace:*",
+        "@partygame/server": "workspace:*",
+        "@partygame/shared": "workspace:*",
+      },
+      "devDependencies": {
+        "@colyseus/schema": "^5.0.35",
+        "@partygame/core": "workspace:*",
+        "typescript": "^6.0.3",
+        "vitest": "^4.1.11",
+        "zod": "^4.6.5",
       },
     },
   },
@@ -239,9 +275,13 @@
 
     "@partygame/game-client": ["@partygame/game-client@workspace:packages/game-client"],
 
+    "@partygame/launcher": ["@partygame/launcher@workspace:packages/launcher"],
+
     "@partygame/server": ["@partygame/server@workspace:packages/server"],
 
     "@partygame/shared": ["@partygame/shared@workspace:packages/shared"],
+
+    "@partygame/terminal": ["@partygame/terminal@workspace:packages/terminal"],
 
     "@partygame/wit-clash": ["@partygame/wit-clash@workspace:games/wit-clash"],
 

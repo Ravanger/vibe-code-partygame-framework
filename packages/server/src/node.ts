@@ -1,8 +1,11 @@
 import { createServer as createHttpServer, type Server as HttpServer } from "node:http";
-import { createServer as createSocketServer } from "node:net";
+import { connect, createServer as createSocketServer } from "node:net";
+import type { Server } from "@colyseus/core";
+import { ResolveCodeResponseSchema } from "@partygame/shared";
 import { z } from "zod";
 import { createApiHandler } from "./api/createApiHandler.js";
-import type { RoomCodeService } from "./services/RoomCodeService.js";
+import { createGameServer, type GameServerOptions } from "./createGameServer.js";
+import { RoomCodeService } from "./services/RoomCodeService.js";
 
 const AddressSchema = z.object({ port: z.number() });
 
@@ -37,4 +40,116 @@ export async function serveApi(
     api.listen(options.port, options.host, resolve);
   });
   return api;
+}
+
+export interface NodeServerOptions extends Omit<GameServerOptions, "transport"> {
+  /** Game server port; a free one when omitted. */
+  port?: number;
+  /** Code API port; a free one when omitted. */
+  apiPort?: number;
+  /** Interface the code API binds; every interface when omitted. */
+  host?: string;
+}
+
+/** A game server and its code API running in this process. */
+export class NodeServerHandle {
+  private stopped = false;
+
+  constructor(
+    readonly server: Server,
+    private readonly api: HttpServer,
+    readonly roomCodeService: RoomCodeService,
+    readonly port: number,
+    readonly apiPort: number,
+  ) {}
+
+  get endpoint(): string {
+    return `ws://127.0.0.1:${this.port}`;
+  }
+
+  /** Closes the API and the game server; calling it again does nothing. */
+  async stop(): Promise<void> {
+    if (this.stopped) return;
+    this.stopped = true;
+    this.api.closeAllConnections();
+    await new Promise((resolve) => this.api.close(resolve));
+    await this.server.gracefullyShutdown(false);
+  }
+}
+
+// Colyseus `listen` hangs instead of rejecting on a taken port, so check first.
+async function claimPort(port: number): Promise<void> {
+  const probe = createSocketServer();
+  await new Promise<void>((resolve, reject) => {
+    probe.once("error", reject);
+    probe.listen(port, resolve);
+  });
+  await new Promise((resolve) => probe.close(resolve));
+}
+
+/** Runs the game server and its code API in this process, on the given ports or free ones. Rejects, leaving nothing open, when either port is taken. */
+export async function startNodeServer(options: NodeServerOptions): Promise<NodeServerHandle> {
+  const { port: wantedPort, apiPort: wantedApiPort, host, ...serverOptions } = options;
+  if (wantedPort !== undefined && wantedPort === wantedApiPort) {
+    throw new Error("The game server and the code API need different ports");
+  }
+  const port = wantedPort ?? (await freePort());
+  const apiPort = wantedApiPort ?? (await freePort());
+  const roomCodeService = options.roomCodeService ?? new RoomCodeService();
+  await claimPort(port);
+  const api = await serveApi(
+    roomCodeService,
+    host === undefined ? { port: apiPort } : { port: apiPort, host },
+  );
+  let server: Server | undefined;
+  try {
+    server = createGameServer({ ...serverOptions, roomCodeService });
+    await server.listen(port);
+  } catch (error) {
+    api.closeAllConnections();
+    await new Promise((resolve) => api.close(resolve));
+    await server?.gracefullyShutdown(false);
+    throw error;
+  }
+  return new NodeServerHandle(server, api, roomCodeService, port, apiPort);
+}
+
+const PROBE_TIMEOUT_MS = 800;
+
+/** Checks whether something is already running where a launcher would look. */
+export class ServerProbe {
+  /** True when a game server listens on `port` and its code API answers on `apiPort`. */
+  async isGameServer(port: number, apiPort: number): Promise<boolean> {
+    if (!(await this.canConnect(port))) return false;
+    try {
+      const response = await fetch(`http://localhost:${apiPort}/api/resolve-code?code=ZZZZ`, {
+        signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+      });
+      return ResolveCodeResponseSchema.safeParse(await response.json()).success;
+    } catch {
+      return false;
+    }
+  }
+
+  /** True when `url` answers at all, whatever the status. */
+  async answers(url: string): Promise<boolean> {
+    try {
+      await fetch(url, { signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** True when something accepts a TCP connection on `port`. */
+  canConnect(port: number, host = "localhost"): Promise<boolean> {
+    return new Promise((resolve) => {
+      const socket = connect({ port, host });
+      socket.once("connect", () => {
+        socket.destroy();
+        resolve(true);
+      });
+      socket.once("error", () => resolve(false));
+    });
+  }
 }

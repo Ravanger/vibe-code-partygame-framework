@@ -1,7 +1,7 @@
 # Party Game Framework (vibe-coded)
 
 > **Goal:** A flexible, modern, TypeScript-first framework for building immersive, multi-device social party games.
-> **Status:** Playable end to end. Plan 10 (framework inversion) stages 1-7 are done: XState-driven `GameRuntime`, generic Colyseus `GameRoom`, generic Svelte SDK, WitClash as a game on top; 4-bot playtest and review fixes landed. Stage 8 (QR join, TV view, kick/settings UI, podium, best-answer award, progress and typing badges) is done. Stage 9 (lifecycle review fixes: name entry for late joiners, minimum players, host `END_GAME`, spectator resume, seated-only podium, `NAME_TAKEN`, spectator-only rooms dispose) is done; Plan 12 (UI redesign, "House Party" look: paper, tape, player stickers, sparkler timer, phase banners; UX fixes from `.AGENTS/plans/12-redesign-audit.md`) is done. Plan 14 (quick hoists into the framework packages) is done. Plan 15 (`@partygame/bots`) is done. Next: launcher + terminal kit hoist. Open: persistence (Phase 9), i18n, plugins (`.AGENTS/plans/13-hoisting-scan.md`). Plans: `.AGENTS/plans/10-framework-inversion.md`, `.AGENTS/plans/12-redesign.md`.
+> **Status:** Playable end to end.
 
 ## !Note: Internal agent files (checklists, logs, notes, memories, etc.) should go in the `.AGENTS/` directory
 
@@ -25,28 +25,31 @@
 
 - `packages/shared`: wire protocol (`protocol.ts`: message names, `ErrorCode`, `ActionResult`, zod schemas), helpers (`waitFor`, `resolveRoomCode`, `joinUrl`/`tvUrl`, `NAME_MAX_LENGTH`) and the browser-safe state classes (`@partygame/shared/schema`: `BaseGameState`, `PlayerSchema`).
 - `packages/core`: pure game runtime, no Colyseus: `defineGame`, `actionFactory`, `GameRuntime` (XState actor per room, built-in Lobby/`START_GAME`/`SET_OPTIONS`/`KICK_PLAYER`), `scoring.ts` helpers, `shuffle`/`required`; `@partygame/core/testing` has `FakeHost`.
-- `packages/server`: generic Colyseus host: `createGameServer`, `GameRoom`, `createApiHandler` (`/api/resolve-code`), `RoomCodeService`; `@partygame/server/bun` (`startServer`), `/node` (`freePort`, `serveApi`), `/content` (`loadJsoncDir`) and `/testing` (`bootTestServer`).
+- `packages/server`: generic Colyseus host: `createGameServer`, `GameRoom`, `createApiHandler` (`/api/resolve-code`), `RoomCodeService`; `@partygame/server/bun` (`startServer`), `/node` (`freePort`, `serveApi`, `startNodeServer`, `ServerProbe`), `/content` (`loadJsoncDir`) and `/testing` (`bootTestServer`).
 - `packages/game-client`: Svelte 5 SDK: `GameConnectionManager`, `Countdown`, `resolveEndpoints`, `readCodeParam`; `/testing` has `StubRoom`, `/test-setup` is the vitest setup file for jsdom.
 - `packages/bots`: bot players for any game: `BotPlayer` (pacing, de-dup, hosting), `joinBots`, `BotTable`, `DemoTable`; a game supplies a `BotStrategy`.
-- `packages/cli`: Scaffolding tool for new games **(planned, not yet created)**.
-- `games/wit-clash`: reference game (Quiplash-style). `src/` rules, `ui/` Svelte client, `server.ts` Bun entry, `content/categories/*.jsonc` host-editable prompts. See `games/wit-clash/README.md`.
+- `packages/terminal`: terminal clients for any game: `TerminalPlayer`, `PlaySession`, `ReadlinePrompter`, `parsePlayArgs`/`parseBotsArgs`, `runBotsCommand`; a game supplies a `TerminalStrategy`.
+- `packages/launcher`: `runLauncher(config, argv)`: game server, API and client (dev, host, prod) plus `--bots`/`--demo` tables, from a `LaunchConfig`.
+- `games/wit-clash`: reference game (Quiplash-style). `src/` rules, `ui/` Svelte client, `server.ts` Bun entry, `launch.ts` launcher config, `content/categories/*.jsonc` host-editable prompts. See `games/wit-clash/README.md`.
 - `docs/`: `framework/README.md` (game author guide), `HOSTING.md` (running and LAN play).
-- `launch.ts`: one-command launcher (game server, API and client); wit-clash specific.
+- `scripts/game.ts`: root dispatcher, `bun run scripts/game.ts <list|launch|play|bots> [game] [...args]` runs `games/<game>/launch.ts`, `terminal/play.ts` or `bots/cli.ts`. A game is a `games/` folder with a `package.json`; it is the first argument when that names one, the only game otherwise, else a numbered prompt (no terminal: the list and exit 2). Pure part in `scripts/gameEntry.ts`.
 
 ## Commands
 
 | Command | What |
 |---|---|
 | `bun run build` | turbo: every package, then the Vite client bundle |
-| `bun run typecheck` | turbo: `tsc` per package, plus `svelte-check` for the game. `bun run typecheck:launch` covers `launch.ts` |
+| `bun run typecheck` | turbo: `tsc` per package, plus `svelte-check` for the game. |
+| `bun run typecheck:scripts` | `tsc` over `scripts/` |
 | `bun run lint` | `biome check .` through the local binary (`./node_modules/.bin/biome.exe check .` on Windows; not `npx`) |
 | `bun run test:coverage` | `vitest run --coverage` over all projects, 100% thresholds |
-| `bun run verify` | lint, typecheck of `launch.ts` and the game, coverage |
+| `bun run verify` | lint, typecheck of `scripts/` and every package and the game, coverage |
 | `bun run launch:demo` | dev launch that also opens a watch-only room (room option `seats`) where a host bot and N bots (`--demo[=2..7]`, default 3) play one game; the browser opens `/?tv=CODE`, the TV stays on the final Results. Excludes `--bots`. `terminal/DemoTable.ts` |
-| `bun run launch:bots` | dev launch that also opens a room, lands your browser in it and seats 3 bots once you enter your name (`launch.ts <mode> --bots[=1..7]`) |
+| `bun run launch:bots` | dev launch that also opens a room, lands your browser in it and seats 3 bots once you enter your name (`games/wit-clash/launch.ts <mode> --bots[=1..7]`) |
 | `bun run bots <CODE> [count]` | WitClash bots join a room created in the browser and play every turn (`--endpoint`, `--api-port`); Ctrl+C removes them |
-| `bun run cli:play [--bots=N] [--name=You] [--join=ABCD]` / `cli:demo [--bots=N] [--rounds=R]` | WitClash in the terminal (`games/wit-clash/terminal/`): play with bots on a server it finds or starts / narrated all-bot game that prints PASS or FAIL |
-| `bun run launch` / `launch:host` / `launch:prod` | game server (2567), API (3001), Vite (5173) or built client (3000); `--no-browser` to skip opening one |
+| `bun run play [--bots=N] [--name=You] [--join=ABCD]` / `bun run --cwd games/wit-clash demo [--bots=N] [--rounds=R]` | WitClash in the terminal (`games/wit-clash/terminal/`): play with bots on a server it finds or starts / narrated all-bot game that prints PASS or FAIL |
+| `bun run games` | lists the games under `games/` and the commands each has an entry for |
+| `bun run launch` / `launch:host` / `launch:prod` | (through `scripts/game.ts`, entry `games/wit-clash/launch.ts`) game server (2567), API (3001), Vite (5173) or built client (3000); `--no-browser` to skip opening one |
 
 ## Library Documentation References
 
@@ -98,25 +101,6 @@ Versions are what the consuming package resolves (checked against installed `pac
 | Frontend           | Svelte 5.57 (Runes), Vite 8 |
 | Testing            | Vitest v4.1 (`FakeHost` for rules, real Colyseus server for rooms, Testing Library for screens) |
 | Linting/Formatting | Biome v2.5          |
-
-## MVP Checklist
-
-- [x] Phase 0: Monorepo Scaffold & Tooling
-- [x] Phase 1: Core DSL (`defineGame`, `actionFactory`; phases, actions, options, timers)
-- [x] Phase 2: Server-side Room Logic; `GameRuntime` driven by an XState actor, built-in Lobby
-- [x] Phase 3: Per-player private state (StateView, `.view()` fields); votes hidden until the reveal
-- [x] Phase 4: Svelte 5 Client SDK (`GameConnectionManager`)
-- [x] Phase 5: Reference Game Implementation (WitClash)
-- [x] Phase 6: Playable loop: Welcome, Waiting Room, Category Voting, Prompting, Answer Voting, Reveal, Results
-- [x] Phase 7: Reconnection (SDK token reconnect, or a new session with the same `playerId`)
-- [x] Phase 8: Host-editable content
-- [x] Phase 8b (plan 10): spectator join option, host `KICK_PLAYER` and `SET_OPTIONS`, request/response actions (`ActionResult`), mid-game joiners wait for the next round (`JoinNextRound` screen), no-answer forfeits, no repeat prompts. The UI uses all three: TV view, host remove buttons, lobby settings form.
-- [ ] Phase 9: Persistence provider (Firebase/Supabase); the old `database/` package was deleted, nothing replaces it yet
-- [x] Phase 10: QR code join (`uqr` renders the waiting-room QR of `<origin>/?code=ABCD`; `?code=` auto-joins, `?tv=` auto-watches)
-- [x] Phase 11a (plan 10 stage 8): TV view (`manager.isSpectator`, `main.tv` layout), host remove button with confirm, lobby settings form
-- [x] Phase 11b (plan 10 stage 8): Results podium (ties share a step, leavers marked, tie-breaker badge), best-answer award, per-player progress and typing badges (`SET_TYPING` from Prompting and TieBreakerPrompting)
-- [x] Plan 10 stage 7: 4-bot playtest re-run, code review, fixes
-- [x] Plan 10 stage 9: lifecycle review fixes, 4-bot playtest A-G pass
 
 ## Troubleshooting
 
@@ -178,7 +162,9 @@ Paths are relative to `games/wit-clash/` unless they start with `packages/`. Tes
 | A timed phase | Set `duration` (ms, or a function of `ctx`) and `onTimeout` on the phase; the runtime writes `state.phaseEndsAt` and the server owns the clock. Client side: `manager.countdown()`, as in `ui/viewmodels/CategoryVoteViewModel.ts`. |
 | A scoring rule | Edit `src/scoring.ts` (`calculateMatchupAwards`, `settleMatchup`, constants). Points are applied in `src/phases/MatchupReveal.ts` through `awardPoints` from `@partygame/core`. |
 | Bots for a game | Write a `BotStrategy<YourState>` with `play` (required) and optional `host` methods, and a `BotKit { roomName, stateClass, strategy }`; pass it to `joinBots`, `BotTable` or `DemoTable` from `@partygame/bots`. Guide: `docs/framework/README.md` (Bots). WitClash example: `games/wit-clash/bots/witClashBot.ts`. |
-| A whole new game | 1. `games/<name>/` with its own `package.json` (copy `games/wit-clash/package.json`; the `games/*` workspace and turbo pick it up), `tsconfig.json`, `vite.config.ts`, `index.html`. 2. `src/state.ts` extending `BaseGameState` from `@partygame/shared/schema`; `src/private.ts`; `src/phaseNames.ts`, `src/actionNames.ts`, `src/actions.ts` (`actionFactory`); `src/phases/*.ts`; `src/game.ts` with `defineGame`. 3. `server.ts`: `startServer({ games: [{ roomName, definition, stateClass }] })` from `@partygame/server/bun`. 4. `ui/`: a `GameConnectionManager<YourState>` in `main.ts` with its own `storagePrefix`, plus screens and viewmodels. 5. Add its vitest configs to `projects` in the root `vitest.config.mts`. `launch.ts` is wit-clash specific (`GAME_DIR`). Guide: `docs/framework/README.md`. |
+| A whole new game | 1. `games/<name>/` with its own `package.json` (copy `games/wit-clash/package.json`; the `games/*` workspace and turbo pick it up), `tsconfig.json`, `vite.config.ts`, `index.html`. 2. `src/state.ts` extending `BaseGameState` from `@partygame/shared/schema`; `src/private.ts`; `src/phaseNames.ts`, `src/actionNames.ts`, `src/actions.ts` (`actionFactory`); `src/phases/*.ts`; `src/game.ts` with `defineGame`. 3. `server.ts`: `startServer({ games: [{ roomName, definition, stateClass }] })` from `@partygame/server/bun`. 4. `ui/`: a `GameConnectionManager<YourState>` in `main.ts` with its own `storagePrefix`, plus screens and viewmodels. 5. Add its vitest configs to `projects` in the root `vitest.config.mts`. 6. `launch.ts` calling `runLauncher` from `@partygame/launcher` (add `@partygame/launcher` as a dependency); `bun run launch <name>` then works. Guide: `docs/framework/README.md`. |
+| A terminal client for a game | `TerminalStrategy<YourState>` with `play(turn)` (ask, `turn.send`, `turn.changed`), optional `narrate`/`lobby`, in `terminal/<name>Terminal.ts`; `terminal/play.ts` wires `parsePlayArgs`, `PlaySession` and `TerminalPlayer` (a `HostedGame` from `src/hostedGame.ts` lets it start a server); `bots/cli.ts` calls `runBotsCommand`. `bun run play` and `bun run bots` pick them up by convention. Guide: `docs/framework/README.md` (Terminal). |
+| Launching a game | `games/<name>/launch.ts`: `runLauncher({ name, gameDir, bots?, demo?, ports?, commands? }, process.argv.slice(2))`. `gameDir` holds `server.ts` and the `dev`/`build` scripts. Omit `bots`/`demo` and those flags are refused. Guide: `docs/framework/README.md` (Launcher). |
 | A framework feature | Host built-ins live in `packages/core/src/runtime/lobby.ts`; the runtime in `packages/core/src/runtime/GameRuntime.ts`; seats, reconnection and views in `packages/server/src/rooms/GameRoom.ts`; wire names and error codes in `packages/shared/src/protocol.ts`. The runtime stays Colyseus-free: new needs go through the `RuntimeHost` interface (`packages/core/src/runtime/types.ts`) and `FakeHost`. |
 
 <!-- BEGIN:turborepo-agent-rules -->

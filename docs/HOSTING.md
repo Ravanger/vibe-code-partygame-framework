@@ -12,6 +12,8 @@ bun run launch
 (`http://<host>:5173/?code=ABCD`) that joins a guest straight into your room. Each player enters a name. The game takes 3 to 8 players: the host presses **Start Game** once at least 3
 players are in and every one of them has entered a name.
 
+The launcher lives in `packages/launcher`; each game's `launch.ts` configures it and the root `scripts/game.ts` runs it (`bun run launch [game]`, the game name is needed only when `games/` holds several).
+
 Press Ctrl+C to stop everything. If any of the three processes dies, the launcher stops the rest and exits with an error.
 
 ## Launch Commands
@@ -72,12 +74,12 @@ bun run launch:demo          # watch-only room: bots play one game, the browser 
 ## Play in the terminal
 
 ```bash
-bun run cli:play                  # host a room; 3 bots join; uses the server on 2567/3001 or starts its own
-bun run cli:play --join=ABCD      # join a room as a normal player
-bun run cli:demo                  # all-bot game, narrated; prints PASS/FAIL (--bots=N total players, --rounds=R)
+bun run play                      # host a room; 3 bots join; uses the server on 2567/3001 or starts its own
+bun run play --join=ABCD          # join a room as a normal player
+bun run --cwd games/wit-clash demo  # all-bot game, narrated; prints PASS/FAIL (--bots=N total players, --rounds=R)
 ```
 
-You are the host in `cli:play`; browser players can join the same room with the printed code while Vite runs.
+You are the host in `play`; browser players can join the same room with the printed code while Vite runs.
 
 ## Joining by QR Code
 

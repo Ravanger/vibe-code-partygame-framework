@@ -1,12 +1,13 @@
 import type { Room } from "@colyseus/sdk";
 import { type BotOutcome, BotPlayer, type DelayRange, joinBots } from "@partygame/bots";
+import { type NodeServerHandle, startNodeServer } from "@partygame/server/node";
 import { waitFor } from "@partygame/shared";
+import { GameClient } from "@partygame/terminal";
 import { witClashBot, witClashKit } from "../bots/witClashBot.js";
 import type { CategoryRepository } from "../src/content/CategoryRepository.js";
+import { witClashGame } from "../src/hostedGame.js";
 import { PHASE } from "../src/phaseNames.js";
 import type { WitClashState } from "../src/state.js";
-import { GameClient } from "./GameClient.js";
-import { GameServerHandle } from "./GameServerHandle.js";
 import { Narrator } from "./Narrator.js";
 
 export interface DemoOptions {
@@ -34,9 +35,9 @@ export class DemoRun {
   /** Plays the game; true when it reached Results, the scores add up and no action was rejected. */
   async run(): Promise<boolean> {
     const { out } = this.options;
-    const server = new GameServerHandle(this.options.categories);
+    let server: NodeServerHandle | undefined;
     try {
-      await server.start();
+      server = await startNodeServer({ games: [witClashGame(this.options.categories)] });
       out(`Demo server on ${server.endpoint}, code API on port ${server.apiPort}`);
       const spectator = await this.play(server);
       const problems = this.problems(spectator.state);
@@ -47,13 +48,13 @@ export class DemoRun {
       return false;
     } finally {
       await Promise.allSettled(this.leavers.map((leave) => leave()));
-      await server.stop();
+      await server?.stop();
     }
   }
 
-  private async play(server: GameServerHandle): Promise<Room<WitClashState>> {
+  private async play(server: NodeServerHandle): Promise<Room<WitClashState>> {
     const { players, rounds, revealSeconds, timeoutMs = DEFAULT_TIMEOUT_MS } = this.options;
-    const client = new GameClient(server.endpoint, server.apiPort);
+    const client = new GameClient(server.endpoint, server.apiPort, witClashKit());
     const botOptions = {
       thinkMs: this.options.thinkMs,
       reactMs: this.options.reactMs,
