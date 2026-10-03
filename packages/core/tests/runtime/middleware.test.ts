@@ -1,3 +1,4 @@
+import { ErrorCode } from "@partygame/shared";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
@@ -38,6 +39,16 @@ const game = (middleware: PhaseMiddleware<S, P, O>[]) =>
             payload: z.object({}),
             handler: (ctx) => ctx.transition("Score"),
           }),
+          PING: action({
+            from: "player",
+            payload: z.object({}),
+            handler: (ctx) => ctx.state.log.push("ping"),
+          }),
+          NOPE: action({
+            from: "player",
+            payload: z.object({}),
+            handler: (ctx) => ctx.reject(ErrorCode.NOT_ALLOWED, "nope"),
+          }),
         },
       },
       Score: {},
@@ -59,6 +70,10 @@ class MTable extends TestTable<S, P, O> {
 const layer =
   (name: string): PhaseMiddleware<S, P, O> =>
   (ctx, next) => {
+    if (ctx.event.kind !== "enter") {
+      next();
+      return;
+    }
     ctx.state.log.push(`${name}-in`);
     next();
     ctx.state.log.push(`${name}-out`);
@@ -81,7 +96,10 @@ describe("middleware chain around onEnter", () => {
   });
 
   it("skips the hook when a middleware omits next(), but still enters the phase", () => {
-    const skip: PhaseMiddleware<S, P, O> = () => {};
+    // Skips only enter events so the START_GAME action can still flow.
+    const skip: PhaseMiddleware<S, P, O> = (ctx, next) => {
+      if (ctx.event.kind !== "enter") next();
+    };
     const table = new MTable([skip]);
     table.state.log.length = 0;
     table.start();
@@ -101,5 +119,55 @@ describe("middleware chain around onEnter", () => {
     const table = new MTable([mw]);
     table.start();
     expect(seen).toEqual(["Lobby|s|2", "Play|s|2"]);
+  });
+});
+
+describe("middleware chain around action handlers", () => {
+  const recordActions =
+    (seen: string[]): PhaseMiddleware<S, P, O> =>
+    (ctx, next) => {
+      if (ctx.event.kind === "action") {
+        seen.push(`${ctx.event.actionType} by ${ctx.event.senderId}`);
+      }
+      next();
+    };
+
+  it("sees the action type and sender for a player action", () => {
+    const seen: string[] = [];
+    const table = new MTable([recordActions(seen)]);
+    table.start();
+    seen.length = 0;
+    table.act("p2", "GO");
+    expect(seen).toEqual(["GO by p2"]);
+  });
+
+  it("wraps built-in actions too", () => {
+    const seen: string[] = [];
+    const table = new MTable([recordActions(seen)]);
+    table.start();
+    expect(seen).toEqual(["START_GAME by p1"]);
+  });
+
+  it("runs around the handler", () => {
+    const mw: PhaseMiddleware<S, P, O> = (ctx, next) => {
+      ctx.state.log.push("mw-before");
+      next();
+      ctx.state.log.push("mw-after");
+    };
+    const table = new MTable([mw]);
+    table.start();
+    table.state.log.length = 0;
+    table.act("p2", "PING");
+    expect(table.state.log).toEqual(["mw-before", "ping", "mw-after"]);
+  });
+
+  it("keeps handler rejections identical with middleware registered", () => {
+    const plain = new MTable();
+    plain.start();
+    plain.act("p2", "NOPE");
+    const wrapped = new MTable([layer("x")]);
+    wrapped.start();
+    wrapped.act("p2", "NOPE");
+    expect(wrapped.errors("p2")).toEqual(plain.errors("p2"));
   });
 });

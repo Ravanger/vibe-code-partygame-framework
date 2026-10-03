@@ -330,7 +330,9 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       payload: payload.data,
       reject: (code, message) => this.reject(playerId, type, code, message),
     };
-    action.handler(actionContext);
+    this.chain({ kind: "action", actionType: type, senderId: playerId }, () =>
+      action.handler(actionContext),
+    );
   }
 
   private reject(
