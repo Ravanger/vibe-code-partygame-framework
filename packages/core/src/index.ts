@@ -1,3 +1,4 @@
+export { type LoggingMiddlewareOptions, loggingMiddleware } from "./middleware.js";
 export * from "./runtime/index.js";
 export {
   awardPoints,
