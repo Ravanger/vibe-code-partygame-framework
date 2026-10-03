@@ -178,6 +178,13 @@ pattern as `timingMiddleware`). It never touches `ctx.state`; export it with `JS
 Rejected actions are **not** logged: they never reach the handler chain, and rejections change no state.
 Roster changes are recorded for observability (see the replay limitation below).
 
+**Roster.** When `START_GAME` is dispatched, the middleware also records `log.roster` — the seat ids
+in seat order at start time, captured once (a second start after `returnToLobby` does not overwrite
+it). Lobby-only sessions have no roster. This is what makes logs from real rooms replayable: replay
+pre-seats exactly these seats and maps their ids positionally to `p1..pN`, so every recorded sender
+re-dispatches against the matching replay seat (the live host is always the first seat, and the
+replay table's first seat is its host).
+
 **Determinism contract.** A log replays exactly when its two non-determinism sources are controlled:
 
 - **RNG.** Rooms draw their randomness from a seeded PRNG (`mulberry32`); each room gets a seed from
@@ -187,8 +194,9 @@ Roster changes are recorded for observability (see the replay limitation below).
   timers fire at exactly the logged times.
 
 **Replay.** `replayLog(definition, log, init)` re-drives a fresh runtime — same definition, RNG seeded from
-the header, clock starting at `header.startedAt`, `init.players` pre-seated — dispatching every logged action
-in order:
+the header, clock starting at `header.startedAt`, the recorded roster pre-seated (`p1..pN` mapped
+positionally; for logs without a roster, `init.players` pre-seats that many seats instead) — dispatching
+every logged action in order:
 
 ```ts
 import { replayLog } from "@partygame/core";
@@ -196,7 +204,7 @@ import { replayLog } from "@partygame/core";
 const { states } = replayLog(ButtonGame, log, {
   state: new State(), // same shape as passed to TestTable
   options: {},
-  players: 4,         // roster size the session started with
+  // players is only needed for logs without a recorded roster (lobby-only sessions)
   // seed defaults to log.header.seed
 });
 ```
@@ -208,9 +216,11 @@ the log's `game` does not match the definition, on a mid-game roster change, on 
 or when a re-dispatched action is rejected (a valid log only contains accepted actions).
 
 **Limitations in v1.** Mid-game roster changes are not replayed: `replayLog` throws naming the first such
-entry. Lobby-phase roster changes are skipped — players are pre-seated at construction — so a game whose
-`Lobby.onRosterChange` writes synced state may diverge in intermediate states for sessions with lobby
-joins/leaves (final states still match). No log cap; party sessions are minutes long.
+entry. Lobby-phase roster changes are skipped — the recorded roster is pre-seated at construction — so a
+game whose `Lobby.onRosterChange` writes synced state may diverge in intermediate states for sessions with
+lobby joins/leaves (final states still match). A sender that is not in the recorded roster (for example a
+joiner of a second session after `returnToLobby`) makes the re-dispatch throw. No log cap; party sessions
+are minutes long.
 
 **Runtime additions.** Action middleware events now carry the zod-parsed `payload`; every context exposes
 `ctx.gameName` (definition name) and `ctx.seed` (room RNG seed), which the log header records.

@@ -216,3 +216,30 @@ describe("action log content, ordering and isolation", () => {
     expect(getActionLog(table.priv)).toBe(log);
   });
 });
+
+describe("action log roster", () => {
+  it("records the seat order when START_GAME is dispatched, and only then", () => {
+    const table = new ATable();
+    expect(table.log()?.roster).toBeUndefined(); // lobby only: no start yet
+    table.start();
+    expect(table.log()?.roster).toEqual(["p1", "p2"]);
+  });
+
+  it("captures the roster at start time, not later joins", () => {
+    const table = new ATable();
+    table.start();
+    table.joinLate("p3");
+    expect(table.log()?.roster).toEqual(["p1", "p2"]);
+  });
+
+  it("records the roster once: a second start after returnToLobby does not overwrite it", () => {
+    const table = new ATable();
+    table.start();
+    table.act("p1", "END_GAME"); // back to the Lobby
+    table.joinLate("p3");
+    table.start(); // second start
+    const log = table.log();
+    expect(log?.roster).toEqual(["p1", "p2"]);
+    expect(log?.entries.filter((e) => e.actionType === "START_GAME")).toHaveLength(2);
+  });
+});

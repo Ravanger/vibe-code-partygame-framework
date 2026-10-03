@@ -210,6 +210,76 @@ describe("replayLog", () => {
     expect(fromHeader.states.at(-1)?.roll).toBe(Math.floor(mulberry32(7)() * 100));
     expect(fromInit.states.at(-1)?.roll).toBe(Math.floor(mulberry32(8)() * 100));
   });
+
+  it("re-dispatches recorded sender ids through the positional roster map", () => {
+    const live = liveTable();
+    live.start();
+    live.act("p2", "TAP", { by: 3 });
+    live.tick(1000);
+    const log = getActionLog(live.priv) as ActionLog;
+    // rename the seats to client-generated ids, as a real server room would have
+    const renamed: ActionLog = {
+      ...log,
+      roster: ["aaaa-1", "bbbb-2"],
+      entries: log.entries.map((e) =>
+        e.kind === "action" && e.senderId !== undefined
+          ? { ...e, senderId: e.senderId === "p1" ? "aaaa-1" : "bbbb-2" }
+          : e,
+      ),
+    };
+    const { states } = replayLog(definition, renamed, { state: newState(), options: {} });
+    expect(states).toEqual([
+      { phase: "Lobby", phaseEndsAt: 0, canStart: true, taps: 0 },
+      { phase: "Tap", phaseEndsAt: 1_001_000, canStart: false, taps: 0 },
+      { phase: "Tap", phaseEndsAt: 1_001_000, canStart: false, taps: 3 },
+      { phase: "Done", phaseEndsAt: 0, canStart: false, taps: 3 },
+    ]);
+  });
+
+  it("rejects an action from a sender missing from the recorded roster", () => {
+    const live = liveTable();
+    live.start();
+    live.act("p2", "TAP", { by: 3 });
+    const log = getActionLog(live.priv) as ActionLog;
+    const stray: ActionLog = {
+      ...log,
+      roster: ["aaaa-1", "bbbb-2"],
+      entries: log.entries.map((e) =>
+        e.kind === "action" && e.senderId !== undefined
+          ? { ...e, senderId: e.actionType === "START_GAME" ? "aaaa-1" : "cccc-9" }
+          : e,
+      ),
+    };
+    expect(() => replayLog(definition, stray, { state: newState(), options: {} })).toThrow(
+      "re-dispatched action TAP was rejected",
+    );
+  });
+
+  it("requires init.players when the log has no recorded roster", () => {
+    const live = liveTable();
+    live.start();
+    const log = getActionLog(live.priv) as ActionLog;
+    // a lobby-only session (or an older log) has no roster field at all
+    const noRoster: ActionLog = { header: log.header, entries: log.entries };
+    expect(() => replayLog(definition, noRoster, { state: newState(), options: {} })).toThrow(
+      "the log has no recorded roster; pass init.players",
+    );
+  });
+
+  it("falls back to init.players when the log has no recorded roster", () => {
+    const live = liveTable();
+    live.start();
+    live.act("p2", "TAP", { by: 3 });
+    live.tick(1000);
+    const log = getActionLog(live.priv) as ActionLog;
+    const noRoster: ActionLog = { header: log.header, entries: log.entries };
+    const { states } = replayLog(definition, noRoster, {
+      state: newState(),
+      options: {},
+      players: 2,
+    });
+    expect(states.at(-1)).toEqual({ phase: "Done", phaseEndsAt: 0, canStart: false, taps: 3 });
+  });
 });
 
 describe("replay round-trip", () => {

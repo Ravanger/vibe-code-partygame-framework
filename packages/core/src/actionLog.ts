@@ -40,6 +40,13 @@ export interface ActionLogHeader {
 /** The complete record of one room session. JSON-serializable. */
 export interface ActionLog {
   header: ActionLogHeader;
+  /**
+   * Seat ids in seat order, captured when START_GAME was dispatched (once — a second start after
+   * `returnToLobby` does not overwrite it). The live host is the first seat, and replay maps these
+   * positionally to p1..pN, so senders re-dispatch against the matching replay seats. Absent from
+   * lobby-only sessions; `replayLog` then requires `init.players`.
+   */
+  roster?: string[];
   entries: ActionLogEntry[];
 }
 
@@ -87,6 +94,10 @@ export function actionLogMiddleware(): PhaseMiddleware<PhaseState, unknown, unkn
       entry.actionType = event.actionType;
       entry.senderId = event.senderId;
       entry.payload = event.payload;
+      if (event.actionType === "START_GAME" && log.roster === undefined) {
+        // The seats when the game starts, in seat order — what replay pre-seats.
+        log.roster = ctx.players().map((seat) => seat.id);
+      }
     } else if (event.kind === "transition") {
       entry.from = event.from;
       entry.to = event.to;
