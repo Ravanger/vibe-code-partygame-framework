@@ -22,4 +22,4 @@ export {
   type LeaderboardInput,
   leaderboard,
 } from "./scoring.js";
-export { randomSeed, required, shuffle } from "./utils.js";
+export { mulberry32, randomSeed, required, shuffle } from "./utils.js";

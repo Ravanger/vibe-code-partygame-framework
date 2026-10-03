@@ -1,4 +1,5 @@
 import type { PlayerInfo, RuntimeHost } from "../runtime/types.js";
+import { mulberry32 } from "../utils.js";
 
 interface Timer {
   id: number;
@@ -21,10 +22,16 @@ export class FakeHost implements RuntimeHost {
   readonly views: Array<{ op: "show" | "hide"; playerId: string; ref: object }> = [];
   readonly kicked: string[] = [];
   readonly published: unknown[] = [];
-  /** No seeded PRNG yet: `rng()` is the constant 0.5 and this seed is a placeholder. */
-  readonly seed = 0;
+  /** The room RNG seed; 0 when unseeded, in which case `rng()` is the constant 0.5. */
+  readonly seed: number;
+  private rngFn: () => number;
   private timers: Timer[] = [];
   private nextId = 1;
+
+  constructor(seed?: number) {
+    this.seed = seed ?? 0;
+    this.rngFn = seed === undefined ? () => 0.5 : mulberry32(seed);
+  }
 
   seat(id: string, overrides: Partial<PlayerInfo> = {}): PlayerInfo {
     const info: PlayerInfo = {
@@ -108,7 +115,7 @@ export class FakeHost implements RuntimeHost {
   }
 
   rng(): number {
-    return 0.5;
+    return this.rngFn();
   }
 
   setTimeout(callback: () => void, ms: number): unknown {

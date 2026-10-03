@@ -11,17 +11,23 @@ export interface TestTableConfig<TState extends PhaseState, TPrivate, TOptions> 
   options: TOptions;
   /** Seats p1..pN, p1 is the host; default 4. */
   players?: number;
+  /** Seed for the room RNG (mulberry32). Omit to keep FakeHost's constant `rng()` of 0.5. */
+  seed?: number;
+  /** Initial fake clock value (epoch ms); defaults to FakeHost's 1_000_000. */
+  startTime?: number;
 }
 
 /** A room driven through the real runtime with a manual clock. Extend it with your game's scenario steps. */
 export class TestTable<TState extends PhaseState, TPrivate, TOptions> {
-  readonly host = new FakeHost();
+  readonly host: FakeHost;
   readonly state: TState;
   readonly runtime: GameRuntime<TState, TPrivate, TOptions>;
 
   constructor(config: TestTableConfig<TState, TPrivate, TOptions>) {
+    this.host = new FakeHost(config.seed);
     this.state = config.state;
     for (let i = 1; i <= (config.players ?? 4); ++i) this.host.seat(`p${i}`);
+    if (config.startTime !== undefined) this.host.time = config.startTime;
     this.runtime = new GameRuntime({
       definition: config.definition,
       state: config.state,

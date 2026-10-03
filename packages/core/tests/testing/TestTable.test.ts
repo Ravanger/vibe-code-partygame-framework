@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { actionFactory, defineGame, type PhaseState } from "../../src/index.js";
+import { actionFactory, defineGame, mulberry32, type PhaseState } from "../../src/index.js";
 import { TestTable } from "../../src/testing/index.js";
 
 interface TapState extends PhaseState {
@@ -104,6 +104,21 @@ describe("TestTable", () => {
 
   it("exposes the private state", () => {
     expect(table().priv).toEqual({ marker: "secret" });
+  });
+
+  it("seeds the room RNG and starts the clock where asked", () => {
+    const t = new TestTable({
+      definition: makeDefinition(),
+      state: newState(),
+      options: {},
+      players: 2,
+      seed: 42,
+      startTime: 5_000_000,
+    });
+    expect(t.host.seed).toBe(42);
+    const expected = mulberry32(42);
+    for (let i = 0; i < 5; ++i) expect(t.host.rng()).toBe(expected());
+    expect(t.host.now()).toBe(5_000_000);
   });
 
   it("removes a seat and runs the roster hook", () => {

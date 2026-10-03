@@ -3,6 +3,7 @@ import { type Schema, StateView } from "@colyseus/schema";
 import {
   type GameDefinition,
   GameRuntime,
+  mulberry32,
   type PlayerInfo,
   type RuntimeHost,
   randomSeed,
@@ -53,6 +54,8 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
   private readonly viewRefs = new Map<string, Set<Schema>>();
   /** Per-room RNG seed drawn from the platform CSPRNG at room creation; recorded in action logs. */
   private readonly seed = randomSeed();
+  /** Seeded PRNG so a room's randomness is reproducible from its log header. */
+  private readonly rngFn = mulberry32(this.seed);
 
   constructor(private readonly config: GameRoomConfig) {
     super();
@@ -186,7 +189,7 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
       this.state.options = JSON.stringify(options);
     },
     now: () => Date.now(),
-    rng: () => Math.random(),
+    rng: () => this.rngFn(),
     seed: this.seed,
     setTimeout: (callback, ms) => this.clock.setTimeout(() => this.safely(callback), ms),
     clearTimeout: (handle: Delayed) => handle.clear(),
