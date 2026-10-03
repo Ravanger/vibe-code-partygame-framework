@@ -47,6 +47,13 @@ class ATable extends TestTable<S, P, O> {
                 payload: z.object({ n: z.number() }),
                 handler: (ctx) => ctx.state.log.push(`ping:${ctx.payload.n}`),
               }),
+              DEEP: action({
+                from: "player",
+                payload: z.object({
+                  data: z.object({ items: z.array(z.number()), tag: z.string() }),
+                }),
+                handler: (ctx) => ctx.state.log.push(`deep:${ctx.payload.data.tag}`),
+              }),
             },
           },
           Score: {},
@@ -143,5 +150,69 @@ describe("actionLogMiddleware", () => {
         expect(Object.keys(entry).sort()).toEqual(["kind", "phase", "seq", "t"]);
       }
     }
+  });
+});
+
+describe("action log content, ordering and isolation", () => {
+  const scriptedSession = (): ATable => {
+    const table = new ATable();
+    table.start();
+    table.act("p2", "DEEP", { data: { items: [1, 2], tag: "x" }, extra: "stripped" });
+    table.joinLate("p3");
+    table.tick(1000);
+    return table;
+  };
+
+  it("records a scripted session exactly, in order", () => {
+    const table = scriptedSession();
+    expect(table.log()?.entries).toEqual([
+      { seq: 1, t: 1_000_000, phase: "Lobby", kind: "enter" },
+      {
+        seq: 2,
+        t: 1_000_000,
+        phase: "Lobby",
+        kind: "action",
+        actionType: "START_GAME",
+        senderId: "p1",
+        payload: {},
+      },
+      { seq: 3, t: 1_000_000, phase: "Lobby", kind: "transition", from: "Lobby", to: "Play" },
+      { seq: 4, t: 1_000_000, phase: "Play", kind: "enter" },
+      {
+        seq: 5,
+        t: 1_000_000,
+        phase: "Play",
+        kind: "action",
+        actionType: "DEEP",
+        senderId: "p2",
+        payload: { data: { items: [1, 2], tag: "x" } },
+      },
+      { seq: 6, t: 1_000_000, phase: "Play", kind: "roster-change" },
+      { seq: 7, t: 1_001_000, phase: "Play", kind: "timeout" },
+      { seq: 8, t: 1_001_000, phase: "Play", kind: "transition", from: "Play", to: "Score" },
+      { seq: 9, t: 1_001_000, phase: "Score", kind: "enter" },
+    ]);
+  });
+
+  it("captures payloads verbatim: the zod-parsed object, unknown fields stripped", () => {
+    const table = scriptedSession();
+    const deep = table.log()?.entries.find((e) => e.kind === "action" && e.actionType === "DEEP");
+    expect(deep?.payload).toEqual({ data: { items: [1, 2], tag: "x" } });
+    expect(Object.keys(deep?.payload as object)).toEqual(["data"]);
+  });
+
+  it("never touches ctx.state; the log lives only under priv[ACTION_LOG]", () => {
+    const table = scriptedSession();
+    expect(Object.keys(table.state)).toEqual(["phase", "phaseEndsAt", "canStart", "log"]);
+    expect(Object.keys(table.priv).sort()).toEqual([ACTION_LOG, "secret"]);
+  });
+
+  it("round-trips through JSON.stringify and JSON.parse", () => {
+    const table = scriptedSession();
+    const log = table.log();
+    expect(log).toBeDefined();
+    const roundTripped = JSON.parse(JSON.stringify(log));
+    expect(roundTripped).toEqual(log);
+    expect(getActionLog(table.priv)).toBe(log);
   });
 });
