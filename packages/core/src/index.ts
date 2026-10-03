@@ -1,4 +1,10 @@
-export { type LoggingMiddlewareOptions, loggingMiddleware } from "./middleware.js";
+export {
+  type LoggingMiddlewareOptions,
+  loggingMiddleware,
+  PHASE_TIMINGS,
+  type PhaseTimingRecord,
+  timingMiddleware,
+} from "./middleware.js";
 export * from "./runtime/index.js";
 export {
   awardPoints,
