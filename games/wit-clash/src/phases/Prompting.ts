@@ -16,7 +16,7 @@ const finish = (ctx: WitClashContext): void => {
     const entries = draftsFor(matchup.id, priv.assignments, priv.drafts);
     const answers = entries.map((entry) => {
       const answer = new Answer();
-      answer.id = crypto.randomUUID();
+      answer.id = ctx.newId();
       answer.text = entry.text ?? PLACEHOLDER_TEXT;
       priv.authors.set(answer.id, entry.playerId);
       if (entry.text === undefined) priv.placeholders.add(answer.id);
@@ -57,7 +57,7 @@ const deal = (ctx: WitClashContext): void => {
   const promptTexts = new Map<string, string>();
   for (const plan of planned) {
     const matchup = new Matchup();
-    matchup.id = crypto.randomUUID();
+    matchup.id = ctx.newId();
     matchup.index = plan.index;
     matchup.promptText = plan.promptText;
     promptTexts.set(matchup.id, plan.promptText);

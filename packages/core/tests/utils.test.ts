@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mulberry32, randomSeed, required, shuffle } from "../src/index.js";
+import { mulberry32, newId, randomSeed, required, shuffle } from "../src/index.js";
 
 describe("required", () => {
   it("returns a defined value, including falsy ones", () => {
@@ -61,5 +61,32 @@ describe("randomSeed", () => {
       expect(seed).toBeGreaterThanOrEqual(0);
       expect(seed).toBeLessThanOrEqual(2 ** 32 - 1);
     }
+  });
+});
+
+describe("newId", () => {
+  it("returns a v4-shaped uuid", () => {
+    for (let i = 0; i < 100; ++i) {
+      expect(newId(mulberry32(i))).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+      );
+    }
+  });
+
+  it("is deterministic for a seed and keeps the shared stream aligned", () => {
+    const a = mulberry32(7);
+    const b = mulberry32(7);
+    expect(newId(a)).toBe(newId(b));
+    expect(a()).toBe(b()); // the streams stay in step after an id
+  });
+
+  it("differs across seeds", () => {
+    expect(newId(mulberry32(1))).not.toBe(newId(mulberry32(2)));
+  });
+
+  it("is unique within a long session", () => {
+    const rng = mulberry32(1234);
+    const ids = new Set(Array.from({ length: 10_000 }, () => newId(rng)));
+    expect(ids.size).toBe(10_000);
   });
 });

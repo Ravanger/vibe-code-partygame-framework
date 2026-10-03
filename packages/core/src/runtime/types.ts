@@ -53,6 +53,12 @@ export interface GameContext<TState extends PhaseState, TPrivate, TOptions> {
   returnToLobby(): void;
   /** Random number in [0, 1). */
   rng(): number;
+  /**
+   * A UUID-shaped identifier drawn from the room RNG. Use it for any id that lands in synced state
+   * or an action payload — `crypto.randomUUID()` breaks replay, because re-dispatched payloads
+   * reference ids a fresh runtime never generated.
+   */
+  newId(): string;
   /** Epoch ms. */
   now(): number;
   /** The definition's name; recorded in the action log header for replay sanity checks. */

@@ -180,6 +180,32 @@ describe("construction", () => {
   });
 });
 
+describe("ctx.newId", () => {
+  const idSpec = makeSpec({
+    minPlayers: 1,
+    phases: { Play: { onEnter: (ctx) => ctx.state.log.push(ctx.newId()) } },
+  });
+
+  const idsFor = (seed: number): string[] => {
+    const host = new FakeHost(seed);
+    host.seat("p1");
+    const state = newState();
+    const runtime = new GameRuntime({
+      definition: idSpec,
+      state,
+      host,
+      options: { rounds: 3 },
+    });
+    runtime.dispatch("p1", { type: "START_GAME" });
+    return [...state.log];
+  };
+
+  it("is deterministic for the room seed", () => {
+    expect(idsFor(9)).toEqual(idsFor(9));
+    expect(idsFor(9)).not.toEqual(idsFor(10));
+  });
+});
+
 describe("Lobby", () => {
   it("START_GAME is host only", () => {
     const { runtime, host } = setup2();

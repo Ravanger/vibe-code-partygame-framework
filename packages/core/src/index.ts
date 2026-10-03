@@ -27,4 +27,4 @@ export {
   type LeaderboardInput,
   leaderboard,
 } from "./scoring.js";
-export { mulberry32, randomSeed, required, shuffle } from "./utils.js";
+export { mulberry32, newId, randomSeed, required, shuffle } from "./utils.js";

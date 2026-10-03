@@ -9,6 +9,7 @@ import {
 } from "@partygame/shared";
 import { createActor, setup } from "xstate";
 import { prettifyError } from "zod";
+import { newId } from "../utils.js";
 import { Lobby } from "./lobby.js";
 import type {
   ActionContext,
@@ -166,6 +167,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
         this.queue.push({ kind: "lobby" });
       },
       rng: () => this.host.rng(),
+      newId: () => newId(() => this.host.rng()),
       now: () => this.host.now(),
       gameName: this.spec.name,
       seed: this.host.seed,

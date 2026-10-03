@@ -185,13 +185,16 @@ pre-seats exactly these seats and maps their ids positionally to `p1..pN`, so ev
 re-dispatches against the matching replay seat (the live host is always the first seat, and the
 replay table's first seat is its host).
 
-**Determinism contract.** A log replays exactly when its two non-determinism sources are controlled:
+**Determinism contract.** A log replays exactly when its three non-determinism sources are controlled:
 
 - **RNG.** Rooms draw their randomness from a seeded PRNG (`mulberry32`); each room gets a seed from
   `crypto.getRandomValues` at creation, recorded in the header. `FakeHost`/`TestTable` accept an explicit
   seed; an unseeded `FakeHost` keeps its constant `rng() === 0.5` and is not replayable by seed.
 - **Clock.** Replay scripts the fake clock: it advances to each entry's `t` before applying the entry, so
   timers fire at exactly the logged times.
+- **IDs.** Identifiers that land in synced state or an action payload must come from `ctx.newId()` (drawn
+  from the room RNG). `crypto.randomUUID()` breaks replay: re-dispatched payloads reference ids the fresh
+  runtime never generated.
 
 **Replay.** `replayLog(definition, log, init)` re-drives a fresh runtime — same definition, RNG seeded from
 the header, clock starting at `header.startedAt`, the recorded roster pre-seated (`p1..pN` mapped
@@ -223,7 +226,8 @@ joiner of a second session after `returnToLobby`) makes the re-dispatch throw. N
 are minutes long.
 
 **Runtime additions.** Action middleware events now carry the zod-parsed `payload`; every context exposes
-`ctx.gameName` (definition name) and `ctx.seed` (room RNG seed), which the log header records.
+`ctx.gameName` (definition name), `ctx.seed` (room RNG seed, recorded in the log header) and `ctx.newId()`
+(deterministic ids — see the Determinism contract above).
 
 ### Errors at definition time
 `defineGame` throws `GameDefinitionError` listing every problem: reserved or unknown phase names, missing `startPhase`,
