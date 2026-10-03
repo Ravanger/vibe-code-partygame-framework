@@ -297,3 +297,71 @@ describe("middleware transition observation", () => {
     expect(seen).toEqual(["Play->Play"]);
   });
 });
+
+describe("middleware throws behave like hook throws", () => {
+  it("surfaces an action-path throw to the caller and drops queued transitions", () => {
+    // Baseline: GameRuntime.test.ts "drops queued transitions when a handler throws".
+    const mw: PhaseMiddleware<S, P, O> = (ctx, next) => {
+      if (ctx.event.kind === "action" && ctx.event.actionType === "GO") {
+        next();
+        throw new Error("mw boom");
+      }
+      next();
+    };
+    const table = new MTable([mw]);
+    table.start();
+    expect(() => table.act("p2", "GO")).toThrow("mw boom");
+    expect(table.phase).toBe("Play");
+  });
+
+  it("surfaces an enter-path throw to the caller and keeps working", () => {
+    // Baseline: GameRuntime.test.ts "surfaces an onEnter failure to the caller and keeps working".
+    let explode = true;
+    const mw: PhaseMiddleware<S, P, O> = (ctx, next) => {
+      if (ctx.event.kind === "enter" && ctx.phase === "Play" && explode) {
+        throw new Error("mw enter boom");
+      }
+      next();
+    };
+    const table = new MTable([mw]);
+    expect(() => table.start()).toThrow("mw enter boom");
+    explode = false;
+    table.act("p2", "GO");
+    expect(table.phase).toBe("Score");
+  });
+
+  it("surfaces a timeout-path throw to the timer's caller and keeps working", () => {
+    // Baseline: GameRuntime.test.ts "surfaces an onTimeout failure to the timer's caller and keeps working".
+    let explode = true;
+    const mw: PhaseMiddleware<S, P, O> = (ctx, next) => {
+      if (ctx.event.kind === "timeout" && explode) {
+        throw new Error("mw timeout boom");
+      }
+      next();
+    };
+    const table = new MTable([mw]);
+    table.start();
+    expect(() => table.tick(1000)).toThrow("mw timeout boom");
+    explode = false;
+    table.act("p2", "GO");
+    expect(table.phase).toBe("Score");
+  });
+
+  it("surfaces a roster-path throw to the caller and keeps working", () => {
+    // No dedicated roster baseline in GameRuntime.test.ts: rosterChanged() runs inside run(),
+    // so a throw propagates like the enter/timeout hook throws above.
+    let explode = true;
+    const mw: PhaseMiddleware<S, P, O> = (ctx, next) => {
+      if (ctx.event.kind === "roster-change" && explode) {
+        throw new Error("mw roster boom");
+      }
+      next();
+    };
+    const table = new MTable([mw]);
+    table.start();
+    expect(() => table.leave("p2")).toThrow("mw roster boom");
+    explode = false;
+    table.joinLate("p3");
+    expect(table.state.log).toContain("roster");
+  });
+});
