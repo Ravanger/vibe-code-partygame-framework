@@ -50,9 +50,30 @@ const game = (middleware: PhaseMiddleware<S, P, O>[]) =>
             payload: z.object({}),
             handler: (ctx) => ctx.reject(ErrorCode.NOT_ALLOWED, "nope"),
           }),
+          JUMP: action({
+            from: "player",
+            payload: z.object({}),
+            handler: (ctx) => ctx.transition("Hop"),
+          }),
+          STAY: action({
+            from: "player",
+            payload: z.object({}),
+            handler: (ctx) => ctx.transition("Play"),
+          }),
         },
       },
-      Score: {},
+      Hop: {
+        onEnter: (ctx) => ctx.transition("Score"),
+      },
+      Score: {
+        actions: {
+          HOME: action({
+            from: "host",
+            payload: z.object({}),
+            handler: (ctx) => ctx.returnToLobby(),
+          }),
+        },
+      },
     },
     middleware,
   });
@@ -221,5 +242,58 @@ describe("middleware chain around onTimeout and onRosterChange", () => {
     table.drop("p2");
     expect(seen).toEqual(["roster-change:Play"]);
     expect(table.state.log).toContain("roster");
+  });
+});
+
+describe("middleware transition observation", () => {
+  const recordTransitions =
+    (seen: string[]): PhaseMiddleware<S, P, O> =>
+    (ctx, next) => {
+      if (ctx.event.kind === "transition") {
+        seen.push(`${ctx.event.from}->${ctx.event.to}`);
+      }
+      next();
+    };
+
+  it("records (from, to) for each applied transition", () => {
+    const seen: string[] = [];
+    const table = new MTable([recordTransitions(seen)]);
+    table.start();
+    expect(seen).toEqual(["Lobby->Play"]);
+    table.act("p2", "GO");
+    expect(seen).toEqual(["Lobby->Play", "Play->Score"]);
+    table.act("p1", "HOME");
+    expect(seen).toEqual(["Lobby->Play", "Play->Score", "Score->Lobby"]);
+  });
+
+  it("fires after the source enter chain has unwound", () => {
+    const order: string[] = [];
+    const mw: PhaseMiddleware<S, P, O> = (ctx, next) => {
+      if (ctx.event.kind === "enter") {
+        order.push("h-in");
+        next();
+        order.push("h-out");
+      } else if (ctx.event.kind === "transition") {
+        const e = ctx.event;
+        order.push(`t:${e.from}->${e.to}`);
+        next();
+      } else {
+        next();
+      }
+    };
+    const table = new MTable([mw]);
+    table.start();
+    order.length = 0;
+    table.act("p2", "JUMP");
+    expect(order).toEqual(["t:Play->Hop", "h-in", "h-out", "t:Hop->Score", "h-in", "h-out"]);
+  });
+
+  it("observes a re-entry as from === to", () => {
+    const seen: string[] = [];
+    const table = new MTable([recordTransitions(seen)]);
+    table.start();
+    seen.length = 0;
+    table.act("p2", "STAY");
+    expect(seen).toEqual(["Play->Play"]);
   });
 });

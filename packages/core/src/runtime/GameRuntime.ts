@@ -286,7 +286,12 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     this.state.canStart = this.phaseName === LOBBY_PHASE && this.lobby.canStart(this.context());
   }
 
+  private observeTransition(from: string, to: string): void {
+    this.chain({ kind: "transition", from, to }, () => {});
+  }
+
   private apply(next: Pending): void {
+    this.observeTransition(this.phaseName, next.kind === "lobby" ? LOBBY_PHASE : next.phase);
     if (next.kind === "lobby") {
       this.spec.onReturnToLobby?.(this.context());
       this.host.activateWaitingPlayers();
