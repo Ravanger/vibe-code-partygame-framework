@@ -5,6 +5,7 @@ import {
   GameRuntime,
   type PlayerInfo,
   type RuntimeHost,
+  randomSeed,
 } from "@partygame/core";
 import {
   type ActionResult,
@@ -50,6 +51,8 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
   private seatList: Set<string> | undefined;
   private readonly views = new Map<string, StateView>();
   private readonly viewRefs = new Map<string, Set<Schema>>();
+  /** Per-room RNG seed drawn from the platform CSPRNG at room creation; recorded in action logs. */
+  private readonly seed = randomSeed();
 
   constructor(private readonly config: GameRoomConfig) {
     super();
@@ -184,6 +187,7 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     },
     now: () => Date.now(),
     rng: () => Math.random(),
+    seed: this.seed,
     setTimeout: (callback, ms) => this.clock.setTimeout(() => this.safely(callback), ms),
     clearTimeout: (handle: Delayed) => handle.clear(),
   };

@@ -4,6 +4,7 @@ export {
   type ActionLogEntry,
   type ActionLogEntryKind,
   type ActionLogHeader,
+  actionLogMiddleware,
   getActionLog,
 } from "./actionLog.js";
 export {
@@ -21,4 +22,4 @@ export {
   type LeaderboardInput,
   leaderboard,
 } from "./scoring.js";
-export { required, shuffle } from "./utils.js";
+export { randomSeed, required, shuffle } from "./utils.js";

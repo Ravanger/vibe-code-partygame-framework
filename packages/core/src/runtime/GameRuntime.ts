@@ -167,6 +167,8 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       },
       rng: () => this.host.rng(),
       now: () => this.host.now(),
+      gameName: this.spec.name,
+      seed: this.host.seed,
     };
   }
 
@@ -364,8 +366,9 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       payload: payload.data,
       reject: (code, message) => this.reject(playerId, type, code, message),
     };
-    this.chain({ kind: "action", actionType: type, senderId: playerId }, () =>
-      action.handler(actionContext),
+    this.chain(
+      { kind: "action", actionType: type, senderId: playerId, payload: payload.data },
+      () => action.handler(actionContext),
     );
   }
 

@@ -1,3 +1,5 @@
+import type { MiddlewareContext, PhaseMiddleware, PhaseState } from "./runtime/index.js";
+
 /** The key under which the action-log middleware stores its record in `ctx.priv`. */
 export const ACTION_LOG = "actionLog" as const;
 
@@ -48,4 +50,48 @@ export interface ActionLog {
 export function getActionLog(priv: unknown): ActionLog | undefined {
   // ACTION_LOG is added at runtime; it is not part of the game's declared private state.
   return (priv as Record<string, unknown>)[ACTION_LOG] as ActionLog | undefined;
+}
+
+function logOf(ctx: MiddlewareContext<PhaseState, unknown, unknown>): ActionLog {
+  // ACTION_LOG is added at runtime; it is not part of the game's declared private state.
+  const record = ctx.priv as Record<string, unknown>;
+  let log = record[ACTION_LOG] as ActionLog | undefined;
+  if (log === undefined) {
+    log = {
+      header: { seed: ctx.seed, game: ctx.gameName, startedAt: ctx.now() },
+      entries: [],
+    };
+    record[ACTION_LOG] = log;
+  }
+  return log;
+}
+
+/**
+ * Records every middleware-visible event — actions (type, sender, zod-parsed payload), transitions
+ * (from/to), enters, timeouts and roster changes — into an append-only, JSON-serializable log in
+ * `ctx.priv[ACTION_LOG]`. The header (seed, game name, start time) is written on the first entry.
+ * Never touches `ctx.state`; the log stays server-side. Rejected actions are not logged: they never
+ * reach the handler chain and change no state. See "Action log and replay" in the framework guide.
+ */
+export function actionLogMiddleware(): PhaseMiddleware<PhaseState, unknown, unknown> {
+  return (ctx, next) => {
+    const log = logOf(ctx);
+    const event = ctx.event;
+    const entry: ActionLogEntry = {
+      seq: log.entries.length + 1,
+      t: ctx.now(),
+      phase: ctx.phase,
+      kind: event.kind,
+    };
+    if (event.kind === "action") {
+      entry.actionType = event.actionType;
+      entry.senderId = event.senderId;
+      entry.payload = event.payload;
+    } else if (event.kind === "transition") {
+      entry.from = event.from;
+      entry.to = event.to;
+    }
+    log.entries.push(entry);
+    next();
+  };
 }

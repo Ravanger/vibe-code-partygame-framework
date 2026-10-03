@@ -4,6 +4,13 @@ export function required<T>(value: T | undefined, what: string): T {
   return value;
 }
 
+/** A random 32-bit seed for a seeded PRNG, drawn from the platform CSPRNG. */
+export function randomSeed(): number {
+  const buffer = new Uint32Array(1);
+  globalThis.crypto.getRandomValues(buffer);
+  return buffer[0] ?? 0;
+}
+
 /** Fisher-Yates over a copy; pass a seeded `rng` in tests. */
 export function shuffle<T>(items: readonly T[], rng: () => number): T[] {
   const a = [...items];

@@ -21,6 +21,8 @@ export class FakeHost implements RuntimeHost {
   readonly views: Array<{ op: "show" | "hide"; playerId: string; ref: object }> = [];
   readonly kicked: string[] = [];
   readonly published: unknown[] = [];
+  /** No seeded PRNG yet: `rng()` is the constant 0.5 and this seed is a placeholder. */
+  readonly seed = 0;
   private timers: Timer[] = [];
   private nextId = 1;
 

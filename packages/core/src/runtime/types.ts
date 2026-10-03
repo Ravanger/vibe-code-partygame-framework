@@ -55,6 +55,10 @@ export interface GameContext<TState extends PhaseState, TPrivate, TOptions> {
   rng(): number;
   /** Epoch ms. */
   now(): number;
+  /** The definition's name; recorded in the action log header for replay sanity checks. */
+  readonly gameName: string;
+  /** The room RNG seed; see `mulberry32`. Recorded in the action log header. */
+  readonly seed: number;
 }
 
 /** Context of an action handler. */
@@ -71,7 +75,7 @@ export type MiddlewareEvent =
   | { kind: "enter" }
   | { kind: "timeout" }
   | { kind: "roster-change" }
-  | { kind: "action"; actionType: string; senderId: string }
+  | { kind: "action"; actionType: string; senderId: string; payload: unknown }
   | { kind: "transition"; from: string; to: string };
 
 /** What a middleware receives: the game context plus the event being wrapped or observed. */
@@ -164,6 +168,8 @@ export interface RuntimeHost {
   publishOptions(options: unknown): void;
   now(): number;
   rng(): number;
+  /** The room RNG seed (see `mulberry32`); recorded in the action log header. */
+  readonly seed: number;
   setTimeout(callback: () => void, ms: number): unknown;
   clearTimeout(handle: unknown): void;
 }
