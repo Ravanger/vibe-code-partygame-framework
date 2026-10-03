@@ -1,4 +1,12 @@
 export {
+  ACTION_LOG,
+  type ActionLog,
+  type ActionLogEntry,
+  type ActionLogEntryKind,
+  type ActionLogHeader,
+  getActionLog,
+} from "./actionLog.js";
+export {
   type LoggingMiddlewareOptions,
   loggingMiddleware,
   PHASE_TIMINGS,
