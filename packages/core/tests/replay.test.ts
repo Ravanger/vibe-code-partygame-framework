@@ -9,6 +9,7 @@ import {
   mulberry32,
   type PhaseState,
   replayLog,
+  shuffle,
 } from "../src/index.js";
 import { TestTable } from "../src/testing/TestTable.js";
 
@@ -208,5 +209,117 @@ describe("replayLog", () => {
     });
     expect(fromHeader.states.at(-1)?.roll).toBe(Math.floor(mulberry32(7)() * 100));
     expect(fromInit.states.at(-1)?.roll).toBe(Math.floor(mulberry32(8)() * 100));
+  });
+});
+
+describe("replay round-trip", () => {
+  // Exercises everything the log must survive: seeded rng draws on every enter, timed phases,
+  // a self-transition (from === to) that re-enters, and returnToLobby.
+  interface SpinState extends PhaseState {
+    spins: number;
+    roll: number;
+    order: number[];
+  }
+
+  const spinAction = actionFactory<SpinState, Record<string, never>, Record<string, never>>();
+
+  const spinDefinition = defineGame<SpinState, Record<string, never>, Record<string, never>>({
+    name: "Spin",
+    minPlayers: 1,
+    maxPlayers: 4,
+    startPhase: "Spin",
+    createPrivateState: () => ({}),
+    phases: {
+      Spin: {
+        duration: 1000,
+        onEnter: (ctx) => {
+          ctx.state.roll = Math.floor(ctx.rng() * 100);
+          ctx.state.order = shuffle([1, 2, 3], ctx.rng);
+        },
+        onTimeout: (ctx) => ctx.transition("Done"),
+        actions: {
+          SPIN: spinAction({
+            from: "player",
+            payload: z.object({ n: z.number().default(1) }),
+            handler: (ctx) => {
+              ctx.state.spins += ctx.payload.n;
+            },
+          }),
+          REENTRY: spinAction({
+            from: "player",
+            payload: z.object({}),
+            handler: (ctx) => ctx.transition("Spin"),
+          }),
+        },
+      },
+      Done: {},
+    },
+  });
+
+  const newSpinState = (): SpinState => ({
+    phase: "",
+    phaseEndsAt: 0,
+    canStart: false,
+    spins: 0,
+    roll: 0,
+    order: [],
+  });
+
+  it("replays a full session (rng, timers, re-entry, return to lobby) to identical states", () => {
+    const live = new TestTable({
+      definition: { ...spinDefinition, middleware: [actionLogMiddleware()] },
+      state: newSpinState(),
+      options: {},
+      players: 2,
+      seed: 1234,
+    });
+    // ground truth: one deep clone per driven step, construction included
+    const snapshots: SpinState[] = [];
+    const snapshot = (): SpinState => {
+      const copy = JSON.parse(JSON.stringify(live.state)) as SpinState;
+      snapshots.push(copy);
+      return copy;
+    };
+
+    snapshot(); // Lobby at construction
+    live.start(); // enter Spin: first rng draws
+    const afterStart = snapshot();
+    live.act("p2", "SPIN", { n: 3 });
+    snapshot();
+    live.act("p1", "REENTRY"); // self-transition: re-enter Spin, fresh rng draws
+    const afterReentry = snapshot();
+    live.tick(1000); // Spin timeout -> Done
+    snapshot();
+    live.act("p1", "END_GAME"); // return to the Lobby
+    snapshot();
+
+    const log = getActionLog(live.priv) as ActionLog;
+    // sanity: the log really contains the tricky shapes
+    expect(
+      log.entries.some((e) => e.kind === "transition" && e.from === "Spin" && e.to === "Spin"),
+    ).toBe(true);
+    expect(log.entries.filter((e) => e.phase === "Lobby" && e.kind === "enter")).toHaveLength(2);
+
+    // the seeded stream must be visible in state: 3 draws per Spin enter (roll + 2 shuffle), so
+    // the REENTRY snapshot holds the 4th draw — proof the self-transition re-entered the phase
+    const stream = mulberry32(1234);
+    const rollOf = (): number => Math.floor(stream() * 100);
+    const skipShuffleDraws = (): void => {
+      stream();
+      stream();
+    };
+    const firstEnterRoll = rollOf();
+    skipShuffleDraws();
+    const reentryRoll = rollOf();
+    expect(reentryRoll).not.toBe(firstEnterRoll);
+    expect(afterStart.roll).toBe(firstEnterRoll);
+    expect(afterReentry.roll).toBe(reentryRoll);
+
+    const { states } = replayLog(spinDefinition, log, {
+      state: newSpinState(),
+      options: {},
+      players: 2,
+    });
+    expect(states).toEqual(snapshots);
   });
 });
