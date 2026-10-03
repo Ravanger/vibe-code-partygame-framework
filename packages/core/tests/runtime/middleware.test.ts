@@ -33,6 +33,7 @@ const game = (middleware: PhaseMiddleware<S, P, O>[]) =>
         duration: 1000,
         onEnter: (ctx) => ctx.state.log.push("enter:Play"),
         onTimeout: (ctx) => ctx.transition("Score"),
+        onRosterChange: (ctx) => ctx.state.log.push("roster"),
         actions: {
           GO: action({
             from: "player",
@@ -169,5 +170,56 @@ describe("middleware chain around action handlers", () => {
     wrapped.start();
     wrapped.act("p2", "NOPE");
     expect(wrapped.errors("p2")).toEqual(plain.errors("p2"));
+  });
+});
+
+describe("middleware chain around onTimeout and onRosterChange", () => {
+  const record =
+    (kind: string, seen: string[]): PhaseMiddleware<S, P, O> =>
+    (ctx, next) => {
+      if (ctx.event.kind === kind) {
+        seen.push(`${ctx.event.kind}:${ctx.phase}`);
+      }
+      next();
+    };
+
+  it("wraps onTimeout and fires it exactly once", () => {
+    const seen: string[] = [];
+    const table = new MTable([record("timeout", seen)]);
+    table.start();
+    table.tick(1000);
+    expect(seen).toEqual(["timeout:Play"]);
+    table.tick(5000);
+    expect(seen).toEqual(["timeout:Play"]);
+  });
+
+  it("does not fire onTimeout after the phase has been left", () => {
+    const seen: string[] = [];
+    const table = new MTable([record("timeout", seen)]);
+    table.start();
+    table.act("p2", "GO");
+    expect(table.phase).toBe("Score");
+    table.tick(10_000);
+    expect(seen).toEqual([]);
+  });
+
+  it("wraps onRosterChange for joinLate, leave and drop", () => {
+    const seen: string[] = [];
+    const table = new MTable([record("roster-change", seen)]);
+    table.start();
+    table.state.log.length = 0;
+    table.joinLate("p3");
+    expect(seen).toEqual(["roster-change:Play"]);
+    expect(table.state.log).toContain("roster");
+    seen.length = 0;
+    table.state.log.length = 0;
+    table.leave("p3");
+    expect(seen).toEqual(["roster-change:Play"]);
+    expect(table.state.log).toContain("roster");
+    seen.length = 0;
+    table.state.log.length = 0;
+    table.drop("p2");
+    expect(seen).toEqual(["roster-change:Play"]);
+    expect(table.state.log).toContain("roster");
   });
 });

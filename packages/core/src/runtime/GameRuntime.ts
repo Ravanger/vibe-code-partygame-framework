@@ -88,7 +88,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
         },
       },
       hasStarted: () => this.hasStarted,
-      rosterChanged: () => this.current.onRosterChange?.(this.context()),
+      rosterChanged: () => this.rosterChange(),
     });
     this.middleware = this.spec.middleware ?? [];
     this.builtins = {
@@ -127,7 +127,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   /** Call after any join, leave, connect, disconnect or ready change. */
   rosterChanged(): void {
     if (this.stopped) return;
-    this.run(() => this.current.onRosterChange?.(this.context()));
+    this.run(() => this.rosterChange());
   }
 
   /** Call after a player (re)connects so the game can resend their private messages. */
@@ -192,6 +192,10 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     return { ...this.context(), event };
   }
 
+  private rosterChange(): void {
+    this.chain({ kind: "roster-change" }, () => this.current.onRosterChange?.(this.context()));
+  }
+
   private buildMachine() {
     const delays: Record<string, () => number> = {};
     const states: Record<string, object> = {};
@@ -202,7 +206,12 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       if (phase.duration !== undefined) {
         delays[name] = () => this.duration;
         node.after = {
-          [name]: { actions: () => this.guarded(() => this.current.onTimeout?.(this.context())) },
+          [name]: {
+            actions: () =>
+              this.guarded(() =>
+                this.chain({ kind: "timeout" }, () => this.current.onTimeout?.(this.context())),
+              ),
+          },
         };
       }
       states[name] = node;
