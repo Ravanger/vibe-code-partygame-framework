@@ -11,6 +11,7 @@ export interface TestPresetOptions {
 }
 
 const DEFAULT_UI_SETUP = ["@testing-library/jest-dom/vitest", "@partygame/game-client/test-setup"];
+const DEFAULT_NODE_SETUP = ["@partygame/config/node-test-setup"];
 
 function shared(options: TestPresetOptions, environment: "jsdom" | "node"): ViteUserConfig {
   return {
@@ -41,7 +42,7 @@ export function uiTestConfig(options: TestPresetOptions): ViteUserConfig {
 export function nodeTestConfig(options: TestPresetOptions): ViteUserConfig {
   return mergeConfig(
     mergeConfig(shared(options, "node"), {
-      test: options.setupFiles ? { setupFiles: options.setupFiles } : {},
+      test: { setupFiles: options.setupFiles ?? DEFAULT_NODE_SETUP },
     }),
     options.overrides ?? {},
   );
