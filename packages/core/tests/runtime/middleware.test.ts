@@ -365,3 +365,66 @@ describe("middleware throws behave like hook throws", () => {
     expect(table.state.log).toContain("roster");
   });
 });
+
+describe("middleware next() re-entrancy", () => {
+  it("throws when a middleware calls next() twice for one enter event, and runs the hook once", () => {
+    // Targets Play only: the initial Lobby enter happens at construction.
+    const double: PhaseMiddleware<S, P, O> = (ctx, next) => {
+      if (ctx.event.kind === "enter" && ctx.phase === "Play") {
+        next();
+        next();
+      } else {
+        next();
+      }
+    };
+    const table = new MTable([double]);
+    expect(() => table.start()).toThrow("middleware[0] called next() twice for one enter event");
+    expect(table.state.log).toEqual(["enter:Play"]);
+    // The runtime keeps working after the throw, like any hook throw.
+    table.act("p2", "GO");
+    expect(table.phase).toBe("Score");
+  });
+
+  it("throws when a middleware calls next() twice for one action event, and runs the handler once", () => {
+    const double: PhaseMiddleware<S, P, O> = (ctx, next) => {
+      if (ctx.event.kind === "action" && ctx.event.actionType === "PING") {
+        next();
+        next();
+      } else {
+        next();
+      }
+    };
+    const table = new MTable([double]);
+    table.start();
+    table.state.log.length = 0;
+    expect(() => table.act("p2", "PING")).toThrow(
+      "middleware[0] called next() twice for one action event",
+    );
+    expect(table.state.log).toEqual(["ping"]);
+  });
+});
+
+describe("middleware must be synchronous", () => {
+  it("throws when a middleware returns a promise instead of running synchronously", () => {
+    const slow: PhaseMiddleware<S, P, O> = async (_ctx, next) => {
+      await Promise.resolve();
+      next();
+    };
+    const table = new MTable([slow]);
+    // The initial Lobby enter happens at construction; its failure is deferred like any hook failure.
+    expect(() => table.start()).toThrow(
+      "middleware[0] returned a Promise; the middleware chain is synchronous",
+    );
+  });
+
+  it("ignores non-promise return values", () => {
+    const tag: PhaseMiddleware<S, P, O> = (_ctx, next) => {
+      next();
+      return {};
+    };
+    const table = new MTable([tag]);
+    table.start();
+    expect(table.act("p2", "PING")).toBeUndefined();
+    expect(table.state.log).toContain("ping");
+  });
+});

@@ -121,7 +121,7 @@ Every call receives `ctx`, the usual context plus a `readonly event`:
 
 Semantics:
 
-1. Hooks and handlers run inside the middleware chain. `next()` invokes the inner layer (the next middleware, or the hook/handler itself); omitting `next()` skips the hook/handler — allowed and documented.
+1. Hooks and handlers run inside the middleware chain. `next()` invokes the inner layer (the next middleware, or the hook/handler itself); omitting `next()` skips the hook/handler — allowed and documented. Calling `next()` twice for one event throws (`middleware[i] called next() twice for one <kind> event`) instead of double-running the inner layers.
 2. Transitions stay queued: `ctx.transition("X")` called inside a hook or middleware still applies only after the outermost hook returns, exactly as without middleware. Middleware cannot apply a transition synchronously.
 3. Transition observation is an event (`{ from, to }`), not a wrapped `ctx.transition`. The event fires only after the source chain has fully unwound. It also covers `returnToLobby` (`to: "Lobby"`) and re-entering the current phase (`from === to`).
 4. Errors: a middleware throw is handled exactly like a hook throw today — on the action path the sender gets `INTERNAL`; enter/timeout/roster paths follow the existing hook-failure path. No new error codes.
@@ -130,8 +130,9 @@ Semantics:
 7. Ordering: for `enter`, the outermost middleware runs first; a transition event fires only after the full chain unwinds (consistent with queued transitions).
 8. The built-in lobby hooks run through the same wrapped path — middleware applies to `Lobby` too.
 
-Non-goals in v1: no async/await inside the chain (synchronous; fire-and-forget for async work), no veto, and action
-events carry `actionType` + `senderId` only (no payload access).
+Non-goals in v1: no async/await inside the chain (synchronous; a middleware that returns a Promise throws
+`middleware[i] returned a Promise; the middleware chain is synchronous` on the first event — do fire-and-forget work
+outside the chain), no veto, and action events carry `actionType` + `senderId` only (no payload access).
 
 #### Built-ins
 - `loggingMiddleware({ log })` — one line per event, no hardcoded console. Exact formats: `enter <phase>`, `timeout <phase>`, `action <ACTION_TYPE> by <senderId> in <phase>`, `transition <from> -> <to>`. No line for `roster-change`.

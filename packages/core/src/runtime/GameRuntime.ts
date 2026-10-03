@@ -170,7 +170,11 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     };
   }
 
-  /** Runs `inner` through the middleware onion; outermost first. Omitting `next()` skips everything inside. */
+  /**
+   * Runs `inner` through the middleware onion; outermost first. Omitting `next()` skips everything inside.
+   * Each layer's `next()` may be called at most once per event, and a layer that returns a Promise throws —
+   * the chain is synchronous.
+   */
   private chain(event: MiddlewareEvent, inner: () => void): void {
     if (this.middleware.length === 0) {
       inner();
@@ -181,8 +185,20 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       const layer = layers[index];
       if (layer === undefined) {
         inner();
-      } else {
-        layer(this.middlewareContext(event), () => runLayer(index + 1));
+        return;
+      }
+      let nexted = false;
+      const result: unknown = layer(this.middlewareContext(event), () => {
+        if (nexted) {
+          throw new Error(`middleware[${index}] called next() twice for one ${event.kind} event`);
+        }
+        nexted = true;
+        runLayer(index + 1);
+      });
+      if (result && typeof (result as PromiseLike<unknown>).then === "function") {
+        throw new Error(
+          `middleware[${index}] returned a Promise; the middleware chain is synchronous`,
+        );
       }
     };
     runLayer(0);
