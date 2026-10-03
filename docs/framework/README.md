@@ -201,9 +201,11 @@ const { states } = replayLog(ButtonGame, log, {
 });
 ```
 
-`states` is one deep-cloned snapshot per step: every logged `action`, `timeout` or (skipped) lobby
-`roster-change` starts a step; the transitions and enters that follow from it belong to the same step.
-It throws when the log's `game` does not match the definition, or on a mid-game roster change.
+`states[0]` is the fresh construction at `header.startedAt`, before any entry; each following element is
+one deep-cloned snapshot per step — every logged `action`, `timeout` or (skipped) lobby `roster-change`
+starts a step, and the transitions and enters that follow from it belong to the same step. It throws when
+the log's `game` does not match the definition, on a mid-game roster change, on out-of-order entry times,
+or when a re-dispatched action is rejected (a valid log only contains accepted actions).
 
 **Limitations in v1.** Mid-game roster changes are not replayed: `replayLog` throws naming the first such
 entry. Lobby-phase roster changes are skipped — players are pre-seated at construction — so a game whose
