@@ -15,7 +15,10 @@ import type {
   ActionDefinition,
   GameContext,
   GameDefinition,
+  MiddlewareContext,
+  MiddlewareEvent,
   PhaseDefinition,
+  PhaseMiddleware,
   PhaseState,
   RuntimeHost,
 } from "./types.js";
@@ -58,6 +61,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   private readonly lobby: Lobby<TState, TPrivate, TOptions>;
   private readonly builtins: Record<string, ActionDefinition<TState, TPrivate, TOptions, unknown>>;
   private readonly phases: Record<string, PhaseDefinition<TState, TPrivate, TOptions>>;
+  private readonly middleware: PhaseMiddleware<TState, TPrivate, TOptions>[];
   private readonly actor: PhaseActor;
   private readonly queue: Pending[] = [];
   private readonly failures: unknown[] = [];
@@ -86,6 +90,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       hasStarted: () => this.hasStarted,
       rosterChanged: () => this.current.onRosterChange?.(this.context()),
     });
+    this.middleware = this.spec.middleware ?? [];
     this.builtins = {
       [KICK_PLAYER]: this.lobby.kickAction(),
       [END_GAME]: this.lobby.endGameAction(),
@@ -165,6 +170,28 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     };
   }
 
+  /** Runs `inner` through the middleware onion; outermost first. Omitting `next()` skips everything inside. */
+  private chain(event: MiddlewareEvent, inner: () => void): void {
+    if (this.middleware.length === 0) {
+      inner();
+      return;
+    }
+    const layers = this.middleware;
+    const runLayer = (index: number): void => {
+      const layer = layers[index];
+      if (layer === undefined) {
+        inner();
+      } else {
+        layer(this.middlewareContext(event), () => runLayer(index + 1));
+      }
+    };
+    runLayer(0);
+  }
+
+  private middlewareContext(event: MiddlewareEvent): MiddlewareContext<TState, TPrivate, TOptions> {
+    return { ...this.context(), event };
+  }
+
   private buildMachine() {
     const delays: Record<string, () => number> = {};
     const states: Record<string, object> = {};
@@ -210,7 +237,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
         typeof phase.duration === "function" ? phase.duration(this.context()) : phase.duration;
       this.state.phaseEndsAt = this.host.now() + this.duration;
     }
-    phase.onEnter?.(this.context());
+    this.chain({ kind: "enter" }, () => phase.onEnter?.(this.context()));
   }
 
   private guarded(fn: () => void): void {
