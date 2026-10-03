@@ -91,6 +91,21 @@ describe("defineGame", () => {
     }
   });
 
+  it("rejects a middleware entry that is not a function", () => {
+    const spec = { ...valid(), middleware: [123] } as unknown as GameDefinition<S>;
+    expect(errorsOf(spec)).toContain("middleware[0] is not a function");
+  });
+
+  it("rejects a middleware that is not an array", () => {
+    const spec = { ...valid(), middleware: "nope" } as unknown as GameDefinition<S>;
+    expect(errorsOf(spec)).toContain("middleware must be an array of functions");
+  });
+
+  it("accepts a valid middleware array", () => {
+    const spec: GameDefinition<S> = { ...valid(), middleware: [(_ctx, next) => next()] };
+    expect(defineGame(spec)).toBe(spec);
+  });
+
   it("reports every problem at once", () => {
     const message = errorsOf({ ...valid(), name: "", startPhase: "X" });
     expect(message).toContain("name");

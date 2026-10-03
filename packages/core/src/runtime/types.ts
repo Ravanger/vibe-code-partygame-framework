@@ -66,6 +66,31 @@ export interface ActionContext<TState extends PhaseState, TPrivate, TOptions, TP
   reject(code: ErrorCode, message: string): void;
 }
 
+/** What a middleware observes or wraps. */
+export type MiddlewareEvent =
+  | { kind: "enter" }
+  | { kind: "timeout" }
+  | { kind: "roster-change" }
+  | { kind: "action"; actionType: string; senderId: string }
+  | { kind: "transition"; from: string; to: string };
+
+/** What a middleware receives: the game context plus the event being wrapped or observed. */
+export interface MiddlewareContext<TState extends PhaseState, TPrivate, TOptions>
+  extends GameContext<TState, TPrivate, TOptions> {
+  readonly event: MiddlewareEvent;
+}
+
+/**
+ * A Koa-style onion layer around phase hooks and action handlers; first registered runs
+ * outermost. Synchronous in v1: call `next()` to run the inner layer (the next middleware or
+ * the hook/handler itself); omit it to skip the hook/handler. Throwing is handled exactly
+ * like a hook throw. Method syntax keeps the context parameter bivariant, as `DurationFn`
+ * does, so game-typed and erased definitions stay mutually assignable.
+ */
+export type PhaseMiddleware<TState extends PhaseState, TPrivate, TOptions> = {
+  run(ctx: MiddlewareContext<TState, TPrivate, TOptions>, next: () => void): void;
+}["run"];
+
 /** One client action accepted by a phase. */
 export interface ActionDefinition<TState extends PhaseState, TPrivate, TOptions, TPayload> {
   /** `"player"` means any active player, including the host. */
@@ -113,6 +138,8 @@ export interface GameDefinition<
   createPrivateState(): TPrivate;
   /** `"Lobby"` is reserved and built in. */
   phases: Record<string, PhaseDefinition<TState, TPrivate, TOptions>>;
+  /** Optional middleware wrapping phase hooks and action handlers. First registered is outermost. */
+  middleware?: PhaseMiddleware<TState, TPrivate, TOptions>[];
   /** After a player (re)connects: resend their private messages. */
   onPlayerSync?(ctx: GameContext<TState, TPrivate, TOptions>, playerId: string): void;
   onReturnToLobby?(ctx: GameContext<TState, TPrivate, TOptions>): void;

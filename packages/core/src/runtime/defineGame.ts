@@ -49,6 +49,14 @@ export function defineGame<
         problems.push(`action name "${action}" is invalid`);
     }
   }
+  const middleware: unknown = spec.middleware;
+  if (middleware !== undefined) {
+    if (!Array.isArray(middleware)) problems.push("middleware must be an array of functions");
+    else
+      for (const [i, layer] of middleware.entries()) {
+        if (typeof layer !== "function") problems.push(`middleware[${i}] is not a function`);
+      }
+  }
   if (problems.length > 0) throw new GameDefinitionError(problems);
   return spec;
 }
