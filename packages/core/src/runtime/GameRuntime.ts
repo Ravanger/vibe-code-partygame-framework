@@ -15,7 +15,10 @@ import type {
   ActionDefinition,
   GameContext,
   GameDefinition,
+  MiddlewareContext,
+  MiddlewareEvent,
   PhaseDefinition,
+  PhaseMiddleware,
   PhaseState,
   RuntimeHost,
 } from "./types.js";
@@ -58,6 +61,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   private readonly lobby: Lobby<TState, TPrivate, TOptions>;
   private readonly builtins: Record<string, ActionDefinition<TState, TPrivate, TOptions, unknown>>;
   private readonly phases: Record<string, PhaseDefinition<TState, TPrivate, TOptions>>;
+  private readonly middleware: PhaseMiddleware<TState, TPrivate, TOptions>[];
   private readonly actor: PhaseActor;
   private readonly queue: Pending[] = [];
   private readonly failures: unknown[] = [];
@@ -84,8 +88,9 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
         },
       },
       hasStarted: () => this.hasStarted,
-      rosterChanged: () => this.current.onRosterChange?.(this.context()),
+      rosterChanged: () => this.rosterChange(),
     });
+    this.middleware = this.spec.middleware ?? [];
     this.builtins = {
       [KICK_PLAYER]: this.lobby.kickAction(),
       [END_GAME]: this.lobby.endGameAction(),
@@ -122,7 +127,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   /** Call after any join, leave, connect, disconnect or ready change. */
   rosterChanged(): void {
     if (this.stopped) return;
-    this.run(() => this.current.onRosterChange?.(this.context()));
+    this.run(() => this.rosterChange());
   }
 
   /** Call after a player (re)connects so the game can resend their private messages. */
@@ -165,6 +170,48 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     };
   }
 
+  /**
+   * Runs `inner` through the middleware onion; outermost first. Omitting `next()` skips everything inside.
+   * Each layer's `next()` may be called at most once per event, and a layer that returns a Promise throws —
+   * the chain is synchronous.
+   */
+  private chain(event: MiddlewareEvent, inner: () => void): void {
+    if (this.middleware.length === 0) {
+      inner();
+      return;
+    }
+    const layers = this.middleware;
+    const runLayer = (index: number): void => {
+      const layer = layers[index];
+      if (layer === undefined) {
+        inner();
+        return;
+      }
+      let nexted = false;
+      const result: unknown = layer(this.middlewareContext(event), () => {
+        if (nexted) {
+          throw new Error(`middleware[${index}] called next() twice for one ${event.kind} event`);
+        }
+        nexted = true;
+        runLayer(index + 1);
+      });
+      if (result && typeof (result as PromiseLike<unknown>).then === "function") {
+        throw new Error(
+          `middleware[${index}] returned a Promise; the middleware chain is synchronous`,
+        );
+      }
+    };
+    runLayer(0);
+  }
+
+  private middlewareContext(event: MiddlewareEvent): MiddlewareContext<TState, TPrivate, TOptions> {
+    return { ...this.context(), event };
+  }
+
+  private rosterChange(): void {
+    this.chain({ kind: "roster-change" }, () => this.current.onRosterChange?.(this.context()));
+  }
+
   private buildMachine() {
     const delays: Record<string, () => number> = {};
     const states: Record<string, object> = {};
@@ -175,7 +222,12 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       if (phase.duration !== undefined) {
         delays[name] = () => this.duration;
         node.after = {
-          [name]: { actions: () => this.guarded(() => this.current.onTimeout?.(this.context())) },
+          [name]: {
+            actions: () =>
+              this.guarded(() =>
+                this.chain({ kind: "timeout" }, () => this.current.onTimeout?.(this.context())),
+              ),
+          },
         };
       }
       states[name] = node;
@@ -210,7 +262,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
         typeof phase.duration === "function" ? phase.duration(this.context()) : phase.duration;
       this.state.phaseEndsAt = this.host.now() + this.duration;
     }
-    phase.onEnter?.(this.context());
+    this.chain({ kind: "enter" }, () => phase.onEnter?.(this.context()));
   }
 
   private guarded(fn: () => void): void {
@@ -250,7 +302,16 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     this.state.canStart = this.phaseName === LOBBY_PHASE && this.lobby.canStart(this.context());
   }
 
+  private observeTransition(from: string, to: string): void {
+    this.chain({ kind: "transition", from, to }, () => {});
+  }
+
   private apply(next: Pending): void {
+    // An observer throw must not cancel the transition it observes (docs: middleware cannot veto);
+    // defer it like any hook failure and let the transition apply, then surface via rethrowFailure.
+    this.guarded(() =>
+      this.observeTransition(this.phaseName, next.kind === "lobby" ? LOBBY_PHASE : next.phase),
+    );
     if (next.kind === "lobby") {
       this.spec.onReturnToLobby?.(this.context());
       this.host.activateWaitingPlayers();
@@ -303,7 +364,9 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       payload: payload.data,
       reject: (code, message) => this.reject(playerId, type, code, message),
     };
-    action.handler(actionContext);
+    this.chain({ kind: "action", actionType: type, senderId: playerId }, () =>
+      action.handler(actionContext),
+    );
   }
 
   private reject(

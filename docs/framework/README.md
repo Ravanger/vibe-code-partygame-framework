@@ -90,6 +90,54 @@ Clients read `state.canStart` instead of recomputing that rule.
 Set `autoStart: true` on the definition (default `false`) to also start once every seated player is ready and there are at least `minPlayers`.
 Returning to the Lobby activates every waiting (mid-game) joiner.
 
+### Phase middleware
+Game-level middleware registered on `defineGame` runs around every phase's `onEnter`, `onTimeout`, `onRosterChange` and
+around every action handler (including the built-in lobby actions), and observes transitions. It is Koa-style onion
+middleware: the first entry in the array is outermost, each layer calls `next()` to reach the next one, and chains are
+synchronous in v1.
+
+```ts
+const log: string[] = [];
+
+export const ButtonGame = defineGame<State, Priv>({
+  name: "FirstToPress",
+  // ...phases as in Minimal game
+  middleware: [
+    (ctx, next) => { log.push(`outer ${ctx.event.kind}`); next(); }, // first registered is outermost
+    (ctx, next) => { if (ctx.event.kind === "enter") next(); },      // omitting next() skips the hook
+  ],
+});
+```
+
+Every call receives `ctx`, the usual context plus a `readonly event`:
+
+| `event.kind` | When | Extra fields |
+|---|---|---|
+| `enter` | around each phase's `onEnter` | — |
+| `timeout` | around each phase's `onTimeout` | — |
+| `roster-change` | around each phase's `onRosterChange` | — |
+| `action` | around each action handler, built-ins included | `actionType`, `senderId` |
+| `transition` | after the source hook's chain unwinds, just before the target's `onEnter` chain runs | `from`, `to` |
+
+Semantics:
+
+1. Hooks and handlers run inside the middleware chain. `next()` invokes the inner layer (the next middleware, or the hook/handler itself); omitting `next()` skips the hook/handler — allowed and documented. Calling `next()` twice for one event throws (`middleware[i] called next() twice for one <kind> event`) instead of double-running the inner layers.
+2. Transitions stay queued: `ctx.transition("X")` called inside a hook or middleware still applies only after the outermost hook returns, exactly as without middleware. Middleware cannot apply a transition synchronously.
+3. Transition observation is an event (`{ from, to }`), not a wrapped `ctx.transition`. The event fires only after the source chain has fully unwound. It also covers `returnToLobby` (`to: "Lobby"`) and re-entering the current phase (`from === to`).
+4. Errors: a middleware throw is handled exactly like a hook throw today — on the action path the sender gets `INTERNAL`; enter/timeout/roster paths follow the existing hook-failure path; a throw on a `transition` event defers the same way and never cancels the transition it observes. No new error codes.
+5. Veto is not in v1 (deliberate non-goal): middleware can skip `next()` but cannot cancel a queued transition or reject an action itself — action handlers already have `ctx.reject`.
+6. `defineGame` validates at definition time: `middleware` must be an array of functions, otherwise the problem is listed in the `GameDefinitionError`. Reserved action names are unchanged.
+7. Ordering: for `enter`, the outermost middleware runs first; a transition event fires only after the full chain unwinds (consistent with queued transitions).
+8. The built-in lobby hooks run through the same wrapped path — middleware applies to `Lobby` too.
+
+Non-goals in v1: no async/await inside the chain (synchronous; a middleware that returns a Promise throws
+`middleware[i] returned a Promise; the middleware chain is synchronous` on the first event — do fire-and-forget work
+outside the chain), no veto, and action events carry `actionType` + `senderId` only (no payload access).
+
+#### Built-ins
+- `loggingMiddleware({ log })` — one line per event, no hardcoded console. Exact formats: `enter <phase>`, `timeout <phase>`, `action <ACTION_TYPE> by <senderId> in <phase>`, `transition <from> -> <to>`. No line for `roster-change`.
+- `timingMiddleware()` — records per-phase durations into `ctx.priv` under the key `phaseTimings`; each phase gets `{ enteredAt: number, durationsMs: number[] }`. Started on enter (before the hook), closed when a transition out of that phase is observed. The currently open phase has no final duration yet. Never touches `ctx.state` (it is synced to clients); timing metadata stays server-side.
+
 ### Errors at definition time
 `defineGame` throws `GameDefinitionError` listing every problem: reserved or unknown phase names, missing `startPhase`,
 `duration` without `onTimeout`, bad player limits, bad action names.

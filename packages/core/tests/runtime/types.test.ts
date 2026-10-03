@@ -4,6 +4,7 @@ import {
   actionFactory,
   defineGame,
   type GameDefinition,
+  type PhaseMiddleware,
   type PhaseState,
 } from "../../src/index.js";
 
@@ -55,6 +56,23 @@ const game = defineGame<S, P, O>({
   },
 });
 
+// An erased middleware must be accepted where a game-typed one is expected. This guards the
+// variance design: MiddlewareContext stays an interface extending GameContext (property
+// covariance), so do not "improve" it into something that breaks this assignment.
+const erasedMiddleware: PhaseMiddleware<PhaseState, unknown, unknown> = (ctx, next) => {
+  if (ctx.event.kind === "enter") next();
+};
+
+const withMiddleware = defineGame<S, P, O>({
+  name: "TypesMw",
+  minPlayers: 1,
+  maxPlayers: 2,
+  startPhase: "Play",
+  createPrivateState: () => ({ seen: [] }),
+  phases: { Play: {} },
+  middleware: [erasedMiddleware],
+});
+
 describe("definition types", () => {
   it("lets one phase hold actions with different payloads", () => {
     expect(Object.keys(game.phases.Play?.actions ?? {})).toEqual(["ADD", "NOTE", "BAD"]);
@@ -63,5 +81,9 @@ describe("definition types", () => {
   it("is assignable to an erased definition, as the server needs", () => {
     const erased: GameDefinition<PhaseState, unknown, unknown> = game;
     expect(erased.name).toBe("Types");
+  });
+
+  it("accepts an erased middleware where a game-typed one is expected", () => {
+    expect(withMiddleware.middleware).toHaveLength(1);
   });
 });

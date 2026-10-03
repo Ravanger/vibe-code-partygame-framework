@@ -1,3 +1,5 @@
+import { type SchemaType, t as schemaField } from "@colyseus/schema";
+import { defineGame } from "@partygame/core";
 import { RoomCodeService } from "@partygame/server";
 import { bootTestServer, type TestServer, waitUntil } from "@partygame/server/testing";
 import { LOBBY_PHASE, NAME_MAX_LENGTH, resolveRoomCode } from "@partygame/shared";
@@ -31,10 +33,37 @@ const tapper: BotKit<TapState> = {
   strategy: { play: (turn) => turn.once("tap", () => turn.later("react", () => turn.act("TAP"))) },
 };
 
+// A tap game whose initial state is ~4 MB: the post-join state sync then lands well past
+// waitFor's 20 ms poll floor, so a 1 ms join budget forwarded to joinBots reliably times out.
+const PaddedState = TapState.extend(
+  { pad: schemaField.string().default("x".repeat(4_000_000)) },
+  "PaddedTapState",
+);
+type PaddedState = SchemaType<typeof PaddedState>;
+
+const PaddedGame = defineGame<PaddedState, Record<string, never>, Record<string, never>>({
+  name: "TapPadded",
+  minPlayers: 1,
+  maxPlayers: 6,
+  startPhase: "Idle",
+  createPrivateState: () => ({}),
+  phases: { Idle: {} },
+});
+
+const PAD_ROOM = "tap-padded";
+const paddedKit: BotKit<PaddedState> = {
+  roomName: PAD_ROOM,
+  stateClass: PaddedState,
+  strategy: { play: (turn) => turn.once("tap", () => turn.later("react", () => turn.act("TAP"))) },
+};
+
 beforeAll(async () => {
   t = await bootTestServer({
     roomCodeService: codes,
-    games: [{ roomName: TAP_ROOM, definition: TapGame, stateClass: TapState }],
+    games: [
+      { roomName: TAP_ROOM, definition: TapGame, stateClass: TapState },
+      { roomName: PAD_ROOM, definition: PaddedGame, stateClass: PaddedState },
+    ],
   });
   apiPort = await t.serveApi();
 });
@@ -265,18 +294,34 @@ describe("table overrides", () => {
   });
 
   it("BotTable and DemoTable forward timeoutMs to joinBots", async () => {
-    const table = new BotTable({ ...tapper, endpoint: t.endpoint, apiPort, timeoutMs: 1 });
+    // The padded room's ~4 MB initial state sync lands well past waitFor's 20 ms poll floor, so a
+    // 1 ms budget forwarded to joinBots times out in joinOne; the 5000 ms default would resolve.
+    const table = new BotTable({ ...paddedKit, endpoint: t.endpoint, apiPort, timeoutMs: 1 });
     leavers.push(table);
     const code = await table.open();
-    const room = await t.sdk.joinById<TapState>(
+    const room = await t.sdk.joinById<PaddedState>(
       await resolve(code),
       { playerId: "human-zed-0005" },
-      TapState,
+      PaddedState,
     );
     leavers.push({ leave: () => room.leave(true) });
     await claimName(room, "human-zed-0005", "Zed");
-    await expect(table.seatBots({ count: 1 })).rejects.toThrow();
-  });
+    await expect(table.seatBots({ count: 1 })).rejects.toThrow(
+      "Timed out waiting for the room state",
+    );
+
+    const demo = new DemoTable({
+      ...paddedKit,
+      endpoint: t.endpoint,
+      apiPort,
+      bots: 1,
+      timeoutMs: 1,
+      isFinished: () => true,
+    });
+    leavers.push(demo);
+    await demo.open();
+    await expect(demo.seatBots()).rejects.toThrow("Timed out waiting for the room state");
+  }, 20_000);
 
   it("DemoTable honours a caller's bot.host.expectedPlayers", async () => {
     const table = new DemoTable({

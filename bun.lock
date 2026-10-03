@@ -67,8 +67,12 @@
     "packages/config": {
       "name": "@partygame/config",
       "version": "0.1.0",
+      "dependencies": {
+        "ws": "^8.18.1",
+      },
       "devDependencies": {
         "@sveltejs/vite-plugin-svelte": "^7.3.1",
+        "@types/ws": "^8.18.2",
         "svelte": "^5.57.1",
         "typescript": "^6.0.3",
         "vite": "^8.3.1",

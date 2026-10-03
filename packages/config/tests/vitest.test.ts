@@ -74,8 +74,8 @@ describe("nodeTestConfig", () => {
     expect(config.test?.coverage?.include).toEqual(["src/**/*.ts"]);
   });
 
-  it("adds setupFiles only when given", () => {
-    expect(nodeTestConfig(base).test?.setupFiles).toBeUndefined();
+  it("defaults setupFiles to the node WebSocket polyfill, replaced when given", () => {
+    expect(nodeTestConfig(base).test?.setupFiles).toEqual(["@partygame/config/node-test-setup"]);
     expect(nodeTestConfig({ ...base, setupFiles: ["./s.ts"] }).test?.setupFiles).toEqual([
       "./s.ts",
     ]);
