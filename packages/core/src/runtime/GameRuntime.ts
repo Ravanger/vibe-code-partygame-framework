@@ -307,7 +307,11 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   }
 
   private apply(next: Pending): void {
-    this.observeTransition(this.phaseName, next.kind === "lobby" ? LOBBY_PHASE : next.phase);
+    // An observer throw must not cancel the transition it observes (docs: middleware cannot veto);
+    // defer it like any hook failure and let the transition apply, then surface via rethrowFailure.
+    this.guarded(() =>
+      this.observeTransition(this.phaseName, next.kind === "lobby" ? LOBBY_PHASE : next.phase),
+    );
     if (next.kind === "lobby") {
       this.spec.onReturnToLobby?.(this.context());
       this.host.activateWaitingPlayers();

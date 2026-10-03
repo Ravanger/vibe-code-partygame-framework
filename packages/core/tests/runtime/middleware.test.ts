@@ -364,6 +364,25 @@ describe("middleware throws behave like hook throws", () => {
     table.joinLate("p3");
     expect(table.state.log).toContain("roster");
   });
+
+  it("applies the observed transition when a middleware throws on it, and surfaces the throw", () => {
+    // Docs promise: "middleware cannot cancel a queued transition". An observer throw must defer
+    // like any hook failure instead of dropping the transition it is observing.
+    let explode = true;
+    const mw: PhaseMiddleware<S, P, O> = (ctx, next) => {
+      if (ctx.event.kind === "transition" && explode) {
+        next();
+        throw new Error("mw transition boom");
+      }
+      next();
+    };
+    const table = new MTable([mw]);
+    expect(() => table.start()).toThrow("mw transition boom");
+    expect(table.phase).toBe("Play");
+    explode = false;
+    table.act("p2", "GO");
+    expect(table.phase).toBe("Score");
+  });
 });
 
 describe("middleware next() re-entrancy", () => {
