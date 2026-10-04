@@ -6,6 +6,7 @@ import {
   type GameContext,
   type GameDefinition,
   GameRuntime,
+  mulberry32,
   type PhaseState,
 } from "../../src/index.js";
 import { FakeHost } from "../../src/testing/FakeHost.js";
@@ -458,7 +459,8 @@ describe("handlers and transitions", () => {
     const { runtime, host, state, p2 } = inPlay();
     p2.isActive = false;
     runtime.dispatch("p1", { type: "TOOLS" });
-    expect(state.log).toEqual([`tools:2:1:p2:undefined:0.5:${host.now()}:3:7`]);
+    // Unseeded host is seed 0, and this is the table's first rng draw.
+    expect(state.log).toEqual([`tools:2:1:p2:undefined:${mulberry32(0)()}:${host.now()}:3:7`]);
     expect(host.sent).toContainEqual({ playerId: "p2", type: "HELLO", payload: 1 });
     expect(host.broadcasts).toEqual([{ type: "ALL", payload: 2 }]);
     expect(host.activations).toBe(1);

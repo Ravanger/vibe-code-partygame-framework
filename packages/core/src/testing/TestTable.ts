@@ -11,7 +11,7 @@ export interface TestTableConfig<TState extends PhaseState, TPrivate, TOptions> 
   options: TOptions;
   /** Seats p1..pN, p1 is the host; default 4. */
   players?: number;
-  /** Seed for the room RNG (mulberry32). Omit to keep FakeHost's constant `rng()` of 0.5. */
+  /** Seed for the room RNG (mulberry32). Omit for seed 0 — a deterministic, replayable stream. */
   seed?: number;
   /** Initial fake clock value (epoch ms); defaults to FakeHost's 1_000_000. */
   startTime?: number;

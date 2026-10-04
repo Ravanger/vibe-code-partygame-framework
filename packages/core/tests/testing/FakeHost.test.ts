@@ -55,7 +55,6 @@ describe("FakeHost", () => {
     expect(host.activations).toBe(1);
     expect(host.kicked).toEqual(["b", "nobody"]);
     expect(host.players().map((p) => p.id)).toEqual(["a"]);
-    expect(host.rng()).toBe(0.5);
   });
 
   it("draws rng from mulberry32 when constructed with a seed", () => {
@@ -65,10 +64,15 @@ describe("FakeHost", () => {
     for (let i = 0; i < 10; ++i) expect(host.rng()).toBe(expected());
   });
 
-  it("differs across seeds, and stays the constant 0.5 unseeded", () => {
+  it("unseeded draws from mulberry32(0) — deterministic, and replayable by seed 0", () => {
+    const host = new FakeHost();
+    expect(host.seed).toBe(0);
+    const expected = mulberry32(0);
+    for (let i = 0; i < 10; ++i) expect(host.rng()).toBe(expected());
+  });
+
+  it("differs across seeds", () => {
     expect(new FakeHost(1).rng()).not.toBe(new FakeHost(2).rng());
-    expect(new FakeHost().seed).toBe(0);
-    expect(new FakeHost().rng()).toBe(0.5);
   });
 
   it("benches only unready seats", () => {

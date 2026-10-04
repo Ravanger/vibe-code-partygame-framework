@@ -22,7 +22,7 @@ export class FakeHost implements RuntimeHost {
   readonly views: Array<{ op: "show" | "hide"; playerId: string; ref: object }> = [];
   readonly kicked: string[] = [];
   readonly published: unknown[] = [];
-  /** The room RNG seed; 0 when unseeded, in which case `rng()` is the constant 0.5. */
+  /** The room RNG seed; an unseeded host is seed 0, so `rng()` is the deterministic `mulberry32(0)` stream. */
   readonly seed: number;
   private rngFn: () => number;
   private timers: Timer[] = [];
@@ -30,7 +30,7 @@ export class FakeHost implements RuntimeHost {
 
   constructor(seed?: number) {
     this.seed = seed ?? 0;
-    this.rngFn = seed === undefined ? () => 0.5 : mulberry32(seed);
+    this.rngFn = mulberry32(this.seed);
   }
 
   seat(id: string, overrides: Partial<PlayerInfo> = {}): PlayerInfo {

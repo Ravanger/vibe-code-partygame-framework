@@ -8,6 +8,7 @@ import {
   actionLogMiddleware,
   defineGame,
   getActionLog,
+  mulberry32,
   type PhaseMiddleware,
   type PhaseState,
   replayLog,
@@ -232,10 +233,11 @@ describe("QA probe R.5 — RNG determinism", () => {
     expect(Array.from({ length: 16 }, () => c.rng())).not.toEqual(seqA);
   });
 
-  it("an unseeded FakeHost keeps its documented constant 0.5 (not replayable by seed)", () => {
+  it("an unseeded FakeHost is seed 0: deterministic mulberry32(0) stream, replayable by seed", () => {
     const host = new FakeHost();
-    expect(host.rng()).toBe(0.5);
-    expect(host.rng()).toBe(0.5);
+    expect(host.seed).toBe(0);
+    const expected = mulberry32(0);
+    for (let i = 0; i < 16; ++i) expect(host.rng()).toBe(expected());
   });
 
   it("ctx.rng() in a real table is drawn from the room seed: same seed, identical state", () => {
