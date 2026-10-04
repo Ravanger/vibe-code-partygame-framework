@@ -177,13 +177,15 @@ partial log remains (`getActionLog` stays `undefined`), and the next runtime ope
 | `phase` | Current phase; for `enter`, the phase being entered |
 | `kind` | `"action" \| "transition" \| "enter" \| "timeout" \| "roster-change"` |
 | `actionType`, `senderId`, `payload` | `kind === "action"` only; `payload` is the zod-parsed action object |
+| `rejected` | `kind === "action"` only; `true` when the handler called `ctx.reject()` (the action ran but changed nothing). Absent on accepted actions |
 | `from`, `to` | `kind === "transition"` only |
 
 Actions rejected **before the handler chain** — malformed envelope, unknown action, unauthorized sender,
 inactive player, invalid payload — are **not** logged: they never reach the middleware and change no state.
-An action whose *handler* calls `ctx.reject()` has reached the chain and **is** logged; it changes no state
-either, but replaying such a log throws at that entry's re-dispatch (the rejection re-runs) — see Limitations.
-Roster changes are recorded for observability (see the replay limitation below).
+An action whose *handler* calls `ctx.reject()` has reached the chain and **is** logged, marked
+`rejected: true`; it changes no state either, and such logs replay — the re-dispatch re-runs the handler
+(RNG draws included) and must reject again (a mismatch in either direction throws). Roster changes are
+recorded for observability (see the replay limitation below).
 
 **Roster.** When `START_GAME` is dispatched, the middleware also records `log.roster` — the seat ids
 in seat order at start time, captured once (a second start after `returnToLobby` does not overwrite
@@ -227,23 +229,23 @@ const { states } = replayLog(ButtonGame, log, {
 one deep-cloned snapshot per step — every logged `action`, `timeout` or (skipped) lobby `roster-change`
 starts a step, and the transitions and enters that follow from it belong to the same step. It throws when
 the log's `game` does not match the definition, on a mid-game roster change, on out-of-order entry times,
-when a re-dispatched action is rejected (either the log is not what this definition produces, or it records
-an action whose handler rejected it — see above), or when a logged transition or enter contradicts what the
-replayed runtime actually did — each step asserts its own consequence run, so a tampered log throws naming
-the mismatch.
+when a re-dispatch rejects an action the log records as accepted or accepts one recorded with
+`rejected: true` (a mismatch in either direction means the log is not what this definition produces), or
+when a logged transition or enter contradicts what the replayed runtime actually did — each step asserts
+its own consequence run, so a tampered log throws naming the mismatch.
 
 **Limitations in v1.** Mid-game roster changes are not replayed: `replayLog` throws naming the first such
 entry. Lobby-phase roster changes are skipped — the recorded roster is pre-seated at construction — so a
 game whose `Lobby.onRosterChange` writes synced state may diverge in intermediate states for sessions with
 lobby joins/leaves (final states still match). A sender that is not in the recorded roster (for example a
-joiner of a second session after `returnToLobby`) makes the re-dispatch throw. A log that records an action
-whose handler called `ctx.reject()` is not replayable: the re-dispatch re-runs the rejection and `replayLog`
-throws at that entry (handler-level rejections are logged — see above). No log cap; party sessions are
-minutes long.
+joiner of a second session after `returnToLobby`) makes the re-dispatch throw. No log cap; party sessions
+are minutes long.
 
 **Runtime additions.** Action middleware events now carry the zod-parsed `payload`; every context exposes
 `ctx.gameName` (definition name), `ctx.seed` (room RNG seed, recorded in the log header) and `ctx.newId()`
-(deterministic ids — see the Determinism contract above).
+(deterministic ids — see the Determinism contract above). Middleware contexts additionally expose
+`ctx.rejectionCount` — the live count of `ctx.reject()` calls for the current dispatch, so a middleware can
+tell after `next()` whether an action's handler rejected.
 
 ### Errors at definition time
 `defineGame` throws `GameDefinitionError` listing every problem: reserved or unknown phase names, missing `startPhase`,

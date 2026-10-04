@@ -88,6 +88,12 @@ export type MiddlewareEvent =
 export interface MiddlewareContext<TState extends PhaseState, TPrivate, TOptions>
   extends GameContext<TState, TPrivate, TOptions> {
   readonly event: MiddlewareEvent;
+  /**
+   * `ctx.reject()` calls recorded since this dispatch started. Live: read it after `next()` to see
+   * whether the action's handler rejected. Pre-chain rejections never enter the chain, and hooks
+   * have no `reject`, so a non-zero count here means the handler rejected.
+   */
+  readonly rejectionCount: number;
 }
 
 /**

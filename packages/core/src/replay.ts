@@ -111,11 +111,12 @@ function authoritativeDurations<TState extends PhaseState, TPrivate, TOptions>(
  * ids are mapped positionally to p1..pN so actions re-dispatch against the matching seats; a log
  * without a roster requires `init.players` instead. Roster changes during the Lobby are skipped —
  * the table is already seated; a mid-game roster change throws, because v1 does not replay it.
- * Entries must be time-ordered; a backwards clock throws. Rejected re-dispatches throw as well: a
- * valid log only contains actions the live runtime accepted from seats in the recorded roster. Each
- * step's logged transitions and enters are asserted against the replayed runtime — a log that
- * contradicts what this definition actually does throws, naming the mismatch. See "Action log and
- * replay" in the framework guide.
+ * Entries must be time-ordered; a backwards clock throws. A re-dispatch that rejects where the log
+ * says the action was accepted throws, and one that accepts where the log marks the entry
+ * `rejected: true` throws as well — both directions of mismatch mean the log is not what this
+ * definition produces. Each step's logged transitions and enters are asserted against the replayed
+ * runtime — a log that contradicts what this definition actually does throws, naming the mismatch.
+ * See "Action log and replay" in the framework guide.
  */
 export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
   definition: GameDefinition<TState, TPrivate, TOptions>,
@@ -174,7 +175,15 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
         entry.actionType ?? "",
         (entry.payload ?? {}) as Record<string, unknown>,
       );
-      if (error !== undefined) {
+      if (entry.rejected === true) {
+        // The live handler rejected: the re-dispatch must reject again. Re-running it also consumes
+        // any RNG draws the handler made before rejecting, keeping the stream in step with live.
+        if (error === undefined) {
+          throw new Error(
+            `replayLog: entry ${entry.seq} is logged as rejected, but the re-dispatch of action ${entry.actionType} was accepted`,
+          );
+        }
+      } else if (error !== undefined) {
         throw new Error(
           `replayLog: re-dispatched action ${entry.actionType} was rejected (${error.code}: ${error.message})`,
         );

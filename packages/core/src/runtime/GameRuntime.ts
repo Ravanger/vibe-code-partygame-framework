@@ -209,7 +209,15 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   }
 
   private middlewareContext(event: MiddlewareEvent): MiddlewareContext<TState, TPrivate, TOptions> {
-    return { ...this.context(), event };
+    const rejections = this.rejections;
+    return {
+      ...this.context(),
+      event,
+      // Live view of the dispatch's rejection list (dispatch resets it before every handle).
+      get rejectionCount() {
+        return rejections.length;
+      },
+    };
   }
 
   private rosterChange(): void {

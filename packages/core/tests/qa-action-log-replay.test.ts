@@ -200,25 +200,61 @@ describe("QA probe R.4 — rejection exclusion", () => {
     expect(table.errors("p2")).toHaveLength(5); // sanity: all five were really rejected
   });
 
-  it("logs an action whose handler calls ctx.reject() — it reached the chain (re-dispatch re-runs the rejection)", () => {
+  it("marks an action whose handler calls ctx.reject() with rejected: true (accepted actions get no key)", () => {
     const table = new FTable();
     table.start();
-    const before = table.log()?.entries.length ?? -1;
+    table.act("p2", "PING", { n: 7 }); // accepted
     expect(table.act("p2", "REJECT_ME")).toMatchObject({ code: ErrorCode.NOT_ALLOWED });
     const log = table.log();
-    expect(log?.entries).toHaveLength(before + 1);
-    expect(log?.entries.at(-1)).toMatchObject({
+    expect(log?.entries.at(-2)).toMatchObject({ kind: "action", actionType: "PING" });
+    expect(log?.entries.at(-2)?.rejected).toBeUndefined(); // no key on accepted actions (R.1 pins this exactly)
+    expect(log?.entries.at(-1)).toEqual({
+      seq: 6,
+      t: 1_000_000,
+      phase: "Play",
       kind: "action",
       actionType: "REJECT_ME",
       senderId: "p2",
+      payload: {},
+      rejected: true,
     });
-    // The re-dispatch re-runs the handler's rejection, so replayLog throws on such a log (v1 limitation).
+  });
+
+  it("replays a log containing a marked rejection: the re-dispatch re-runs the handler and rejects as expected", () => {
+    const table = new FTable();
+    table.start();
+    table.act("p2", "REJECT_ME"); // rejected by the handler, marked in the log
+    const result = replayLog(fullDefinition, table.log() as ActionLog, {
+      state: newState(),
+      options: { rounds: 2 },
+      players: 2,
+    });
+    expect(result.states.at(-1)?.pings).toEqual([]); // the rejected action changed nothing
+  });
+
+  it("throws when a log marks an accepted action as rejected (tampered log)", () => {
+    const table = new FTable();
+    table.start();
+    table.act("p2", "PING", { n: 7 });
+    const log = table.log() as ActionLog;
+    const ping = log.entries.find((e) => e.actionType === "PING");
+    if (ping === undefined) throw new Error("test setup: PING entry missing");
+    ping.rejected = true; // hand-edit: claim the accepted action was rejected
     expect(() =>
-      replayLog(fullDefinition, log as ActionLog, {
-        state: newState(),
-        options: { rounds: 2 },
-        players: 2,
-      }),
+      replayLog(fullDefinition, log, { state: newState(), options: { rounds: 2 }, players: 2 }),
+    ).toThrow(/logged as rejected/);
+  });
+
+  it("throws when a log hides a rejection (no mark, but the re-dispatch rejects)", () => {
+    const table = new FTable();
+    table.start();
+    table.act("p2", "REJECT_ME");
+    const log = table.log() as ActionLog;
+    const entry = log.entries.find((e) => e.actionType === "REJECT_ME");
+    if (entry === undefined) throw new Error("test setup: REJECT_ME entry missing");
+    delete entry.rejected; // hand-edit: hide the rejection
+    expect(() =>
+      replayLog(fullDefinition, log, { state: newState(), options: { rounds: 2 }, players: 2 }),
     ).toThrow(/re-dispatched action REJECT_ME was rejected/);
   });
 });
