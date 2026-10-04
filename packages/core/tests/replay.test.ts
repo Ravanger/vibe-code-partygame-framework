@@ -165,6 +165,35 @@ describe("replayLog", () => {
     ).toThrow('log was recorded for game "TapReplay", not "OtherGame"');
   });
 
+  it("throws when the first entry is not the construction-time Lobby enter (entry removed)", () => {
+    const live = liveTable();
+    live.start();
+    const log = getActionLog(live.priv) as ActionLog;
+    const trimmed: ActionLog = { ...log, entries: log.entries.slice(1) }; // drop the Lobby enter
+    expect(() =>
+      replayLog(definition, trimmed, { state: newState(), options: {}, players: 2 }),
+    ).toThrow(
+      'the first log entry must be the construction-time Lobby enter (got action "START_GAME" in phase "Lobby", seq 2)',
+    );
+  });
+
+  it("throws when the first entry is not the construction-time Lobby enter (phase tampered)", () => {
+    const live = liveTable();
+    live.start();
+    const log = getActionLog(live.priv) as ActionLog;
+    const firstEntry = log.entries[0];
+    if (firstEntry === undefined) throw new Error("test setup: empty log");
+    const tampered: ActionLog = {
+      ...log,
+      entries: [{ ...firstEntry, phase: "Tap" }, ...log.entries.slice(1)],
+    };
+    expect(() =>
+      replayLog(definition, tampered, { state: newState(), options: {}, players: 2 }),
+    ).toThrow(
+      'the first log entry must be the construction-time Lobby enter (got "enter" entry in phase "Tap", seq 1)',
+    );
+  });
+
   it("throws on a mid-game roster change, naming the entry and phase", () => {
     const live = liveTable();
     live.start();

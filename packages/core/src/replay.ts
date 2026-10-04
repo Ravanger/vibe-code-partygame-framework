@@ -101,6 +101,8 @@ function authoritativeDurations<TState extends PhaseState, TPrivate, TOptions>(
 
 /**
  * Re-drives a fresh runtime from an {@link ActionLog} and returns deep-cloned state snapshots.
+ * The log must start with the construction-time Lobby enter (seq 1) — every recorded session does,
+ * because the middleware creates the log on its first event — and a different first entry throws.
  * Builds a `TestTable` with the log's seed (or `init.seed`) and start time, then walks the entries
  * in order: transitions and enters are consequences of the step that started them and are skipped;
  * every other entry advances the clock to its `t`, re-dispatches the action (if any) and produces
@@ -126,6 +128,15 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
   if (definition.name !== log.header.game) {
     throw new Error(
       `replayLog: log was recorded for game "${log.header.game}", not "${definition.name}"`,
+    );
+  }
+  // The middleware creates the log on its first event, and a runtime's first event is always the
+  // construction-time Lobby enter — so any valid log starts with exactly that entry.
+  const first = required(log.entries[0], "first log entry");
+  if (first.seq !== 1 || first.kind !== "enter" || first.phase !== LOBBY_PHASE) {
+    const what = first.kind === "action" ? `action "${first.actionType}"` : `"${first.kind}" entry`;
+    throw new Error(
+      `replayLog: the first log entry must be the construction-time Lobby enter (got ${what} in phase "${first.phase}", seq ${first.seq})`,
     );
   }
   let seatCount: number;
