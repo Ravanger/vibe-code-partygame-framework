@@ -155,6 +155,10 @@ export const ButtonGame = defineGame<State, Priv>({
 
 The log is created lazily on the first event and stored under the key `ACTION_LOG` (the same lazy-storage
 pattern as `timingMiddleware`). It never touches `ctx.state`; export it with `JSON.stringify(getActionLog(priv))`.
+The log lives in `ctx.priv`, so a game's private state must be writable: with a frozen or sealed private
+state the first write fails — construction does not throw (a hook failure is deferred, like any other), no
+partial log remains (`getActionLog` stays `undefined`), and the next runtime operation throws a loud
+`TypeError`.
 
 **Header** — written on the first entry:
 
