@@ -219,7 +219,9 @@ const { states } = replayLog(ButtonGame, log, {
 one deep-cloned snapshot per step — every logged `action`, `timeout` or (skipped) lobby `roster-change`
 starts a step, and the transitions and enters that follow from it belong to the same step. It throws when
 the log's `game` does not match the definition, on a mid-game roster change, on out-of-order entry times,
-or when a re-dispatched action is rejected (a valid log only contains accepted actions).
+when a re-dispatched action is rejected (a valid log only contains accepted actions), or when a logged
+transition or enter contradicts what the replayed runtime actually did — each step asserts its own
+consequence run, so a tampered log throws naming the mismatch.
 
 **Limitations in v1.** Mid-game roster changes are not replayed: `replayLog` throws naming the first such
 entry. Lobby-phase roster changes are skipped — the recorded roster is pre-seated at construction — so a

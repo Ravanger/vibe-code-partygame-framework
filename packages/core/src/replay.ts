@@ -2,6 +2,7 @@ import { LOBBY_PHASE } from "@partygame/shared";
 import type { ActionLog, ActionLogEntry } from "./actionLog.js";
 import type { GameDefinition, PhaseDefinition, PhaseState } from "./runtime/index.js";
 import { TestTable } from "./testing/TestTable.js";
+import { required } from "./utils.js";
 
 /** Starting values for {@link replayLog}. */
 export interface ReplayInit<TState extends PhaseState, TOptions> {
@@ -107,8 +108,10 @@ function authoritativeDurations<TState extends PhaseState, TPrivate, TOptions>(
  * without a roster requires `init.players` instead. Roster changes during the Lobby are skipped —
  * the table is already seated; a mid-game roster change throws, because v1 does not replay it.
  * Entries must be time-ordered; a backwards clock throws. Rejected re-dispatches throw as well: a
- * valid log only contains actions the live runtime accepted from seats in the recorded roster.
- * See "Action log and replay" in the framework guide.
+ * valid log only contains actions the live runtime accepted from seats in the recorded roster. Each
+ * step's logged transitions and enters are asserted against the replayed runtime — a log that
+ * contradicts what this definition actually does throws, naming the mismatch. See "Action log and
+ * replay" in the framework guide.
  */
 export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
   definition: GameDefinition<TState, TPrivate, TOptions>,
@@ -143,7 +146,10 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
     startTime: log.header.startedAt,
   });
   const states: TState[] = [clone(table.state)];
-  for (const entry of log.entries) {
+  for (let i = 0; i < log.entries.length; ++i) {
+    const entry = required(log.entries[i], "log entry");
+    // Transition and enter entries are consequences of the step that caused them; each step asserts
+    // its own consequence run below.
     if (entry.kind === "transition" || entry.kind === "enter") continue;
     if (entry.t < table.host.time) {
       throw new Error(
@@ -155,6 +161,7 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
         `replayLog: mid-game roster changes are not replayable in v1 (entry ${entry.seq} in phase "${entry.phase}")`,
       );
     }
+    const prePhase = table.phase;
     table.tick(entry.t - table.host.time);
     if (entry.kind === "action") {
       const senderId = entry.senderId ?? "";
@@ -168,6 +175,31 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
           `replayLog: re-dispatched action ${entry.actionType} was rejected (${error.code}: ${error.message})`,
         );
       }
+    }
+    // The transitions and enters that follow a step are its consequences: the replayed runtime must
+    // have performed exactly what the log records, or the log is not what this definition produces.
+    let expected = prePhase;
+    for (let j = i + 1; j < log.entries.length; ++j) {
+      const consequence = required(log.entries[j], "log entry");
+      if (consequence.kind !== "transition" && consequence.kind !== "enter") break;
+      if (consequence.kind === "transition") {
+        const to = required(consequence.to, "transition target");
+        if (consequence.from !== expected) {
+          throw new Error(
+            `replayLog: entry ${consequence.seq} says transition "${consequence.from}" -> "${to}" but replay was in phase "${expected}"`,
+          );
+        }
+        expected = to;
+      } else if (consequence.phase !== expected) {
+        throw new Error(
+          `replayLog: entry ${consequence.seq} says enter "${consequence.phase}" but the log's transition leads to "${expected}"`,
+        );
+      }
+    }
+    if (table.phase !== expected) {
+      throw new Error(
+        `replayLog: after entry ${entry.seq} the log expects phase "${expected}" but replay is in phase "${table.phase}"`,
+      );
     }
     states.push(clone(table.state));
   }

@@ -419,6 +419,65 @@ describe("QA probe R.7 — adversarial replay round-trip", () => {
   });
 });
 
+describe("QA probe R.8 — replay transition assertion", () => {
+  const session = (): ActionLog => {
+    const table = new FTable();
+    table.start();
+    table.tick(1000);
+    return getActionLog(table.priv) as ActionLog;
+  };
+
+  // A fresh init per test: replayLog drives the passed state object in place.
+  const init = () => ({ state: newState(), options: { rounds: 2 }, players: 2 });
+
+  it("throws when a transition entry's `to` was tampered with, naming the mismatch", () => {
+    const log = session();
+    const tampered: ActionLog = {
+      ...log,
+      entries: log.entries.map((e) =>
+        e.kind === "transition" && e.to === "Score" ? { ...e, to: "Play" } : e,
+      ),
+    };
+    expect(() => replayLog(fullDefinition, tampered, init())).toThrow(/(Score|Play)/);
+  });
+
+  it("throws when a transition entry's `from` was tampered with, naming the mismatch", () => {
+    const log = session();
+    const tampered: ActionLog = {
+      ...log,
+      entries: log.entries.map((e) =>
+        e.kind === "transition" && e.to === "Score" ? { ...e, from: "Lobby" } : e,
+      ),
+    };
+    expect(() => replayLog(fullDefinition, tampered, init())).toThrow(/(Play|Score)/);
+  });
+
+  it("throws when an enter entry's phase was tampered with, naming the mismatch", () => {
+    const log = session();
+    const tampered: ActionLog = {
+      ...log,
+      entries: log.entries.map((e) =>
+        e.kind === "enter" && e.phase === "Score" ? { ...e, phase: "Play" } : e,
+      ),
+    };
+    expect(() => replayLog(fullDefinition, tampered, init())).toThrow(/(Play|Score)/);
+  });
+
+  it("throws when a transition and its enter are tampered consistently, naming the mismatch", () => {
+    const log = session();
+    // Consistent with each other (chain checks pass) but not with what the runtime actually did.
+    const tampered: ActionLog = {
+      ...log,
+      entries: log.entries.map((e) => {
+        if (e.kind === "transition" && e.to === "Score") return { ...e, to: "Play" };
+        if (e.kind === "enter" && e.phase === "Score") return { ...e, phase: "Play" };
+        return e;
+      }),
+    };
+    expect(() => replayLog(fullDefinition, tampered, init())).toThrow(/(Play|Score)/);
+  });
+});
+
 describe("QA probe R.9 — roster-change limitation", () => {
   it("throws a clear v1-limitation error naming the entry and phase, not a deep-equal failure later", () => {
     const table = new FTable();
@@ -445,6 +504,8 @@ describe("QA probe R.10 — clock scripting", () => {
     const timeout = log.entries.find((e) => e.kind === "timeout");
     if (timeout === undefined)
       throw new Error("QA probe R.10: expected a timeout entry in the live log");
+    // The live log continues past the timeout with its transition and enter; keep them, at the skewed time.
+    const afterTimeout = log.entries.slice(log.entries.indexOf(timeout) + 1);
     const skewed: ActionLog = {
       ...log,
       entries: [
@@ -459,6 +520,7 @@ describe("QA probe R.10 — clock scripting", () => {
           payload: { n: 2 },
         },
         { ...timeout, seq: 7, t: 1_001_100 }, // the skewed timeout
+        ...afterTimeout.map((e, k) => ({ ...e, seq: 8 + k, t: 1_001_100 })),
       ],
     };
 
