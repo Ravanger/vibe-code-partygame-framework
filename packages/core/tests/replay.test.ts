@@ -37,9 +37,57 @@ const definition = defineGame<S, { marker: string }, Record<string, never>>({
             ctx.state.taps += ctx.payload.by;
           },
         }),
+        STAGE: action({
+          from: "host",
+          payload: z.object({}),
+          handler: (ctx) => ctx.transition("Staged"),
+        }),
+        LOOP: action({
+          from: "host",
+          payload: z.object({}),
+          handler: (ctx) => ctx.transition("Loop"),
+        }),
       },
     },
-    Done: {},
+    // Its timeout re-enters the same phase.
+    Loop: {
+      duration: 300,
+      onTimeout: (ctx) => ctx.transition("Loop"),
+      actions: {
+        UNLOOP: action({
+          from: "host",
+          payload: z.object({}),
+          handler: (ctx) => ctx.transition("Done"),
+        }),
+      },
+    },
+    Staged: {
+      duration: () => 500,
+      onTimeout: (ctx) => ctx.transition("Done"),
+      actions: {
+        SKIP: action({
+          from: "host",
+          payload: z.object({}),
+          handler: (ctx) => ctx.transition("Done"),
+        }),
+      },
+    },
+    // Timed but never entered in the tests below.
+    Stowed: {
+      duration: 250,
+      onTimeout: (ctx) => ctx.transition("Done"),
+    },
+    Done: {
+      actions: {
+        FINISH: action({
+          from: "host",
+          payload: z.object({}),
+          handler: (ctx) => {
+            ctx.state.taps += 10;
+          },
+        }),
+      },
+    },
   },
 });
 
@@ -184,6 +232,113 @@ describe("replayLog", () => {
     expect(() =>
       replayLog(definition, stripped, { state: newState(), options: {}, players: 2 }),
     ).toThrow("re-dispatched action undefined was rejected");
+  });
+
+  it("treats logged timeout times as authoritative when they precede enter + duration", () => {
+    const live = liveTable();
+    live.start();
+    live.tick(1000); // Tap timeout -> Done at 1_001_000
+    const log = getActionLog(live.priv) as ActionLog;
+    // A live room's tick-quantized clock can fire a phase timer a few ms before the nominal
+    // enter + duration deadline; replay must honor the logged firing time.
+    const skewed: ActionLog = {
+      ...log,
+      entries: log.entries.map((e) => (e.t === 1_001_000 ? { ...e, t: e.t - 5 } : e)),
+    };
+    const { states } = replayLog(definition, skewed, {
+      state: newState(),
+      options: {},
+      players: 2,
+    });
+    expect(states).toEqual([
+      { phase: "Lobby", phaseEndsAt: 0, canStart: true, taps: 0 },
+      // the replayed timer expires at the logged timeout time, not enter + duration
+      { phase: "Tap", phaseEndsAt: 1_000_995, canStart: false, taps: 0 },
+      { phase: "Done", phaseEndsAt: 0, canStart: false, taps: 0 },
+    ]);
+  });
+
+  it("re-dispatches actions after an early logged timeout instead of rejecting them", () => {
+    const live = liveTable();
+    live.start();
+    live.tick(1000); // Tap timeout -> Done at 1_001_000
+    live.act("p1", "FINISH"); // host action in Done, same ms as the live firing
+    const log = getActionLog(live.priv) as ActionLog;
+    // Simulate a skewed live log: the timeout fired 5 ms early and the host reacted 2 ms later.
+    const skewed: ActionLog = {
+      ...log,
+      entries: log.entries.map((e) => {
+        if (e.kind === "timeout") return { ...e, t: e.t - 5 };
+        if (e.actionType === "FINISH") return { ...e, t: e.t - 2 };
+        return e;
+      }),
+    };
+    const { states } = replayLog(definition, skewed, {
+      state: newState(),
+      options: {},
+      players: 2,
+    });
+    expect(states.at(-1)).toEqual({ phase: "Done", phaseEndsAt: 0, canStart: false, taps: 10 });
+  });
+
+  it("keeps the original duration for enters without a logged timeout", () => {
+    const live = liveTable();
+    live.start();
+    live.act("p1", "STAGE"); // Tap leaves early (no timeout); Staged gets a function duration
+    live.act("p1", "SKIP"); // Staged leaves early too, so neither enter is paired with a timeout
+    const log = getActionLog(live.priv) as ActionLog;
+    const { states } = replayLog(definition, log, { state: newState(), options: {}, players: 2 });
+    expect(states.at(-1)).toEqual({ phase: "Done", phaseEndsAt: 0, canStart: false, taps: 0 });
+  });
+
+  it("falls back to the nominal duration when a timeout has no matching enter", () => {
+    const live = liveTable();
+    live.start();
+    live.tick(1000); // Tap timeout -> Done at 1_001_000
+    const log = getActionLog(live.priv) as ActionLog;
+    // Drop the enter so the timeout cannot be paired (a malformed log).
+    const noEnter: ActionLog = {
+      ...log,
+      entries: log.entries.filter((e) => !(e.kind === "enter" && e.phase === "Tap")),
+    };
+    const { states } = replayLog(definition, noEnter, {
+      state: newState(),
+      options: {},
+      players: 2,
+    });
+    expect(states.at(-1)).toEqual({ phase: "Done", phaseEndsAt: 0, canStart: false, taps: 0 });
+  });
+
+  it("pairs each enter of a self-reentering timed phase with its own timeout", () => {
+    const live = liveTable();
+    live.start();
+    live.act("p1", "LOOP"); // Tap -> Loop (300 ms; onTimeout re-enters Loop)
+    live.tick(650); // two Loop timeouts: re-enter at +300, timeout again at +600
+    live.act("p1", "UNLOOP"); // Loop -> Done
+    const log = getActionLog(live.priv) as ActionLog;
+    // Skew the first logged timeout 5 ms early (tick-quantized live clocks do this).
+    const skewed: ActionLog = {
+      ...log,
+      entries: log.entries.map((e) =>
+        e.kind === "timeout" && e.t === 1_000_300 ? { ...e, t: e.t - 5 } : e,
+      ),
+    };
+    const { states } = replayLog(definition, skewed, {
+      state: newState(),
+      options: {},
+      players: 2,
+    });
+    expect(states).toEqual([
+      { phase: "Lobby", phaseEndsAt: 0, canStart: true, taps: 0 },
+      { phase: "Tap", phaseEndsAt: 1_001_000, canStart: false, taps: 0 },
+      // the first Loop enter expires at the skewed logged time
+      { phase: "Loop", phaseEndsAt: 1_000_295, canStart: false, taps: 0 },
+      // re-entry after the first timeout; its timer expires at the second logged timeout
+      { phase: "Loop", phaseEndsAt: 1_000_600, canStart: false, taps: 0 },
+      // the third enter has no logged timeout (UNLOOP leaves early): nominal duration
+      { phase: "Loop", phaseEndsAt: 1_000_900, canStart: false, taps: 0 },
+      { phase: "Done", phaseEndsAt: 0, canStart: false, taps: 0 },
+    ]);
   });
 
   it("draws the RNG from the header seed by default and from init.seed when given", () => {

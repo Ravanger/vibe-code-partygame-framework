@@ -1,6 +1,6 @@
 import { LOBBY_PHASE } from "@partygame/shared";
-import type { ActionLog } from "./actionLog.js";
-import type { GameDefinition, PhaseState } from "./runtime/index.js";
+import type { ActionLog, ActionLogEntry } from "./actionLog.js";
+import type { GameDefinition, PhaseDefinition, PhaseState } from "./runtime/index.js";
 import { TestTable } from "./testing/TestTable.js";
 
 /** Starting values for {@link replayLog}. */
@@ -33,11 +33,76 @@ function clone<T>(value: T): T {
 }
 
 /**
+ * Pairs each logged enter with the timeout that closed it. Per phase, one slot per enter in log
+ * order, filled with the timeout entry's `t` when the phase timed out before its next enter;
+ * `undefined` when the phase left early. A valid log pairs 1:1 — a timeout without an open enter
+ * (a malformed log) is ignored.
+ */
+function pairTimeouts(entries: ActionLogEntry[]): Map<string, (number | undefined)[]> {
+  const pairs = new Map<string, (number | undefined)[]>();
+  const open = new Map<string, { list: (number | undefined)[]; index: number }>();
+  for (const entry of entries) {
+    if (entry.kind === "enter") {
+      // Re-enters (including a timeout that re-enters its own phase) append to the existing list.
+      let list = pairs.get(entry.phase);
+      if (list === undefined) {
+        list = [];
+        pairs.set(entry.phase, list);
+      }
+      open.set(entry.phase, { list, index: list.length });
+      list.push(undefined);
+    } else if (entry.kind === "timeout") {
+      const slot = open.get(entry.phase);
+      if (slot !== undefined) {
+        slot.list[slot.index] = entry.t;
+        open.delete(entry.phase);
+      }
+    }
+  }
+  return pairs;
+}
+
+/**
+ * Replaces each timed phase's duration with one that expires at the log's recorded timeout time.
+ * A live room's phase timers run on Colyseus's tick-quantized clock (~17 ms grid), so a logged
+ * timeout can precede or follow the nominal enter + duration deadline; the log is authoritative.
+ * Enters without a logged timeout keep the original duration (their timer is cancelled on the
+ * early exit, exactly as live).
+ */
+function authoritativeDurations<TState extends PhaseState, TPrivate, TOptions>(
+  definition: GameDefinition<TState, TPrivate, TOptions>,
+  pairs: Map<string, (number | undefined)[]>,
+): GameDefinition<TState, TPrivate, TOptions> {
+  const phases: Record<string, PhaseDefinition<TState, TPrivate, TOptions>> = {};
+  for (const [name, phase] of Object.entries(definition.phases)) {
+    const list = pairs.get(name);
+    if (list === undefined || phase.duration === undefined) {
+      phases[name] = phase;
+      continue;
+    }
+    const original = phase.duration;
+    let next = 0;
+    phases[name] = {
+      ...phase,
+      duration: (ctx) => {
+        const at = list[next++];
+        if (at !== undefined) return at - ctx.now();
+        return typeof original === "function" ? original(ctx) : original;
+      },
+    };
+  }
+  return { ...definition, phases };
+}
+
+/**
  * Re-drives a fresh runtime from an {@link ActionLog} and returns deep-cloned state snapshots.
  * Builds a `TestTable` with the log's seed (or `init.seed`) and start time, then walks the entries
  * in order: transitions and enters are consequences of the step that started them and are skipped;
  * every other entry advances the clock to its `t`, re-dispatches the action (if any) and produces
- * one snapshot. The recorded roster (the seats at START_GAME, host first) is pre-seated and its
+ * one snapshot. Logged timeouts are authoritative: when the replayed runtime enters a timed phase,
+ * its timer is made to expire at the time recorded in the log — a live room's tick-quantized clock
+ * can fire a few ms early or late relative to enter + duration — so `phaseEndsAt` in the snapshots
+ * reflects that time. The recorded roster (the seats at START_GAME, host first) is pre-seated and its
  * ids are mapped positionally to p1..pN so actions re-dispatch against the matching seats; a log
  * without a roster requires `init.players` instead. Roster changes during the Lobby are skipped —
  * the table is already seated; a mid-game roster change throws, because v1 does not replay it.
@@ -70,7 +135,7 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
     seatCount = init.players;
   }
   const table = new TestTable({
-    definition,
+    definition: authoritativeDurations(definition, pairTimeouts(log.entries)),
     state: init.state,
     options: init.options,
     players: seatCount,

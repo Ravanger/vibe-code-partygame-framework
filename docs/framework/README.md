@@ -190,8 +190,11 @@ replay table's first seat is its host).
 - **RNG.** Rooms draw their randomness from a seeded PRNG (`mulberry32`); each room gets a seed from
   `crypto.getRandomValues` at creation, recorded in the header. `FakeHost`/`TestTable` accept an explicit
   seed; an unseeded `FakeHost` keeps its constant `rng() === 0.5` and is not replayable by seed.
-- **Clock.** Replay scripts the fake clock: it advances to each entry's `t` before applying the entry, so
-  timers fire at exactly the logged times.
+- **Clock.** Replay scripts the fake clock: it advances to each entry's `t` before applying the entry, and
+  logged timeouts are authoritative — when replay enters a timed phase, its timer is made to expire at the
+  time recorded in the log. A live room's phase timers run on Colyseus's tick-quantized clock (a ~17 ms
+  grid), so a timeout can fire a few ms early or late relative to enter + duration; `phaseEndsAt` in
+  replayed snapshots is the logged timeout time, not enter + duration.
 - **IDs.** Identifiers that land in synced state or an action payload must come from `ctx.newId()` (drawn
   from the room RNG). `crypto.randomUUID()` breaks replay: re-dispatched payloads reference ids the fresh
   runtime never generated.
