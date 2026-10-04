@@ -419,6 +419,63 @@ describe("QA probe R.7 — adversarial replay round-trip", () => {
   });
 });
 
+describe("QA probe R.7 extension — RNG parity for function durations", () => {
+  // A legal game shape: the phase duration itself is drawn from the room RNG. Live, the duration
+  // function runs at enter (a draw in the stream) BEFORE onEnter; replay must keep the same order.
+  interface DurState extends PhaseState {
+    roll: number;
+    roll2: number;
+  }
+
+  const durDefinition = defineGame<DurState, Record<string, never>, Record<string, never>>({
+    name: "QADur",
+    minPlayers: 1,
+    maxPlayers: 2,
+    startPhase: "Wait",
+    createPrivateState: () => ({}),
+    phases: {
+      Wait: {
+        duration: (ctx) => 1000 + Math.floor(ctx.rng() * 500),
+        onEnter: (ctx) => {
+          ctx.state.roll = Math.floor(ctx.rng() * 100);
+          ctx.state.roll2 = Math.floor(ctx.rng() * 100);
+        },
+        onTimeout: (ctx) => ctx.transition("Done"),
+      },
+      Done: {},
+    },
+  });
+
+  const freshDur = (): DurState => ({
+    phase: "",
+    phaseEndsAt: 0,
+    canStart: false,
+    roll: 0,
+    roll2: 0,
+  });
+
+  it("a function duration that draws the RNG keeps replay in step with the live draw stream", () => {
+    const live = new TestTable({
+      definition: { ...durDefinition, middleware: [actionLogMiddleware()] },
+      state: freshDur(),
+      options: {},
+      players: 1,
+      seed: 55,
+    });
+    live.start();
+    live.tick(2000); // covers the maximum possible duration (1499)
+    const log = getActionLog(live.priv) as ActionLog;
+    expect(log.entries.some((e) => e.kind === "timeout" && e.phase === "Wait")).toBe(true);
+
+    const { states } = replayLog(durDefinition, log, {
+      state: freshDur(),
+      options: {},
+      players: 1,
+    });
+    expect(states.at(-1)).toEqual(JSON.parse(JSON.stringify(live.state)) as DurState);
+  });
+});
+
 describe("QA probe R.8 — replay transition assertion", () => {
   const session = (): ActionLog => {
     const table = new FTable();

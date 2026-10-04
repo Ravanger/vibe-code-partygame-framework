@@ -68,7 +68,9 @@ function pairTimeouts(entries: ActionLogEntry[]): Map<string, (number | undefine
  * A live room's phase timers run on Colyseus's tick-quantized clock (~17 ms grid), so a logged
  * timeout can precede or follow the nominal enter + duration deadline; the log is authoritative.
  * Enters without a logged timeout keep the original duration (their timer is cancelled on the
- * early exit, exactly as live).
+ * early exit, exactly as live). When the original duration is a function it is still called on
+ * every enter — its value is only discarded when a recorded timeout is authoritative — so a
+ * duration that draws from `ctx.rng()` consumes the same RNG draws, in the same order, as live.
  */
 function authoritativeDurations<TState extends PhaseState, TPrivate, TOptions>(
   definition: GameDefinition<TState, TPrivate, TOptions>,
@@ -87,8 +89,10 @@ function authoritativeDurations<TState extends PhaseState, TPrivate, TOptions>(
       ...phase,
       duration: (ctx) => {
         const at = list[next++];
-        if (at !== undefined) return at - ctx.now();
-        return typeof original === "function" ? original(ctx) : original;
+        // Call the original even when the recorded timeout is authoritative: a function duration
+        // that draws the RNG must consume the same draws, in the same order, as live.
+        const base = typeof original === "function" ? original(ctx) : original;
+        return at !== undefined ? at - ctx.now() : base;
       },
     };
   }
