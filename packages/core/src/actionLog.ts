@@ -77,8 +77,11 @@ function logOf(ctx: MiddlewareContext<PhaseState, unknown, unknown>): ActionLog 
  * Records every middleware-visible event — actions (type, sender, zod-parsed payload), transitions
  * (from/to), enters, timeouts and roster changes — into an append-only, JSON-serializable log in
  * `ctx.priv[ACTION_LOG]`. The header (seed, game name, start time) is written on the first entry.
- * Never touches `ctx.state`; the log stays server-side. Rejected actions are not logged: they never
- * reach the handler chain and change no state. See "Action log and replay" in the framework guide.
+ * Never touches `ctx.state`; the log stays server-side. Actions rejected before the handler chain
+ * (malformed envelope, unknown action, unauthorized sender, inactive player, invalid payload) are not
+ * logged; an action whose handler calls `ctx.reject()` has reached the chain and is logged — replaying
+ * such a log throws at that entry's re-dispatch, because the rejection re-runs. See "Action log and
+ * replay" in the framework guide.
  */
 export function actionLogMiddleware(): PhaseMiddleware<PhaseState, unknown, unknown> {
   return (ctx, next) => {

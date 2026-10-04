@@ -211,6 +211,14 @@ describe("QA probe R.4 — rejection exclusion", () => {
       actionType: "REJECT_ME",
       senderId: "p2",
     });
+    // The re-dispatch re-runs the handler's rejection, so replayLog throws on such a log (v1 limitation).
+    expect(() =>
+      replayLog(fullDefinition, log as ActionLog, {
+        state: newState(),
+        options: { rounds: 2 },
+        players: 2,
+      }),
+    ).toThrow(/re-dispatched action REJECT_ME was rejected/);
   });
 });
 
