@@ -229,7 +229,8 @@ const { states } = replayLog(ButtonGame, log, {
 `states[0]` is the fresh construction at `header.startedAt`, before any entry; each following element is
 one deep-cloned snapshot per step — every logged `action`, `timeout` or (skipped) lobby `roster-change`
 starts a step, and the transitions and enters that follow from it belong to the same step. It throws when
-the log's shape is malformed — validated up front with named errors: `entries` not an array, `header`
+the log's shape is malformed — validated up front with named errors: `entries` not an array, an entry
+that is not an object or lacks a known `kind`, numeric `t` and `seq` and a string `phase`, `header`
 missing or lacking a string `game`, number `seed` and number `startedAt`, or a roster entry missing its
 `id`/flags — when the first entry is not the construction-time Lobby enter (every recorded session starts
 with it), when the log's `game` does not match the definition, on a mid-game roster change, on out-of-order

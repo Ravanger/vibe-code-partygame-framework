@@ -41,14 +41,46 @@ const ROSTER_FIELDS = [
   ["isActive", "boolean"],
 ] as const;
 
+/** The kinds a recorded entry may carry — the set the replay walk dispatches on. */
+const ENTRY_KINDS = ["action", "transition", "enter", "timeout", "roster-change"] as const;
+
+/** The fields every recorded entry must carry besides its kind, and their types. */
+const ENTRY_FIELDS = [
+  ["t", "number"],
+  ["seq", "number"],
+  ["phase", "string"],
+] as const;
+
 /**
  * Validates the log's shape before `replayLog` reads it: a hand-edited or corrupt log must fail
- * with a named `replayLog:` error, never a raw `TypeError` partway through the walk.
+ * with a named `replayLog:` error, never a raw `TypeError` partway through the walk. Every entry
+ * is checked too — an object with a known `kind` and numeric `t` and `seq` plus a string `phase`,
+ * the fields the walk reads unconditionally; a kind-less entry would otherwise fall through every
+ * branch of the walk, poison the clock with `tick(NaN)` and silence all later ordering checks.
  */
 function assertLogShape(log: ActionLog): void {
   const raw = log as unknown as Record<string, unknown>;
   if (!Array.isArray(raw.entries)) {
     throw new Error("replayLog: log.entries must be an array");
+  }
+  for (const entry of raw.entries) {
+    if (typeof entry !== "object" || entry === null) {
+      throw new Error(`replayLog: malformed log entry ${JSON.stringify(entry)}: must be an object`);
+    }
+    const record = entry as Record<string, unknown>;
+    const kind = record.kind;
+    if (typeof kind !== "string" || !(ENTRY_KINDS as readonly string[]).includes(kind)) {
+      throw new Error(
+        `replayLog: malformed log entry ${JSON.stringify(entry)}: "kind" must be one of ${ENTRY_KINDS.join(", ")}`,
+      );
+    }
+    for (const [field, type] of ENTRY_FIELDS) {
+      if (typeof record[field] !== type) {
+        throw new Error(
+          `replayLog: malformed log entry ${JSON.stringify(entry)}: "${field}" must be a ${type}`,
+        );
+      }
+    }
   }
   const header = raw.header;
   if (typeof header !== "object" || header === null) {
@@ -165,9 +197,10 @@ function authoritativeDurations<TState extends PhaseState, TPrivate, TOptions>(
  * `rejected: true` throws as well — both directions of mismatch mean the log is not what this
  * definition produces. Each step's logged transitions and enters are asserted against the replayed
  * runtime — a log that contradicts what this definition actually does throws, naming the mismatch.
- * The log's shape is validated up front (`entries` an array; `header` with a string `game`, number
- * `seed` and number `startedAt`; roster entries carrying `id` plus the seat flags) — a malformed
- * log throws a named error before anything runs. See "Action log and replay" in the framework guide.
+ * The log's shape is validated up front (`entries` an array of objects each with a known `kind`,
+ * numeric `t` and `seq` and a string `phase`; `header` with a string `game`, number `seed` and
+ * number `startedAt`; roster entries carrying `id` plus the seat flags) — a malformed log throws a
+ * named error before anything runs. See "Action log and replay" in the framework guide.
  */
 export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
   definition: GameDefinition<TState, TPrivate, TOptions>,

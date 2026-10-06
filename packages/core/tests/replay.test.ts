@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
   type ActionLog,
+  type ActionLogEntry,
   actionFactory,
   actionLogMiddleware,
   defineGame,
@@ -558,6 +559,59 @@ describe("replayLog log-shape validation", () => {
     expect(() =>
       replayLog(definition, { ...log, roster: [{ id: "aaaa-1" }] } as unknown as ActionLog, init),
     ).toThrow('"isConnected" must be a boolean');
+  });
+
+  function withEntry(log: ActionLog, index: number, entry: unknown): ActionLog {
+    const entries = [...log.entries];
+    entries[index] = entry as ActionLogEntry;
+    return { ...log, entries };
+  }
+
+  it("throws a named error when an entry is not an object", () => {
+    const log = liveLog();
+    expect(() => replayLog(definition, withEntry(log, 1, null), init)).toThrow(
+      "replayLog: malformed log entry null: must be an object",
+    );
+    expect(() => replayLog(definition, withEntry(log, 1, "nope"), init)).toThrow(
+      'replayLog: malformed log entry "nope": must be an object',
+    );
+  });
+
+  it("throws a named error when an entry is missing its kind", () => {
+    // A kind-less entry used to fall through every branch of the walk: no dispatch, but a snapshot
+    // still pushed, and tick(NaN) poisoning the clock so every later ordering check went quiet.
+    const log = liveLog();
+    expect(() => replayLog(definition, withEntry(log, 3, {}), init)).toThrow(
+      '"kind" must be one of action, transition, enter, timeout, roster-change',
+    );
+  });
+
+  it("throws a named error when an entry has an unknown kind", () => {
+    const log = liveLog();
+    expect(() =>
+      replayLog(definition, withEntry(log, 1, { ...log.entries[1], kind: "teleport" }), init),
+    ).toThrow('"kind" must be one of action, transition, enter, timeout, roster-change');
+  });
+
+  it("throws a named error when an entry's t is not a number", () => {
+    const log = liveLog();
+    expect(() =>
+      replayLog(definition, withEntry(log, 1, { ...log.entries[1], t: "100" }), init),
+    ).toThrow('"t" must be a number');
+  });
+
+  it("throws a named error when an entry's seq is not a number", () => {
+    const log = liveLog();
+    expect(() =>
+      replayLog(definition, withEntry(log, 1, { ...log.entries[1], seq: "second" }), init),
+    ).toThrow('"seq" must be a number');
+  });
+
+  it("throws a named error when an entry's phase is not a string", () => {
+    const log = liveLog();
+    expect(() =>
+      replayLog(definition, withEntry(log, 1, { ...log.entries[1], phase: 42 }), init),
+    ).toThrow('"phase" must be a string');
   });
 });
 
