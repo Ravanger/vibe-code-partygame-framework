@@ -53,6 +53,7 @@ export class Table extends TestTable<WitClashState, WitClashPrivate, WitClashOpt
       state: new WitClashState(),
       options: WitClashOptionsSchema.parse(config.options ?? {}),
       players: config.players ?? 4,
+      seed: 1234,
     });
   }
 

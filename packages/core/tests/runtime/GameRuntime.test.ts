@@ -6,6 +6,7 @@ import {
   type GameContext,
   type GameDefinition,
   GameRuntime,
+  mulberry32,
   type PhaseState,
 } from "../../src/index.js";
 import { FakeHost } from "../../src/testing/FakeHost.js";
@@ -177,6 +178,32 @@ describe("construction", () => {
     });
     runtime.dispatch("p1", { type: "START_GAME" });
     expect(seen).toEqual([{ rounds: 9 }]);
+  });
+});
+
+describe("ctx.newId", () => {
+  const idSpec = makeSpec({
+    minPlayers: 1,
+    phases: { Play: { onEnter: (ctx) => ctx.state.log.push(ctx.newId()) } },
+  });
+
+  const idsFor = (seed: number): string[] => {
+    const host = new FakeHost(seed);
+    host.seat("p1");
+    const state = newState();
+    const runtime = new GameRuntime({
+      definition: idSpec,
+      state,
+      host,
+      options: { rounds: 3 },
+    });
+    runtime.dispatch("p1", { type: "START_GAME" });
+    return [...state.log];
+  };
+
+  it("is deterministic for the room seed", () => {
+    expect(idsFor(9)).toEqual(idsFor(9));
+    expect(idsFor(9)).not.toEqual(idsFor(10));
   });
 });
 
@@ -432,7 +459,8 @@ describe("handlers and transitions", () => {
     const { runtime, host, state, p2 } = inPlay();
     p2.isActive = false;
     runtime.dispatch("p1", { type: "TOOLS" });
-    expect(state.log).toEqual([`tools:2:1:p2:undefined:0.5:${host.now()}:3:7`]);
+    // Unseeded host is seed 0, and this is the table's first rng draw.
+    expect(state.log).toEqual([`tools:2:1:p2:undefined:${mulberry32(0)()}:${host.now()}:3:7`]);
     expect(host.sent).toContainEqual({ playerId: "p2", type: "HELLO", payload: 1 });
     expect(host.broadcasts).toEqual([{ type: "ALL", payload: 2 }]);
     expect(host.activations).toBe(1);

@@ -116,7 +116,7 @@ Every call receives `ctx`, the usual context plus a `readonly event`:
 | `enter` | around each phase's `onEnter` | — |
 | `timeout` | around each phase's `onTimeout` | — |
 | `roster-change` | around each phase's `onRosterChange` | — |
-| `action` | around each action handler, built-ins included | `actionType`, `senderId` |
+| `action` | around each action handler, built-ins included | `actionType`, `senderId`, `payload` (zod-parsed) |
 | `transition` | after the source hook's chain unwinds, just before the target's `onEnter` chain runs | `from`, `to` |
 
 Semantics:
@@ -132,11 +132,126 @@ Semantics:
 
 Non-goals in v1: no async/await inside the chain (synchronous; a middleware that returns a Promise throws
 `middleware[i] returned a Promise; the middleware chain is synchronous` on the first event — do fire-and-forget work
-outside the chain), no veto, and action events carry `actionType` + `senderId` only (no payload access).
+outside the chain), no veto.
 
 #### Built-ins
 - `loggingMiddleware({ log })` — one line per event, no hardcoded console. Exact formats: `enter <phase>`, `timeout <phase>`, `action <ACTION_TYPE> by <senderId> in <phase>`, `transition <from> -> <to>`. No line for `roster-change`.
 - `timingMiddleware()` — records per-phase durations into `ctx.priv` under the key `phaseTimings`; each phase gets `{ enteredAt: number, durationsMs: number[] }`. Started on enter (before the hook), closed when a transition out of that phase is observed. The currently open phase has no final duration yet. Never touches `ctx.state` (it is synced to clients); timing metadata stays server-side.
+- `actionLogMiddleware()` — append-only, JSON-serializable record of every middleware-visible event in `ctx.priv[ACTION_LOG]`; see Action log and replay below.
+
+### Action log and replay
+`actionLogMiddleware()` records everything the middleware sees into an append-only, JSON-serializable log
+in `ctx.priv` — a server-side record of the whole room session. Register it like any other middleware;
+unregistered games pay nothing (the chain early-returns on an empty array).
+
+```ts
+import { actionLogMiddleware, getActionLog } from "@partygame/core";
+
+export const ButtonGame = defineGame<State, Priv>({
+  // ...phases as in Minimal game
+  middleware: [actionLogMiddleware()],
+});
+```
+
+The log is created lazily on the first event and stored under the key `ACTION_LOG` (the same lazy-storage
+pattern as `timingMiddleware`). It never touches `ctx.state`; export it with `JSON.stringify(getActionLog(priv))`.
+The log lives in `ctx.priv`, so a game's private state must be writable: with a frozen or sealed private
+state the first write fails — construction does not throw (a hook failure is deferred, like any other), no
+partial log remains (`getActionLog` stays `undefined`), and the next runtime operation throws a loud
+`TypeError`.
+
+**Header** — written on the first entry:
+
+| Field | Meaning |
+|---|---|
+| `seed` | Room RNG seed (see Determinism contract) |
+| `game` | Definition name; `replayLog` refuses a log recorded for another game |
+| `startedAt` | `ctx.now()` at the first entry (the construction-time Lobby enter) |
+
+**Entries** — one per middleware-visible event, in append order:
+
+| Field | Meaning |
+|---|---|
+| `seq` | 1-based, strictly increasing |
+| `t` | `ctx.now()` at record time |
+| `phase` | Current phase; for `enter`, the phase being entered |
+| `kind` | `"action" \| "transition" \| "enter" \| "timeout" \| "roster-change"` |
+| `actionType`, `senderId`, `payload` | `kind === "action"` only; `payload` is the zod-parsed action object |
+| `rejected` | `kind === "action"` only; `true` when the handler called `ctx.reject()` (the action ran but changed nothing). Absent on accepted actions |
+| `from`, `to` | `kind === "transition"` only |
+
+Actions rejected **before the handler chain** — malformed envelope, unknown action, unauthorized sender,
+inactive player, invalid payload — are **not** logged: they never reach the middleware and change no state.
+An action whose *handler* calls `ctx.reject()` has reached the chain and **is** logged, marked
+`rejected: true`; it changes no state either, and such logs replay — the re-dispatch re-runs the handler
+(RNG draws included) and must reject again (a mismatch in either direction throws). Roster changes are
+recorded for observability (see the replay limitation below).
+
+**Roster.** When `START_GAME` is dispatched, the middleware also records `log.roster` — the seats in
+seat order at start time, each as `{ id, isConnected, isReady, isActive }`, captured once (a second
+start after `returnToLobby` does not overwrite it). Lobby-only sessions have no roster. This is what
+makes logs from real rooms replayable: replay pre-seats exactly these seats — restoring the recorded
+flags, so the bench-on-start and every `activePlayers()` read match live — and maps their ids
+positionally to `p1..pN`, so every recorded sender re-dispatches against the matching replay seat
+(the live host is always the first seat, and the replay table's first seat is its host).
+
+**Determinism contract.** A log replays exactly when its three non-determinism sources are controlled:
+
+- **RNG.** Rooms draw their randomness from a seeded PRNG (`mulberry32`); each room gets a seed from
+  `crypto.getRandomValues` at creation, recorded in the header. `FakeHost`/`TestTable` accept an explicit
+  seed; an unseeded host is seed 0 — its `rng()` is the deterministic `mulberry32(0)` stream, so even
+  unseeded test rooms are replayable by seed (and their ids from `ctx.newId()` stay unique).
+- **Clock.** Replay scripts the fake clock: it advances to each entry's `t` before applying the entry, and
+  logged timeouts are authoritative — when replay enters a timed phase, its timer is made to expire at the
+  time recorded in the log. A live room's phase timers run on Colyseus's tick-quantized clock (a ~17 ms
+  grid), so a timeout can fire a few ms early or late relative to enter + duration; `phaseEndsAt` in
+  replayed snapshots is the logged timeout time, not enter + duration.
+- **IDs.** Identifiers that land in synced state or an action payload must come from `ctx.newId()` (drawn
+  from the room RNG). `crypto.randomUUID()` breaks replay: re-dispatched payloads reference ids the fresh
+  runtime never generated.
+
+**Replay.** `replayLog(definition, log, init)` re-drives a fresh runtime — same definition, RNG seeded from
+the header, clock starting at `header.startedAt`, the recorded roster pre-seated with its flags restored
+(`p1..pN` mapped positionally; for logs without a roster, `init.players` pre-seats that many seats instead)
+— dispatching every logged action in order:
+
+```ts
+import { replayLog } from "@partygame/core";
+
+const { states } = replayLog(ButtonGame, log, {
+  state: new State(), // same shape as passed to TestTable
+  options: {},
+  // players is only needed for logs without a recorded roster (lobby-only sessions)
+  // seed defaults to log.header.seed
+});
+```
+
+`states[0]` is the fresh construction at `header.startedAt`, before any entry; each following element is
+one deep-cloned snapshot per step — every logged `action`, `timeout` or (skipped) lobby `roster-change`
+starts a step, and the transitions and enters that follow from it belong to the same step. It throws when
+the log's shape is malformed — validated up front with named errors: `entries` not an array, an entry
+that is not an object or lacks a known `kind`, numeric `t` and `seq` and a string `phase`, `header`
+missing or lacking a string `game`, number `seed` and number `startedAt`, or a roster entry missing its
+`id`/flags — when the first entry is not the construction-time Lobby enter (every recorded session starts
+with it), when the log's `game` does not match the definition, on a mid-game roster change, on out-of-order
+entry times,
+when a re-dispatch rejects an action the log records as accepted or accepts one recorded with
+`rejected: true` (a mismatch in either direction means the log is not what this definition produces), or
+when a logged transition or enter contradicts what the replayed runtime actually did — each step asserts
+its own consequence run, so a tampered log throws naming the mismatch.
+
+**Limitations in v1.** Mid-game roster changes are not replayed: `replayLog` throws naming the first such
+entry. Lobby-phase roster changes are skipped — the recorded roster is pre-seated at construction — so a
+game whose `Lobby.onRosterChange` writes synced state may diverge in intermediate states for sessions with
+lobby joins/leaves (final states still match). A sender that is not in the recorded roster (for example a
+joiner of a second session after `returnToLobby`) makes the re-dispatch throw. No log cap; party sessions
+are minutes long.
+
+**Runtime additions.** Action middleware events now carry the zod-parsed `payload`; every context exposes
+`ctx.gameName` (definition name), `ctx.seed` (room RNG seed, recorded in the log header) and `ctx.newId()`
+(deterministic ids — see the Determinism contract above). Middleware contexts additionally expose
+`ctx.rejectionCount` — the live count of `ctx.reject()` calls for the current dispatch, so a middleware can
+tell after `next()` whether an action's handler rejected.
 
 ### Errors at definition time
 `defineGame` throws `GameDefinitionError` listing every problem: reserved or unknown phase names, missing `startPhase`,

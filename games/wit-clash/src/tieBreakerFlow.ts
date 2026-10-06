@@ -74,7 +74,7 @@ export class TieBreakerFlow {
     this.round.clearTyping();
     state.answersPerPlayer = 1;
     const matchup = new Matchup();
-    matchup.id = crypto.randomUUID();
+    matchup.id = this.ctx.newId();
     matchup.index = state.tieBreakers.length;
     matchup.promptText = plan.prompt.text;
     state.tieBreakers.push(matchup);
@@ -103,7 +103,7 @@ export class TieBreakerFlow {
     const answers = draftsFor(matchup.id, priv.assignments, priv.drafts).flatMap((entry) => {
       if (entry.text === undefined) return [];
       const answer = new Answer();
-      answer.id = crypto.randomUUID();
+      answer.id = this.ctx.newId();
       answer.text = entry.text;
       priv.authors.set(answer.id, entry.playerId);
       return [answer];

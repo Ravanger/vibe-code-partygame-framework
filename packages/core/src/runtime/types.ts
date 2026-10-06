@@ -53,8 +53,18 @@ export interface GameContext<TState extends PhaseState, TPrivate, TOptions> {
   returnToLobby(): void;
   /** Random number in [0, 1). */
   rng(): number;
+  /**
+   * A UUID-shaped identifier drawn from the room RNG. Use it for any id that lands in synced state
+   * or an action payload — `crypto.randomUUID()` breaks replay, because re-dispatched payloads
+   * reference ids a fresh runtime never generated.
+   */
+  newId(): string;
   /** Epoch ms. */
   now(): number;
+  /** The definition's name; recorded in the action log header for replay sanity checks. */
+  readonly gameName: string;
+  /** The room RNG seed; see `mulberry32`. Recorded in the action log header. */
+  readonly seed: number;
 }
 
 /** Context of an action handler. */
@@ -71,13 +81,19 @@ export type MiddlewareEvent =
   | { kind: "enter" }
   | { kind: "timeout" }
   | { kind: "roster-change" }
-  | { kind: "action"; actionType: string; senderId: string }
+  | { kind: "action"; actionType: string; senderId: string; payload: unknown }
   | { kind: "transition"; from: string; to: string };
 
 /** What a middleware receives: the game context plus the event being wrapped or observed. */
 export interface MiddlewareContext<TState extends PhaseState, TPrivate, TOptions>
   extends GameContext<TState, TPrivate, TOptions> {
   readonly event: MiddlewareEvent;
+  /**
+   * `ctx.reject()` calls recorded since this dispatch started. Live: read it after `next()` to see
+   * whether the action's handler rejected. Pre-chain rejections never enter the chain, and hooks
+   * have no `reject`, so a non-zero count here means the handler rejected.
+   */
+  readonly rejectionCount: number;
 }
 
 /**
@@ -164,6 +180,8 @@ export interface RuntimeHost {
   publishOptions(options: unknown): void;
   now(): number;
   rng(): number;
+  /** The room RNG seed (see `mulberry32`); recorded in the action log header. */
+  readonly seed: number;
   setTimeout(callback: () => void, ms: number): unknown;
   clearTimeout(handle: unknown): void;
 }

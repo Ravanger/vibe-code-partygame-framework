@@ -9,6 +9,7 @@ import {
 } from "@partygame/shared";
 import { createActor, setup } from "xstate";
 import { prettifyError } from "zod";
+import { newId } from "../utils.js";
 import { Lobby } from "./lobby.js";
 import type {
   ActionContext,
@@ -166,7 +167,10 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
         this.queue.push({ kind: "lobby" });
       },
       rng: () => this.host.rng(),
+      newId: () => newId(() => this.host.rng()),
       now: () => this.host.now(),
+      gameName: this.spec.name,
+      seed: this.host.seed,
     };
   }
 
@@ -205,7 +209,15 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   }
 
   private middlewareContext(event: MiddlewareEvent): MiddlewareContext<TState, TPrivate, TOptions> {
-    return { ...this.context(), event };
+    const rejections = this.rejections;
+    return {
+      ...this.context(),
+      event,
+      // Live view of the dispatch's rejection list (dispatch resets it before every handle).
+      get rejectionCount() {
+        return rejections.length;
+      },
+    };
   }
 
   private rosterChange(): void {
@@ -364,8 +376,9 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       payload: payload.data,
       reject: (code, message) => this.reject(playerId, type, code, message),
     };
-    this.chain({ kind: "action", actionType: type, senderId: playerId }, () =>
-      action.handler(actionContext),
+    this.chain(
+      { kind: "action", actionType: type, senderId: playerId, payload: payload.data },
+      () => action.handler(actionContext),
     );
   }
 

@@ -1,10 +1,25 @@
 export {
+  ACTION_LOG,
+  type ActionLog,
+  type ActionLogEntry,
+  type ActionLogEntryKind,
+  type ActionLogHeader,
+  actionLogMiddleware,
+  getActionLog,
+  type RosterSeat,
+} from "./actionLog.js";
+export {
   type LoggingMiddlewareOptions,
   loggingMiddleware,
   PHASE_TIMINGS,
   type PhaseTimingRecord,
   timingMiddleware,
 } from "./middleware.js";
+export {
+  type ReplayInit,
+  type ReplayResult,
+  replayLog,
+} from "./replay.js";
 export * from "./runtime/index.js";
 export {
   awardPoints,
@@ -13,4 +28,4 @@ export {
   type LeaderboardInput,
   leaderboard,
 } from "./scoring.js";
-export { required, shuffle } from "./utils.js";
+export { mulberry32, newId, randomSeed, required, shuffle } from "./utils.js";

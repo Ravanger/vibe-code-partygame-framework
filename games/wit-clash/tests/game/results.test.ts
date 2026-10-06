@@ -80,7 +80,15 @@ describe("scoring a matchup", () => {
 
 describe("Results", () => {
   it("lists every active player, including those on zero points", () => {
-    const t = inResults({ options: { totalRounds: 1 } });
+    // Only p1 answers: their matchups are forfeits (the sole real answer wins them) and the other
+    // players' placeholders never score — so three players end on zero, whatever the shuffles.
+    const t = new Table({ options: { totalRounds: 1 } });
+    t.toPrompting();
+    for (const prompt of t.mine("p1").prompts) {
+      t.act("p1", "SUBMIT_ANSWER", { matchupId: prompt.matchupId, answer: "only" });
+    }
+    t.tick(90_000); // deadline: placeholders for p2–p4, forfeits reveal straight away
+    t.playOutVoting();
     expect(t.phase).toBe("Results");
     expect(t.state.scoreboard).toHaveLength(4);
     expect([...t.state.scoreboard].some((e) => e.score === 0)).toBe(true);

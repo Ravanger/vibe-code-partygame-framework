@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { actionFactory, defineGame, type PhaseState } from "../../src/index.js";
+import { actionFactory, defineGame, mulberry32, type PhaseState } from "../../src/index.js";
 import { TestTable } from "../../src/testing/index.js";
 
 interface TapState extends PhaseState {
@@ -62,6 +62,21 @@ describe("TestTable", () => {
     expect(table(2).ids()).toEqual(["p1", "p2"]);
   });
 
+  it("applies per-seat overrides to the pre-seated players, in seat order", () => {
+    const t = new TestTable({
+      definition: makeDefinition(),
+      state: newState(),
+      options: {},
+      players: 3,
+      seats: [{}, { isReady: false }, { isActive: false, isConnected: false }],
+    });
+    expect(t.host.seats.map((s) => [s.id, s.isReady, s.isActive, s.isConnected])).toEqual([
+      ["p1", true, true, true],
+      ["p2", false, true, true],
+      ["p3", true, false, false],
+    ]);
+  });
+
   it("starts the game from the first seat", () => {
     const t = table();
     expect(t.phase).toBe("Lobby");
@@ -104,6 +119,21 @@ describe("TestTable", () => {
 
   it("exposes the private state", () => {
     expect(table().priv).toEqual({ marker: "secret" });
+  });
+
+  it("seeds the room RNG and starts the clock where asked", () => {
+    const t = new TestTable({
+      definition: makeDefinition(),
+      state: newState(),
+      options: {},
+      players: 2,
+      seed: 42,
+      startTime: 5_000_000,
+    });
+    expect(t.host.seed).toBe(42);
+    const expected = mulberry32(42);
+    for (let i = 0; i < 5; ++i) expect(t.host.rng()).toBe(expected());
+    expect(t.host.now()).toBe(5_000_000);
   });
 
   it("removes a seat and runs the roster hook", () => {
