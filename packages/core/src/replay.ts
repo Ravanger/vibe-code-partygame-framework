@@ -1,6 +1,6 @@
 import { LOBBY_PHASE } from "@partygame/shared";
 import type { ActionLog, ActionLogEntry } from "./actionLog.js";
-import type { GameDefinition, PhaseDefinition, PhaseState } from "./runtime/index.js";
+import type { GameDefinition, PhaseDefinition, PhaseState, PlayerInfo } from "./runtime/index.js";
 import { TestTable } from "./testing/TestTable.js";
 import { required } from "./utils.js";
 
@@ -109,8 +109,9 @@ function authoritativeDurations<TState extends PhaseState, TPrivate, TOptions>(
  * one snapshot. Logged timeouts are authoritative: when the replayed runtime enters a timed phase,
  * its timer is made to expire at the time recorded in the log — a live room's tick-quantized clock
  * can fire a few ms early or late relative to enter + duration — so `phaseEndsAt` in the snapshots
- * reflects that time. The recorded roster (the seats at START_GAME, host first) is pre-seated and its
- * ids are mapped positionally to p1..pN so actions re-dispatch against the matching seats; a log
+ * reflects that time. The recorded roster (the seats at START_GAME, host first) is pre-seated with
+ * its recorded flags — so the replayed bench-on-start and `activePlayers()` reads match live — and
+ * its ids are mapped positionally to p1..pN so actions re-dispatch against the matching seats; a log
  * without a roster requires `init.players` instead. Roster changes during the Lobby are skipped —
  * the table is already seated; a mid-game roster change throws, because v1 does not replay it.
  * Entries must be time-ordered; a backwards clock throws. A re-dispatch that rejects where the log
@@ -141,12 +142,19 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
   }
   let seatCount: number;
   let toSeat: Map<string, string> | undefined;
+  let seats: Partial<PlayerInfo>[] | undefined;
   const roster = log.roster;
   if (roster !== undefined) {
     seatCount = roster.length;
     // The live host is the first seat and FakeHost makes the first seated player the host, so a
     // positional map preserves both identity and order.
-    toSeat = new Map(roster.map((id, index) => [id, `p${index + 1}`] as const));
+    toSeat = new Map(roster.map((seat, index) => [seat.id, `p${index + 1}`] as const));
+    // Restore the recorded flags so the replayed bench-on-start and activePlayers() reads match live.
+    seats = roster.map(({ isConnected, isReady, isActive }) => ({
+      isConnected,
+      isReady,
+      isActive,
+    }));
   } else {
     if (init.players === undefined) {
       throw new Error("replayLog: the log has no recorded roster; pass init.players");
@@ -158,6 +166,7 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
     state: init.state,
     options: init.options,
     players: seatCount,
+    ...(seats !== undefined ? { seats } : {}),
     seed: init.seed ?? log.header.seed,
     startTime: log.header.startedAt,
   });

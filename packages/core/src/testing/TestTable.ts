@@ -11,6 +11,8 @@ export interface TestTableConfig<TState extends PhaseState, TPrivate, TOptions> 
   options: TOptions;
   /** Seats p1..pN, p1 is the host; default 4. */
   players?: number;
+  /** Per-seat overrides for the pre-seated p1..pN, in seat order; omit an entry to keep the defaults. */
+  seats?: Partial<PlayerInfo>[];
   /** Seed for the room RNG (mulberry32). Omit for seed 0 — a deterministic, replayable stream. */
   seed?: number;
   /** Initial fake clock value (epoch ms); defaults to FakeHost's 1_000_000. */
@@ -26,7 +28,8 @@ export class TestTable<TState extends PhaseState, TPrivate, TOptions> {
   constructor(config: TestTableConfig<TState, TPrivate, TOptions>) {
     this.host = new FakeHost(config.seed);
     this.state = config.state;
-    for (let i = 1; i <= (config.players ?? 4); ++i) this.host.seat(`p${i}`);
+    const count = config.players ?? 4;
+    for (let i = 0; i < count; ++i) this.host.seat(`p${i + 1}`, config.seats?.[i] ?? {});
     if (config.startTime !== undefined) this.host.time = config.startTime;
     this.runtime = new GameRuntime({
       definition: config.definition,

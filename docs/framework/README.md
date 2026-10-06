@@ -187,12 +187,13 @@ An action whose *handler* calls `ctx.reject()` has reached the chain and **is** 
 (RNG draws included) and must reject again (a mismatch in either direction throws). Roster changes are
 recorded for observability (see the replay limitation below).
 
-**Roster.** When `START_GAME` is dispatched, the middleware also records `log.roster` — the seat ids
-in seat order at start time, captured once (a second start after `returnToLobby` does not overwrite
-it). Lobby-only sessions have no roster. This is what makes logs from real rooms replayable: replay
-pre-seats exactly these seats and maps their ids positionally to `p1..pN`, so every recorded sender
-re-dispatches against the matching replay seat (the live host is always the first seat, and the
-replay table's first seat is its host).
+**Roster.** When `START_GAME` is dispatched, the middleware also records `log.roster` — the seats in
+seat order at start time, each as `{ id, isConnected, isReady, isActive }`, captured once (a second
+start after `returnToLobby` does not overwrite it). Lobby-only sessions have no roster. This is what
+makes logs from real rooms replayable: replay pre-seats exactly these seats — restoring the recorded
+flags, so the bench-on-start and every `activePlayers()` read match live — and maps their ids
+positionally to `p1..pN`, so every recorded sender re-dispatches against the matching replay seat
+(the live host is always the first seat, and the replay table's first seat is its host).
 
 **Determinism contract.** A log replays exactly when its three non-determinism sources are controlled:
 
@@ -210,9 +211,9 @@ replay table's first seat is its host).
   runtime never generated.
 
 **Replay.** `replayLog(definition, log, init)` re-drives a fresh runtime — same definition, RNG seeded from
-the header, clock starting at `header.startedAt`, the recorded roster pre-seated (`p1..pN` mapped
-positionally; for logs without a roster, `init.players` pre-seats that many seats instead) — dispatching
-every logged action in order:
+the header, clock starting at `header.startedAt`, the recorded roster pre-seated with its flags restored
+(`p1..pN` mapped positionally; for logs without a roster, `init.players` pre-seats that many seats instead)
+— dispatching every logged action in order:
 
 ```ts
 import { replayLog } from "@partygame/core";

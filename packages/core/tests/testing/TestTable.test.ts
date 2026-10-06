@@ -62,6 +62,21 @@ describe("TestTable", () => {
     expect(table(2).ids()).toEqual(["p1", "p2"]);
   });
 
+  it("applies per-seat overrides to the pre-seated players, in seat order", () => {
+    const t = new TestTable({
+      definition: makeDefinition(),
+      state: newState(),
+      options: {},
+      players: 3,
+      seats: [{}, { isReady: false }, { isActive: false, isConnected: false }],
+    });
+    expect(t.host.seats.map((s) => [s.id, s.isReady, s.isActive, s.isConnected])).toEqual([
+      ["p1", true, true, true],
+      ["p2", false, true, true],
+      ["p3", true, false, false],
+    ]);
+  });
+
   it("starts the game from the first seat", () => {
     const t = table();
     expect(t.phase).toBe("Lobby");

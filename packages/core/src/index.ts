@@ -6,6 +6,7 @@ export {
   type ActionLogHeader,
   actionLogMiddleware,
   getActionLog,
+  type RosterSeat,
 } from "./actionLog.js";
 export {
   type LoggingMiddlewareOptions,

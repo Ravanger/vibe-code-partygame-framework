@@ -43,16 +43,27 @@ export interface ActionLogHeader {
   startedAt: number;
 }
 
+/** One recorded seat at START_GAME time: the id plus the flags replay restores when pre-seating. */
+export interface RosterSeat {
+  /** The seat's playerId (a client-generated UUID in real rooms). */
+  id: string;
+  isConnected: boolean;
+  isReady: boolean;
+  isActive: boolean;
+}
+
 /** The complete record of one room session. JSON-serializable. */
 export interface ActionLog {
   header: ActionLogHeader;
   /**
-   * Seat ids in seat order, captured when START_GAME was dispatched (once — a second start after
-   * `returnToLobby` does not overwrite it). The live host is the first seat, and replay maps these
-   * positionally to p1..pN, so senders re-dispatch against the matching replay seats. Absent from
-   * lobby-only sessions; `replayLog` then requires `init.players`.
+   * The seats in seat order, captured when START_GAME was dispatched (once — a second start after
+   * `returnToLobby` does not overwrite it). Each entry records the seat's flags at that moment so
+   * replay pre-seats them and the replayed bench-on-start and `activePlayers()` reads match live.
+   * The live host is the first seat, and replay maps the ids positionally to p1..pN, so senders
+   * re-dispatch against the matching replay seats. Absent from lobby-only sessions; `replayLog`
+   * then requires `init.players`.
    */
-  roster?: string[];
+  roster?: RosterSeat[];
   entries: ActionLogEntry[];
 }
 
@@ -104,8 +115,14 @@ export function actionLogMiddleware(): PhaseMiddleware<PhaseState, unknown, unkn
       entry.senderId = event.senderId;
       entry.payload = event.payload;
       if (event.actionType === "START_GAME" && log.roster === undefined) {
-        // The seats when the game starts, in seat order — what replay pre-seats.
-        log.roster = ctx.players().map((seat) => seat.id);
+        // The seats when the game starts, in seat order — what replay pre-seats. The flags are
+        // recorded too: replay restores them so its bench-on-start matches live's exactly.
+        log.roster = ctx.players().map((seat) => ({
+          id: seat.id,
+          isConnected: seat.isConnected,
+          isReady: seat.isReady,
+          isActive: seat.isActive,
+        }));
       }
     } else if (event.kind === "transition") {
       entry.from = event.from;

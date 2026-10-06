@@ -214,7 +214,8 @@ describe("replayLog", () => {
     live.tick(1000);
     const log = getActionLog(live.priv) as ActionLog;
     expect(log.entries.some((e) => e.kind === "roster-change")).toBe(true);
-    // the log records no roster: pre-seat the full table (p3 joined in the Lobby live)
+    // p3 joined the Lobby before start, so the recorded roster already includes it; the recorded
+    // roster wins and init.players (3 here) is ignored
     const { states } = replayLog(definition, log, { state: newState(), options: {}, players: 3 });
     expect(states.at(-1)).toEqual({ phase: "Done", phaseEndsAt: 0, canStart: false, taps: 0 });
   });
@@ -404,7 +405,10 @@ describe("replayLog", () => {
     // rename the seats to client-generated ids, as a real server room would have
     const renamed: ActionLog = {
       ...log,
-      roster: ["aaaa-1", "bbbb-2"],
+      roster: [
+        { id: "aaaa-1", isConnected: true, isReady: true, isActive: true },
+        { id: "bbbb-2", isConnected: true, isReady: true, isActive: true },
+      ],
       entries: log.entries.map((e) =>
         e.kind === "action" && e.senderId !== undefined
           ? { ...e, senderId: e.senderId === "p1" ? "aaaa-1" : "bbbb-2" }
@@ -427,7 +431,10 @@ describe("replayLog", () => {
     const log = getActionLog(live.priv) as ActionLog;
     const stray: ActionLog = {
       ...log,
-      roster: ["aaaa-1", "bbbb-2"],
+      roster: [
+        { id: "aaaa-1", isConnected: true, isReady: true, isActive: true },
+        { id: "bbbb-2", isConnected: true, isReady: true, isActive: true },
+      ],
       entries: log.entries.map((e) =>
         e.kind === "action" && e.senderId !== undefined
           ? { ...e, senderId: e.actionType === "START_GAME" ? "aaaa-1" : "cccc-9" }
@@ -463,6 +470,83 @@ describe("replayLog", () => {
       players: 2,
     });
     expect(states.at(-1)).toEqual({ phase: "Done", phaseEndsAt: 0, canStart: false, taps: 3 });
+  });
+});
+
+describe("replay restores recorded seat flags", () => {
+  // A game whose start-phase enter reads the active seats — exactly what diverged when replay
+  // pre-seated everyone ready and active while live benched the unready at START_GAME.
+  interface BenchState extends PhaseState {
+    activeAtEnter: number;
+  }
+
+  const benchDefinition = defineGame<BenchState, Record<string, never>, Record<string, never>>({
+    name: "Bench",
+    minPlayers: 1,
+    maxPlayers: 4,
+    startPhase: "Play",
+    createPrivateState: () => ({}),
+    phases: {
+      Play: {
+        onEnter: (ctx) => {
+          ctx.state.activeAtEnter = ctx.activePlayers().length;
+        },
+      },
+    },
+  });
+
+  const newBenchState = (): BenchState => ({
+    phase: "",
+    phaseEndsAt: 0,
+    canStart: false,
+    activeAtEnter: 0,
+  });
+
+  it("records the seat flags at start and benches an unready seat on replay, exactly like live", () => {
+    // Explicit generics: the spread-with-middleware definition would otherwise widen TState to PhaseState.
+    const live = new TestTable<BenchState, Record<string, never>, Record<string, never>>({
+      definition: { ...benchDefinition, middleware: [actionLogMiddleware()] },
+      state: newBenchState(),
+      options: {},
+      players: 3,
+      seats: [{}, {}, { isReady: false }],
+    });
+    expect(live.start()).toBeUndefined();
+    // live benched p3 when leaving the Lobby
+    expect(live.state.activeAtEnter).toBe(2);
+    const log = getActionLog(live.priv) as ActionLog;
+    expect(log.roster).toEqual([
+      { id: "p1", isConnected: true, isReady: true, isActive: true },
+      { id: "p2", isConnected: true, isReady: true, isActive: true },
+      { id: "p3", isConnected: true, isReady: false, isActive: true },
+    ]);
+    const { states } = replayLog(benchDefinition, log, { state: newBenchState(), options: {} });
+    expect(states.at(-1)).toEqual({
+      phase: "Play",
+      phaseEndsAt: 0,
+      canStart: false,
+      activeAtEnter: 2,
+    });
+  });
+
+  it("keeps a lobby joiner inactive at start on replay, exactly like live", () => {
+    const live = new TestTable<BenchState, Record<string, never>, Record<string, never>>({
+      definition: { ...benchDefinition, middleware: [actionLogMiddleware()] },
+      state: newBenchState(),
+      options: {},
+      players: 2,
+    });
+    live.joinLate("p3"); // seated ready but inactive while in the Lobby
+    expect(live.start()).toBeUndefined();
+    expect(live.state.activeAtEnter).toBe(2);
+    const log = getActionLog(live.priv) as ActionLog;
+    const { states } = replayLog(benchDefinition, log, { state: newBenchState(), options: {} });
+    expect(states.at(-1)).toEqual({
+      phase: "Play",
+      phaseEndsAt: 0,
+      canStart: false,
+      activeAtEnter: 2,
+    });
   });
 });
 
