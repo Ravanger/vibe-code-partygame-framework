@@ -210,13 +210,14 @@ positionally to `p1..pN`, so every recorded sender re-dispatches against the mat
   from the room RNG). `crypto.randomUUID()` breaks replay: re-dispatched payloads reference ids the fresh
   runtime never generated.
 
-**Replay.** `replayLog(definition, log, init)` re-drives a fresh runtime — same definition, RNG seeded from
+**Replay.** `replayLog(definition, log, init)` (from `@partygame/core/testing` — it builds a `TestTable`)
+re-drives a fresh runtime — same definition, RNG seeded from
 the header, clock starting at `header.startedAt`, the recorded roster pre-seated with its flags restored
 (`p1..pN` mapped positionally; for logs without a roster, `init.players` pre-seats that many seats instead)
 — dispatching every logged action in order:
 
 ```ts
-import { replayLog } from "@partygame/core";
+import { replayLog } from "@partygame/core/testing";
 
 const { states } = replayLog(ButtonGame, log, {
   state: new State(), // same shape as passed to TestTable

@@ -11,10 +11,10 @@ import {
   mulberry32,
   type PhaseMiddleware,
   type PhaseState,
-  replayLog,
   required,
 } from "../src/index.js";
 import { FakeHost } from "../src/testing/FakeHost.js";
+import { replayLog } from "../src/testing/index.js";
 import { TestTable } from "../src/testing/TestTable.js";
 
 /**

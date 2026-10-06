@@ -15,11 +15,6 @@ export {
   type PhaseTimingRecord,
   timingMiddleware,
 } from "./middleware.js";
-export {
-  type ReplayInit,
-  type ReplayResult,
-  replayLog,
-} from "./replay.js";
 export * from "./runtime/index.js";
 export {
   awardPoints,
