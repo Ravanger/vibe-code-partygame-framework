@@ -473,6 +473,94 @@ describe("replayLog", () => {
   });
 });
 
+describe("replayLog log-shape validation", () => {
+  const init = { state: newState(), options: {} } as const;
+
+  function liveLog(): ActionLog {
+    const live = liveTable();
+    live.start();
+    return getActionLog(live.priv) as ActionLog;
+  }
+
+  it("throws a named error when log.entries is missing", () => {
+    const log = liveLog();
+    expect(() =>
+      replayLog(definition, { header: log.header } as unknown as ActionLog, init),
+    ).toThrow("replayLog: log.entries must be an array");
+  });
+
+  it("throws a named error when log.entries is not an array", () => {
+    const log = liveLog();
+    expect(() =>
+      replayLog(definition, { ...log, entries: "nope" } as unknown as ActionLog, init),
+    ).toThrow("replayLog: log.entries must be an array");
+  });
+
+  it("throws a named error when the header is missing or null", () => {
+    const log = liveLog();
+    expect(() =>
+      replayLog(definition, { entries: log.entries } as unknown as ActionLog, init),
+    ).toThrow("replayLog: log.header must be an object");
+    expect(() =>
+      replayLog(definition, { header: null, entries: log.entries } as unknown as ActionLog, init),
+    ).toThrow("replayLog: log.header must be an object");
+  });
+
+  it("throws a named error when header.game is not a string", () => {
+    const log = liveLog();
+    expect(() =>
+      replayLog(
+        definition,
+        { ...log, header: { ...log.header, game: 42 } } as unknown as ActionLog,
+        init,
+      ),
+    ).toThrow("replayLog: log.header.game must be a string");
+  });
+
+  it("throws a named error when header.seed is not a number", () => {
+    const log = liveLog();
+    expect(() =>
+      replayLog(
+        definition,
+        { ...log, header: { ...log.header, seed: "x" } } as unknown as ActionLog,
+        init,
+      ),
+    ).toThrow("replayLog: log.header.seed must be a number");
+  });
+
+  it("throws a named error when header.startedAt is not a number", () => {
+    const log = liveLog();
+    expect(() =>
+      replayLog(
+        definition,
+        { ...log, header: { ...log.header, startedAt: "x" } } as unknown as ActionLog,
+        init,
+      ),
+    ).toThrow("replayLog: log.header.startedAt must be a number");
+  });
+
+  it("throws a named error when log.roster is not an array", () => {
+    const log = liveLog();
+    expect(() =>
+      replayLog(definition, { ...log, roster: "nope" } as unknown as ActionLog, init),
+    ).toThrow("replayLog: log.roster must be an array");
+  });
+
+  it("throws a named error when a roster entry is not an object", () => {
+    const log = liveLog();
+    expect(() =>
+      replayLog(definition, { ...log, roster: [null] } as unknown as ActionLog, init),
+    ).toThrow('malformed roster entry null: "id" must be a string');
+  });
+
+  it("throws a named error when a roster entry is missing fields", () => {
+    const log = liveLog();
+    expect(() =>
+      replayLog(definition, { ...log, roster: [{ id: "aaaa-1" }] } as unknown as ActionLog, init),
+    ).toThrow('"isConnected" must be a boolean');
+  });
+});
+
 describe("replay restores recorded seat flags", () => {
   // A game whose start-phase enter reads the active seats — exactly what diverged when replay
   // pre-seated everyone ready and active while live benched the unready at START_GAME.

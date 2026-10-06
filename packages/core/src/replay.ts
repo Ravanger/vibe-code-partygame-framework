@@ -33,6 +33,52 @@ function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
+/** The fields every recorded roster entry must carry, and their types. */
+const ROSTER_FIELDS = [
+  ["id", "string"],
+  ["isConnected", "boolean"],
+  ["isReady", "boolean"],
+  ["isActive", "boolean"],
+] as const;
+
+/**
+ * Validates the log's shape before `replayLog` reads it: a hand-edited or corrupt log must fail
+ * with a named `replayLog:` error, never a raw `TypeError` partway through the walk.
+ */
+function assertLogShape(log: ActionLog): void {
+  const raw = log as unknown as Record<string, unknown>;
+  if (!Array.isArray(raw.entries)) {
+    throw new Error("replayLog: log.entries must be an array");
+  }
+  const header = raw.header;
+  if (typeof header !== "object" || header === null) {
+    throw new Error("replayLog: log.header must be an object");
+  }
+  const h = header as Record<string, unknown>;
+  if (typeof h.game !== "string") {
+    throw new Error("replayLog: log.header.game must be a string");
+  }
+  if (typeof h.seed !== "number") {
+    throw new Error("replayLog: log.header.seed must be a number");
+  }
+  if (typeof h.startedAt !== "number") {
+    throw new Error("replayLog: log.header.startedAt must be a number");
+  }
+  if (raw.roster !== undefined && !Array.isArray(raw.roster)) {
+    throw new Error("replayLog: log.roster must be an array");
+  }
+  for (const seat of (raw.roster as unknown[] | undefined) ?? []) {
+    const record = seat as Record<string, unknown> | null;
+    for (const [field, type] of ROSTER_FIELDS) {
+      if (typeof record?.[field] !== type) {
+        throw new Error(
+          `replayLog: malformed roster entry ${JSON.stringify(seat)}: "${field}" must be a ${type}`,
+        );
+      }
+    }
+  }
+}
+
 /**
  * Pairs each logged enter with the timeout that closed it. Per phase, one slot per enter in log
  * order, filled with the timeout entry's `t` when the phase timed out before its next enter;
@@ -119,13 +165,16 @@ function authoritativeDurations<TState extends PhaseState, TPrivate, TOptions>(
  * `rejected: true` throws as well — both directions of mismatch mean the log is not what this
  * definition produces. Each step's logged transitions and enters are asserted against the replayed
  * runtime — a log that contradicts what this definition actually does throws, naming the mismatch.
- * See "Action log and replay" in the framework guide.
+ * The log's shape is validated up front (`entries` an array; `header` with a string `game`, number
+ * `seed` and number `startedAt`; roster entries carrying `id` plus the seat flags) — a malformed
+ * log throws a named error before anything runs. See "Action log and replay" in the framework guide.
  */
 export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
   definition: GameDefinition<TState, TPrivate, TOptions>,
   log: ActionLog,
   init: ReplayInit<TState, TOptions>,
 ): ReplayResult<TState> {
+  assertLogShape(log);
   if (definition.name !== log.header.game) {
     throw new Error(
       `replayLog: log was recorded for game "${log.header.game}", not "${definition.name}"`,
