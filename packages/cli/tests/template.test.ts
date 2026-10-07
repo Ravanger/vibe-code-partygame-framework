@@ -45,6 +45,14 @@ describe("renderTemplate", () => {
     expect(mode & 0o111).not.toBe(0);
   });
 
+  it("substitutes tokens in file names as well", async () => {
+    const src = await freshDir("cli-tmpl-");
+    await writeFile(join(src, "__camelName__Bot.txt"), "bot for __slug__\n");
+    const dest = await freshDir("cli-out-");
+    await renderTemplate({ templateDir: src, outDir: dest, names: NAMES });
+    expect(await readFile(join(dest, "myGameBot.txt"), "utf8")).toBe("bot for my-game\n");
+  });
+
   it("rejects when the template directory is missing", async () => {
     const dest = await freshDir("cli-out-");
     await expect(

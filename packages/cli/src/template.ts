@@ -45,7 +45,8 @@ export async function renderTemplate({
   if (!source?.isDirectory()) throw new Error(`template directory not found: ${templateDir}`);
   for (const file of await filesIn(templateDir)) {
     const content = await readFile(file, "utf8");
-    const dest = join(outDir, relative(templateDir, file));
+    const rel = relative(templateDir, file);
+    const dest = join(outDir, substitute(rel, names));
     await mkdir(dirname(dest), { recursive: true });
     await writeFile(dest, substitute(content, names), "utf8");
     await chmod(dest, (await stat(file)).mode & 0o777);
