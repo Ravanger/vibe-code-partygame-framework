@@ -4,7 +4,9 @@
  */
 const RESERVED = ["list", "launch", "play", "bots", "dev", "host", "prod"];
 
-const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+// The first word must start with a letter: the slug is turned into identifiers (`PascalName`, `camelName`),
+// which cannot begin with a digit.
+const SLUG = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 
 export type ParseSlugResult = { ok: true; slug: string } | { ok: false; error: string };
 
@@ -12,7 +14,10 @@ export type ParseSlugResult = { ok: true; slug: string } | { ok: false; error: s
 export function parseSlug(input: unknown): ParseSlugResult {
   if (typeof input !== "string") return { ok: false, error: "slug must be a string" };
   if (!SLUG.test(input)) {
-    return { ok: false, error: `invalid slug "${input}": use kebab-case [a-z0-9]+(-[a-z0-9]+)*` };
+    return {
+      ok: false,
+      error: `invalid slug "${input}": use kebab-case [a-z][a-z0-9]*(-[a-z0-9]+)*, starting with a letter`,
+    };
   }
   if (RESERVED.includes(input)) {
     return { ok: false, error: `"${input}" is a reserved name` };

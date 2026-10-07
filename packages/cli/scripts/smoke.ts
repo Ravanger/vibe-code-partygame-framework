@@ -1,5 +1,6 @@
 /**
- * Renders the template to a throwaway game (`games/__cli_smoke__/` — a slug no real user could pick),
+ * Renders the template to a throwaway game (`games/cli_smoke/` — an underscored name no real user could pick,
+ * but one whose derived identifiers are distinct and valid),
  * installs it, runs its tests and typecheck, then removes it and restores the lockfile. Run with:
  *
  *   bun packages/cli/scripts/smoke.ts
@@ -11,7 +12,7 @@ import { fileURLToPath } from "node:url";
 import { deriveNames } from "../src/slug.js";
 import { renderTemplate } from "../src/template.js";
 
-const SLUG = "__cli_smoke__";
+const SLUG = "cli_smoke";
 const repoRoot = fileURLToPath(new URL("../../..", import.meta.url));
 const templateDir = fileURLToPath(new URL("../template", import.meta.url));
 const outDir = join(repoRoot, "games", SLUG);

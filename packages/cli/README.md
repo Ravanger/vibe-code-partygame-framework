@@ -13,8 +13,8 @@ bunx partygame create <slug>          # via the bin, once linked
 `create <slug> [--name "Display Name"]` writes a complete, working, fully-tested game to `games/<slug>/` and
 runs `bun install` at the repo root so it is ready to play.
 
-- The slug must be kebab-case (`[a-z0-9]+(-[a-z0-9]+)*`), not a reserved name, and there must be no existing
-  `games/<slug>/`.
+- The slug must be kebab-case starting with a letter (`[a-z][a-z0-9]*(-[a-z0-9]+)*`), not a reserved name, and
+  there must be no existing `games/<slug>/`.
 - Every name is derived from the slug: package `@partygame/<slug>`, room `<slug>` with dashes as underscores,
   PascalCase/camelCase identifiers and a spaced display name. `--name` overrides only the display name.
 - The repo root is found by walking up to the nearest `package.json` whose `workspaces` include `games/*`;

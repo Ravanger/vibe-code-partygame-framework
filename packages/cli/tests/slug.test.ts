@@ -11,6 +11,8 @@ describe("parseSlug", () => {
     ["My-Game"], // uppercase
     ["my game"], // spaces
     ["-leading"], // leading dash
+    ["2fast"], // leading digit would derive an invalid identifier
+    ["_under"], // leading underscore
     ["trailing-"], // trailing dash
     ["double--dash"], // double dash
     ["list"], // reserved
