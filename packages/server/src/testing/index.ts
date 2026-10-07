@@ -3,7 +3,7 @@ import { matchMaker, type Room, type Server } from "@colyseus/core";
 import { type Room as ClientRoom, ColyseusSDK } from "@colyseus/sdk";
 import { waitFor } from "@partygame/shared";
 import { createGameServer, type GameServerOptions } from "../createGameServer.js";
-import { freePort, serveApi as serveApiOnNode } from "../node.js";
+import { closeHttpServer, freePort, serveApi as serveApiOnNode } from "../node.js";
 import { RoomCodeService } from "../services/RoomCodeService.js";
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -81,7 +81,7 @@ export class TestServer {
     await Promise.all(
       this.apis.map((api) => {
         api.closeAllConnections();
-        return new Promise((resolve) => api.close(resolve));
+        return closeHttpServer(api);
       }),
     );
     await this.server.gracefullyShutdown(false);

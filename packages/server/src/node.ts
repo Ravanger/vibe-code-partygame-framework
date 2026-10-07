@@ -42,6 +42,17 @@ export async function serveApi(
   return api;
 }
 
+/** Closes an HTTP server, resolving when it already stopped: after `closeAllConnections()`, Bun reports `ERR_SERVER_NOT_RUNNING` to the close callback where Node resolves cleanly. Any other close error is propagated. */
+export function closeHttpServer(server: HttpServer): Promise<void> {
+  return new Promise((resolve, reject) => {
+    server.close((error) => {
+      const code = (error as NodeJS.ErrnoException | undefined)?.code;
+      if (error === undefined || code === "ERR_SERVER_NOT_RUNNING") resolve();
+      else reject(error);
+    });
+  });
+}
+
 export interface NodeServerOptions extends Omit<GameServerOptions, "transport"> {
   /** Game server port; a free one when omitted. */
   port?: number;
@@ -72,7 +83,7 @@ export class NodeServerHandle {
     if (this.stopped) return;
     this.stopped = true;
     this.api.closeAllConnections();
-    await new Promise((resolve) => this.api.close(resolve));
+    await closeHttpServer(this.api);
     await this.server.gracefullyShutdown(false);
   }
 }
@@ -125,7 +136,7 @@ export async function startNodeServer(
       if (api !== undefined) {
         const openApi = api;
         openApi.closeAllConnections();
-        await new Promise((resolve) => openApi.close(resolve));
+        await closeHttpServer(openApi);
       }
       await server?.gracefullyShutdown(false);
       const retriable =

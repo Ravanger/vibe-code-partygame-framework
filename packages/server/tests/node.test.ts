@@ -1,6 +1,7 @@
-import { createServer, type Server } from "node:http";
+import { Agent, createServer, get, type Server } from "node:http";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  closeHttpServer,
   freePort,
   type NodeServerHandle,
   ServerProbe,
@@ -209,6 +210,41 @@ describe("startNodeServer", () => {
     ).rejects.toThrow();
     expect(calls).toBe(1); // only the auto game port; no re-roll
     expect(await probe.canConnect(gamePort)).toBe(false); // nothing left open
+  });
+});
+
+describe("closeHttpServer", () => {
+  it("resolves when the server closes cleanly", async () => {
+    const idle = createServer();
+    await new Promise<void>((resolve) => idle.listen(0, "127.0.0.1", resolve));
+    servers.push(idle);
+    await expect(closeHttpServer(idle)).resolves.toBeUndefined();
+  });
+
+  it("resolves when a keep-alive connection was destroyed just before close", async () => {
+    // On Bun this makes close() report ERR_SERVER_NOT_RUNNING to its callback; on Node it resolves cleanly.
+    const busy = createServer((_req, res) => res.end("ok"));
+    await new Promise<void>((resolve) => busy.listen(0, "127.0.0.1", resolve));
+    servers.push(busy);
+    const agent = new Agent({ keepAlive: true });
+    await new Promise<void>((resolve, reject) => {
+      const request = get({ host: "127.0.0.1", port: portOf(busy), path: "/", agent }, (res) => {
+        res.resume();
+        res.on("end", () => resolve());
+      });
+      request.on("error", reject);
+    });
+    busy.closeAllConnections();
+    await expect(closeHttpServer(busy)).resolves.toBeUndefined();
+    agent.destroy();
+  });
+
+  it("propagates an unexpected close error", async () => {
+    const boom = Object.assign(new Error("boom"), { code: "BOOM" });
+    const failing = {
+      close: (callback?: (error?: Error) => void) => callback?.(boom),
+    } as unknown as Server;
+    await expect(closeHttpServer(failing)).rejects.toBe(boom);
   });
 });
 
