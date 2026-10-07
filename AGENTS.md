@@ -32,6 +32,7 @@
 - `packages/terminal`: terminal clients for any game: `TerminalPlayer`, `PlaySession`, `ReadlinePrompter`, `parsePlayArgs`/`parseBotsArgs`, `runBotsCommand`; a game supplies a `TerminalStrategy`.
 - `packages/launcher`: `runLauncher(config, argv)`: game server, API and client (dev, host, prod) plus `--bots`/`--demo` tables, from a `LaunchConfig`.
 - `packages/config`: `@partygame/config` presets: `/vite` (`defineGameViteConfig`), `/vitest` (`uiTestConfig`, `nodeTestConfig`; both alias every `@partygame/*` subpath to package source — the UI preset excepts node-runtime server subpaths, see Troubleshooting — and compile Svelte sources, so tests never read a stale `dist/` and cross-package runes files transform identically for coverage), `/svelte` (`svelteConfig`), `/tsconfig.base.json` (the root `tsconfig.base.json` extends it) and `/tsconfig.game.json`.
+- `packages/cli`: the `create` command — `bun run new <slug> [--name "..."]` scaffolds a complete, working, fully-tested game under `games/<slug>/` from `packages/cli/template/` (the slug, PascalCase/camelCase/display names and room name are substituted in file contents and file names), then runs `bun install`. See `packages/cli/README.md`.
 - `games/wit-clash`: reference game (Quiplash-style). `src/` rules, `ui/` Svelte client, `server.ts` Bun entry, `launch.ts` launcher config, `content/categories/*.jsonc` host-editable prompts. See `games/wit-clash/README.md`.
 - `docs/`: `framework/README.md` (game author guide), `HOSTING.md` (running and LAN play).
 - `scripts/game.ts`: root dispatcher, `bun run scripts/game.ts <list|launch|play|bots> [game] [...args]` runs `games/<game>/launch.ts`, `terminal/play.ts` or `bots/cli.ts`. A game is a `games/` folder with a `package.json`; it is the first argument when that names one, the only game otherwise, else a numbered prompt (no terminal: the list and exit 2). Pure part in `scripts/gameEntry.ts`.
@@ -51,6 +52,7 @@
 | `bun run bots <CODE> [count]` | WitClash bots join a room created in the browser and play every turn (`--endpoint`, `--api-port`); Ctrl+C removes them |
 | `bun run play [--bots=N] [--name=You] [--join=ABCD]` / `bun run --cwd games/wit-clash demo [--bots=N] [--rounds=R]` | WitClash in the terminal (`games/wit-clash/terminal/`): play with bots on a server it finds or starts / narrated all-bot game that prints PASS or FAIL |
 | `bun run games` | lists the games under `games/` and the commands each has an entry for |
+| `bun run new <slug> [--name "..."]` | scaffolds a complete game under `games/<slug>/` from the CLI template, then `bun install` (`packages/cli`; guide: `docs/framework/README.md`, "Scaffolding a new game") |
 | `bun run launch` / `launch:host` / `launch:prod` | (through `scripts/game.ts`, entry `games/wit-clash/launch.ts`) game server (2567), API (3001), Vite (5173) or built client (3000); `--no-browser` to skip opening one |
 
 ## Library Documentation References
