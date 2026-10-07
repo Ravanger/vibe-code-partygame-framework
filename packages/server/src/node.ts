@@ -42,6 +42,17 @@ export async function serveApi(
   return api;
 }
 
+/** Closes an HTTP server, resolving when it already stopped: after `closeAllConnections()`, Bun reports `ERR_SERVER_NOT_RUNNING` to the close callback where Node resolves cleanly. Any other close error is propagated. */
+export function closeHttpServer(server: HttpServer): Promise<void> {
+  return new Promise((resolve, reject) => {
+    server.close((error) => {
+      const code = (error as NodeJS.ErrnoException | undefined)?.code;
+      if (error === undefined || code === "ERR_SERVER_NOT_RUNNING") resolve();
+      else reject(error);
+    });
+  });
+}
+
 export interface NodeServerOptions extends Omit<GameServerOptions, "transport"> {
   /** Game server port; a free one when omitted. */
   port?: number;
@@ -72,7 +83,7 @@ export class NodeServerHandle {
     if (this.stopped) return;
     this.stopped = true;
     this.api.closeAllConnections();
-    await new Promise((resolve) => this.api.close(resolve));
+    await closeHttpServer(this.api);
     await this.server.gracefullyShutdown(false);
   }
 }
@@ -87,31 +98,52 @@ async function claimPort(port: number): Promise<void> {
   await new Promise((resolve) => probe.close(resolve));
 }
 
-/** Runs the game server and its code API in this process, on the given ports or free ones. Rejects, leaving nothing open, when either port is taken. */
-export async function startNodeServer(options: NodeServerOptions): Promise<NodeServerHandle> {
+const MAX_PORT_ATTEMPTS = 5;
+
+/** True for the EADDRINUSE a failed `listen` reports when a port was taken after we checked it. */
+function isEaddrinuse(error: unknown): boolean {
+  return (error as { code?: string } | null)?.code === "EADDRINUSE";
+}
+
+/** Runs the game server and its code API in this process, on the given ports or free ones. A free port that gets taken in the meantime is re-rolled (up to five attempts); a given port that is taken rejects immediately, leaving nothing open either way. */
+export async function startNodeServer(
+  options: NodeServerOptions,
+  /** Test seam: overrides how free ports are discovered. */
+  hooks?: { freePort?: () => Promise<number> },
+): Promise<NodeServerHandle> {
   const { port: wantedPort, apiPort: wantedApiPort, host, ...serverOptions } = options;
   if (wantedPort !== undefined && wantedPort === wantedApiPort) {
     throw new Error("The game server and the code API need different ports");
   }
-  const port = wantedPort ?? (await freePort());
-  const apiPort = wantedApiPort ?? (await freePort());
   const roomCodeService = options.roomCodeService ?? new RoomCodeService();
-  await claimPort(port);
-  const api = await serveApi(
-    roomCodeService,
-    host === undefined ? { port: apiPort } : { port: apiPort, host },
-  );
-  let server: Server | undefined;
-  try {
-    server = createGameServer({ ...serverOptions, roomCodeService });
-    await server.listen(port);
-  } catch (error) {
-    api.closeAllConnections();
-    await new Promise((resolve) => api.close(resolve));
-    await server?.gracefullyShutdown(false);
-    throw error;
+  const discoverFreePort = hooks?.freePort ?? freePort;
+  for (let attempt = 1; ; attempt++) {
+    const port = wantedPort ?? (await discoverFreePort());
+    const apiPort = wantedApiPort ?? (await discoverFreePort());
+    let api: HttpServer | undefined;
+    let server: Server | undefined;
+    try {
+      await claimPort(port);
+      api = await serveApi(
+        roomCodeService,
+        host === undefined ? { port: apiPort } : { port: apiPort, host },
+      );
+      server = createGameServer({ ...serverOptions, roomCodeService });
+      await server.listen(port);
+      return new NodeServerHandle(server, api, roomCodeService, port, apiPort);
+    } catch (error) {
+      // A failed `listen` leaves no listening server behind; only close what is open.
+      if (api !== undefined) {
+        const openApi = api;
+        openApi.closeAllConnections();
+        await closeHttpServer(openApi);
+      }
+      await server?.gracefullyShutdown(false);
+      const retriable =
+        isEaddrinuse(error) && wantedPort === undefined && wantedApiPort === undefined;
+      if (!retriable || attempt === MAX_PORT_ATTEMPTS) throw error;
+    }
   }
-  return new NodeServerHandle(server, api, roomCodeService, port, apiPort);
 }
 
 const PROBE_TIMEOUT_MS = 800;

@@ -1,6 +1,6 @@
 # Turbo (Turborepo) Documentation
 
-> **Version:** 2.11.5 (root devDependency, `packageManager: bun@1.1.0`; the machine runs Bun 1.4.2)
+> **Version:** 2.11.5 (root devDependency, `packageManager: bun@1.4.2`)
 
 ## Overview
 Orchestrates workspace scripts. Workspaces: `packages/*`, `games/*` (`@partygame/shared`, `core`, `server`, `game-client`, `wit-clash`). Config is `turbo.json` with v2 `tasks` (not `pipeline`).

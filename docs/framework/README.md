@@ -210,13 +210,14 @@ positionally to `p1..pN`, so every recorded sender re-dispatches against the mat
   from the room RNG). `crypto.randomUUID()` breaks replay: re-dispatched payloads reference ids the fresh
   runtime never generated.
 
-**Replay.** `replayLog(definition, log, init)` re-drives a fresh runtime — same definition, RNG seeded from
+**Replay.** `replayLog(definition, log, init)` (from `@partygame/core/testing` — it builds a `TestTable`)
+re-drives a fresh runtime — same definition, RNG seeded from
 the header, clock starting at `header.startedAt`, the recorded roster pre-seated with its flags restored
 (`p1..pN` mapped positionally; for logs without a roster, `init.players` pre-seats that many seats instead)
 — dispatching every logged action in order:
 
 ```ts
-import { replayLog } from "@partygame/core";
+import { replayLog } from "@partygame/core/testing";
 
 const { states } = replayLog(ButtonGame, log, {
   state: new State(), // same shape as passed to TestTable
@@ -868,7 +869,7 @@ export { svelteConfig as default } from "@partygame/config/svelte";
 |---|---|
 | `@partygame/shared` | `Parsed<T>` (`{ ok: true, value } \| { ok: false, error }`) and `between(value, min, max)` for argument parsing; `waitFor(predicate, what, timeoutMs)` poll loop; `resolveRoomCode(apiBase, code)`; `joinUrl(base, code)` / `tvUrl(base, code)` share links; `NAME_MAX_LENGTH` |
 | `@partygame/core` | `shuffle(items, rng)`, `required(value, what)` |
-| `@partygame/server/node` | `startNodeServer({ games, port?, apiPort? })` (a game server and its API in this process; `.stop()`), `ServerProbe` (`isGameServer(port, apiPort)`, `canConnect(port)`, `answers(url)`), `freePort()`, `serveApi(codes, { port, host? })`: the code API on Node's `http` (the Bun entry serves its own) |
+| `@partygame/server/node` | `startNodeServer({ games, port?, apiPort? })` (a game server and its API in this process; `.stop()`), `ServerProbe` (`isGameServer(port, apiPort)`, `canConnect(port)`, `answers(url)`), `freePort()`, `serveApi(codes, { port, host? })`, `closeHttpServer(server)` (resolves when the server already stopped): the code API on Node's `http` (the Bun entry serves its own) |
 | `@partygame/server/content` | `loadJsoncDir(dir, schema, { idOf, label })`: a folder of commented JSON files, validated, duplicate ids refused; `stripJsonComments` |
 | `@partygame/game-client` | `resolveEndpoints(overrides, pageHost)`, `readCodeParam(search, "code" \| "tv")` |
 | `@partygame/game-client/test-setup` | vitest `setupFiles` entry for jsdom: storage shims, SDK on `ws` (repo-internal, raw `.ts`) |

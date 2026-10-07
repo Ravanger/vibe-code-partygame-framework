@@ -1,6 +1,7 @@
-import { createServer, type Server } from "node:http";
+import { Agent, createServer, get, type Server } from "node:http";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  closeHttpServer,
   freePort,
   type NodeServerHandle,
   ServerProbe,
@@ -17,8 +18,11 @@ afterEach(async () => {
   await Promise.all(handles.splice(0).map((h) => h.stop()));
 });
 
-const start = async (options: Parameters<typeof startNodeServer>[0]): Promise<NodeServerHandle> => {
-  const handle = await startNodeServer(options);
+const start = async (
+  options: Parameters<typeof startNodeServer>[0],
+  hooks?: Parameters<typeof startNodeServer>[1],
+): Promise<NodeServerHandle> => {
+  const handle = await startNodeServer(options, hooks);
   handles.push(handle);
   return handle;
 };
@@ -99,7 +103,19 @@ describe("startNodeServer", () => {
         throw new Error("no games for you");
       }
     }
-    await expect(startNodeServer({ games: new BrokenList(), apiPort })).rejects.toThrow(/no games/);
+    let calls = 0;
+    await expect(
+      startNodeServer(
+        { games: new BrokenList(), apiPort },
+        {
+          freePort: async () => {
+            calls++;
+            return await freePort();
+          },
+        },
+      ),
+    ).rejects.toThrow(/no games/);
+    expect(calls).toBe(1); // the auto game port; a non-EADDRINUSE failure is never re-rolled
     expect(await probe.canConnect(apiPort)).toBe(false);
   });
 
@@ -110,6 +126,125 @@ describe("startNodeServer", () => {
       startNodeServer({ games: GAMES, port: first.port, apiPort: freeApiPort }),
     ).rejects.toThrow();
     expect(await probe.canConnect(freeApiPort)).toBe(false);
+  });
+
+  it("re-rolls a free port that got taken in the meantime", async () => {
+    const first = await start({ games: GAMES });
+    let calls = 0;
+    const handle = await start(
+      { games: GAMES },
+      { freePort: async () => (calls++ === 0 ? first.port : await freePort()) },
+    );
+    expect(calls).toBe(4); // two ports per attempt, one failed attempt
+    expect(await probe.isGameServer(handle.port, handle.apiPort)).toBe(true);
+  });
+
+  it("re-rolls when the code API port got taken after the game port was claimed", async () => {
+    const first = await start({ games: GAMES });
+    const gameFree = await freePort();
+    const sequence = [gameFree, first.port, await freePort(), await freePort()];
+    let n = 0;
+    const next = async (): Promise<number> => {
+      const port = sequence[n];
+      n++;
+      if (port === undefined) throw new Error("sequence exhausted");
+      return port;
+    };
+    const handle = await start({ games: GAMES }, { freePort: next });
+    expect(n).toBe(4);
+    expect(await probe.canConnect(gameFree)).toBe(false); // the claimed game port was released
+    expect(await probe.isGameServer(handle.port, handle.apiPort)).toBe(true);
+  });
+
+  it("gives up after five attempts when every discovered port is taken", async () => {
+    const first = await start({ games: GAMES });
+    let calls = 0;
+    await expect(
+      startNodeServer(
+        { games: GAMES },
+        {
+          freePort: async () => {
+            calls++;
+            return first.port;
+          },
+        },
+      ),
+    ).rejects.toMatchObject({ code: "EADDRINUSE" });
+    expect(calls).toBe(10); // five attempts, two ports each
+  });
+
+  it("does not re-roll explicitly given ports", async () => {
+    const first = await start({ games: GAMES });
+    const freeApiPort = await freePort();
+    let calls = 0;
+    await expect(
+      startNodeServer(
+        { games: GAMES, port: first.port, apiPort: freeApiPort },
+        {
+          freePort: async () => {
+            calls++;
+            return freeApiPort;
+          },
+        },
+      ),
+    ).rejects.toThrow();
+    expect(calls).toBe(0);
+  });
+
+  it("does not re-roll when an explicitly given API port is taken", async () => {
+    const first = await start({ games: GAMES });
+    let calls = 0;
+    let gamePort = 0;
+    await expect(
+      startNodeServer(
+        { games: GAMES, apiPort: first.port },
+        {
+          freePort: async () => {
+            calls++;
+            const port = await freePort();
+            gamePort = port;
+            return port;
+          },
+        },
+      ),
+    ).rejects.toThrow();
+    expect(calls).toBe(1); // only the auto game port; no re-roll
+    expect(await probe.canConnect(gamePort)).toBe(false); // nothing left open
+  });
+});
+
+describe("closeHttpServer", () => {
+  it("resolves when the server closes cleanly", async () => {
+    const idle = createServer();
+    await new Promise<void>((resolve) => idle.listen(0, "127.0.0.1", resolve));
+    servers.push(idle);
+    await expect(closeHttpServer(idle)).resolves.toBeUndefined();
+  });
+
+  it("resolves when a keep-alive connection was destroyed just before close", async () => {
+    // On Bun this makes close() report ERR_SERVER_NOT_RUNNING to its callback; on Node it resolves cleanly.
+    const busy = createServer((_req, res) => res.end("ok"));
+    await new Promise<void>((resolve) => busy.listen(0, "127.0.0.1", resolve));
+    servers.push(busy);
+    const agent = new Agent({ keepAlive: true });
+    await new Promise<void>((resolve, reject) => {
+      const request = get({ host: "127.0.0.1", port: portOf(busy), path: "/", agent }, (res) => {
+        res.resume();
+        res.on("end", () => resolve());
+      });
+      request.on("error", reject);
+    });
+    busy.closeAllConnections();
+    await expect(closeHttpServer(busy)).resolves.toBeUndefined();
+    agent.destroy();
+  });
+
+  it("propagates an unexpected close error", async () => {
+    const boom = Object.assign(new Error("boom"), { code: "BOOM" });
+    const failing = {
+      close: (callback?: (error?: Error) => void) => callback?.(boom),
+    } as unknown as Server;
+    await expect(closeHttpServer(failing)).rejects.toBe(boom);
   });
 });
 

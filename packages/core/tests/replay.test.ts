@@ -9,9 +9,9 @@ import {
   getActionLog,
   mulberry32,
   type PhaseState,
-  replayLog,
   shuffle,
 } from "../src/index.js";
+import { replayLog } from "../src/testing/index.js";
 import { TestTable } from "../src/testing/TestTable.js";
 
 interface S extends PhaseState {

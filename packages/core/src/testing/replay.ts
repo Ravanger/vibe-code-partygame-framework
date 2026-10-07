@@ -1,8 +1,8 @@
 import { LOBBY_PHASE } from "@partygame/shared";
-import type { ActionLog, ActionLogEntry } from "./actionLog.js";
-import type { GameDefinition, PhaseDefinition, PhaseState, PlayerInfo } from "./runtime/index.js";
-import { TestTable } from "./testing/TestTable.js";
-import { required } from "./utils.js";
+import type { ActionLog, ActionLogEntry } from "../actionLog.js";
+import type { GameDefinition, PhaseDefinition, PhaseState, PlayerInfo } from "../runtime/index.js";
+import { required } from "../utils.js";
+import { TestTable } from "./TestTable.js";
 
 /** Starting values for {@link replayLog}. */
 export interface ReplayInit<TState extends PhaseState, TOptions> {

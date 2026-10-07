@@ -23,7 +23,7 @@ export default defineGameViteConfig();
 
 ## Vitest
 
-`uiTestConfig` runs jsdom + Svelte tests with jest-dom and `@partygame/game-client/test-setup` as default `setupFiles`. `nodeTestConfig` is for rules, bots and terminal tests.
+`uiTestConfig` runs jsdom + Svelte tests with jest-dom and `@partygame/game-client/test-setup` as default `setupFiles`. `nodeTestConfig` is for rules, bots and terminal tests. Both compile Svelte sources (`.svelte`, `.svelte.ts`) with the same transform, so a node test that loads another package's runes file (e.g. `GameConnectionManager` via `@partygame/game-client/testing`) gets identical code — and identical v8 coverage — to the UI projects.
 
 ```ts
 // vitest.config.ts
@@ -33,6 +33,10 @@ export default uiTestConfig({ name: "my-game", coverage: ["src/**/*.ts", "ui/**/
 ```
 
 Options: `{ name, coverage, include?, exclude?, setupFiles?, overrides? }`. `include` defaults to `tests/**/*.test.ts`; `exclude` always adds `dist/**`, `node_modules/**` and `coverage/**`; a given `setupFiles` replaces the UI default. In a multi-project setup, give each project its own `name` and call `nodeTestConfig({ name, coverage, include: [...] })` for the non-UI ones.
+
+Both presets install a `resolve.alias` that maps every `@partygame/*` export subpath to its package **source** (`src/...`, enumerated from each package's `exports`), so a test never reads another workspace's stale `dist/` build — no `bun run build` is needed before running tests after editing a dependency package.
+
+One exception, in the UI preset only: `@partygame/server/node` and `@partygame/server/testing` resolve to `dist/`. jsdom transforms modules with Vite's client pipeline, which rewrites value imports of node: builtins as CJS interop; remapped through source maps, their v8 coverage items don't line up with the SSR-transformed ones from node projects (the provider merges per-project maps by source location), leaving phantom uncovered lines. UI tests need a working test server, not fresh source — the server package's own tests cover that source. If you add a subpath whose source graph value-imports a node: builtin, add it to `JSDOM_DIST_ONLY` in `src/vitest.ts` (and its test twin in `tests/vitest.test.ts`). Real consumers (the launcher, the dev server) still resolve through `dist/` as usual; this only changes what vitest loads.
 
 ## Svelte
 
