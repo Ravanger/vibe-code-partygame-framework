@@ -11,18 +11,21 @@ export interface RenderTemplateOptions {
   names: Names;
 }
 
-const TOKENS: ReadonlyArray<readonly [token: string, key: keyof Names]> = [
-  ["__slug__", "slug"],
-  ["__PascalName__", "pascalName"],
-  ["__camelName__", "camelName"],
-  ["__DisplayName__", "displayName"],
-  ["__roomName__", "roomName"],
-];
+// One pass, so substituted values are never re-scanned: a `--name` containing token text stays literal.
+const TOKEN_KEYS = {
+  __slug__: "slug",
+  __PascalName__: "pascalName",
+  __camelName__: "camelName",
+  __DisplayName__: "displayName",
+  __roomName__: "roomName",
+} as const satisfies Record<string, keyof Names>;
+
+type Token = keyof typeof TOKEN_KEYS;
+const TOKEN_RE = new RegExp(Object.keys(TOKEN_KEYS).join("|"), "g");
 
 function substitute(content: string, names: Names): string {
-  let out = content;
-  for (const [token, key] of TOKENS) out = out.split(token).join(names[key]);
-  return out;
+  // TOKEN_RE only ever matches a key of TOKEN_KEYS, so the lookup is total.
+  return content.replace(TOKEN_RE, (token) => names[TOKEN_KEYS[token as Token]]);
 }
 
 async function filesIn(dir: string): Promise<string[]> {

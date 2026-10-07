@@ -53,6 +53,15 @@ describe("renderTemplate", () => {
     expect(await readFile(join(dest, "myGameBot.txt"), "utf8")).toBe("bot for my-game\n");
   });
 
+  it("treats substituted values as data: a display name containing token text stays literal", async () => {
+    const dest = await freshDir("cli-out-");
+    const names = { ...NAMES, displayName: "A __roomName__ and a __slug__" };
+    await renderTemplate({ templateDir: TEMPLATE, outDir: dest, names });
+    expect(await readFile(join(dest, "nested/leaf.txt"), "utf8")).toBe(
+      "camel=myGame\nroom=my_game\ndisplay=A __roomName__ and a __slug__\n",
+    );
+  });
+
   it("rejects when the template directory is missing", async () => {
     const dest = await freshDir("cli-out-");
     await expect(
