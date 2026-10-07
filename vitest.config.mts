@@ -36,6 +36,7 @@ export default defineConfig({
         "packages/launcher/src/runLauncher.ts",
         "games/*/launch.ts",
         "scripts/game.ts",
+        "packages/cli/src/cli.ts",
       ],
       thresholds: { lines: 100, functions: 100, branches: 100, statements: 100 },
     },

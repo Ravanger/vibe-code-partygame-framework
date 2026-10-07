@@ -17,6 +17,7 @@
     "typecheck": "turbo typecheck",
     "dev": "turbo run dev dev:server",
     "games": "bun run scripts/game.ts list",
+    "new": "bun packages/cli/src/cli.ts create",
     "bots": "bun run scripts/game.ts bots",
     "play": "bun run scripts/game.ts play",
     "launch": "bun run scripts/game.ts launch",

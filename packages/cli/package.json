@@ -1,0 +1,17 @@
+{
+  "name": "@partygame/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "partygame": "./src/cli.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.test.json"
+  },
+  "devDependencies": {
+    "@partygame/config": "workspace:*",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.11"
+  }
+}
