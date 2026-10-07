@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -7,6 +7,7 @@ import { deriveNames } from "../src/slug.js";
 import { renderTemplate } from "../src/template.js";
 
 const TEMPLATE = fileURLToPath(new URL("./fixtures/template", import.meta.url));
+const SHIPPED_TEMPLATE = fileURLToPath(new URL("../template", import.meta.url));
 const NAMES = deriveNames("my-game");
 const TOKEN = /__[A-Za-z]+__/;
 
@@ -60,6 +61,24 @@ describe("renderTemplate", () => {
     expect(await readFile(join(dest, "nested/leaf.txt"), "utf8")).toBe(
       "camel=myGame\nroom=my_game\ndisplay=A __roomName__ and a __slug__\n",
     );
+  });
+
+  it("renders the shipped template with no token left in any file name or content", async () => {
+    const dest = await freshDir("cli-shipped-");
+    await renderTemplate({ templateDir: SHIPPED_TEMPLATE, outDir: dest, names: deriveNames("wave-game") });
+    const leftovers = async (dir: string): Promise<string[]> => {
+      const found: string[] = [];
+      for (const entry of await readdir(dir)) {
+        const full = join(dir, entry);
+        if ((await stat(full)).isDirectory()) {
+          found.push(...(await leftovers(full)));
+        } else if (TOKEN.test(entry) || TOKEN.test(await readFile(full, "utf8"))) {
+          found.push(full);
+        }
+      }
+      return found;
+    };
+    expect(await leftovers(dest)).toEqual([]);
   });
 
   it("rejects when the template directory is missing", async () => {
