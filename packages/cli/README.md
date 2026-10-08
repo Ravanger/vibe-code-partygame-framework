@@ -3,10 +3,12 @@
 Scaffolds a new game into this monorepo from the built-in template.
 
 ```sh
-bun run new <slug>                    # root script
+bun run new <slug>                       # root script
 bun packages/cli/src/cli.ts create <slug>   # direct
-bunx partygame create <slug>          # via the bin, once linked
 ```
+
+The `partygame` bin in `package.json` is for publishing this package; inside the monorepo it is never linked,
+so use one of the two forms above.
 
 ## `create`
 
