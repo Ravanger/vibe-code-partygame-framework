@@ -8,11 +8,14 @@ A small party game scaffolded by `bun run new`: players take turns waving, and t
 
 From the repo root:
 
+The repo dispatcher (`scripts/game.ts`) needs the game named whenever more than one game exists, so every
+command below carries `__slug__`:
+
 ```sh
-bun run launch __slug__        # server + API + dev client; open the printed URL
-bun run launch:host __slug__   # serve the built client instead of Vite
-bun run play --join=CODE       # join from a terminal (Waving/Results)
-bun run bots CODE [count]      # seat bots in a browser-created room
+bun run launch __slug__            # server + API + dev client; open the printed URL
+bun run launch __slug__ host       # same, plus the LAN URLs for guests on your network
+bun run play __slug__ --join=CODE  # join from a terminal (Waving/Results)
+bun run bots __slug__ CODE [count] # seat bots in a browser-created room
 ```
 
 `bun run --cwd games/__slug__ demo` runs a narrated all-bot game and prints PASS or FAIL.
