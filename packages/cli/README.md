@@ -18,7 +18,9 @@ runs `bun install` at the repo root so it is ready to play.
 - The slug must be kebab-case starting with a letter (`[a-z][a-z0-9]*(-[a-z0-9]+)*`), not a reserved name, and
   there must be no existing `games/<slug>/`.
 - Every name is derived from the slug: package `@partygame/<slug>`, room `<slug>` with dashes as underscores,
-  PascalCase/camelCase identifiers and a spaced display name. `--name` overrides only the display name.
+  PascalCase/camelCase identifiers and a spaced display name. `--name` overrides only the display name; it is
+  trimmed and must not be empty. The display name may contain any characters (quotes, backslashes, newlines):
+  in code contexts the template renders it as an escaped string literal.
 - The repo root is found by walking up to the nearest `package.json` whose `workspaces` include `games/*`;
   anything else fails with a clear error (this targets this monorepo only).
 
