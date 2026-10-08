@@ -23,12 +23,12 @@ export async function findRepoRoot(startDir: string): Promise<string> {
 }
 
 async function isMonorepoRoot(dir: string): Promise<boolean> {
-  let raw: string;
+  let pkg: PackageJson;
   try {
-    raw = await readFile(join(dir, "package.json"), "utf8");
+    pkg = JSON.parse(await readFile(join(dir, "package.json"), "utf8")) as PackageJson;
   } catch {
+    // A missing or malformed package.json is not a root; keep walking up.
     return false;
   }
-  const pkg = JSON.parse(raw) as PackageJson;
   return Array.isArray(pkg.workspaces) && pkg.workspaces.includes("games/*");
 }

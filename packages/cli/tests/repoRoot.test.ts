@@ -35,6 +35,21 @@ describe("findRepoRoot", () => {
     expect(await findRepoRoot(mid)).toBe(root);
   });
 
+  it("keeps walking past a malformed package.json", async () => {
+    const root = await fresh("cli-root-");
+    await writePkg(root, { name: "root", workspaces: ["packages/*", "games/*"] });
+    const mid = join(root, "mid");
+    await mkdir(mid);
+    await writeFile(join(mid, "package.json"), "{ not json");
+    expect(await findRepoRoot(mid)).toBe(root);
+  });
+
+  it("throws the clean error when only a malformed package.json is found", async () => {
+    const leaf = await fresh("cli-leaf-");
+    await writeFile(join(leaf, "package.json"), "{ not json");
+    await expect(findRepoRoot(leaf)).rejects.toThrow(/no monorepo root/);
+  });
+
   it("throws when no ancestor is a monorepo root", async () => {
     const leaf = await fresh("cli-leaf-");
     await writePkg(leaf, { name: "lonely", workspaces: ["x/*"] });
