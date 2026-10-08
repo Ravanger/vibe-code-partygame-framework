@@ -17,15 +17,25 @@ const TOKEN_KEYS = {
   __PascalName__: "pascalName",
   __camelName__: "camelName",
   __DisplayName__: "displayName",
+  // JSON.stringify of the display name, quotes included: safe inside TS/JS string literals.
+  __DisplayNameJson__: "displayNameJson",
   __roomName__: "roomName",
-} as const satisfies Record<string, keyof Names>;
+} as const satisfies Record<string, keyof TokenValues>;
 
 type Token = keyof typeof TOKEN_KEYS;
 const TOKEN_RE = new RegExp(Object.keys(TOKEN_KEYS).join("|"), "g");
 
-function substitute(content: string, names: Names): string {
+/** Everything the template can substitute: the names plus the code-safe form of the display name. */
+type TokenValues = Names & { displayNameJson: string };
+
+function tokenValues(names: Names): TokenValues {
+  // Derived here so the raw display name stays the single source.
+  return { ...names, displayNameJson: JSON.stringify(names.displayName) };
+}
+
+function substitute(content: string, values: TokenValues): string {
   // TOKEN_RE only ever matches a key of TOKEN_KEYS, so the lookup is total.
-  return content.replace(TOKEN_RE, (token) => names[TOKEN_KEYS[token as Token]]);
+  return content.replace(TOKEN_RE, (token) => values[TOKEN_KEYS[token as Token]]);
 }
 
 async function filesIn(dir: string): Promise<string[]> {
@@ -46,12 +56,13 @@ export async function renderTemplate({
 }: RenderTemplateOptions): Promise<void> {
   const source = await stat(templateDir).catch(() => undefined);
   if (!source?.isDirectory()) throw new Error(`template directory not found: ${templateDir}`);
+  const values = tokenValues(names);
   for (const file of await filesIn(templateDir)) {
     const content = await readFile(file, "utf8");
     const rel = relative(templateDir, file);
-    const dest = join(outDir, substitute(rel, names));
+    const dest = join(outDir, substitute(rel, values));
     await mkdir(dirname(dest), { recursive: true });
-    await writeFile(dest, substitute(content, names), "utf8");
+    await writeFile(dest, substitute(content, values), "utf8");
     await chmod(dest, (await stat(file)).mode & 0o777);
   }
 }

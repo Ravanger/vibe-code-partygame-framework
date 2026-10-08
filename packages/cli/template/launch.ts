@@ -9,7 +9,7 @@ const kit = __camelName__Kit();
 
 await runLauncher(
   {
-    name: "__DisplayName__",
+    name: __DisplayNameJson__,
     gameDir: fileURLToPath(new URL(".", import.meta.url)),
     bots: { kit, max: MAX_PLAYERS - 1 },
     demo: {

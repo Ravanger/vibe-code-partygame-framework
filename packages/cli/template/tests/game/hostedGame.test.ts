@@ -8,6 +8,6 @@ describe("__camelName__Game", () => {
     const game = __camelName__Game();
     expect(game.roomName).toBe(ROOM_NAME);
     expect(game.stateClass).toBe(__PascalName__State);
-    expect(game.definition.name).toBe("__DisplayName__");
+    expect(game.definition.name).toBe(__DisplayNameJson__);
   });
 });

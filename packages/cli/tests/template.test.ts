@@ -2,6 +2,7 @@ import { mkdtemp, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { ModuleKind, ScriptTarget, transpileModule } from "typescript";
 import { describe, expect, it } from "vitest";
 import { deriveNames } from "../src/slug.js";
 import { renderTemplate } from "../src/template.js";
@@ -83,6 +84,23 @@ describe("renderTemplate", () => {
       return found;
     };
     expect(await leftovers(dest)).toEqual([]);
+  });
+
+  it("renders a hostile display name as a valid escaped literal in code contexts", async () => {
+    const dest = await freshDir("cli-hostile-");
+    // A quote, a backslash and an embedded newline: each of these breaks a raw TS string literal.
+    const names = { ...NAMES, displayName: 'Bob "The Builder" \\ \n test' };
+    await renderTemplate({ templateDir: SHIPPED_TEMPLATE, outDir: dest, names });
+    for (const file of ["src/game.ts", "launch.ts", "tests/game/hostedGame.test.ts"]) {
+      const code = await readFile(join(dest, file), "utf8");
+      expect(
+        transpileModule(code, {
+          reportDiagnostics: true,
+          compilerOptions: { module: ModuleKind.ESNext, target: ScriptTarget.ES2022 },
+        }).diagnostics ?? [],
+        file,
+      ).toEqual([]);
+    }
   });
 
   it("rejects when the template directory is missing", async () => {
