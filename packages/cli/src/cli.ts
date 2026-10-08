@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { parseCreateArgs, runCreate } from "./create.js";
+import { formatGame, parseCreateArgs, runCreate } from "./create.js";
 
 const [command, ...rest] = process.argv.slice(2);
 if (command !== "create") {
@@ -22,6 +22,7 @@ process.exit(
     ...(args.name === undefined ? {} : { name: args.name }),
     cwd: process.cwd(),
     templateDir,
+    format: formatGame,
     install,
   }),
 );

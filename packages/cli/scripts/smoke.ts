@@ -9,6 +9,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { formatGame } from "../src/create.js";
 import { deriveNames } from "../src/slug.js";
 import { renderTemplate } from "../src/template.js";
 
@@ -34,6 +35,9 @@ try {
 } catch (error) {
   fail(`render (${error instanceof Error ? error.message : String(error)})`);
 }
+
+// Same step `create` runs: the template is formatted for its token names, so a real render needs one pass.
+if (!failed && formatGame(outDir) !== 0) fail("biome check --write");
 
 let installCode = 0;
 if (!failed) {

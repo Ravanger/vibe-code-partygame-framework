@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
@@ -39,8 +40,23 @@ export interface RunCreateOptions {
   cwd: string;
   /** Directory of the template files. */
   templateDir: string;
-  /** Runs after a successful render, passed the repo root; returns an exit code. */
+  /** Runs after a successful render, passed the rendered game dir; returns an exit code. */
+  format: (gameDir: string) => number | Promise<number>;
+  /** Runs after a successful render and format, passed the repo root; returns an exit code. */
   install: (root: string) => number | Promise<number>;
+}
+
+/**
+ * Runs `biome check --write` on a rendered game. The template is formatted for its `__token__` names, so
+ * substituting shorter real names can leave lines that the repo's lint gate would reformat; this makes the
+ * scaffolded game pass `bun run lint` as-is. Returns 1 when the binary cannot be spawned.
+ *
+ * @param bin package-manager binary providing `x <pkg>` (default `bun`).
+ */
+export function formatGame(gameDir: string, bin = "bun"): number {
+  return (
+    spawnSync(bin, ["x", "biome", "check", "--write", gameDir], { stdio: "inherit" }).status ?? 1
+  );
 }
 
 /** Scaffolds `games/<slug>/` from the template and installs. Returns a process exit code. */
@@ -70,6 +86,11 @@ export async function runCreate(options: RunCreateOptions): Promise<number> {
   } catch (error) {
     console.error(`failed to create games/${slug.slug}/: ${errorMessage(error)}`);
     return 1;
+  }
+  const formatCode = await options.format(gameDir);
+  if (formatCode !== 0) {
+    console.error(`biome check --write failed with exit code ${formatCode}`);
+    return formatCode;
   }
   const code = await options.install(root);
   if (code !== 0) {
