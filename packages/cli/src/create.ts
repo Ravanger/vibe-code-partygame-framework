@@ -20,7 +20,8 @@ export function parseCreateArgs(argv: string[]): CreateArgs {
     if (arg !== "--name") return { ok: false, error: `unexpected argument "${arg}"\n${USAGE}` };
     const value = rest[i + 1];
     if (value === undefined) return { ok: false, error: USAGE };
-    name = value;
+    name = value.trim();
+    if (name.length === 0) return { ok: false, error: `--name must not be empty\n${USAGE}` };
     i++;
   }
   const slug = parseSlug(first);

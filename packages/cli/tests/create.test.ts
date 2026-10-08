@@ -41,6 +41,22 @@ describe("parseCreateArgs", () => {
     expect(parseCreateArgs(["my-game", "--name"]).ok).toBe(false);
   });
 
+  it("rejects an empty or whitespace-only --name", () => {
+    for (const value of ["", "   "]) {
+      const result = parseCreateArgs(["my-game", "--name", value]);
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error).toMatch(/--name must not be empty/);
+    }
+  });
+
+  it("trims the display name", () => {
+    expect(parseCreateArgs(["my-game", "--name", "  My Game  "])).toEqual({
+      ok: true,
+      slug: "my-game",
+      name: "My Game",
+    });
+  });
+
   it("rejects an unexpected argument", () => {
     const result = parseCreateArgs(["my-game", "extra"]);
     expect(result.ok).toBe(false);
