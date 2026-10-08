@@ -5,6 +5,29 @@ The framework supplies the lobby, room, roster, reconnection, timers and wire pr
 
 Dependency direction: `games/* -> @partygame/server -> @partygame/core -> @partygame/shared`.
 
+## Scaffolding a new game
+
+Start from the built-in template instead of hand-wiring packages:
+
+```sh
+bun run new <slug>                     # e.g. bun run new word-war
+bun run new <slug> --name "Word War"    # override the display name only
+```
+
+This writes a complete, working, fully-tested game to `games/<slug>/` — package config, a small wave-based
+ruleset (two phases, `Waving` and `Results`), a Svelte client, a terminal client, bots and the launcher wiring —
+then runs `bun install` so it is ready to play. It targets this monorepo only: it finds the repo root by walking
+up to the nearest `package.json` whose `workspaces` include `games/*`, and fails with a clear error otherwise.
+
+The slug must be kebab-case starting with a letter (`[a-z][a-z0-9]*(-[a-z0-9]+)*`), not a reserved name
+(`list`, `launch`, `play`, `bots`, `dev`, `host`, `prod`), and there must be no existing `games/<slug>/`.
+Every other name is derived from the slug:
+package `@partygame/<slug>`, room `<slug>` with dashes as underscores, plus PascalCase, camelCase and a spaced
+display name (override the display name with `--name`).
+
+Once it runs, replace the wave ruleset in `games/<slug>/src/` with your own game; the phases, actions, state, UI,
+terminal and bots are small, self-contained files you can edit. The rest of this guide explains how each piece works.
+
 ## Concepts
 
 ### Phases

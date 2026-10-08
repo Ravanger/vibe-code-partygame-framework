@@ -1,0 +1,38 @@
+{
+  "name": "@partygame/__slug__",
+  "version": "0.1.0",
+  "type": "module",
+  "dependencies": {
+    "@colyseus/schema": "^5.0.35",
+    "@partygame/bots": "workspace:*",
+    "@partygame/core": "workspace:*",
+    "@partygame/game-client": "workspace:*",
+    "@partygame/game-ui": "workspace:*",
+    "@partygame/launcher": "workspace:*",
+    "@partygame/server": "workspace:*",
+    "@partygame/shared": "workspace:*",
+    "@partygame/terminal": "workspace:*",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@colyseus/core": "^0.18.18",
+    "@colyseus/sdk": "^0.18.4",
+    "@partygame/config": "workspace:*",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@testing-library/jest-dom": "^6.10.0",
+    "@testing-library/svelte": "^5.4.2",
+    "jsdom": "^29.1.1",
+    "svelte": "^5.57.1",
+    "svelte-check": "^4.7.6",
+    "vite": "^8.3.1",
+    "vitest": "^4.1.11"
+  },
+  "scripts": {
+    "dev": "vite",
+    "dev:server": "bun --hot server.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit && svelte-check --tsconfig ./tsconfig.json --threshold warning",
+    "build": "vite build",
+    "demo": "bun run terminal/demo.ts"
+  }
+}

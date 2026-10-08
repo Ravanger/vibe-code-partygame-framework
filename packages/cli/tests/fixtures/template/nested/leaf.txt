@@ -1,0 +1,3 @@
+camel=__camelName__
+room=__roomName__
+display=__DisplayName__

@@ -64,6 +64,18 @@
         "zod": "^4.6.5",
       },
     },
+    "packages/cli": {
+      "name": "@partygame/cli",
+      "version": "0.1.0",
+      "bin": {
+        "partygame": "./src/cli.ts",
+      },
+      "devDependencies": {
+        "@partygame/config": "workspace:*",
+        "typescript": "^6.0.3",
+        "vitest": "^4.1.11",
+      },
+    },
     "packages/config": {
       "name": "@partygame/config",
       "version": "0.1.0",
@@ -321,6 +333,8 @@
     "@oxc-project/types": ["@oxc-project/types@0.152.0", "", {}, "sha512-oM/5rLBm2tPkg0iBgkH/FOeR3PCDpY19GTgAZjMFM8h9WI9VW7cLgzp6nwtarYKmovavIQZ+Fe/RKX/8C8O/Rw=="],
 
     "@partygame/bots": ["@partygame/bots@workspace:packages/bots"],
+
+    "@partygame/cli": ["@partygame/cli@workspace:packages/cli"],
 
     "@partygame/config": ["@partygame/config@workspace:packages/config"],
 

@@ -1,0 +1,180 @@
+/* Theme for this game. The CSS variables are consumed by the @partygame/game-ui
+   components; the base styles below are shared by every screen. Restyle freely. */
+:root {
+  color-scheme: light;
+  --paper: #fbf3e4;
+  --white: #ffffff;
+  --ink: #2b2235;
+  --ink-soft: #5a4f66;
+  --pink: #ff5fa2;
+  --sun: #ffd23f;
+  --mint: #3ddc97;
+  --sky: #4cc9f0;
+  --grape: #7b5cff;
+  --danger: #e5383b;
+  --disabled: #ddd3c2;
+  --fill: #fff8ea;
+  --spark: #ff9ecb;
+  --tape-pink: rgb(255 95 162 / 0.7);
+  --tape-sun: rgb(255 210 63 / 0.75);
+  --tape-mint: rgb(61 220 151 / 0.7);
+  --tape-sky: rgb(76 201 240 / 0.7);
+  --outline: 3px solid var(--ink);
+  --radius-card: 6px;
+  --radius-btn: 12px;
+  --radius-pill: 999px;
+  --scrap-shadow: 3px 4px 0 rgb(43 34 53 / 0.25);
+  --font-display: "Trebuchet MS", "Arial Rounded MT Bold", system-ui, sans-serif;
+  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --fs-1: 0.8rem;
+  --fs-2: 1rem;
+  --fs-3: 1.25rem;
+  --fs-4: 1.6rem;
+  --fs-5: 2.2rem;
+  --fs-6: 2.75rem;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  background-color: var(--paper);
+  color: var(--ink);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 400;
+}
+
+:where(button, a, input, textarea, select, summary, [tabindex]):focus-visible {
+  outline: 3px dashed var(--grape);
+  outline-offset: 3px;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap, 1rem);
+}
+
+.card {
+  position: relative;
+  padding: 1rem 1.25rem;
+  border: var(--outline);
+  border-radius: var(--radius-card);
+  background: var(--white);
+  color: var(--ink);
+  box-shadow: var(--scrap-shadow);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.1rem 0.7rem;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--sun);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: calc(var(--fs-1) * var(--scale, 1));
+  line-height: 1.6;
+}
+
+.chip--paper {
+  background: var(--white);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.4rem 1.1rem;
+  border: var(--outline);
+  border-radius: var(--radius-btn);
+  background: var(--white);
+  color: var(--ink);
+  box-shadow: 0 4px 0 var(--ink);
+  font-family: var(--font-display);
+  font-size: calc(var(--fs-2) * var(--scale, 1));
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition:
+    transform 0.08s,
+    box-shadow 0.08s;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 var(--ink);
+}
+
+.btn:disabled {
+  background: var(--disabled);
+  color: var(--ink-soft);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  min-height: 48px;
+  background: var(--pink);
+  font-size: calc(var(--fs-3) * var(--scale, 1));
+}
+
+.btn--danger {
+  background: var(--danger);
+  color: var(--white);
+}
+
+.btn--ghost {
+  border-style: dashed;
+  border-color: var(--ink-soft);
+  background: transparent;
+  color: var(--ink);
+  box-shadow: none;
+}
+
+.btn--ghost:disabled {
+  background: transparent;
+  color: var(--ink-soft);
+  opacity: 0.7;
+}
+
+.btn--big {
+  min-height: 56px;
+  padding: 0.5rem 1.75rem;
+  font-size: calc(var(--fs-4) * var(--scale, 1));
+}
+
+.action-bar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin: auto -16px -24px;
+  padding: 1.1rem 16px calc(0.9rem + env(safe-area-inset-bottom));
+  background-color: var(--paper);
+  border-top: 3px solid var(--ink);
+}
+
+.action-bar > .btn {
+  flex: 1;
+  max-width: 420px;
+}
+
+main.tv {
+  --scale: 1.6;
+  font-size: 1.6rem;
+}
