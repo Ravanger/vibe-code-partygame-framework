@@ -65,7 +65,11 @@ describe("renderTemplate", () => {
 
   it("renders the shipped template with no token left in any file name or content", async () => {
     const dest = await freshDir("cli-shipped-");
-    await renderTemplate({ templateDir: SHIPPED_TEMPLATE, outDir: dest, names: deriveNames("wave-game") });
+    await renderTemplate({
+      templateDir: SHIPPED_TEMPLATE,
+      outDir: dest,
+      names: deriveNames("wave-game"),
+    });
     const leftovers = async (dir: string): Promise<string[]> => {
       const found: string[] = [];
       for (const entry of await readdir(dir)) {
