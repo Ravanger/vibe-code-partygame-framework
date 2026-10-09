@@ -53,3 +53,21 @@ Known traps in this repo, with the cause and the rule that keeps each one fixed.
 - **Cause:** `GameRoom` remembers every ref passed to `ctx.showTo` and re-adds it to a reconnecting client's view.
 - **Rule:** call `ctx.hideFrom(playerId, entry)` before deleting a `.view()` entry from the state.
 - **Reference:** `packages/server/src/rooms/GameRoom.ts`
+
+## Svelte generics imports need a Biome suppression
+- **Cause:** Biome does not see an import used only in a component's `generics="..."` attribute, so `noUnusedImports` fails unless the import carries a suppression comment.
+- **Rule:** an added suppression line fails the `gates` job (hard rule 12), so a new generic component needs the `gate-change` label, or a design without a generics-only import.
+- **Reference:** `packages/game-ui/src/components/Podium.svelte`, `scripts/checkGates.ts`
+
+## A label does not reach a re-run job
+- **Cause:** "Re-run jobs" replays the original event payload, so a label added since is invisible to it. The `pull_request` trigger's default types also leave out `labeled`/`unlabeled`.
+- **Rule:** `gates` lives in `.github/workflows/gates.yml`, which triggers on label changes; adding the label starts a fresh run. For any other job, push or close and reopen the PR instead of re-running. Never make a required job skip with `if:`: a skipped required check counts as passing.
+- **Reference:** `.github/workflows/gates.yml`, `docs/HOSTING.md`
+
+## `bun.lock` conflict or a knip memory error
+- **Rule:** on a merge or cherry-pick conflict in `bun.lock`, take one side (`git checkout --ours bun.lock`) and run `bun install` to regenerate it; never hand-merge it.
+- **Rule:** knip's "Array buffer allocation failed" is a transient memory error; rerun `bun run check:unused` before investigating.
+
+## Harmless output during `verify`
+- **knip:** a hint that the `node-test-setup.ts` entry pattern in `knip.json` is redundant. It exits 0; ignore it.
+- **vitest:** `Failed to resolve dependency: svelte` warnings from `optimizeDeps`. Tests are unaffected; ignore them.
