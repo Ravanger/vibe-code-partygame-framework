@@ -6,7 +6,7 @@ A TypeScript-first framework for multi-device social party games. Playable end t
 
 Each rule names the gate that enforces it; `not enforced yet: #N` means a reviewer checks it until that issue lands.
 
-1. MUST write a failing test before production code, and keep 100% statements, branches, functions and lines in every package and game. (coverage: `vitest` thresholds in `vitest.config.mts`; assertions: biome plugin `test-has-expect`; tests change with `src`: `bun run check:gates` rule `untested-change` in the `gates` job; test-first order: reviewer)
+1. MUST write a failing test before production code, and keep 100% statements, branches, functions and lines in every package and game. (coverage: `vitest` thresholds in `vitest.config.mts`; assertions: biome plugin `test-has-expect`; tests change with `src`: `bun run check:gates` rule `untested-change` in the `gates` job; mutation score of 80% on the source files a PR changes: `mutation` CI job; test-first order: reviewer)
 2. MUST NOT use `any`, tests included. (`biome` `noExplicitAny`)
 3. MUST pass `biome check .` and every `tsc`/`svelte-check`. (`bun run verify`)
 4. MUST keep dependency direction. Server side: `games/* -> server -> core -> shared`. Client side: `games/* -> game-ui -> game-client -> shared`; `core` and `server` are allowed there only as `devDependencies` for tests. No package imports `games/`. (`bun run check:boundaries`)
@@ -99,9 +99,10 @@ Every job is a separate check in `.github/workflows/ci.yml`; the job name tells 
 | `typecheck` | `bun run typecheck:scripts && bun run typecheck` |
 | `test` | `bun run test:coverage` |
 | `template-smoke` | `bun run smoke:template` |
+| `mutation` (PRs only) | `bun run build && bun run mutate:changed` (Stryker on the `packages/*/src` and `games/*/src` files changed against `origin/main`, break below 80%) |
 | `gates` (PRs only) | `bun run check:gates --base origin/main` and `bun run scripts/checkPathsCli.ts --base origin/main` |
 
-`bun run verify` runs all of them except `template-smoke` and `gates`.
+`bun run verify` runs all of them except `template-smoke`, `mutation` and `gates`.
 
 ## Library docs
 

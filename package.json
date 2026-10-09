@@ -35,18 +35,21 @@
     "smoke:template": "bun run --cwd packages/cli smoke",
     "check:paths": "bun run scripts/checkPathsCli.ts --staged",
     "check:gates": "bun run scripts/checkGatesCli.ts",
+    "mutate:changed": "bun run scripts/mutateChangedCli.ts --base origin/main",
     "check:conventions": "bun run scripts/checkConventionsCli.ts",
     "verify": "biome check . && bun run check:agents && bun run check:boundaries && bun run check:conventions && bun run check:exports && bun run check:unused && bun run typecheck:scripts && bun run typecheck && vitest run --coverage"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
+    "@stryker-mutator/core": "^10.0.0",
+    "@stryker-mutator/vitest-runner": "^10.0.0",
     "@testing-library/jest-dom": "^6.10.0",
     "@types/jsdom": "^28.0.3",
     "@types/node": "^26.6.3",
     "@vitest/coverage-v8": "^4.1.11",
     "jsdom": "^29.1.1",
-    "lefthook": "^2.1.0",
     "knip": "^6.40.0",
+    "lefthook": "^2.1.0",
     "turbo": "^2.11.5",
     "typescript": "^6.0.3",
     "vitest": "^4.1.11"
