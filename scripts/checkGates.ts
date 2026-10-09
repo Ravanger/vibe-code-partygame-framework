@@ -120,5 +120,11 @@ export const labelsOf = (event: unknown): string[] => {
   });
 };
 
+export const diffRange = (args: string[]): string[] => {
+  if (args.includes("--staged")) return ["--cached"];
+  const flag = args.indexOf("--base");
+  return [`${(flag === -1 ? undefined : args[flag + 1]) ?? "origin/main"}...HEAD`];
+};
+
 export const checkGates = (diff: string, labels: string[]): GateViolation[] =>
   labels.includes(OVERRIDE_LABEL) ? [] : parseDiff(diff).flatMap(violationsOf);

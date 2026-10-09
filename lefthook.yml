@@ -1,0 +1,9 @@
+pre-commit:
+  commands:
+    biome:
+      glob: "*.{ts,mts,js,json,jsonc,svelte,css}"
+      run: bunx biome check --staged --no-errors-on-unmatched
+    paths:
+      run: bun run check:paths
+    gates:
+      run: bun run scripts/checkGatesCli.ts --staged

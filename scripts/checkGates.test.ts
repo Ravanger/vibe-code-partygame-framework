@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkGates, labelsOf, OVERRIDE_LABEL, parseDiff } from "./checkGates.js";
+import { checkGates, diffRange, labelsOf, OVERRIDE_LABEL, parseDiff } from "./checkGates.js";
 
 const diffOf = (path: string, removed: string[], added: string[]): string =>
   [
@@ -128,5 +128,17 @@ describe("labelsOf", () => {
     expect(labelsOf("x")).toEqual([]);
     expect(labelsOf({})).toEqual([]);
     expect(labelsOf({ pull_request: {} })).toEqual([]);
+  });
+});
+
+describe("diffRange", () => {
+  it("diffs the index with --staged", () => {
+    expect(diffRange(["--staged"])).toEqual(["--cached"]);
+  });
+
+  it("diffs against a base, defaulting to origin/main", () => {
+    expect(diffRange(["--base", "dev"])).toEqual(["dev...HEAD"]);
+    expect(diffRange(["--base"])).toEqual(["origin/main...HEAD"]);
+    expect(diffRange([])).toEqual(["origin/main...HEAD"]);
   });
 });

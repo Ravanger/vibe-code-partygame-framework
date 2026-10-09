@@ -29,6 +29,7 @@ const ROOT_FILES = new Set([
   "vitest.config.mts",
   ".gitignore",
   ".gitattributes",
+  "lefthook.yml",
 ]);
 const SELF = new Set(["scripts/checkConventions.ts", "scripts/checkConventions.test.ts"]);
 
