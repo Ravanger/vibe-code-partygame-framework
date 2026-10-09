@@ -1,4 +1,5 @@
 export const OVERRIDE_LABEL = "gate-change";
+export const NO_TEST_LABEL = "no-test-needed";
 
 export interface GateViolation {
   path: string;
@@ -110,6 +111,27 @@ const violationsOf = (change: FileChange): GateViolation[] => {
   return violations;
 };
 
+const SOURCE_FILE = /^((?:packages|games)\/[^/]+)\/src\/.+/;
+const TEST_FILE = /^((?:packages|games)\/[^/]+)\/.+\.test\.ts$/;
+
+const untestedChanges = (changes: FileChange[]): GateViolation[] => {
+  const touched = changes.filter((change) => change.added.length > 0 || change.removed.length > 0);
+  const tested = new Set(touched.map(({ path }) => TEST_FILE.exec(path)?.[1]));
+  const roots = new Set(
+    touched
+      .filter(({ path, added }) => added.length > 0 && !path.endsWith(".d.ts"))
+      .filter(({ path }) => !TEST_FILE.test(path))
+      .flatMap(({ path }) => SOURCE_FILE.exec(path)?.[1] ?? []),
+  );
+  return [...roots]
+    .filter((root) => !tested.has(root))
+    .map((root) => ({
+      path: root,
+      rule: "untested-change",
+      detail: "src changed without a *.test.ts change",
+    }));
+};
+
 export const labelsOf = (event: unknown): string[] => {
   if (typeof event !== "object" || event === null) return [];
   const pullRequest = (event as { pull_request?: { labels?: unknown } }).pull_request;
@@ -126,5 +148,13 @@ export const diffRange = (args: string[]): string[] => {
   return [`${(flag === -1 ? undefined : args[flag + 1]) ?? "origin/main"}...HEAD`];
 };
 
-export const checkGates = (diff: string, labels: string[]): GateViolation[] =>
-  labels.includes(OVERRIDE_LABEL) ? [] : parseDiff(diff).flatMap(violationsOf);
+export const checkGates = (
+  diff: string,
+  labels: string[],
+  requireTests = false,
+): GateViolation[] => {
+  const changes = parseDiff(diff);
+  const gated = labels.includes(OVERRIDE_LABEL) ? [] : changes.flatMap(violationsOf);
+  const untested = requireTests && !labels.includes(NO_TEST_LABEL) ? untestedChanges(changes) : [];
+  return [...gated, ...untested];
+};

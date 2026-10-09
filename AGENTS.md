@@ -6,7 +6,7 @@ A TypeScript-first framework for multi-device social party games. Playable end t
 
 Each rule names the gate that enforces it; `not enforced yet: #N` means a reviewer checks it until that issue lands.
 
-1. MUST write a failing test before production code, and keep 100% statements, branches, functions and lines in every package and game. (coverage: `vitest` thresholds in `vitest.config.mts`; assertions: biome plugin `test-has-expect`; test-first order: reviewer, CI heuristic in #199)
+1. MUST write a failing test before production code, and keep 100% statements, branches, functions and lines in every package and game. (coverage: `vitest` thresholds in `vitest.config.mts`; assertions: biome plugin `test-has-expect`; tests change with `src`: `bun run check:gates` rule `untested-change` in the `gates` job; test-first order: reviewer)
 2. MUST NOT use `any`, tests included. (`biome` `noExplicitAny`)
 3. MUST pass `biome check .` and every `tsc`/`svelte-check`. (`bun run verify`)
 4. MUST keep dependency direction. Server side: `games/* -> server -> core -> shared`. Client side: `games/* -> game-ui -> game-client -> shared`; `core` and `server` are allowed there only as `devDependencies` for tests. No package imports `games/`. (`bun run check:boundaries`)
