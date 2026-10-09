@@ -27,6 +27,7 @@ const IMPORT = /(?:\bfrom\s*|\bimport\s*\(?\s*)["']([^"']+)["']/g;
 
 const LAYERS: Record<string, { runtime: string[]; dev: string[] }> = {
   shared: { runtime: [], dev: [] },
+  "client-utils": { runtime: ["shared"], dev: [] },
   core: { runtime: ["shared"], dev: [] },
   server: { runtime: ["core", "shared"], dev: [] },
   "game-client": { runtime: ["shared"], dev: ["core", "server"] },

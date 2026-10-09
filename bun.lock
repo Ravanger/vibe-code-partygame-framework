@@ -81,6 +81,18 @@
         "vitest": "^4.1.11",
       },
     },
+    "packages/client-utils": {
+      "name": "@partygame/client-utils",
+      "version": "0.1.0",
+      "dependencies": {
+        "@partygame/shared": "workspace:*",
+      },
+      "devDependencies": {
+        "@partygame/config": "workspace:*",
+        "typescript": "^6.0.3",
+        "vitest": "^4.1.11",
+      },
+    },
     "packages/config": {
       "name": "@partygame/config",
       "version": "0.1.0",
@@ -520,6 +532,8 @@
     "@partygame/bots": ["@partygame/bots@workspace:packages/bots"],
 
     "@partygame/cli": ["@partygame/cli@workspace:packages/cli"],
+
+    "@partygame/client-utils": ["@partygame/client-utils@workspace:packages/client-utils"],
 
     "@partygame/config": ["@partygame/config@workspace:packages/config"],
 

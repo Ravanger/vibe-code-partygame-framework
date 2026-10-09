@@ -114,6 +114,7 @@ describe("nodeTestConfig", () => {
  */
 const EXPECTED_SOURCE_ALIASES: Record<string, string> = {
   "@partygame/bots": "bots/src/index.ts",
+  "@partygame/client-utils": "client-utils/src/index.ts",
   "@partygame/config/node-test-setup": "config/node-test-setup.ts",
   "@partygame/config/svelte": "config/src/svelte.ts",
   "@partygame/config/vite": "config/src/vite.ts",
