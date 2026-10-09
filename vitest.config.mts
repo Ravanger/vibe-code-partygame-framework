@@ -41,6 +41,7 @@ export default defineConfig({
         "scripts/checkExportsCli.ts",
         "scripts/checkPathsCli.ts",
         "scripts/checkGatesCli.ts",
+        "scripts/checkConventionsCli.ts",
         "packages/cli/src/cli.ts",
         "packages/cli/scripts/*.ts",
       ],

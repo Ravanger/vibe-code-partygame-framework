@@ -34,7 +34,8 @@
     "smoke:template": "bun run --cwd packages/cli smoke",
     "check:paths": "bun run scripts/checkPathsCli.ts --staged",
     "check:gates": "bun run scripts/checkGatesCli.ts",
-    "verify": "biome check . && bun run check:agents && bun run check:boundaries && bun run check:exports && bun run check:unused && bun run typecheck:scripts && bun run typecheck && vitest run --coverage"
+    "check:conventions": "bun run scripts/checkConventionsCli.ts",
+    "verify": "biome check . && bun run check:agents && bun run check:boundaries && bun run check:conventions && bun run check:exports && bun run check:unused && bun run typecheck:scripts && bun run typecheck && vitest run --coverage"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",

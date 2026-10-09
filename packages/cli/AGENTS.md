@@ -7,7 +7,7 @@ The `create` command (`bun run new <slug>`) that scaffolds a tested game from `t
 ## Never put here
 
 - Framework runtime code other packages import.
-- A template that drifts from `games/wit-clash` (moving: #136, #137, #112).
+- A template that drifts from the reference game (moving: #136, #137, #112).
 - Runtime `@partygame/*` dependencies; the template's own `package.json` carries those.
 
 ## May import

@@ -4,7 +4,7 @@ import { prettifyError, type z } from "zod";
 
 /**
  * Remove // and /* *\/ comments from JSON text WITHOUT touching comment-like
- * sequences inside string literals. A naive regex corrupts prompts containing "https://".
+ * sequences inside string literals. A naive regex corrupts values containing "https://".
  */
 export function stripJsonComments(input: string): string {
   let out = "";
@@ -67,7 +67,7 @@ export function stripJsonComments(input: string): string {
 export interface LoadJsoncDirOptions<T> {
   /** Unique key across all files; a repeat throws. */
   idOf: (item: T) => string;
-  /** Used in warnings and errors, e.g. `"Category"`. */
+  /** Used in warnings and errors, e.g. `"Item"`. */
   label: string;
 }
 

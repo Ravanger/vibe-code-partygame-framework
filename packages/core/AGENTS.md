@@ -7,7 +7,7 @@ The Colyseus-free game runtime: `defineGame`, `GameRuntime`, lobby built-ins, ac
 ## Never put here
 
 - Colyseus, sockets, HTTP, Svelte or DOM code.
-- Game vocabulary (phase names, prompts, card rules).
+- Game vocabulary (phase names, card rules).
 - Zod text in client-facing errors (moving: #140, throw `FrameworkError` from #139).
 - New host needs outside the `RuntimeHost` interface.
 
