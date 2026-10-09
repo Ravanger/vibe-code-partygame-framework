@@ -86,7 +86,11 @@ export function sourceAliases(packagesDir: string = PACKAGES_DIR): Record<string
  * The UI preset resolves these subpaths to dist instead: UI tests need a working test server, not
  * fresh source, and the owning project's own tests cover the source.
  */
-const JSDOM_DIST_ONLY = ["@partygame/server/node", "@partygame/server/testing"];
+const JSDOM_DIST_ONLY = [
+  "@partygame/server/node",
+  "@partygame/server/probe",
+  "@partygame/server/testing",
+];
 
 function shared(options: TestPresetOptions, environment: "jsdom" | "node"): ViteUserConfig {
   const alias: Record<string, string> = {};

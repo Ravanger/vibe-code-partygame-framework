@@ -6,7 +6,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Client } from "@colyseus/sdk";
 import { type BotKit, claimName, DemoTable } from "@partygame/bots";
-import { freePort, ServerProbe } from "@partygame/server/node";
+import { freePort, ServerProbe } from "@partygame/server/probe";
 import { ClientMessage, resolveRoomCode, waitFor } from "@partygame/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Launcher } from "../src/Launcher.js";

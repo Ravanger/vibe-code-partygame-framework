@@ -3,7 +3,7 @@ import { request } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
-import { freePort } from "@partygame/server/node";
+import { freePort } from "@partygame/server/probe";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { StaticSite } from "../src/StaticSite.js";
 

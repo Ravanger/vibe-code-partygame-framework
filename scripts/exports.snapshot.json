@@ -39,6 +39,22 @@
         }
       }
     },
+    "client-utils": {
+      ".": {
+        "target": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.js"
+        },
+        "symbols": {
+          "Parsed": {},
+          "between": {},
+          "joinUrl": {},
+          "resolveRoomCode": {},
+          "tvUrl": {},
+          "waitFor": {}
+        }
+      }
+    },
     "config": {
       "./node-test-setup": {
         "target": "./node-test-setup.ts",
@@ -318,11 +334,19 @@
           "NodeServerHandle": {},
           "NodeServerOptions": {},
           "ServeApiOptions": {},
-          "ServerProbe": {},
-          "closeHttpServer": {},
-          "freePort": {},
           "serveApi": {},
           "startNodeServer": {}
+        }
+      },
+      "./probe": {
+        "target": {
+          "types": "./dist/probe.d.ts",
+          "default": "./dist/probe.js"
+        },
+        "symbols": {
+          "ServerProbe": {},
+          "closeHttpServer": {},
+          "freePort": {}
         }
       },
       "./testing": {

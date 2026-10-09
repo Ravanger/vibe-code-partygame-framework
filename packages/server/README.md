@@ -6,7 +6,8 @@ Generic Colyseus server: host any game defined with `@partygame/core`.
 |---|---|
 | `@partygame/server` | `createGameServer`, `GameRoom`, `createApiHandler`, `RoomCodeService` |
 | `@partygame/server/bun` | `startServer`: Bun entry point (WebSocket on 2567, API on 3001) |
-| `@partygame/server/node` | `startNodeServer`, `serveApi`, `freePort`, `ServerProbe`: Node runtimes and tests |
+| `@partygame/server/node` | `startNodeServer`, `serveApi`: in-process Node hosting (game server plus code API) |
+| `@partygame/server/probe` | `ServerProbe` (`isGameServer`, `canConnect`, `answers`), `freePort`, `closeHttpServer`: port probing, no Colyseus |
 | `@partygame/server/content` | `loadJsoncDir`: load and validate a folder of `.jsonc` content files |
 | `@partygame/server/testing` | `bootTestServer`, `seatPlayers`, `joinPlayer`, `stateOf`, `waitUntil`, `testPlayerId`, `TestServer` for room tests |
 

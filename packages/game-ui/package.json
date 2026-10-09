@@ -22,6 +22,7 @@
     "typecheck": "tsc -p tsconfig.test.json && svelte-check --tsconfig ./tsconfig.test.json --threshold warning"
   },
   "dependencies": {
+    "@partygame/client-utils": "workspace:*",
     "@partygame/game-client": "workspace:*",
     "@partygame/shared": "workspace:*",
     "svelte": "^5.57.1",

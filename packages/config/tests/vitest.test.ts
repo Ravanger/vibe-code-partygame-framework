@@ -114,6 +114,7 @@ describe("nodeTestConfig", () => {
  */
 const EXPECTED_SOURCE_ALIASES: Record<string, string> = {
   "@partygame/bots": "bots/src/index.ts",
+  "@partygame/client-utils": "client-utils/src/index.ts",
   "@partygame/config/node-test-setup": "config/node-test-setup.ts",
   "@partygame/config/svelte": "config/src/svelte.ts",
   "@partygame/config/vite": "config/src/vite.ts",
@@ -130,6 +131,7 @@ const EXPECTED_SOURCE_ALIASES: Record<string, string> = {
   "@partygame/server/bun": "server/src/bun.ts",
   "@partygame/server/content": "server/src/content.ts",
   "@partygame/server/node": "server/src/node.ts",
+  "@partygame/server/probe": "server/src/probe.ts",
   "@partygame/server/testing": "server/src/testing/index.ts",
   "@partygame/shared": "shared/src/index.ts",
   "@partygame/shared/schema": "shared/src/schema/index.ts",
@@ -147,6 +149,7 @@ function aliasesOf(config: ViteUserConfig): Record<string, string> {
 /** Subpaths the UI preset resolves to dist instead of source, and their package-relative dist targets. */
 const JSDOM_DIST_ONLY: Record<string, string> = {
   "@partygame/server/node": "server/dist/node.js",
+  "@partygame/server/probe": "server/dist/probe.js",
   "@partygame/server/testing": "server/dist/testing/index.js",
 };
 
