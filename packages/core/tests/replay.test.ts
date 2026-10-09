@@ -9,6 +9,7 @@ import {
   getActionLog,
   mulberry32,
   type PhaseState,
+  required,
   shuffle,
 } from "../src/index.js";
 import { replayLog } from "../src/testing/index.js";
@@ -225,9 +226,13 @@ describe("replayLog", () => {
     const live = liveTable();
     live.start();
     const log = getActionLog(live.priv) as ActionLog;
+    const [first, second] = log.entries;
     const backwards: ActionLog = {
       ...log,
-      entries: [log.entries[0]!, { ...log.entries[1]!, t: 999_999 }],
+      entries: [
+        required(first, "first entry"),
+        { ...required(second, "second entry"), t: 999_999 },
+      ],
     };
     expect(() =>
       replayLog(definition, backwards, { state: newState(), options: {}, players: 2 }),
