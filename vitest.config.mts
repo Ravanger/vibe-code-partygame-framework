@@ -36,6 +36,7 @@ export default defineConfig({
         "packages/launcher/src/runLauncher.ts",
         "games/*/launch.ts",
         "scripts/game.ts",
+        "scripts/checkAgentsFilesCli.ts",
         "packages/cli/src/cli.ts",
         "packages/cli/scripts/*.ts",
       ],

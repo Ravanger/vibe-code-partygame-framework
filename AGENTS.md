@@ -26,7 +26,7 @@ Each rule names the gate that enforces it; `not enforced yet: #N` means a review
 ## Picking up an issue
 
 - Work only on open issues labelled `agent-ready`. Never start one labelled `needs-decision` or `epic`.
-- One issue per branch and per PR. The branch is `<type>/<issue>-<slug>`, e.g. `docs/116-agents-hard-rules`.
+- One commit per issue, with `Closes #N` in the body. A lone issue gets its own branch `<type>/<issue>-<slug>`, e.g. `docs/116-agents-hard-rules`; a milestone's issues share one branch `milestone/<n>-<slug>` and one PR.
 - Touch only the files the issue lists. If a test forces another file, say why in the PR.
 - TDD order: failing test, see it fail, minimal code, see it pass, refactor.
 - Use conventional commit subjects (`feat(core): ...`). No plan numbers in subjects.
@@ -44,7 +44,7 @@ Stop and comment on the issue with what you tried and what failed. Do not weaken
 
 ## Packages
 
-Each package's README has its API; per-package `AGENTS.md` files come with #117.
+Each package's README has its API. Each package also has an `AGENTS.md` (responsibility, what never goes in, allowed `@partygame/*` imports) that `bun run check:agents` checks against its `package.json`.
 
 | Path | Holds |
 |---|---|

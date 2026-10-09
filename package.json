@@ -28,7 +28,8 @@
     "launch:demo": "bun run scripts/game.ts launch dev --demo",
     "test:coverage": "vitest run --coverage",
     "typecheck:scripts": "tsc --noEmit -p scripts/tsconfig.json",
-    "verify": "biome check . && bun run typecheck:scripts && bun run typecheck && vitest run --coverage"
+    "check:agents": "bun run scripts/checkAgentsFilesCli.ts",
+    "verify": "biome check . && bun run check:agents && bun run typecheck:scripts && bun run typecheck && vitest run --coverage"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
