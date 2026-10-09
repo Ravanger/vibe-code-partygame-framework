@@ -3,7 +3,8 @@
   "workspaces": {
     ".": {
       "entry": ["scripts/*.ts", "biome-plugins/*"],
-      "project": ["scripts/**"]
+      "project": ["scripts/**"],
+      "ignoreDependencies": ["@stryker-mutator/vitest-runner"]
     },
     "packages/bots": {
       "project": ["src/**", "tests/**"]

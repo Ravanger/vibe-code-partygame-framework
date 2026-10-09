@@ -1,0 +1,5 @@
+language js
+
+JsDecorator() as $d where {
+  register_diagnostic(span=$d, message="Decorators are forbidden: Colyseus Schema 5 is decorator-free. Declare schema fields with the schema() helper instead of @type.")
+}

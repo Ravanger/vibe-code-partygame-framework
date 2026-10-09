@@ -76,3 +76,7 @@ games/**/src/**/*.map
 .worktrees/
 
 LAUNCH_GUIDE.md
+
+# Stryker
+.stryker-tmp
+reports/

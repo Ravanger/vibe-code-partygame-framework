@@ -6,15 +6,15 @@ A TypeScript-first framework for multi-device social party games. Playable end t
 
 Each rule names the gate that enforces it; `not enforced yet: #N` means a reviewer checks it until that issue lands.
 
-1. MUST write a failing test before production code, and keep 100% statements, branches, functions and lines in every package and game. (coverage: `vitest` thresholds in `vitest.config.mts`; test-first order: reviewer, CI heuristic in #199)
+1. MUST write a failing test before production code, and keep 100% statements, branches, functions and lines in every package and game. (coverage: `vitest` thresholds in `vitest.config.mts`; assertions: biome plugin `test-has-expect`; tests change with `src`: `bun run check:gates` rule `untested-change` in the `gates` job; mutation score of 80% on the source files a PR changes: `mutation` CI job; test-first order: reviewer)
 2. MUST NOT use `any`, tests included. (`biome` `noExplicitAny`)
 3. MUST pass `biome check .` and every `tsc`/`svelte-check`. (`bun run verify`)
 4. MUST keep dependency direction. Server side: `games/* -> server -> core -> shared`. Client side: `games/* -> game-ui -> game-client -> shared`; `core` and `server` are allowed there only as `devDependencies` for tests. No package imports `games/`. (`bun run check:boundaries`)
 5. MUST NOT put game vocabulary in `packages/` (framework code is game-agnostic). (`bun run check:conventions`)
-6. MUST key players by `playerId` in state, private maps and scores; `sessionId` exists only inside `packages/server`. (`bun run check:conventions`)
+6. MUST key players by `playerId` in state, private maps and scores; `sessionId` exists only inside `packages/server`. (biome plugin `no-session-id`)
 7. MUST validate client input with Zod. (action payloads: `defineAction`'s type requires a `payload` schema, so `bun run typecheck` fails without one; join options: `GameRoom` parses them with `RoomOptionsSchema`)
-8. MUST NOT mock the module under test; `vi.mock` only `node:` builtins. Rules run through `FakeHost`, rooms through `bootTestServer`, UI through `StubRoom`. (`bun run check:conventions`)
-9. MUST NOT reintroduce decorators (`experimentalDecorators`, `emitDecoratorMetadata`); Colyseus Schema 5 is decorator-free. (`bun run check:conventions`)
+8. MUST NOT mock the module under test; `vi.mock` only `node:` builtins. Rules run through `FakeHost`, rooms through `bootTestServer`, UI through `StubRoom`. (biome plugin `vi-mock-node-only`)
+9. MUST NOT reintroduce decorators (`experimentalDecorators`, `emitDecoratorMetadata`); Colyseus Schema 5 is decorator-free. (biome plugin `no-decorators`; `bun run check:conventions` for tsconfig options)
 10. MUST NOT name a commercial party-game brand or product in docs, code or communication. (`bun run check:conventions`)
 11. MUST NOT edit generated files (`dist/`, `coverage/`, `node_modules/`, `.turbo/`) or change `bun.lock` without a `package.json` change. (`bun run check:paths`)
 12. MUST NOT weaken a gate: lower thresholds, `biome-ignore`, `.skip`/`.only`, or coverage excludes. (`bun run check:gates` in the `gates` CI job; only a maintainer adds the `gate-change` override label)
@@ -99,9 +99,10 @@ Every job is a separate check in `.github/workflows/ci.yml`; the job name tells 
 | `typecheck` | `bun run typecheck:scripts && bun run typecheck` |
 | `test` | `bun run test:coverage` |
 | `template-smoke` | `bun run smoke:template` |
+| `mutation` (PRs only) | `bun run build && bun run mutate:changed` (Stryker on the `packages/*/src` and `games/*/src` files changed against `origin/main`, break below 80%) |
 | `gates` (PRs only) | `bun run check:gates --base origin/main` and `bun run scripts/checkPathsCli.ts --base origin/main` |
 
-`bun run verify` runs all of them except `template-smoke` and `gates`.
+`bun run verify` runs all of them except `template-smoke`, `mutation` and `gates`.
 
 ## Library docs
 

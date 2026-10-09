@@ -31,5 +31,19 @@
   "html": {
     "experimentalFullSupportEnabled": true
   },
-  "plugins": ["./biome-plugins/prefer-prefix-increment.grit"]
+  "plugins": [
+    "./biome-plugins/prefer-prefix-increment.grit",
+    "./biome-plugins/vi-mock-node-only.grit",
+    "./biome-plugins/no-decorators.grit"
+  ],
+  "overrides": [
+    {
+      "includes": ["**", "!packages/server/**"],
+      "plugins": ["./biome-plugins/no-session-id.grit"]
+    },
+    {
+      "includes": ["**/*.test.ts"],
+      "plugins": ["./biome-plugins/test-has-expect.grit"]
+    }
+  ]
 }

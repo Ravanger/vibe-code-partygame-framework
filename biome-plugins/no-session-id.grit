@@ -1,0 +1,14 @@
+language js
+
+or {
+  JsReferenceIdentifier(),
+  JsName(),
+  JsIdentifierBinding(),
+  JsLiteralMemberName(),
+  JsShorthandPropertyObjectMember(),
+  TsPropertySignatureTypeMember(),
+  JsPropertyClassMember()
+} as $n where {
+  $n <: r"sessionId",
+  register_diagnostic(span=$n, message="sessionId exists only inside packages/server. Key players by playerId everywhere else.")
+}

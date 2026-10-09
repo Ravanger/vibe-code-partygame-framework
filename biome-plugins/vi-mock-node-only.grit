@@ -1,0 +1,26 @@
+language js
+
+or {
+  or {
+    `vi.mock($first, $...)`,
+    `vi.doMock($first, $...)`,
+    `vi.mock()`,
+    `vi.doMock()`
+  } as $call where {
+    $first <: not or {
+      `"node:$_"`,
+      `'node:$_'`
+    },
+    register_diagnostic(span=$call, message="vi.mock and vi.doMock may only mock a string literal starting with node:. Test the real module through FakeHost, bootTestServer or StubRoom instead of mocking it.")
+  },
+  or {
+    `vi.mock`,
+    `vi.doMock`
+  } as $ref where {
+    not $ref <: within or {
+      `vi.mock($_)`,
+      `vi.doMock($_)`
+    },
+    register_diagnostic(span=$ref, message="Call vi.mock and vi.doMock directly with a node: string literal; aliasing or passing them around hides a mock from this gate.")
+  }
+}

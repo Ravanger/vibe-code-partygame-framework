@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { checkGates, diffRange, labelsOf, OVERRIDE_LABEL, parseDiff } from "./checkGates.js";
+import {
+  checkGates,
+  diffRange,
+  labelsOf,
+  NO_TEST_LABEL,
+  OVERRIDE_LABEL,
+  parseDiff,
+} from "./checkGates.js";
 
 const diffOf = (path: string, removed: string[], added: string[]): string =>
   [
@@ -114,6 +121,75 @@ describe("checkGates", () => {
     const diff = diffOf(".github/workflows/ci.yml", [], ["// biome-ignore x"]);
     expect(rules(diff)).toEqual(["suppression", "protected-path"]);
     expect(rules(diff, ["bug", OVERRIDE_LABEL])).toEqual([]);
+  });
+});
+
+const renameOf = (from: string, to: string): string =>
+  [
+    `diff --git a/${from} b/${to}`,
+    "similarity index 100%",
+    `rename from ${from}`,
+    `rename to ${to}`,
+  ].join("\n");
+
+const untested = (diffs: string[], labels: string[] = []): string[] =>
+  checkGates(diffs.join("\n"), labels, true).map((violation) => violation.path);
+
+describe("untested-change", () => {
+  const src = diffOf("packages/core/src/a.ts", [], ["x"]);
+
+  it("fails a change to src without a test", () => {
+    const found = checkGates(src, [], true);
+    expect(found).toEqual([
+      {
+        path: "packages/core",
+        rule: "untested-change",
+        detail: "src changed without a *.test.ts change",
+      },
+    ]);
+  });
+
+  it("passes src with a test in tests/ or next to src", () => {
+    expect(untested([src, diffOf("packages/core/tests/a.test.ts", [], ["x"])])).toEqual([]);
+    expect(untested([src, diffOf("packages/core/src/a.test.ts", [], ["x"])])).toEqual([]);
+  });
+
+  it("reports each package and game once", () => {
+    const games = diffOf("games/wit-clash/src/b.ts", [], ["y"]);
+    const more = diffOf("packages/core/src/c.ts", [], ["z"]);
+    expect(untested([src, more, games])).toEqual(["packages/core", "games/wit-clash"]);
+  });
+
+  it("does not take a test from another package", () => {
+    const other = diffOf("packages/shared/tests/a.test.ts", [], ["x"]);
+    expect(untested([src, other])).toEqual(["packages/core"]);
+  });
+
+  it("passes a test-only change", () => {
+    expect(untested([diffOf("packages/core/tests/a.test.ts", [], ["x"])])).toEqual([]);
+  });
+
+  it("ignores d.ts, renames, removals and files outside src", () => {
+    expect(untested([diffOf("packages/core/src/a.d.ts", [], ["x"])])).toEqual([]);
+    expect(untested([renameOf("packages/core/src/a.ts", "packages/core/src/b.ts")])).toEqual([]);
+    expect(untested([diffOf("packages/core/src/a.ts", ["x"], [])])).toEqual([]);
+    expect(untested([diffOf("packages/core/README.md", [], ["x"])])).toEqual([]);
+    expect(untested([diffOf("scripts/game.ts", [], ["x"])])).toEqual([]);
+  });
+
+  it("is off unless requested, as when checking staged files", () => {
+    expect(rules(src)).toEqual([]);
+  });
+
+  it("is overridden by no-test-needed alone", () => {
+    expect(untested([src], [NO_TEST_LABEL])).toEqual([]);
+    expect(untested([src], [OVERRIDE_LABEL])).toEqual(["packages/core"]);
+  });
+
+  it("leaves the other rules to gate-change", () => {
+    const bad = diffOf("packages/core/src/a.ts", [], ["// biome-ignore x"]);
+    const found = checkGates(bad, [NO_TEST_LABEL], true);
+    expect(found.map((violation) => violation.rule)).toEqual(["suppression"]);
   });
 });
 

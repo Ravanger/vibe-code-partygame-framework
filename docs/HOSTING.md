@@ -158,3 +158,7 @@ CI cannot stop a direct push to `main` on its own. In the GitHub repository sett
 A PR that edits a gate (check scripts, CI, coverage thresholds or excludes, biome severities, suppressions) needs the `gate-change` label before the `gates` job passes. Only a maintainer adds it.
 
 Locally the pre-commit hook runs the same check on staged files. To commit an intended gate edit, skip only that step: `LEFTHOOK_EXCLUDE=gates git commit ...`. Biome and `check:paths` still run, and CI still requires the label.
+
+## Maintainer: a change that needs no test
+
+`gates` also fails a PR that changes `packages/*/src/` or `games/*/src/` without changing a `*.test.ts` in the same package or game (`d.ts` files, pure renames and removals are exempt). For a change with nothing to test, such as a comment or type-only edit, a maintainer adds the `no-test-needed` label. It overrides only this rule; `gate-change` does not. The pre-commit hook skips this rule, so tests can be committed separately. Create the label once in the repository settings.

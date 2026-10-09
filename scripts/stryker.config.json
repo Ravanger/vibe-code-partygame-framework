@@ -1,0 +1,14 @@
+{
+  "$schema": "https://raw.githubusercontent.com/stryker-mutator/stryker/master/packages/api/schema/stryker-core.json",
+  "testRunner": "vitest",
+  "plugins": ["@stryker-mutator/vitest-runner"],
+  "vitest": { "configFile": "vitest.config.mts" },
+  "mutate": ["packages/*/src/**/*.ts", "games/*/src/**/*.ts", "!**/*.d.ts"],
+  "coverageAnalysis": "perTest",
+  "clearTextReporter": { "logTests": false },
+  "reporters": ["clear-text", "progress"],
+  "thresholds": { "high": 90, "low": 85, "break": 80 },
+  "inPlace": true,
+  "concurrency": 4,
+  "ignoreStatic": true
+}

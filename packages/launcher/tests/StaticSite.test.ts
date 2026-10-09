@@ -97,16 +97,18 @@ describe("StaticSite", () => {
     const brokenPort = await freePort();
     await broken.serve(join(root, "dist"), brokenPort);
     try {
-      await new Promise<void>((resolve, reject) => {
-        request({ port: brokenPort, path: "/app.js", host: "127.0.0.1" }, (res) => {
-          res.on("error", () => resolve());
-          res.on("close", () => resolve());
-          res.resume();
-        })
-          .on("error", () => resolve())
-          .end();
-        setTimeout(() => reject(new Error("the connection stayed open")), 5000);
-      });
+      await expect(
+        new Promise<void>((resolve, reject) => {
+          request({ port: brokenPort, path: "/app.js", host: "127.0.0.1" }, (res) => {
+            res.on("error", () => resolve());
+            res.on("close", () => resolve());
+            res.resume();
+          })
+            .on("error", () => resolve())
+            .end();
+          setTimeout(() => reject(new Error("the connection stayed open")), 5000);
+        }),
+      ).resolves.toBeUndefined();
     } finally {
       await broken.close();
     }
