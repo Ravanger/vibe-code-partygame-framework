@@ -1,0 +1,23 @@
+language js
+
+or {
+  `it($name, $cb)`,
+  `test($name, $cb)`,
+  `it($name, $cb, $t)`,
+  `test($name, $cb, $t)`,
+  `it.each($tbl)($name, $cb)`,
+  `test.each($tbl)($name, $cb)`
+} as $call where {
+  $cb <: or {
+    JsArrowFunctionExpression(),
+    JsFunctionExpression()
+  },
+  $cb <: not contains or {
+    `expect($_)`,
+    `expect.$_($_)`,
+    `expectTypeOf($_)`,
+    `assert($_)`,
+    `$f($...)` where { $f <: r"^(?:expect|assert|waitUntil|waitFor)[A-Za-z0-9_]*$" }
+  },
+  register_diagnostic(span=$call, message="Test callback has no expect call; add an assertion.")
+}

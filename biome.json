@@ -40,6 +40,10 @@
     {
       "includes": ["**", "!packages/server/**"],
       "plugins": ["./biome-plugins/no-session-id.grit"]
+    },
+    {
+      "includes": ["**/*.test.ts"],
+      "plugins": ["./biome-plugins/test-has-expect.grit"]
     }
   ]
 }
