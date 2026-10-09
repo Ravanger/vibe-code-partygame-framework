@@ -69,5 +69,4 @@ Known traps in this repo, with the cause and the rule that keeps each one fixed.
 - **Rule:** knip's "Array buffer allocation failed" is a transient memory error; rerun `bun run check:unused` before investigating.
 
 ## Harmless output during `verify`
-- **knip:** a hint that the `node-test-setup.ts` entry pattern in `knip.json` is redundant. It exits 0; ignore it.
 - **vitest:** `Failed to resolve dependency: svelte` warnings from `optimizeDeps`. Tests are unaffected; ignore them.

@@ -13,7 +13,7 @@
       "project": ["src/**", "scripts/**", "tests/**"]
     },
     "packages/config": {
-      "entry": ["src/*.ts", "node-test-setup.ts"],
+      "entry": ["src/*.ts"],
       "project": ["src/**", "*.ts", "tests/**"],
       "svelte": false
     },
