@@ -29,5 +29,6 @@
   },
   "html": {
     "experimentalFullSupportEnabled": true
-  }
+  },
+  "plugins": ["./biome-plugins/prefer-prefix-increment.grit"]
 }

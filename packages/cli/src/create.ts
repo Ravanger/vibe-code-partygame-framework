@@ -15,14 +15,14 @@ export function parseCreateArgs(argv: string[]): CreateArgs {
   const [first, ...rest] = argv;
   if (first === undefined) return { ok: false, error: USAGE };
   let name: string | undefined;
-  for (let i = 0; i < rest.length; i++) {
+  for (let i = 0; i < rest.length; ++i) {
     const arg = rest[i];
     if (arg !== "--name") return { ok: false, error: `unexpected argument "${arg}"\n${USAGE}` };
     const value = rest[i + 1];
     if (value === undefined) return { ok: false, error: USAGE };
     name = value.trim();
     if (name.length === 0) return { ok: false, error: `--name must not be empty\n${USAGE}` };
-    i++;
+    ++i;
   }
   const slug = parseSlug(first);
   if (!slug.ok) return { ok: false, error: slug.error };

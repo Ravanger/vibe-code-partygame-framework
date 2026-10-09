@@ -1,0 +1,9 @@
+language js
+
+or {
+  JsExpressionStatement(expression=$e),
+  JsForStatement(update=$e)
+} where {
+  $e <: JsPostUpdateExpression(),
+  register_diagnostic(span=$e, message="Use prefix increment (++i / --i) instead of postfix when the value is unused.")
+}

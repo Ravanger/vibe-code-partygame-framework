@@ -109,7 +109,7 @@ describe("startNodeServer", () => {
         { games: new BrokenList(), apiPort },
         {
           freePort: async () => {
-            calls++;
+            ++calls;
             return await freePort();
           },
         },
@@ -146,7 +146,7 @@ describe("startNodeServer", () => {
     let n = 0;
     const next = async (): Promise<number> => {
       const port = sequence[n];
-      n++;
+      ++n;
       if (port === undefined) throw new Error("sequence exhausted");
       return port;
     };
@@ -164,7 +164,7 @@ describe("startNodeServer", () => {
         { games: GAMES },
         {
           freePort: async () => {
-            calls++;
+            ++calls;
             return first.port;
           },
         },
@@ -182,7 +182,7 @@ describe("startNodeServer", () => {
         { games: GAMES, port: first.port, apiPort: freeApiPort },
         {
           freePort: async () => {
-            calls++;
+            ++calls;
             return freeApiPort;
           },
         },
@@ -200,7 +200,7 @@ describe("startNodeServer", () => {
         { games: GAMES, apiPort: first.port },
         {
           freePort: async () => {
-            calls++;
+            ++calls;
             const port = await freePort();
             gamePort = port;
             return port;
