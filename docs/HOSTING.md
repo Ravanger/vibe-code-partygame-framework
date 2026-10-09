@@ -152,3 +152,9 @@ CI cannot stop a direct push to `main` on its own. In the GitHub repository sett
 
 `gates` runs on pull requests only, so it is required there and never on direct pushes.
 
+
+## Maintainer: changing a gate
+
+A PR that edits a gate (check scripts, CI, coverage thresholds or excludes, biome severities, suppressions) needs the `gate-change` label before the `gates` job passes. Only a maintainer adds it.
+
+Locally the pre-commit hook runs the same check on staged files. To commit an intended gate edit, skip only that step: `LEFTHOOK_EXCLUDE=gates git commit ...`. Biome and `check:paths` still run, and CI still requires the label.

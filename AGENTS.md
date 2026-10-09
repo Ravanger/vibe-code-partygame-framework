@@ -6,13 +6,13 @@ A TypeScript-first framework for multi-device social party games. Playable end t
 
 Each rule names the gate that enforces it; `not enforced yet: #N` means a reviewer checks it until that issue lands.
 
-1. MUST keep 100% statements, branches, functions and lines in every package and game. (`vitest` thresholds in `vitest.config.mts`)
+1. MUST write a failing test before production code, and keep 100% statements, branches, functions and lines in every package and game. (coverage: `vitest` thresholds in `vitest.config.mts`; test-first order: reviewer, CI heuristic in #199)
 2. MUST NOT use `any`, tests included. (`biome` `noExplicitAny`)
 3. MUST pass `biome check .` and every `tsc`/`svelte-check`. (`bun run verify`)
 4. MUST keep dependency direction. Server side: `games/* -> server -> core -> shared`. Client side: `games/* -> game-ui -> game-client -> shared`; `core` and `server` are allowed there only as `devDependencies` for tests. No package imports `games/`. (`bun run check:boundaries`)
 5. MUST NOT put game vocabulary in `packages/` (framework code is game-agnostic). (`bun run check:conventions`)
 6. MUST key players by `playerId` in state, private maps and scores; `sessionId` exists only inside `packages/server`. (`bun run check:conventions`)
-7. MUST validate client input with Zod: `defineAction` requires a `payload` schema (TypeScript) and `RoomOptionsSchema` parses join options (`GameRoom`). (`bun run typecheck`)
+7. MUST validate client input with Zod. (action payloads: `defineAction`'s type requires a `payload` schema, so `bun run typecheck` fails without one; join options: `GameRoom` parses them with `RoomOptionsSchema`)
 8. MUST NOT mock the module under test; `vi.mock` only `node:` builtins. Rules run through `FakeHost`, rooms through `bootTestServer`, UI through `StubRoom`. (`bun run check:conventions`)
 9. MUST NOT reintroduce decorators (`experimentalDecorators`, `emitDecoratorMetadata`); Colyseus Schema 5 is decorator-free. (`bun run check:conventions`)
 10. MUST NOT name a commercial party-game brand or product in docs, code or communication. (`bun run check:conventions`)
@@ -23,7 +23,7 @@ Each rule names the gate that enforces it; `not enforced yet: #N` means a review
 15. MUST put agent files (plans, logs, checklists, notes) in `.AGENTS/`; `docs/` is for developers and users only; no new files in the repo root. (`bun run check:conventions`)
 16. MUST NOT commit or push unless the human asks. (branch protection on `main`: nothing merges without a PR and green CI)
 
-A `lefthook` pre-commit hook (`lefthook.yml`, installed by `bun install`) runs `biome check --staged`, `check:paths` and `check:gates --staged`; `git commit --no-verify` is forbidden.
+A `lefthook` pre-commit hook (`lefthook.yml`, installed by `bun install`) runs `biome check --staged`, `check:paths` and `check:gates --staged`; `git commit --no-verify` is forbidden. If it refuses a gate edit, stop and ask a maintainer (`docs/HOSTING.md`).
 
 ## Labels
 
