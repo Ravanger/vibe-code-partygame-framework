@@ -9,11 +9,10 @@
       "project": ["src/**", "tests/**"]
     },
     "packages/cli": {
-      "entry": ["scripts/smoke.ts"],
       "project": ["src/**", "scripts/**", "tests/**"]
     },
     "packages/config": {
-      "entry": ["src/*.ts"],
+      "entry": ["src/*.ts", "node-test-setup.ts"],
       "project": ["src/**", "*.ts", "tests/**"],
       "svelte": false
     },
