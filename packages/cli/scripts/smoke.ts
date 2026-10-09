@@ -20,7 +20,9 @@ const outDir = join(repoRoot, "games", validatedSlug);
 
 function run(command: string, args: readonly string[]): number {
   console.log(`[smoke] $ ${command} ${args.join(" ")}`);
-  return spawnSync(command, args, { cwd: repoRoot, stdio: "inherit" }).status ?? 1;
+  const result = spawnSync(command, args, { cwd: repoRoot, stdio: "inherit" });
+  if (result.error) console.error(`[smoke] could not start ${command}: ${result.error.message}`);
+  return result.status ?? 1;
 }
 
 let failed = false;
@@ -48,7 +50,8 @@ if (!failed) {
 let testCode = 0;
 if (!failed) {
   // --passWithNoTests: a project with no test files yet is not a failure.
-  testCode = run("bunx", [
+  testCode = run("bun", [
+    "x",
     "vitest",
     "run",
     "--project",
@@ -62,7 +65,8 @@ if (!failed) {
 
 let typecheckCode = 0;
 if (!failed && existsSync(join(outDir, "src"))) {
-  typecheckCode = run("bunx", [
+  typecheckCode = run("bun", [
+    "x",
     "turbo",
     "run",
     "typecheck",
@@ -72,7 +76,7 @@ if (!failed && existsSync(join(outDir, "src"))) {
 }
 
 for (const [step, command, args] of [
-  ["biome", "bunx", ["biome", "check", `games/${validatedSlug}`]],
+  ["biome", "bun", ["x", "biome", "check", `games/${validatedSlug}`]],
   ["check:agents", "bun", ["run", "check:agents"]],
   ["check:boundaries", "bun", ["run", "check:boundaries"]],
   ["check:unused", "bun", ["run", "check:unused"]],
