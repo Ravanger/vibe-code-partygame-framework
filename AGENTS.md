@@ -23,6 +23,12 @@ Each rule names the gate that enforces it; `not enforced yet: #N` means a review
 15. MUST put agent files (plans, logs, checklists, notes) in `.AGENTS/`; `docs/` is for developers and users only; no new files in the repo root. (not enforced yet: #125)
 16. MUST NOT commit or push unless the human asks. (not enforced yet: #69)
 
+## Labels
+
+- `agent-ready`: the issue has every section of the task template; an agent may start it.
+- `needs-decision`: waits on a maintainer choice. `epic`: a parent; work its children.
+- `size:*`, `area:*`, `P0`-`P3`: set by triage.
+
 ## Picking up an issue
 
 - Work only on open issues labelled `agent-ready`. Never start one labelled `needs-decision` or `epic`.
