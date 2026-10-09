@@ -318,11 +318,19 @@
           "NodeServerHandle": {},
           "NodeServerOptions": {},
           "ServeApiOptions": {},
-          "ServerProbe": {},
-          "closeHttpServer": {},
-          "freePort": {},
           "serveApi": {},
           "startNodeServer": {}
+        }
+      },
+      "./probe": {
+        "target": {
+          "types": "./dist/probe.d.ts",
+          "default": "./dist/probe.js"
+        },
+        "symbols": {
+          "ServerProbe": {},
+          "closeHttpServer": {},
+          "freePort": {}
         }
       },
       "./testing": {

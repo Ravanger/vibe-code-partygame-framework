@@ -33,6 +33,10 @@
       "types": "./dist/node.d.ts",
       "default": "./dist/node.js"
     },
+    "./probe": {
+      "types": "./dist/probe.d.ts",
+      "default": "./dist/probe.js"
+    },
     "./content": {
       "types": "./dist/content.d.ts",
       "default": "./dist/content.js"
