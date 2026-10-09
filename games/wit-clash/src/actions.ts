@@ -19,7 +19,6 @@ export const CastVoteSchema = z.object({ answerId: z.string().min(1).max(64) });
 export const SetTypingSchema = z.object({ typing: z.boolean() });
 export const NoPayloadSchema = z.object({});
 
-export type VoteCategoryPayload = z.infer<typeof VoteCategorySchema>;
 export type SubmitAnswerPayload = z.infer<typeof SubmitAnswerSchema>;
 export type CastVotePayload = z.infer<typeof CastVoteSchema>;
 export type SetTypingPayload = z.infer<typeof SetTypingSchema>;

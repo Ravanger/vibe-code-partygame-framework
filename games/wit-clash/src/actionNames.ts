@@ -8,6 +8,4 @@ export const ACTION = {
   SET_TYPING: "SET_TYPING",
 } as const;
 
-export type ActionName = (typeof ACTION)[keyof typeof ACTION];
-
 export const ANSWER_MAX_LENGTH = 200;

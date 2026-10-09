@@ -17,7 +17,7 @@ export interface MatchupAward {
 export const POINTS_PER_VOTE = 100;
 export const WINNER_BONUS = 50;
 export const CLASH_BONUS = 150;
-export const CLASH_MIN_VOTERS = 2;
+const CLASH_MIN_VOTERS = 2;
 
 /**
  * Pure. Score one head-to-head matchup.

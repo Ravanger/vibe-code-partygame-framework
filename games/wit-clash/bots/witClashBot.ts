@@ -64,7 +64,7 @@ export interface WitClashBotOptions {
 type Turn = BotTurn<WitClashState>;
 
 /** WitClash bot brain: votes a category, writes answers, votes on matchups; as host, advances rounds. */
-export class WitClashBot implements BotStrategy<WitClashState> {
+class WitClashBot implements BotStrategy<WitClashState> {
   constructor(private readonly options: WitClashBotOptions = {}) {}
 
   play(turn: Turn): void {

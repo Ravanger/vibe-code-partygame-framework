@@ -2,7 +2,7 @@ import { ACTION } from "../../src/actionNames.js";
 import type { SetTypingPayload } from "../../src/actions.js";
 import type { WitClashManager } from "../manager.js";
 
-export const TYPING_IDLE_MS = 2500;
+const TYPING_IDLE_MS = 2500;
 
 /** Tells the server when this player starts and stops typing: one message per change, never per keystroke. */
 export class TypingReporter {

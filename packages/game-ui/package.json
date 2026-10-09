@@ -29,7 +29,6 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@colyseus/schema": "^5.0.35",
     "@partygame/config": "workspace:*",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@testing-library/jest-dom": "^6.10.0",

@@ -30,7 +30,8 @@
     "check:agents": "bun run scripts/checkAgentsFilesCli.ts",
     "check:boundaries": "bun run scripts/checkBoundariesCli.ts",
     "check:exports": "bun run scripts/checkExportsCli.ts",
-    "verify": "biome check . && bun run check:agents && bun run check:boundaries && bun run check:exports && bun run typecheck:scripts && bun run typecheck && vitest run --coverage"
+    "check:unused": "knip --no-progress",
+    "verify": "biome check . && bun run check:agents && bun run check:boundaries && bun run check:exports && bun run check:unused && bun run typecheck:scripts && bun run typecheck && vitest run --coverage"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
@@ -39,6 +40,7 @@
     "@types/node": "^26.6.3",
     "@vitest/coverage-v8": "^4.1.11",
     "jsdom": "^29.1.1",
+    "knip": "^6.40.0",
     "turbo": "^2.11.5",
     "typescript": "^6.0.3",
     "vitest": "^4.1.11"

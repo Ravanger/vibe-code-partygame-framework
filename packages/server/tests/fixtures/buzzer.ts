@@ -3,7 +3,7 @@ import { actionFactory, defineGame } from "@partygame/core";
 import { BaseGameState } from "@partygame/shared/schema";
 import { z } from "zod";
 
-export const SecretSchema = schema({ word: t.string().default("") }, "SecretSchema");
+const SecretSchema = schema({ word: t.string().default("") }, "SecretSchema");
 
 export const BuzzerState = BaseGameState.extend(
   {

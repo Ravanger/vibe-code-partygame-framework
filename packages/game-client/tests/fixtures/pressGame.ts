@@ -11,7 +11,7 @@ const MAX_PRESSES = 3;
 
 const action = actionFactory<PressState, Record<string, never>, Record<string, never>>();
 
-export const PressGame = defineGame<PressState, Record<string, never>, Record<string, never>>({
+const PressGame = defineGame<PressState, Record<string, never>, Record<string, never>>({
   name: "Press",
   minPlayers: 2,
   autoStart: true,

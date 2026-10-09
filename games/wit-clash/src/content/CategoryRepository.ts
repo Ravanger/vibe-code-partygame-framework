@@ -2,9 +2,9 @@ import { shuffle } from "@partygame/core";
 import { loadJsoncDir } from "@partygame/server/content";
 import { z } from "zod";
 
-export const PromptSchema = z.object({ id: z.string().min(1), text: z.string().min(1) });
+const PromptSchema = z.object({ id: z.string().min(1), text: z.string().min(1) });
 
-export const CategorySchema = z.object({
+const CategorySchema = z.object({
   id: z.string().regex(/^[a-z0-9-]+$/, "id must be lowercase kebab-case"),
   name: z.string().min(1),
   emoji: z.string().default("🎲"),
