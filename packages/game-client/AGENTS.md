@@ -13,7 +13,7 @@ The Svelte 5 SDK a game client uses to connect, join, send actions and read stat
 
 ## May import
 
-- Runtime: `@partygame/shared`
+- Runtime: `@partygame/client-utils`, `@partygame/shared`
 - Dev: `@partygame/config`, `@partygame/core`, `@partygame/server`
 
 ## Public entry points

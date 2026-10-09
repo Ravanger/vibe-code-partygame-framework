@@ -134,6 +134,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@colyseus/sdk": "^0.18.4",
+        "@partygame/client-utils": "workspace:*",
         "@partygame/shared": "workspace:*",
         "svelte": "^5.57.1",
       },
@@ -152,6 +153,7 @@
       "name": "@partygame/game-ui",
       "version": "0.1.0",
       "dependencies": {
+        "@partygame/client-utils": "workspace:*",
         "@partygame/game-client": "workspace:*",
         "@partygame/shared": "workspace:*",
         "svelte": "^5.57.1",

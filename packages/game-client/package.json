@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@colyseus/sdk": "^0.18.4",
+    "@partygame/client-utils": "workspace:*",
     "@partygame/shared": "workspace:*",
     "svelte": "^5.57.1"
   },
