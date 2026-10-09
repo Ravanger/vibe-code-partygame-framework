@@ -7,13 +7,19 @@ export interface GateViolation {
   detail: string;
 }
 
-const PROTECTED_PATHS = [/^\.github\/workflows\//, /^scripts\/check[^/]*\.ts$/, /^lefthook\.yml$/];
+const PROTECTED_PATHS = [
+  /^\.github\/workflows\//,
+  /^scripts\/check[^/]*\.ts$/,
+  /^lefthook\.yml$/,
+  /^scripts\/stryker\.config\.json$/,
+];
 
 const FORBIDDEN_LINES: { rule: string; pattern: RegExp }[] = [
   { rule: "suppression", pattern: /biome-ignore/ },
   { rule: "suppression", pattern: /@ts-ignore/ },
   { rule: "suppression", pattern: /@ts-expect-error/ },
   { rule: "suppression", pattern: /eslint-disable/ },
+  { rule: "suppression", pattern: /Stryker disable/ },
   { rule: "focused-or-skipped-test", pattern: /\.(skip|only)\(/ },
   { rule: "type-escape", pattern: /\bas any\b/ },
   { rule: "type-escape", pattern: /\bas unknown as\b/ },
