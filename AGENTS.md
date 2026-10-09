@@ -9,7 +9,7 @@ Each rule names the gate that enforces it; `not enforced yet: #N` means a review
 1. MUST write a failing test before production code, and keep 100% statements, branches, functions and lines in every package and game. (`vitest` thresholds in `vitest.config.mts`)
 2. MUST NOT use `any`, tests included. (`biome` `noExplicitAny`)
 3. MUST pass `biome check .` and every `tsc`/`svelte-check`. (`bun run verify`)
-4. MUST keep dependency direction. Server side: `games/* -> server -> core -> shared`. Client side: `games/* -> game-ui -> game-client -> shared`; `core` and `server` are allowed there only as `devDependencies` for tests. No package imports `games/`. (not enforced yet: #33)
+4. MUST keep dependency direction. Server side: `games/* -> server -> core -> shared`. Client side: `games/* -> game-ui -> game-client -> shared`; `core` and `server` are allowed there only as `devDependencies` for tests. No package imports `games/`. (`bun run check:boundaries`)
 5. MUST NOT put game vocabulary in `packages/` (framework code is game-agnostic). (not enforced yet: #125)
 6. MUST key players by `playerId` in state, private maps and scores; `sessionId` exists only inside `packages/server`. (not enforced yet: #125)
 7. MUST validate every client input with Zod: protocol envelope, action payloads, options, join options. (not enforced yet: #69)

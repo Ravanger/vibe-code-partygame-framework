@@ -28,7 +28,8 @@
     "test:coverage": "vitest run --coverage",
     "typecheck:scripts": "tsc --noEmit -p scripts/tsconfig.json",
     "check:agents": "bun run scripts/checkAgentsFilesCli.ts",
-    "verify": "biome check . && bun run check:agents && bun run typecheck:scripts && bun run typecheck && vitest run --coverage"
+    "check:boundaries": "bun run scripts/checkBoundariesCli.ts",
+    "verify": "biome check . && bun run check:agents && bun run check:boundaries && bun run typecheck:scripts && bun run typecheck && vitest run --coverage"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
