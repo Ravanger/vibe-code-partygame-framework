@@ -27,3 +27,7 @@ runs `bun install` at the repo root so it is ready to play.
 The template is a small wave-based game (phases `Waving` and `Results`) with a Svelte client, a terminal client,
 bots and launcher wiring. Replace the ruleset in `games/<slug>/src/` with your own game. See
 `docs/framework/README.md` for how each piece works.
+
+## Smoke test
+
+`bun run smoke:template` renders the template into a test game, installs it, runs its tests and typecheck to ensure the template is ready for use; CI runs this on every pull request.
