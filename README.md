@@ -6,7 +6,7 @@ TypeScript framework for multi-device party games. Reference game: **WitClash** 
 
 ```bash
 bun install
-bun run launch        # opens http://localhost:5173 -> Host Game, share the code
+bun run launch        # opens http://localhost:5173 -> Host Game, share the code; builds dependencies as needed
 ```
 
 ## Playtest alone

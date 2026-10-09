@@ -1,0 +1,59 @@
+name: Bug
+description: Something is not working as expected
+labels: [bug, area:unknown]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting! Help us fix it by describing what went wrong.
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: How to see the problem (command, click, etc.).
+      placeholder: |
+        1. Run `bun run launch:demo --demo=2`
+        2. Enter your name and wait for Category Vote.
+        3. Observe the timer counting down.
+      validations:
+        required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected
+      description: What should happen.
+      placeholder: "The timer reaches 0 and the vote phase advances."
+      validations:
+        required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual
+      description: What happens instead.
+      placeholder: "The timer stays at 2s and never advances."
+      validations:
+        required: true
+
+  - type: textarea
+    id: version
+    attributes:
+      label: Version or commit
+      description: Version number, commit hash, or branch name.
+      placeholder: "main (bf4cfcc)"
+      validations:
+        required: true
+
+  - type: textarea
+    id: test-idea
+    attributes:
+      label: Failing test idea (optional)
+      description: |
+        Sketch of a test that reproduces the bug. Helps someone fix it faster.
+      placeholder: |
+        In `games/wit-clash/tests/game/CategoryVote.test.ts`:
+        - Advance time to 1s before the timeout.
+        - Step the actor; time should not advance.
+        - Assert `state.phaseEndsAt` moved forward.

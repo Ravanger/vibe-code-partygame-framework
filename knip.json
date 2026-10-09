@@ -1,0 +1,47 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": ["scripts/*.ts", "biome-plugins/*"],
+      "project": ["scripts/**"]
+    },
+    "packages/bots": {
+      "project": ["src/**", "tests/**"]
+    },
+    "packages/cli": {
+      "project": ["src/**", "scripts/**", "tests/**"]
+    },
+    "packages/config": {
+      "entry": ["src/*.ts", "node-test-setup.ts"],
+      "project": ["src/**", "*.ts", "tests/**"],
+      "svelte": false
+    },
+    "packages/core": {
+      "project": ["src/**", "tests/**"]
+    },
+    "packages/game-client": {
+      "project": ["src/**", "*.ts", "tests/**"],
+      "svelte": false
+    },
+    "packages/game-ui": {
+      "project": ["src/**", "tests/**"]
+    },
+    "packages/launcher": {
+      "project": ["src/**", "tests/**"],
+      "entry": ["tests/fixtures/game/server.ts"]
+    },
+    "packages/server": {
+      "project": ["src/**", "tests/**"]
+    },
+    "packages/shared": {
+      "project": ["src/**", "tests/**"]
+    },
+    "packages/terminal": {
+      "project": ["src/**", "tests/**"]
+    },
+    "games/*": {
+      "entry": ["server.ts", "launch.ts", "bots/cli.ts", "terminal/*.ts"],
+      "project": ["src/**", "ui/**", "bots/**", "terminal/**", "*.ts", "**/*.svelte", "tests/**"]
+    }
+  }
+}

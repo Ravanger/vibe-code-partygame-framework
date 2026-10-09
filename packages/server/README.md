@@ -46,10 +46,10 @@ Drop commented JSON files in a folder and validate them with a zod schema. Inval
 import { loadJsoncDir } from "@partygame/server/content";
 import { z } from "zod";
 
-const Prompt = z.object({ id: z.string(), text: z.string() });
-const prompts = await loadJsoncDir("content/prompts", Prompt, {
-  idOf: (prompt) => prompt.id,
-  label: "Prompt",
+const Item = z.object({ id: z.string(), text: z.string() });
+const items = await loadJsoncDir("content/items", Item, {
+  idOf: (item) => item.id,
+  label: "Item",
 });
 ```
 

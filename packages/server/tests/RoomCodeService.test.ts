@@ -53,7 +53,7 @@ describe("RoomCodeService", () => {
       service.register(codeA, "room-1");
       let callCount = 0;
       Math.random = () => {
-        callCount++;
+        ++callCount;
         return callCount < 4 ? 0 : 0.5;
       };
       const codeB = service.generateCode();

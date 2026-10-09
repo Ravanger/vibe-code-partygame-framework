@@ -117,7 +117,7 @@ export async function startNodeServer(
   }
   const roomCodeService = options.roomCodeService ?? new RoomCodeService();
   const discoverFreePort = hooks?.freePort ?? freePort;
-  for (let attempt = 1; ; attempt++) {
+  for (let attempt = 1; ; ++attempt) {
     const port = wantedPort ?? (await discoverFreePort());
     const apiPort = wantedApiPort ?? (await discoverFreePort());
     let api: HttpServer | undefined;

@@ -15,6 +15,7 @@ export interface FolderRecord {
 export interface Game {
   folder: string;
   label: string;
+  name: string;
 }
 
 export type PickedGame =
@@ -33,6 +34,13 @@ export function isGameCommand(value: string | undefined): value is GameCommand {
 export const entryPath = (command: GameCommand, game: string): string =>
   `games/${game}/${ENTRIES[command]}`;
 
+export const buildArgs = (packageName: string): string[] => [
+  "turbo",
+  "run",
+  "build",
+  `--filter=${packageName}^...`,
+];
+
 const packageName = (packageJson: unknown): string | undefined => {
   if (typeof packageJson !== "object" || packageJson === null || !("name" in packageJson)) {
     return undefined;
@@ -47,10 +55,14 @@ export const discoverGames = (records: FolderRecord[]): { games: Game[]; ignored
   const candidates = records.filter((record) => record.packageJson !== undefined);
   const games = candidates
     .filter((record) => !RESERVED.includes(record.folder))
-    .map((record) => ({
-      folder: record.folder,
-      label: (packageName(record.packageJson) ?? record.folder).replace(SCOPE, ""),
-    }))
+    .map((record) => {
+      const pkgName = packageName(record.packageJson) ?? record.folder;
+      return {
+        folder: record.folder,
+        label: pkgName.replace(SCOPE, ""),
+        name: pkgName,
+      };
+    })
     .sort((a, b) => a.folder.localeCompare(b.folder));
   const ignored = candidates
     .map((record) => record.folder)

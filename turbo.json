@@ -1,5 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalPassThroughEnv": ["GITHUB_EVENT_PATH", "PARTYGAME_SKIP_BUILD"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -8,10 +9,6 @@
     "test": {
       "dependsOn": ["^build"],
       "cache": false
-    },
-    "test:ci": {
-      "dependsOn": ["^build"],
-      "outputs": ["coverage/**"]
     },
     "typecheck": {
       "dependsOn": ["^build"]

@@ -1,22 +1,22 @@
 /**
- * Renders the template to a throwaway game (`games/cli_smoke/` — an underscored name no real user could pick,
- * but one whose derived identifiers are distinct and valid),
- * installs it, runs its tests and typecheck, then removes it and restores the lockfile. Run with:
- *
- *   bun packages/cli/scripts/smoke.ts
+ * Renders the template to a throwaway game, installs it, runs its tests and typecheck, then cleans up.
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { formatGame } from "../src/create.js";
-import { deriveNames } from "../src/slug.js";
+import { deriveNames, parseSlug } from "../src/slug.js";
 import { renderTemplate } from "../src/template.js";
 
-const SLUG = "cli_smoke";
+const SLUG = "zz-smoke-test";
+const slugResult = parseSlug(SLUG);
+if (!slugResult.ok) throw new Error(`Invalid smoke test slug: ${slugResult.error}`);
+const validatedSlug = slugResult.slug;
+const names = deriveNames(validatedSlug);
 const repoRoot = fileURLToPath(new URL("../../..", import.meta.url));
 const templateDir = fileURLToPath(new URL("../template", import.meta.url));
-const outDir = join(repoRoot, "games", SLUG);
+const outDir = join(repoRoot, "games", validatedSlug);
 
 function run(command: string, args: readonly string[]): number {
   console.log(`[smoke] $ ${command} ${args.join(" ")}`);
@@ -31,7 +31,7 @@ const fail = (step: string): void => {
 
 try {
   rmSync(outDir, { recursive: true, force: true });
-  await renderTemplate({ templateDir, outDir, names: deriveNames(SLUG) });
+  await renderTemplate({ templateDir, outDir, names });
 } catch (error) {
   fail(`render (${error instanceof Error ? error.message : String(error)})`);
 }
@@ -52,9 +52,9 @@ if (!failed) {
     "vitest",
     "run",
     "--project",
-    SLUG,
+    validatedSlug,
     "--project",
-    `${SLUG}-game`,
+    `${validatedSlug}-game`,
     "--passWithNoTests",
   ]);
   if (testCode !== 0) fail("tests");
@@ -62,8 +62,22 @@ if (!failed) {
 
 let typecheckCode = 0;
 if (!failed && existsSync(join(outDir, "src"))) {
-  typecheckCode = run("bunx", ["turbo", "run", "typecheck", `--filter=@partygame/${SLUG}`]);
+  typecheckCode = run("bunx", [
+    "turbo",
+    "run",
+    "typecheck",
+    `--filter=@partygame/${validatedSlug}`,
+  ]);
   if (typecheckCode !== 0) fail("typecheck");
+}
+
+for (const [step, command, args] of [
+  ["biome", "bunx", ["biome", "check", `games/${validatedSlug}`]],
+  ["check:agents", "bun", ["run", "check:agents"]],
+  ["check:boundaries", "bun", ["run", "check:boundaries"]],
+  ["check:unused", "bun", ["run", "check:unused"]],
+] as const) {
+  if (!failed && run(command, args) !== 0) fail(step);
 }
 
 // Always leave the repo clean: drop the throwaway game and restore the lockfile.

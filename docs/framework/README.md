@@ -5,6 +5,10 @@ The framework supplies the lobby, room, roster, reconnection, timers and wire pr
 
 Dependency direction: `games/* -> @partygame/server -> @partygame/core -> @partygame/shared`.
 
+Known traps (build, coverage, reconnects, Schema 5): [troubleshooting.md](troubleshooting.md).
+
+**Design:** Six architecture decisions that explain why the framework is shaped this way: [ADRs](../adr/).
+
 ## Scaffolding a new game
 
 Start from the built-in template instead of hand-wiring packages:
@@ -18,6 +22,7 @@ This writes a complete, working, fully-tested game to `games/<slug>/` — packag
 ruleset (two phases, `Waving` and `Results`), a Svelte client, a terminal client, bots and the launcher wiring —
 then runs `bun install` so it is ready to play. It targets this monorepo only: it finds the repo root by walking
 up to the nearest `package.json` whose `workspaces` include `games/*`, and fails with a clear error otherwise.
+Then run `bun run launch <slug>` to start the server and dev client; the build step happens automatically.
 
 The slug must be kebab-case starting with a letter (`[a-z][a-z0-9]*(-[a-z0-9]+)*`), not a reserved name
 (`list`, `launch`, `play`, `bots`, `dev`, `host`, `prod`), and there must be no existing `games/<slug>/`.

@@ -1,7 +1,7 @@
 import type { Matchup } from "../../src/state.js";
 import type { WitClashManager } from "../manager.js";
 
-export interface RevealedAnswer {
+interface RevealedAnswer {
   id: string;
   text: string;
   votes: number;

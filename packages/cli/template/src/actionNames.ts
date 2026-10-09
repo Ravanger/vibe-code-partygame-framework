@@ -4,5 +4,3 @@ export const ACTION = {
   FINISH: "FINISH",
   PLAY_AGAIN: "PLAY_AGAIN",
 } as const;
-
-export type ActionName = (typeof ACTION)[keyof typeof ACTION];

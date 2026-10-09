@@ -18,12 +18,7 @@ describe("awardPoints", () => {
 describe("leaderboard", () => {
   it("sorts high to low", () => {
     const sorted = leaderboard({ p1: 100, p2: 300, p3: 200 });
-    // biome-ignore lint/style/noNonNullAssertion: Array index guaranteed to exist from sorted result
-    expect(sorted[0]!.playerId).toBe("p2");
-    // biome-ignore lint/style/noNonNullAssertion: Array index guaranteed to exist from sorted result
-    expect(sorted[1]!.playerId).toBe("p3");
-    // biome-ignore lint/style/noNonNullAssertion: Array index guaranteed to exist from sorted result
-    expect(sorted[2]!.playerId).toBe("p1");
+    expect(sorted.map((e) => e.playerId)).toEqual(["p2", "p3", "p1"]);
   });
   it("breaks equal scores deterministically", () => {
     expect(leaderboard({ b: 100, a: 100 })).toEqual(leaderboard({ a: 100, b: 100 }));

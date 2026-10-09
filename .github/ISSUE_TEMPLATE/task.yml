@@ -1,0 +1,92 @@
+name: Task
+description: Feature, enhancement, or work to implement
+labels: [area:unknown]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for contributing! This form helps agents and reviewers understand what needs to be done.
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: One or two sentences on what this achieves for the framework or a game.
+      placeholder: "Example: Agents can read the current state of any player."
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: |
+        Background and motivation. Cite file paths and symbol names (`packages/x/src/file.ts`, `functionName`), never line numbers — they go stale after edits.
+      placeholder: |
+        Example:
+        - The WelcomeViewModel reads user input but never validates it.
+        - Current validation is in the server action handler (GameRoom.ts), unreachable during UI testing.
+      validations:
+        required: true
+
+  - type: textarea
+    id: tasks
+    attributes:
+      label: Tasks
+      description: Numbered steps (with test first). Use checkboxes so an agent can update the issue.
+      placeholder: |
+        - [ ] Write a failing test in `packages/game-ui/tests/` that expects validation to run before sending.
+        - [ ] Implement validation in the ViewModel (reference PlayerSchema from `@partygame/shared`).
+        - [ ] Verify the existing server test still passes.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Checkboxes that confirm the work is done. Copied into the PR template by the author.
+      placeholder: |
+        - [ ] A new name with symbols or length > 32 is rejected before sending.
+        - [ ] The error message is shown in a toast (ref. `StubRoom` in game-client tests).
+        - [ ] `bun run verify` passes with 100% coverage on the ViewModel.
+    validations:
+      required: true
+
+  - type: textarea
+    id: verify
+    attributes:
+      label: Verify
+      description: Command to run to confirm the work is done (usually `bun run verify`).
+      placeholder: "bun run verify"
+      value: "bun run verify"
+
+  - type: textarea
+    id: files
+    attributes:
+      label: Files likely touched
+      description: |
+        Comma-separated file paths that are likely to change (no line numbers). This helps agents understand scope and reviewers spot unexpected changes.
+      placeholder: "packages/game-ui/src/WelcomeViewModel.ts, packages/game-ui/tests/viewmodels/WelcomeViewModel.test.ts"
+    validations:
+      required: true
+
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+      description: What is explicitly NOT being done (helps avoid scope creep).
+      placeholder: |
+        - Rewriting the server's action validation (handled separately).
+        - Styling the toast message.
+      value: "- None"
+
+  - type: textarea
+    id: depends-on
+    attributes:
+      label: Depends on / related
+      description: GitHub issue links or related work.
+      placeholder: |
+        - Related: #105 (validation strategy)
+        - Blocks: #110
+      value: "- None"
