@@ -17,7 +17,7 @@ Each rule names the gate that enforces it; `not enforced yet: #N` means a review
 9. MUST NOT reintroduce decorators (`experimentalDecorators`, `emitDecoratorMetadata`); Colyseus Schema 5 is decorator-free. (not enforced yet: #125)
 10. MUST NOT name a commercial party-game brand or product in docs, code or communication. (not enforced yet: #125)
 11. MUST NOT edit generated files (`dist/`, `coverage/`, `node_modules/`, `.turbo/`) or change `bun.lock` without a `package.json` change. (`bun run check:paths`)
-12. MUST NOT weaken a gate: lower thresholds, `biome-ignore`, `.skip`/`.only`, or coverage excludes. (not enforced yet: #121)
+12. MUST NOT weaken a gate: lower thresholds, `biome-ignore`, `.skip`/`.only`, or coverage excludes. (`bun run check:gates` in the `gates` CI job; only a maintainer adds the `gate-change` override label)
 13. MUST use `++i` in loops, never `i++`. (`biome` plugin `prefer-prefix-increment`)
 14. MUST document every public API (JSDoc plus `docs/framework/README.md`) in the same PR. (`bun run check:exports` snapshots the surface; docs not enforced yet: #113)
 15. MUST put agent files (plans, logs, checklists, notes) in `.AGENTS/`; `docs/` is for developers and users only; no new files in the repo root. (not enforced yet: #125)

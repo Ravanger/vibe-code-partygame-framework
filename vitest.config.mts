@@ -40,6 +40,7 @@ export default defineConfig({
         "scripts/checkBoundariesCli.ts",
         "scripts/checkExportsCli.ts",
         "scripts/checkPathsCli.ts",
+        "scripts/checkGatesCli.ts",
         "packages/cli/src/cli.ts",
         "packages/cli/scripts/*.ts",
       ],

@@ -1,6 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalPassThroughEnv": ["PARTYGAME_SKIP_BUILD"],
+  "globalPassThroughEnv": ["GITHUB_EVENT_PATH", "PARTYGAME_SKIP_BUILD"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
