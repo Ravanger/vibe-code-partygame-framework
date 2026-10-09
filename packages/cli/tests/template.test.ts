@@ -43,8 +43,8 @@ describe("renderTemplate", () => {
     const dest = await freshDir("cli-out-");
     await renderTemplate({ templateDir: src, outDir: dest, names: NAMES });
     expect(await readFile(join(dest, "crlf.txt"), "utf8")).toBe("a=my-game\r\nb=MyGame\r\n");
-    const mode = (await stat(join(dest, "run.sh"))).mode & 0o777;
-    expect(mode & 0o111).not.toBe(0);
+    const mode = async (path: string) => (await stat(path)).mode & 0o777;
+    expect(await mode(join(dest, "run.sh"))).toBe(await mode(script));
   });
 
   it("substitutes tokens in file names as well", async () => {
