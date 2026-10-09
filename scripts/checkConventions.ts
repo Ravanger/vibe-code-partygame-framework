@@ -70,9 +70,7 @@ const fileViolations = (file: TextFile): ConventionViolation[] => {
       message: "file is not on the repo root allowlist",
     });
   }
-  if (path !== "AGENTS.md") {
-    found.push(...lineViolations(file, "brand", BRAND, "names a commercial brand"));
-  }
+  found.push(...lineViolations(file, "brand", BRAND, "names a commercial brand"));
   if (inside(path, "packages") && !inside(path, "packages/cli/template")) {
     found.push(...lineViolations(file, "vocabulary", VOCABULARY, "game vocabulary in packages/"));
     if (!inside(path, "packages/terminal")) {

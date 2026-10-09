@@ -6,13 +6,13 @@ A TypeScript-first framework for multi-device social party games. Playable end t
 
 Each rule names the gate that enforces it; `not enforced yet: #N` means a reviewer checks it until that issue lands.
 
-1. MUST write a failing test before production code, and keep 100% statements, branches, functions and lines in every package and game. (`vitest` thresholds in `vitest.config.mts`)
+1. MUST keep 100% statements, branches, functions and lines in every package and game. (`vitest` thresholds in `vitest.config.mts`)
 2. MUST NOT use `any`, tests included. (`biome` `noExplicitAny`)
 3. MUST pass `biome check .` and every `tsc`/`svelte-check`. (`bun run verify`)
 4. MUST keep dependency direction. Server side: `games/* -> server -> core -> shared`. Client side: `games/* -> game-ui -> game-client -> shared`; `core` and `server` are allowed there only as `devDependencies` for tests. No package imports `games/`. (`bun run check:boundaries`)
 5. MUST NOT put game vocabulary in `packages/` (framework code is game-agnostic). (`bun run check:conventions`)
 6. MUST key players by `playerId` in state, private maps and scores; `sessionId` exists only inside `packages/server`. (`bun run check:conventions`)
-7. MUST validate every client input with Zod: protocol envelope, action payloads, options, join options. (not enforced yet: #69)
+7. MUST validate client input with Zod: `defineAction` requires a `payload` schema (TypeScript) and `RoomOptionsSchema` parses join options (`GameRoom`). (`bun run typecheck`)
 8. MUST NOT mock the module under test; `vi.mock` only `node:` builtins. Rules run through `FakeHost`, rooms through `bootTestServer`, UI through `StubRoom`. (`bun run check:conventions`)
 9. MUST NOT reintroduce decorators (`experimentalDecorators`, `emitDecoratorMetadata`); Colyseus Schema 5 is decorator-free. (`bun run check:conventions`)
 10. MUST NOT name a commercial party-game brand or product in docs, code or communication. (`bun run check:conventions`)
@@ -105,30 +105,30 @@ Every job is a separate check in `.github/workflows/ci.yml`; the job name tells 
 
 ## Library docs
 
-Project-specific API notes live in `.AGENTS/docs/libraries/`. Versions are what the consuming package resolves.
+Project-specific API notes live in `.AGENTS/docs/libraries/`.
 
-| Library | Documentation | Version |
-|---------|---------------|---------|
-| **@biomejs/biome** | [biome.md](.AGENTS/docs/libraries/biome.md) | v2.5.15 |
-| **@colyseus/bun-websockets** | [colyseus.md](.AGENTS/docs/libraries/colyseus.md) | v0.18.3 |
-| **@colyseus/core** | [colyseus.md](.AGENTS/docs/libraries/colyseus.md) | v0.18.18 |
-| **@colyseus/schema** | [colyseus-schema.md](.AGENTS/docs/libraries/colyseus-schema.md) | v5.0.35 |
-| **@colyseus/sdk** | [colyseus.md](.AGENTS/docs/libraries/colyseus.md) | v0.18.4 |
-| **@colyseus/ws-transport** | [colyseus.md](.AGENTS/docs/libraries/colyseus.md) | v0.18.4 |
-| *Colyseus test harness (own)* | [colyseus-testing.md](.AGENTS/docs/libraries/colyseus-testing.md) | `@partygame/server/testing` |
-| **svelte** | [svelte.md](.AGENTS/docs/libraries/svelte.md) | v5.57.1 |
-| **@sveltejs/vite-plugin-svelte** | [svelte.md](.AGENTS/docs/libraries/svelte.md) | v7.3.1 |
-| **turbo** | [turbo.md](.AGENTS/docs/libraries/turbo.md) | v2.11.5 |
-| **vitest** | [vitest.md](.AGENTS/docs/libraries/vitest.md) | v4.1.11 |
-| **@vitest/coverage-v8** | [vitest-coverage.md](.AGENTS/docs/libraries/vitest-coverage.md) | v4.1.11 |
-| **xstate** | [xstate.md](.AGENTS/docs/libraries/xstate.md) | v5.33.2 |
-| **zod** | [zod.md](.AGENTS/docs/libraries/zod.md) | v4.6.5 |
-| **@testing-library/svelte** | [testing-library.md](.AGENTS/docs/libraries/testing-library.md) | v5.4.2 |
-| **@testing-library/jest-dom** | [testing-library.md](.AGENTS/docs/libraries/testing-library.md) | v6.10.0 |
-| **jsdom** | [jsdom.md](.AGENTS/docs/libraries/jsdom.md) | v29.1.1 |
-| **@types/jsdom** | [jsdom.md](.AGENTS/docs/libraries/jsdom.md) | v28.0.3 |
-| **vite** | [vite.md](.AGENTS/docs/libraries/vite.md) | v8.3.1 |
-| **typescript** | [typescript.md](.AGENTS/docs/libraries/typescript.md) | v6.0.3 |
+| Library | Documentation |
+|---------|---------------|
+| **@biomejs/biome** | [biome.md](.AGENTS/docs/libraries/biome.md) |
+| **@colyseus/bun-websockets** | [colyseus.md](.AGENTS/docs/libraries/colyseus.md) |
+| **@colyseus/core** | [colyseus.md](.AGENTS/docs/libraries/colyseus.md) |
+| **@colyseus/schema** | [colyseus-schema.md](.AGENTS/docs/libraries/colyseus-schema.md) |
+| **@colyseus/sdk** | [colyseus.md](.AGENTS/docs/libraries/colyseus.md) |
+| **@colyseus/ws-transport** | [colyseus.md](.AGENTS/docs/libraries/colyseus.md) |
+| *Colyseus test harness (own)* | [colyseus-testing.md](.AGENTS/docs/libraries/colyseus-testing.md) |
+| **svelte** | [svelte.md](.AGENTS/docs/libraries/svelte.md) |
+| **@sveltejs/vite-plugin-svelte** | [svelte.md](.AGENTS/docs/libraries/svelte.md) |
+| **turbo** | [turbo.md](.AGENTS/docs/libraries/turbo.md) |
+| **vitest** | [vitest.md](.AGENTS/docs/libraries/vitest.md) |
+| **@vitest/coverage-v8** | [vitest-coverage.md](.AGENTS/docs/libraries/vitest-coverage.md) |
+| **xstate** | [xstate.md](.AGENTS/docs/libraries/xstate.md) |
+| **zod** | [zod.md](.AGENTS/docs/libraries/zod.md) |
+| **@testing-library/svelte** | [testing-library.md](.AGENTS/docs/libraries/testing-library.md) |
+| **@testing-library/jest-dom** | [testing-library.md](.AGENTS/docs/libraries/testing-library.md) |
+| **jsdom** | [jsdom.md](.AGENTS/docs/libraries/jsdom.md) |
+| **@types/jsdom** | [jsdom.md](.AGENTS/docs/libraries/jsdom.md) |
+| **vite** | [vite.md](.AGENTS/docs/libraries/vite.md) |
+| **typescript** | [typescript.md](.AGENTS/docs/libraries/typescript.md) |
 
 ## Extension Points
 
@@ -137,8 +137,8 @@ Paths are relative to `games/wit-clash/` unless they start with `packages/`. Tes
 | To add... | Do this |
 |---|---|
 | A category or prompt | Drop a `.jsonc` file into `content/categories/` and restart the server. No code. Category ids and prompt ids must be unique across all files (used-prompt tracking is by id). |
-| A game phase | 1. Add the name to `PHASE` in `src/phaseNames.ts`. 2. Create `src/phases/<Name>.ts` exporting a `WitClashPhase` (`onEnter`, `duration` + `onTimeout`, `onRosterChange`, `actions`). 3. Add one line to `phases` in `src/game.ts`. 4. Add any synced field to `src/state.ts` (the client contract) and server-only data to `src/private.ts`. Move between phases with `ctx.transition(PHASE.X)` only. |
-| A screen for a phase | 1. `ui/viewmodels/<Name>ViewModel.ts` (reads `manager.state`, never recomputes rules). 2. `ui/screens/<Name>.svelte`. 3. One entry in `PHASE_SCREENS` in `ui/screens/index.ts`: `[PHASE.X]: { component, waitingLabel }` (a missing phase is a compile error). `AppViewModel` (an `AppRouter` from `@partygame/game-ui`) routes from `PHASE_SCREENS`, `App.svelte` renders and `JoinNextRound` labels from that table. A screen must also render with no seat (`manager.isSpectator`, the TV display): no inputs, progress shown large. Reusable pieces (StatusPanel, Timer, PlayerSticker, ActionBar, Podium, ...) come from `@partygame/game-ui/components`, themed by `ui/app.css`. |
+| A game phase | 1. Add the name to `PHASE` in `src/phaseNames.ts`. 2. Create `src/phases/<Name>.ts` exporting a `WitClashPhase` (`onEnter`, `duration` + `onTimeout`, `onRosterChange`, `actions`). 3. Add one line to `phases` in `src/game.ts`. 4. Add any synced field to `src/state.ts` (the client contract) and server-only data to `src/private.ts`. |
+| A screen for a phase | 1. `ui/viewmodels/<Name>ViewModel.ts` (reads `manager.state`, never recomputes rules). 2. `ui/screens/<Name>.svelte`. 3. One entry in `PHASE_SCREENS` in `ui/screens/index.ts`: `[PHASE.X]: { component, waitingLabel }` (a missing phase is a compile error). `AppViewModel` (an `AppRouter` from `@partygame/game-ui`) routes from `PHASE_SCREENS`, `App.svelte` renders and `JoinNextRound` labels from that table. A screen should also render with no seat (`manager.isSpectator`, the TV display): no inputs, progress shown large. Reusable pieces (StatusPanel, Timer, PlayerSticker, ActionBar, Podium, ...) come from `@partygame/game-ui/components`, themed by `ui/app.css`. |
 | A client action | 1. Name in `ACTION` (`src/actionNames.ts`, `SCREAMING_SNAKE_CASE`; `START_GAME`, `KICK_PLAYER`, `SET_OPTIONS`, `END_GAME` are reserved). 2. zod payload schema and payload type in `src/actions.ts`. 3. `[ACTION.X]: defineAction({ from, payload, handler })` in the accepting phase's `actions`. 4. `manager.sendAction(ACTION.X, payload)` from a viewmodel; it resolves with an `ActionResult` and rejections also land in `manager.lastServerError`. Reject with `ctx.reject(ErrorCode.NOT_ALLOWED, "why")`. |
 | An option | Add the field, default and range to `WitClashOptionsSchema` in `src/options.ts` (the single source). Read it as `ctx.options.<name>` in phases. The client reads the published `state.options` JSON through the same schema (see `LobbySettingsViewModel`). The lobby settings form is generated from the same schema (`LobbySettingsViewModel` from `@partygame/game-ui` reads the bounds through `z.toJSONSchema`; the game's subclass passes the schema and defaults): every bounded numeric field gets a labelled number input for the host and a read-only line for everyone else, so a new numeric option needs no UI edit. The host changes options with the built-in `SET_OPTIONS`. |
 | A timed phase | Set `duration` (ms, or a function of `ctx`) and `onTimeout` on the phase; the runtime writes `state.phaseEndsAt` and the server owns the clock. Client side: `manager.countdown()`, as in `ui/viewmodels/CategoryVoteViewModel.ts`. |

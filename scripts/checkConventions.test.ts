@@ -5,12 +5,12 @@ const check = (path: string, text: string) => checkConventions([{ path, text }])
 const rules = (path: string, text: string) => check(path, text).map((v) => v.rule);
 
 describe("checkConventions", () => {
-  it("flags the brand case-insensitively and exempts AGENTS.md", () => {
+  it("flags the brand case-insensitively in every file, AGENTS.md included", () => {
     const brand = ["Jack", "Box"].join("");
     expect(check("docs/a.md", `ok\nsee ${brand}`)).toEqual([
       { rule: "brand", path: "docs/a.md", line: 2, message: "names a commercial brand" },
     ]);
-    expect(check("AGENTS.md", brand)).toEqual([]);
+    expect(rules("AGENTS.md", brand)).toEqual(["brand"]);
     expect(check("docs/a.md", "clean")).toEqual([]);
   });
 
