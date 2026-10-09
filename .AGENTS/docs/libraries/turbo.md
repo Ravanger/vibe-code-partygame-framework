@@ -10,7 +10,6 @@ Orchestrates workspace scripts. Workspaces: `packages/*`, `games/*` (`@partygame
 |---|---|
 | `build` | `dependsOn: ["^build"]`, `outputs: ["dist/**"]` |
 | `test` | `dependsOn: ["^build"]`, `cache: false` |
-| `test:ci` | `dependsOn: ["^build"]`, `outputs: ["coverage/**"]` (no package defines this script) |
 | `typecheck` | `dependsOn: ["^build"]` (only `games/wit-clash` defines `typecheck`) |
 | `lint` | `{}` (no package defines it; root `bun run lint` calls Biome directly) |
 | `dev` | `dependsOn: ["^build"]`, `cache: false`, `persistent: true` |
