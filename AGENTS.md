@@ -21,7 +21,7 @@ Each rule names the gate that enforces it; `not enforced yet: #N` means a review
 13. MUST use `++i` in loops, never `i++`. (`biome` plugin `prefer-prefix-increment`)
 14. MUST document every public API (JSDoc plus `docs/framework/README.md`) in the same PR. (`bun run check:exports` snapshots the surface; docs not enforced yet: #113)
 15. MUST put agent files (plans, logs, checklists, notes) in `.AGENTS/`; `docs/` is for developers and users only; no new files in the repo root. (`bun run check:conventions`)
-16. MUST NOT commit or push unless the human asks. (not enforced yet: #69)
+16. MUST NOT commit or push unless the human asks. (branch protection on `main`: nothing merges without a PR and green CI)
 
 A `lefthook` pre-commit hook (`lefthook.yml`, installed by `bun install`) runs `biome check --staged`, `check:paths` and `check:gates --staged`; `git commit --no-verify` is forbidden.
 
