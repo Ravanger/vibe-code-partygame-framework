@@ -19,7 +19,7 @@ Each rule names the gate that enforces it; `not enforced yet: #N` means a review
 11. MUST NOT edit generated files (`dist/`, `coverage/`, `node_modules/`, `.turbo/`) or change `bun.lock` without a `package.json` change. (not enforced yet: #118)
 12. MUST NOT weaken a gate: lower thresholds, `biome-ignore`, `.skip`/`.only`, or coverage excludes. (not enforced yet: #121)
 13. MUST use `++i` in loops, never `i++`. (`biome` plugin `prefer-prefix-increment`)
-14. MUST document every public API (JSDoc plus `docs/framework/README.md`) in the same PR. (not enforced yet: #79)
+14. MUST document every public API (JSDoc plus `docs/framework/README.md`) in the same PR. (`bun run check:exports` snapshots the surface; docs not enforced yet: #113)
 15. MUST put agent files (plans, logs, checklists, notes) in `.AGENTS/`; `docs/` is for developers and users only; no new files in the repo root. (not enforced yet: #125)
 16. MUST NOT commit or push unless the human asks. (not enforced yet: #69)
 

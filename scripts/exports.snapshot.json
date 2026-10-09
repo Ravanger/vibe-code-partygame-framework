@@ -1,0 +1,440 @@
+{
+  "knownViolations": [
+    {
+      "package": "core",
+      "rule": "types-first",
+      "issue": 115
+    }
+  ],
+  "packages": {
+    "bots": {
+      ".": {
+        "target": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.js"
+        },
+        "symbols": {
+          "BotConnection": {},
+          "BotHostOptions": {},
+          "BotKit": {},
+          "BotOptions": {},
+          "BotOutcome": {},
+          "BotPlayer": {},
+          "BotRoom": {},
+          "BotSpeed": {},
+          "BotStrategy": {},
+          "BotTable": {},
+          "BotTableOptions": {},
+          "BotTurn": {},
+          "DelayRange": {},
+          "DemoTable": {},
+          "DemoTableOptions": {},
+          "JoinBotsOptions": {},
+          "SeatBotsOptions": {},
+          "SeatRoom": {},
+          "apiBaseOf": {},
+          "claimName": {},
+          "joinBots": {},
+          "outcomeOf": {}
+        }
+      }
+    },
+    "config": {
+      "./node-test-setup": {
+        "target": "./node-test-setup.ts",
+        "symbols": {}
+      },
+      "./svelte": {
+        "target": {
+          "types": "./dist/svelte.d.ts",
+          "import": "./dist/svelte.js"
+        },
+        "symbols": {
+          "svelteConfig": {}
+        }
+      },
+      "./tsconfig.base.json": {
+        "target": "./tsconfig.base.json",
+        "symbols": {}
+      },
+      "./tsconfig.game.json": {
+        "target": "./tsconfig.game.json",
+        "symbols": {}
+      },
+      "./vite": {
+        "target": {
+          "types": "./dist/vite.d.ts",
+          "import": "./dist/vite.js"
+        },
+        "symbols": {
+          "GameViteOptions": {},
+          "defineGameViteConfig": {}
+        }
+      },
+      "./vitest": {
+        "target": {
+          "types": "./dist/vitest.d.ts",
+          "import": "./dist/vitest.js"
+        },
+        "symbols": {
+          "TestPresetOptions": {},
+          "nodeTestConfig": {},
+          "sourceAliases": {},
+          "uiTestConfig": {}
+        }
+      }
+    },
+    "core": {
+      ".": {
+        "target": {
+          "import": "./dist/index.js",
+          "types": "./dist/index.d.ts"
+        },
+        "symbols": {
+          "ACTION_LOG": {},
+          "ActionContext": {},
+          "ActionDefinition": {},
+          "ActionLog": {},
+          "ActionLogEntry": {},
+          "ActionLogEntryKind": {},
+          "ActionLogHeader": {},
+          "GameContext": {},
+          "GameDefinition": {},
+          "GameDefinitionError": {},
+          "GameRuntime": {},
+          "GameRuntimeConfig": {},
+          "LeaderboardEntry": {},
+          "LeaderboardInput": {},
+          "LoggingMiddlewareOptions": {},
+          "MiddlewareContext": {},
+          "MiddlewareEvent": {},
+          "PHASE_TIMINGS": {},
+          "PhaseDefinition": {},
+          "PhaseMiddleware": {},
+          "PhaseState": {},
+          "PhaseTimingRecord": {},
+          "PlayerInfo": {},
+          "PlayerRole": {},
+          "RosterSeat": {},
+          "RuntimeHost": {},
+          "actionFactory": {},
+          "actionLogMiddleware": {},
+          "awardPoints": {},
+          "composeLeaderboard": {},
+          "defineGame": {},
+          "getActionLog": {},
+          "leaderboard": {},
+          "loggingMiddleware": {},
+          "mulberry32": {},
+          "newId": {},
+          "randomSeed": {},
+          "required": {},
+          "shuffle": {},
+          "timingMiddleware": {}
+        }
+      },
+      "./testing": {
+        "target": {
+          "import": "./dist/testing/index.js",
+          "types": "./dist/testing/index.d.ts"
+        },
+        "symbols": {
+          "FakeHost": {},
+          "ReplayInit": {},
+          "ReplayResult": {},
+          "Sent": {},
+          "TestTable": {},
+          "TestTableConfig": {},
+          "replayLog": {}
+        }
+      }
+    },
+    "game-client": {
+      ".": {
+        "target": {
+          "types": "./dist/index.d.ts",
+          "svelte": "./src/index.ts",
+          "default": "./dist/index.js"
+        },
+        "symbols": {
+          "ConnectionStatus": {},
+          "Countdown": {},
+          "EndpointOverrides": {},
+          "GameConnectionManager": {},
+          "GameConnectionOptions": {},
+          "RoomLike": {},
+          "readCodeParam": {},
+          "resolveEndpoints": {}
+        }
+      },
+      "./test-setup": {
+        "target": "./test-setup.ts",
+        "symbols": {},
+        "source": true
+      },
+      "./testing": {
+        "target": {
+          "types": "./dist/testing.d.ts",
+          "svelte": "./src/testing.ts",
+          "default": "./dist/testing.js"
+        },
+        "symbols": {
+          "ConnectedClient": {},
+          "ConnectedClientOptions": {},
+          "FetchStub": {},
+          "SeatConfig": {},
+          "StubRoom": {},
+          "addSeat": {},
+          "connectedClient": {},
+          "fakeFetch": {}
+        }
+      }
+    },
+    "game-ui": {
+      ".": {
+        "target": {
+          "types": "./dist/index.d.ts",
+          "svelte": "./src/index.ts",
+          "default": "./dist/index.js"
+        },
+        "symbols": {
+          "AppRouter": {},
+          "GameControlsViewModel": {},
+          "LobbyPlayer": {},
+          "LobbySettingsConfig": {},
+          "LobbySettingsViewModel": {},
+          "NameField": {},
+          "OptionField": {},
+          "OptionFields": {},
+          "PodiumRow": {},
+          "PodiumStep": {},
+          "QrCode": {},
+          "Route": {},
+          "RouterScreen": {},
+          "STICKER_SHAPES": {},
+          "StickerShape": {},
+          "WaitingRoomViewModel": {},
+          "WelcomeViewModel": {},
+          "createAppRouter": {},
+          "playerSticker": {},
+          "podiumSteps": {},
+          "qrCode": {},
+          "rankRows": {},
+          "stickerLetter": {}
+        }
+      },
+      "./components": {
+        "target": {
+          "types": "./src/components/index.ts",
+          "svelte": "./src/components/index.ts",
+          "default": "./src/components/index.ts"
+        },
+        "symbols": {
+          "ActionBar": {},
+          "GameControls": {},
+          "LobbySettings": {},
+          "NameInput": {},
+          "PlayerSticker": {},
+          "Podium": {},
+          "QrCode": {},
+          "StatusPanel": {},
+          "Timer": {}
+        },
+        "source": true
+      }
+    },
+    "launcher": {
+      ".": {
+        "target": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.js"
+        },
+        "symbols": {
+          "BrowserSpawner": {},
+          "LaunchArgs": {},
+          "LaunchBots": {},
+          "LaunchCommands": {},
+          "LaunchConfig": {},
+          "LaunchDemo": {},
+          "LaunchMode": {},
+          "LaunchPorts": {},
+          "Launcher": {},
+          "ProcessGroup": {},
+          "StaticSite": {},
+          "lanUrls": {},
+          "openBrowser": {},
+          "parseLaunchArgs": {},
+          "runLauncher": {}
+        }
+      }
+    },
+    "server": {
+      ".": {
+        "target": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.js"
+        },
+        "symbols": {
+          "BaseGameState": {},
+          "DEFAULT_EMPTY_ROOM_GRACE_MS": {},
+          "DEFAULT_RECONNECT_MS": {},
+          "GameRoom": {},
+          "GameRoomConfig": {},
+          "GameServerOptions": {},
+          "HostedGame": {},
+          "PlayerSchema": {},
+          "RoomCodeService": {},
+          "createApiHandler": {},
+          "createGameServer": {}
+        }
+      },
+      "./bun": {
+        "target": {
+          "types": "./dist/bun.d.ts",
+          "default": "./dist/bun.js"
+        },
+        "symbols": {
+          "StartServerOptions": {},
+          "startServer": {}
+        }
+      },
+      "./content": {
+        "target": {
+          "types": "./dist/content.d.ts",
+          "default": "./dist/content.js"
+        },
+        "symbols": {
+          "LoadJsoncDirOptions": {},
+          "loadJsoncDir": {},
+          "stripJsonComments": {}
+        }
+      },
+      "./node": {
+        "target": {
+          "types": "./dist/node.d.ts",
+          "default": "./dist/node.js"
+        },
+        "symbols": {
+          "NodeServerHandle": {},
+          "NodeServerOptions": {},
+          "ServeApiOptions": {},
+          "ServerProbe": {},
+          "closeHttpServer": {},
+          "freePort": {},
+          "serveApi": {},
+          "startNodeServer": {}
+        }
+      },
+      "./testing": {
+        "target": {
+          "types": "./dist/testing/index.d.ts",
+          "default": "./dist/testing/index.js"
+        },
+        "symbols": {
+          "SeatPlayersOptions": {},
+          "TestJoinOptions": {},
+          "TestPlayer": {},
+          "TestServer": {},
+          "bootTestServer": {},
+          "collectErrors": {},
+          "collectMessages": {},
+          "joinPlayer": {},
+          "seatPlayers": {},
+          "sleep": {},
+          "stateOf": {},
+          "testPlayerId": {},
+          "waitUntil": {}
+        }
+      }
+    },
+    "shared": {
+      ".": {
+        "target": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.js"
+        },
+        "symbols": {
+          "ACTION_NAME_PATTERN": {},
+          "ActionEnvelopeSchema": {},
+          "ActionResult": {},
+          "ClientMessage": {},
+          "END_GAME": {},
+          "ErrorCode": {},
+          "JoinOptionsSchema": {},
+          "KICK_PLAYER": {},
+          "LOBBY_PHASE": {},
+          "NAME_MAX_LENGTH": {},
+          "Parsed": {},
+          "PlayerIdSchema": {},
+          "ResolveCodeResponseSchema": {},
+          "RoomCodeSchema": {},
+          "RoomOptionsSchema": {},
+          "SET_OPTIONS": {},
+          "START_GAME": {},
+          "ServerError": {},
+          "ServerMessage": {},
+          "SetNameSchema": {},
+          "between": {},
+          "isActionResult": {},
+          "isServerError": {},
+          "joinUrl": {},
+          "resolveRoomCode": {},
+          "tvUrl": {},
+          "waitFor": {}
+        }
+      },
+      "./schema": {
+        "target": {
+          "types": "./dist/schema/index.d.ts",
+          "default": "./dist/schema/index.js"
+        },
+        "symbols": {
+          "BaseGameState": {},
+          "PlayerSchema": {}
+        }
+      }
+    },
+    "terminal": {
+      ".": {
+        "target": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.js"
+        },
+        "symbols": {
+          "ArgsLimits": {},
+          "BotsArgs": {},
+          "BotsCommandHandle": {},
+          "BotsCommandOptions": {},
+          "DEFAULT_API_PORT": {},
+          "DEFAULT_ENDPOINT": {},
+          "DemoRun": {},
+          "DemoRunOptions": {},
+          "GameClient": {},
+          "GameRoomOf": {},
+          "PlayArgs": {},
+          "PlaySession": {},
+          "PlaySessionOptions": {},
+          "Prompter": {},
+          "ReadlinePrompter": {},
+          "SessionPlayer": {},
+          "TerminalPlayer": {},
+          "TerminalPlayerOptions": {},
+          "TerminalStrategy": {},
+          "TerminalTurn": {},
+          "parseBotsArgs": {},
+          "parsePlayArgs": {},
+          "runBotsCommand": {}
+        }
+      },
+      "./testing": {
+        "target": {
+          "types": "./dist/testing.d.ts",
+          "default": "./dist/testing.js"
+        },
+        "symbols": {
+          "ScriptedIo": {}
+        }
+      }
+    }
+  }
+}
