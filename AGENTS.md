@@ -82,6 +82,25 @@ Docs: [`docs/framework/README.md`](docs/framework/README.md) (game author guide)
 | `bun run launch:bots` / `launch:demo` | dev launch plus 3 bots / a watch-only all-bot room |
 | `bun run play` / `bun run bots <CODE> [count]` | terminal client with bots / bots joining a browser room |
 
+## CI jobs
+
+Every job is a separate check in `.github/workflows/ci.yml`; the job name tells you which gate failed.
+
+| Job | Reproduce locally |
+|---|---|
+| `lint` | `bun run lint` |
+| `agents` | `bun run check:agents` |
+| `boundaries` | `bun run check:boundaries` |
+| `conventions` | `bun run check:conventions` |
+| `exports` | `bun run check:exports` |
+| `unused` | `bun run check:unused` |
+| `typecheck` | `bun run typecheck:scripts && bun run typecheck` |
+| `test` | `bun run test:coverage` |
+| `template-smoke` | `bun run smoke:template` |
+| `gates` (PRs only) | `bun run check:gates --base origin/main` and `bun run scripts/checkPathsCli.ts --base origin/main` |
+
+`bun run verify` runs all of them except `template-smoke` and `gates`.
+
 ## Library docs
 
 Project-specific API notes live in `.AGENTS/docs/libraries/`. Versions are what the consuming package resolves.
