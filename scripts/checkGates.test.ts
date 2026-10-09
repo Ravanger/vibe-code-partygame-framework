@@ -54,6 +54,7 @@ describe("checkGates", () => {
     ["// @ts-ignore", "suppression"],
     ["// @ts-expect-error", "suppression"],
     ["// eslint-disable-next-line", "suppression"],
+    ["// Stryker disable next-line all", "suppression"],
     ["it.skip('x', () => {});", "focused-or-skipped-test"],
     ["describe.only('x', () => {});", "focused-or-skipped-test"],
     ["const a = b as any;", "type-escape"],
@@ -66,12 +67,14 @@ describe("checkGates", () => {
     expect(rules(diffOf("packages/core/src/a.ts", ["// biome-ignore x"], []))).toEqual([]);
   });
 
-  it.each([".github/workflows/ci.yml", "scripts/checkBoundaries.ts", "lefthook.yml"])(
-    "rejects edits to %s",
-    (path) => {
-      expect(rules(diffOf(path, [], ["x"]))).toEqual(["protected-path"]);
-    },
-  );
+  it.each([
+    ".github/workflows/ci.yml",
+    "scripts/checkBoundaries.ts",
+    "lefthook.yml",
+    "scripts/stryker.config.json",
+  ])("rejects edits to %s", (path) => {
+    expect(rules(diffOf(path, [], ["x"]))).toEqual(["protected-path"]);
+  });
 
   it("does not protect unrelated scripts or nested paths", () => {
     expect(rules(diffOf("scripts/game.ts", [], ["x"]))).toEqual([]);
