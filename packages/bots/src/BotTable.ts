@@ -21,7 +21,7 @@ const OPEN_TIMEOUT_MS = 5000;
 /** Opens an empty room as a spectator, then seats bots once a human has joined and named themselves. */
 export class BotTable<TState extends BaseGameState> {
   private readonly client: Client;
-  private seat: { room: BotRoom<TState>; watch: RoomWatch } | undefined;
+  private seat: { room: BotRoom<TState>; watch: RoomWatch; code: string } | undefined;
   private bots: BotPlayer<TState>[] = [];
 
   constructor(private readonly options: BotTableOptions<TState>) {
@@ -37,9 +37,10 @@ export class BotTable<TState extends BaseGameState> {
       this.options.stateClass,
     );
     const watch = new RoomWatch(room);
-    this.seat = { room, watch };
+    this.seat = { room, watch, code: "" };
     await watch.until(() => room.state.roomCode !== "", OPEN_TIMEOUT_MS, "the room code");
-    return room.state.roomCode;
+    this.seat.code = room.state.roomCode;
+    return this.seat.code;
   }
 
   async seatBots({
@@ -47,7 +48,7 @@ export class BotTable<TState extends BaseGameState> {
     timeoutMs = DEFAULT_SEAT_TIMEOUT_MS,
   }: SeatBotsOptions): Promise<BotPlayer<TState>[]> {
     if (!this.seat) throw new Error("The table is not open");
-    const { room, watch } = this.seat;
+    const { room, watch, code } = this.seat;
     await watch.until(
       () => [...room.state.players.values()].some((player) => player.name !== ""),
       timeoutMs,
@@ -63,7 +64,7 @@ export class BotTable<TState extends BaseGameState> {
       timeoutMs: joinTimeoutMs,
     } = this.options;
     this.bots = await joinBots({
-      code: room.state.roomCode,
+      code,
       count,
       endpoint,
       apiPort,
