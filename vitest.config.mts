@@ -39,6 +39,7 @@ export default defineConfig({
         "scripts/checkAgentsFilesCli.ts",
         "scripts/checkBoundariesCli.ts",
         "scripts/checkExportsCli.ts",
+        "scripts/checkPathsCli.ts",
         "packages/cli/src/cli.ts",
         "packages/cli/scripts/*.ts",
       ],

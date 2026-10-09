@@ -32,6 +32,7 @@
     "check:exports": "bun run scripts/checkExportsCli.ts",
     "check:unused": "knip --no-progress",
     "smoke:template": "bun run --cwd packages/cli smoke",
+    "check:paths": "bun run scripts/checkPathsCli.ts --staged",
     "verify": "biome check . && bun run check:agents && bun run check:boundaries && bun run check:exports && bun run check:unused && bun run typecheck:scripts && bun run typecheck && vitest run --coverage"
   },
   "devDependencies": {
