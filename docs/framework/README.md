@@ -7,6 +7,8 @@ Dependency direction: `games/* -> @partygame/server -> @partygame/core -> @party
 
 Known traps (build, coverage, reconnects, Schema 5): [troubleshooting.md](troubleshooting.md).
 
+**Design:** Six architecture decisions that explain why the framework is shaped this way: [ADRs](../adr/).
+
 ## Scaffolding a new game
 
 Start from the built-in template instead of hand-wiring packages:

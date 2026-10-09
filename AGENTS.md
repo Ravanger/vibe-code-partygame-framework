@@ -67,7 +67,7 @@ Each package's README has its API. Each package also has an `AGENTS.md` (respons
 | [`games/wit-clash`](games/wit-clash/README.md) | reference game: `src/` rules, `ui/` client, `server.ts`, `launch.ts`, `content/` |
 | `scripts/game.ts` | root dispatcher for `list`, `launch`, `play`, `bots` (pure part in `scripts/gameEntry.ts`) |
 
-Docs: [`docs/framework/README.md`](docs/framework/README.md) (game author guide), [`docs/HOSTING.md`](docs/HOSTING.md), [`docs/framework/troubleshooting.md`](docs/framework/troubleshooting.md) (known traps; read it before debugging the build, coverage or reconnects).
+Docs: [`docs/framework/README.md`](docs/framework/README.md) (game author guide), [`docs/HOSTING.md`](docs/HOSTING.md), [`docs/framework/troubleshooting.md`](docs/framework/troubleshooting.md) (known traps; read it before debugging the build, coverage or reconnects), [`docs/adr/`](docs/adr/README.md) (why the architecture is shaped this way; read before reopening a settled design).
 
 ## Commands
 
