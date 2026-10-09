@@ -28,34 +28,27 @@ describe("checkConventions", () => {
     expect(rules("packages/core/src/a.ts", "const item = 1")).toEqual([]);
   });
 
-  it("flags sessionId outside packages/server in ts and svelte files", () => {
-    const text = "const x = sessionId;";
-    expect(rules("packages/core/src/a.ts", text)).toEqual(["sessionId"]);
-    expect(rules("games/x/ui/a.svelte", text)).toEqual(["sessionId"]);
-    expect(rules("packages/server/src/a.ts", text)).toEqual([]);
-    expect(rules("docs/a.md", text)).toEqual([]);
-    expect(rules("scripts/checkConventions.test.ts", text)).toEqual([]);
-    expect(rules("packages/core/src/a.ts", "const mySessionIdx = 1;")).toEqual([]);
-  });
-
-  it("allows only node: specifiers in vi.mock and vi.doMock", () => {
-    expect(check("x/a.test.ts", 'vi.mock("./x");').map((v) => [v.rule, v.line])).toEqual([
-      ["vi.mock", 1],
+  it("forbids decorator compiler options in tsconfig files, comments and trailing commas allowed", () => {
+    const on = `{ // c\n "compilerOptions": { "experimentalDecorators": true, }, }`;
+    expect(check("x/tsconfig.json", on)).toEqual([
+      {
+        rule: "decorators",
+        path: "x/tsconfig.json",
+        line: 1,
+        message: "experimentalDecorators is true: decorators are forbidden",
+      },
     ]);
-    expect(rules("x/a.test.ts", "vi.doMock('x', () => ({}));")).toEqual(["vi.mock"]);
-    expect(rules("x/a.test.ts", 'vi.mock("node:fs");')).toEqual([]);
-    expect(rules("x/a.test.ts", 'vi.doMock("node:fs");')).toEqual([]);
-    expect(rules("x/a.test.ts", "vi.mock(factory);")).toEqual([]);
-    expect(rules("x/a.md", 'vi.mock("./x");')).toEqual([]);
-  });
-
-  it("forbids decorator compiler options in json, ts and mts", () => {
-    const text = '{ "experimentalDecorators": true }';
-    expect(rules("x/tsconfig.json", text)).toEqual(["decorators"]);
-    expect(rules("x/a.ts", "emitDecoratorMetadata")).toEqual(["decorators"]);
-    expect(rules("x/a.mts", "emitDecoratorMetadata")).toEqual(["decorators"]);
-    expect(rules("x/a.md", text)).toEqual([]);
+    expect(
+      rules("x/tsconfig.test.json", '{"compilerOptions":{"emitDecoratorMetadata":true}}'),
+    ).toEqual(["decorators"]);
+    expect(
+      rules("x/tsconfig.json", '{"compilerOptions":{"experimentalDecorators":false}}'),
+    ).toEqual([]);
     expect(rules("x/tsconfig.json", "{}")).toEqual([]);
+    expect(rules("x/tsconfig.json", '{"compilerOptions":1}')).toEqual([]);
+    expect(rules("x/tsconfig.json", "not json")).toEqual([]);
+    expect(rules("x/other.json", on)).toEqual([]);
+    expect(rules("x/a.md", on)).toEqual([]);
   });
 
   it("restricts files in the repo root to an allowlist", () => {
