@@ -1,9 +1,10 @@
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { fileURLToPath } from "node:url";
 import {
+  buildArgs,
   discoverGames,
   entryPath,
   type FolderRecord,
@@ -76,6 +77,14 @@ const entry = entryPath(command, game);
 if (!existsSync(join(root, entry))) {
   console.error(`${game} has no ${command} entry (${entry})`);
   process.exit(2);
+}
+
+if (process.env.PARTYGAME_SKIP_BUILD !== "1") {
+  const name = games.find((g) => g.folder === game)?.name ?? game;
+  const build = spawnSync(process.execPath, buildArgs(name), { cwd: root, stdio: "inherit" });
+  if (build.status !== 0) {
+    process.exit(build.status ?? 1);
+  }
 }
 
 const child = spawn(process.execPath, [entry, ...rest], { cwd: root, stdio: "inherit" });

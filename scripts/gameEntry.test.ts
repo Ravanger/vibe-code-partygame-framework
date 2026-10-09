@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildArgs,
   discoverGames,
   entryPath,
   formatChoices,
@@ -9,8 +10,23 @@ import {
   pickGame,
 } from "./gameEntry.js";
 
-const alpha = { folder: "alpha", label: "alpha" };
-const beta = { folder: "beta", label: "Beta Game" };
+const alpha = { folder: "alpha", label: "alpha", name: "alpha" };
+const beta = { folder: "beta", label: "Beta Game", name: "@partygame/beta-game" };
+
+describe("buildArgs", () => {
+  it("returns turbo arguments for building package dependencies", () => {
+    expect(buildArgs("@partygame/wit-clash")).toEqual([
+      "turbo",
+      "run",
+      "build",
+      "--filter=@partygame/wit-clash^...",
+    ]);
+  });
+
+  it("works with simple package names", () => {
+    expect(buildArgs("alpha")).toEqual(["turbo", "run", "build", "--filter=alpha^..."]);
+  });
+});
 
 describe("discoverGames", () => {
   it("keeps folders with a package.json, sorted, labelled by package name without the scope", () => {
@@ -20,8 +36,8 @@ describe("discoverGames", () => {
       { folder: "alpha", packageJson: { name: "alpha" } },
     ]);
     expect(games).toEqual([
-      { folder: "alpha", label: "alpha" },
-      { folder: "zed", label: "zed-game" },
+      { folder: "alpha", label: "alpha", name: "alpha" },
+      { folder: "zed", label: "zed-game", name: "@partygame/zed-game" },
     ]);
   });
 
@@ -31,16 +47,21 @@ describe("discoverGames", () => {
       expect(
         discoverGames([
           { folder, packageJson: {} },
-          { folder: "alpha", packageJson: {} },
+          { folder: "alpha", packageJson: { name: "alpha" } },
         ]),
-      ).toEqual({ games: [alpha], ignored: [folder] });
+      ).toEqual({
+        games: [{ folder: "alpha", label: "alpha", name: "alpha" }],
+        ignored: [folder],
+      });
     },
   );
 
   it.each([[{}], [{ name: 7 }], ["text"], [null], [[]]])(
     "falls back to the folder name for package.json %j",
     (packageJson) => {
-      expect(discoverGames([{ folder: "alpha", packageJson }]).games).toEqual([alpha]);
+      expect(discoverGames([{ folder: "alpha", packageJson }]).games).toEqual([
+        { folder: "alpha", label: "alpha", name: "alpha" },
+      ]);
     },
   );
 });
