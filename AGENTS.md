@@ -86,7 +86,7 @@ Docs: [`docs/framework/README.md`](docs/framework/README.md) (game author guide)
 
 ## CI jobs
 
-Every job is a separate check in `.github/workflows/ci.yml`; the job name tells you which gate failed.
+Every job is a separate check in `.github/workflows/ci.yml` (`gates` in `gates.yml`, which also reruns on label changes); the job name tells you which gate failed.
 
 | Job | Reproduce locally |
 |---|---|
