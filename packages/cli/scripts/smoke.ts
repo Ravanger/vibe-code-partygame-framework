@@ -71,6 +71,15 @@ if (!failed && existsSync(join(outDir, "src"))) {
   if (typecheckCode !== 0) fail("typecheck");
 }
 
+for (const [step, command, args] of [
+  ["biome", "bunx", ["biome", "check", `games/${validatedSlug}`]],
+  ["check:agents", "bun", ["run", "check:agents"]],
+  ["check:boundaries", "bun", ["run", "check:boundaries"]],
+  ["check:unused", "bun", ["run", "check:unused"]],
+] as const) {
+  if (!failed && run(command, args) !== 0) fail(step);
+}
+
 // Always leave the repo clean: drop the throwaway game and restore the lockfile.
 rmSync(outDir, { recursive: true, force: true });
 if (run("bun", ["install"]) !== 0) fail("restore bun install");
