@@ -5,6 +5,8 @@ The framework supplies the lobby, room, roster, reconnection, timers and wire pr
 
 Dependency direction: `games/* -> @partygame/server -> @partygame/core -> @partygame/shared`.
 
+Known traps (build, coverage, reconnects, Schema 5): [troubleshooting.md](troubleshooting.md).
+
 ## Scaffolding a new game
 
 Start from the built-in template instead of hand-wiring packages:
