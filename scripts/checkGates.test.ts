@@ -22,9 +22,6 @@ const diffOf = (path: string, removed: string[], added: string[]): string =>
 const rules = (diff: string, labels: string[] = []): string[] =>
   checkGates(diff, labels).map((violation) => violation.rule);
 
-const thresholds = (value: number): string =>
-  `      thresholds: { lines: ${value}, functions: 100, branches: 100, statements: 100 },`;
-
 describe("parseDiff", () => {
   it("splits a diff per file and ignores lines outside hunks", () => {
     const diff = `${diffOf("a.ts", ["old"], ["new"])}\n${diffOf("b.ts", [], ["more"])}`;
@@ -55,6 +52,13 @@ describe("checkGates", () => {
     ["// @ts-expect-error", "suppression"],
     ["// eslint-disable-next-line", "suppression"],
     ["// Stryker disable next-line all", "suppression"],
+    ["/* v8 ignore next */", "suppression"],
+    ["/* istanbul ignore next */", "suppression"],
+    ["/* c8 ignore next */", "suppression"],
+    ["// @ts-nocheck", "suppression"],
+    ["it.skipIf(ci)('x', () => {});", "focused-or-skipped-test"],
+    ["describe.runIf(ci)('x', () => {});", "focused-or-skipped-test"],
+    ["it.todo('x');", "focused-or-skipped-test"],
     ["it.skip('x', () => {});", "focused-or-skipped-test"],
     ["describe.only('x', () => {});", "focused-or-skipped-test"],
     ["const a = b as any;", "type-escape"],
@@ -72,6 +76,13 @@ describe("checkGates", () => {
     "scripts/checkBoundaries.ts",
     "lefthook.yml",
     "scripts/stryker.config.json",
+    "biome.json",
+    "biome-plugins/no-decorators.grit",
+    ".github/actions/setup/action.yml",
+    "scripts/mutateChanged.ts",
+    "scripts/mutateChangedCli.ts",
+    "knip.json",
+    "vitest.config.mts",
   ])("rejects edits to %s", (path) => {
     expect(rules(diffOf(path, [], ["x"]))).toEqual(["protected-path"]);
   });
@@ -81,43 +92,62 @@ describe("checkGates", () => {
     expect(rules(diffOf("packages/x/scripts/checkA.ts", [], ["x"]))).toEqual([]);
   });
 
-  it("rejects a lowered threshold", () => {
-    const found = checkGates(diffOf("vitest.config.mts", [thresholds(100)], [thresholds(90)]), []);
-    expect(found).toEqual([
-      {
-        path: "vitest.config.mts",
-        rule: "threshold",
-        detail: "lines threshold lowered from 100 to 90",
-      },
-    ]);
+  it.each([
+    ['    "test:coverage": "vitest run --coverage",', '    "test:coverage": "true",'],
+    ['    "check:boundaries": "bun run x.ts",', ""],
+    ['    "typecheck": "tsc -p tsconfig.test.json"', '    "typecheck": "true"'],
+    ['    "verify": "biome check ."', '    "verify": "true"'],
+    ['    "mutate:changed": "x"', ""],
+    ['    "smoke": "bun scripts/smoke.ts"', ""],
+    ['    "lint": "biome check ."', ""],
+    ['    "test": "vitest run",', ""],
+  ])("rejects a changed gate script %s", (before, after) => {
+    const added = after === "" ? [] : [after];
+    expect(rules(diffOf("package.json", [before], added))).toEqual(["gate-script"]);
+    expect(rules(diffOf("packages/core/package.json", [before], added))).toEqual(["gate-script"]);
   });
 
-  it("rejects a removed threshold", () => {
-    const found = checkGates(diffOf("vitest.config.mts", [thresholds(100)], []), []);
-    expect(found.map((violation) => violation.detail)).toContain(
-      "lines threshold lowered from 100 to nothing",
-    );
-    expect(found).toHaveLength(4);
-  });
-
-  it("accepts unchanged or raised thresholds and other config edits", () => {
-    expect(rules(diffOf("vitest.config.mts", [thresholds(90)], [thresholds(100)]))).toEqual([]);
-    expect(rules(diffOf("vitest.config.mts", ["const a = 1;"], ["const a = 2;"]))).toEqual([]);
-  });
-
-  it("rejects an added coverage exclude entry", () => {
-    const found = checkGates(
-      diffOf("vitest.config.mts", [], ['        "packages/x/src/a.ts",']),
+  it("accepts new gate scripts and other package.json edits", () => {
+    const fresh = ['    "test": "vitest run",', '    "typecheck": "tsc --noEmit"'];
+    expect(rules(diffOf("games/new/package.json", [], fresh))).toEqual([]);
+    expect(rules(diffOf("package.json", ['    "zod": "4.0.0",'], ['    "zod": "4.1.0",']))).toEqual(
       [],
     );
-    expect(found.map((violation) => violation.rule)).toEqual(["coverage-exclude"]);
-    expect(rules(diffOf("vitest.config.mts", ['        "a",'], []))).toEqual([]);
+    expect(rules(diffOf("package.json", ['    "build": "turbo build",'], []))).toEqual([]);
+    expect(rules(diffOf("notes/package.md", ['    "test": "x"'], []))).toEqual([]);
+    const reordered = diffOf(
+      "package.json",
+      ['    "lint": "biome check .",', '    "test": "vitest run",'],
+      ['    "test": "vitest run",', '    "lint": "biome check ."'],
+    );
+    expect(rules(reordered)).toEqual([]);
+    for (const name of ["lint-staged", "testing", "smoker", "typechecker"])
+      expect(rules(diffOf("package.json", [`    "${name}": "x",`], []))).toEqual([]);
   });
 
-  it("rejects a relaxed biome severity only", () => {
-    const relaxed = diffOf("biome.json", ['"noExplicitAny": "error"'], ['"noExplicitAny": "off"']);
-    expect(checkGates(relaxed, []).map((violation) => violation.rule)).toEqual(["severity"]);
-    expect(rules(diffOf("biome.json", ['"x": "warn"'], ['"x": "error"']))).toEqual([]);
+  it.each([
+    ["tsconfig.json", [], ['    "strict": false,']],
+    ["packages/config/tsconfig.base.json", ['    "strict": true,'], []],
+    ["packages/core/tsconfig.test.json", [], ['    "noUncheckedIndexedAccess": false']],
+    ["games/x/tsconfig.json", ['    "noImplicitReturns": true,'], []],
+    ["tsconfig.json", [], ['    "strictNullChecks": false,']],
+    ["tsconfig.json", [], ['    "noUnusedLocals": false,']],
+    ["tsconfig.json", [], ['    "noFallthroughCasesInSwitch": false,']],
+    ["tsconfig.json", [], ['    "exactOptionalPropertyTypes": false,']],
+  ])("rejects a relaxed compiler option in %s", (path, removed, added) => {
+    expect(rules(diffOf(path, removed, added))).toEqual(["compiler-option"]);
+  });
+
+  it("accepts tightened or unrelated compiler options", () => {
+    expect(
+      rules(diffOf("tsconfig.json", ['    "strict": false,'], ['    "strict": true,'])),
+    ).toEqual([]);
+    expect(
+      rules(diffOf("tsconfig.json", ['    "noEmit": true,'], ['    "noEmit": false,'])),
+    ).toEqual([]);
+    expect(rules(diffOf("packages/x/src/a.ts", [], ['const o = { "strict": false };']))).toEqual(
+      [],
+    );
   });
 
   it("lets the gate-change label override everything", () => {

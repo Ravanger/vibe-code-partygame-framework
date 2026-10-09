@@ -8,10 +8,14 @@ export interface GateViolation {
 }
 
 const PROTECTED_PATHS = [
-  /^\.github\/workflows\//,
-  /^scripts\/check[^/]*\.ts$/,
+  /^\.github\/(workflows|actions)\//,
+  /^scripts\/(check|mutateChanged)[^/]*\.ts$/,
   /^lefthook\.yml$/,
   /^scripts\/stryker\.config\.json$/,
+  /^biome\.json$/,
+  /^biome-plugins\//,
+  /^knip\.json$/,
+  /^vitest\.config\.mts$/,
 ];
 
 const FORBIDDEN_LINES: { rule: string; pattern: RegExp }[] = [
@@ -20,14 +24,19 @@ const FORBIDDEN_LINES: { rule: string; pattern: RegExp }[] = [
   { rule: "suppression", pattern: /@ts-expect-error/ },
   { rule: "suppression", pattern: /eslint-disable/ },
   { rule: "suppression", pattern: /Stryker disable/ },
-  { rule: "focused-or-skipped-test", pattern: /\.(skip|only)\(/ },
+  { rule: "suppression", pattern: /\b(v8|c8|istanbul) ignore\b/ },
+  { rule: "suppression", pattern: /@ts-nocheck/ },
+  { rule: "focused-or-skipped-test", pattern: /\.(skip|only|skipIf|runIf|todo)\(/ },
   { rule: "type-escape", pattern: /\bas any\b/ },
   { rule: "type-escape", pattern: /\bas unknown as\b/ },
 ];
 
-const THRESHOLD = /\b(lines|functions|branches|statements)\s*:\s*(\d+(?:\.\d+)?)/g;
-const EXCLUDE_ENTRY = /^\s*"[^"]+",?\s*$/;
-const SEVERITY = /"(off|warn|info|on)"/;
+const GATE_SCRIPT =
+  /^\s*"((lint|verify|typecheck|test|smoke)(:[\w:-]+)?|(check|mutate):[\w:-]+)"\s*:/;
+const RELAXED_FLAG =
+  /"(strict|noUnchecked|noImplicit|noUnused|noFallthrough|exactOptional)\w*"\s*:\s*false/;
+const DROPPED_FLAG =
+  /"(strict|noUnchecked|noImplicit|noUnused|noFallthrough|exactOptional)\w*"\s*:\s*true/;
 
 interface FileChange {
   path: string;
@@ -54,48 +63,28 @@ export const parseDiff = (diff: string): FileChange[] => {
   return changes;
 };
 
-const thresholdsOf = (lines: string[]): Map<string, number> => {
-  const found = new Map<string, number>();
-  for (const line of lines) {
-    for (const match of line.matchAll(THRESHOLD)) found.set(match[1] as string, Number(match[2]));
-  }
-  return found;
-};
+const scriptEntry = (line: string): string => line.trim().replace(/,$/, "");
 
-const loweredThresholds = (change: FileChange): GateViolation[] => {
-  const before = thresholdsOf(change.removed);
-  const after = thresholdsOf(change.added);
-  const violations: GateViolation[] = [];
-  for (const [key, old] of before) {
-    const next = after.get(key);
-    if (next === undefined || next < old) {
-      violations.push({
-        path: change.path,
-        rule: "threshold",
-        detail: `${key} threshold lowered from ${old} to ${next ?? "nothing"}`,
-      });
-    }
-  }
-  return violations;
-};
-
-const addedExcludes = (change: FileChange): GateViolation[] =>
-  change.added
-    .filter((line) => EXCLUDE_ENTRY.test(line))
+const changedGateScripts = (change: FileChange): GateViolation[] => {
+  const kept = new Set(change.added.map(scriptEntry));
+  return change.removed
+    .filter((line) => GATE_SCRIPT.test(line) && !kept.has(scriptEntry(line)))
     .map((line) => ({
       path: change.path,
-      rule: "coverage-exclude",
-      detail: `coverage exclude added: ${line.trim()}`,
+      rule: "gate-script",
+      detail: `gate script changed: ${line.trim()}`,
     }));
+};
 
-const severityChanges = (change: FileChange): GateViolation[] =>
-  change.added
-    .filter((line) => SEVERITY.test(line))
-    .map((line) => ({
-      path: change.path,
-      rule: "severity",
-      detail: `biome rule severity relaxed: ${line.trim()}`,
-    }));
+const relaxedCompilerOptions = (change: FileChange): GateViolation[] =>
+  [
+    ...change.added.filter((line) => RELAXED_FLAG.test(line)),
+    ...change.removed.filter((line) => DROPPED_FLAG.test(line)),
+  ].map((line) => ({
+    path: change.path,
+    rule: "compiler-option",
+    detail: `compiler check relaxed: ${line.trim()}`,
+  }));
 
 const forbiddenAdditions = (change: FileChange): GateViolation[] =>
   change.added.flatMap((line) =>
@@ -111,9 +100,9 @@ const violationsOf = (change: FileChange): GateViolation[] => {
   if (PROTECTED_PATHS.some((pattern) => pattern.test(change.path))) {
     violations.push({ path: change.path, rule: "protected-path", detail: "gate file edited" });
   }
-  if (change.path === "vitest.config.mts")
-    violations.push(...loweredThresholds(change), ...addedExcludes(change));
-  if (change.path === "biome.json") violations.push(...severityChanges(change));
+  if (/(^|\/)package\.json$/.test(change.path)) violations.push(...changedGateScripts(change));
+  if (/(^|\/)tsconfig[^/]*\.json$/.test(change.path))
+    violations.push(...relaxedCompilerOptions(change));
   return violations;
 };
 

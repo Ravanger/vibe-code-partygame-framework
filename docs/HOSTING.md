@@ -155,7 +155,7 @@ CI cannot stop a direct push to `main` on its own. In the GitHub repository sett
 
 ## Maintainer: changing a gate
 
-A PR that edits a gate (check scripts, CI, coverage thresholds or excludes, biome severities, suppressions) needs the `gate-change` label before the `gates` job passes. Only a maintainer adds it. `gates` lives in its own workflow (`.github/workflows/gates.yml`) that also runs when a label is added or removed, so the label takes effect without a new push.
+A PR that edits a gate (check and mutation scripts, CI workflows and actions, `biome.json` and its plugins, `vitest.config.mts`, `knip.json`, gate scripts in a `package.json`, strict `tsconfig` options, suppressions and skipped tests) needs the `gate-change` label before the `gates` job passes. Only a maintainer adds it. `gates` lives in its own workflow (`.github/workflows/gates.yml`) that also runs when a label is added or removed, so the label takes effect without a new push.
 
 Locally the pre-commit hook runs the same check on staged files. To commit an intended gate edit, skip only that step: `LEFTHOOK_EXCLUDE=gates git commit ...`. Biome and `check:paths` still run, and CI still requires the label.
 
