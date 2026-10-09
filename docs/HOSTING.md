@@ -146,16 +146,16 @@ For a production client, run `bun run build` in `games/wit-clash` and serve `gam
 CI cannot stop a direct push to `main` on its own. In the GitHub repository settings (Settings, Branches, rule for `main`) enable:
 
 - Require a pull request before merging.
-- Require status checks to pass before merging, and select every job by name: `lint`, `agents`, `boundaries`, `conventions`, `exports`, `unused`, `typecheck`, `test`, `template-smoke`, `gates`.
+- Require status checks to pass before merging, and select every job by name: `lint`, `agents`, `boundaries`, `conventions`, `exports`, `unused`, `typecheck`, `test`, `template-smoke`, `gates`, `mutation`.
 - Require branches to be up to date before merging.
 - Do not allow bypassing the above settings.
 
-`gates` runs on pull requests only, so it is required there and never on direct pushes.
+`gates` and `mutation` run on pull requests only, so they are required there and never on direct pushes.
 
 
 ## Maintainer: changing a gate
 
-A PR that edits a gate (check scripts, CI, coverage thresholds or excludes, biome severities, suppressions) needs the `gate-change` label before the `gates` job passes. Only a maintainer adds it.
+A PR that edits a gate (check scripts, CI, coverage thresholds or excludes, biome severities, suppressions) needs the `gate-change` label before the `gates` job passes. Only a maintainer adds it. `gates` lives in its own workflow (`.github/workflows/gates.yml`) that also runs when a label is added or removed, so the label takes effect without a new push.
 
 Locally the pre-commit hook runs the same check on staged files. To commit an intended gate edit, skip only that step: `LEFTHOOK_EXCLUDE=gates git commit ...`. Biome and `check:paths` still run, and CI still requires the label.
 
