@@ -1,4 +1,4 @@
-import { waitFor } from "@partygame/shared";
+import { waitFor } from "@partygame/client-utils";
 
 const POLL_MS = 20;
 

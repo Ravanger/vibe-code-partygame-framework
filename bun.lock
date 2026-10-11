@@ -28,6 +28,7 @@
         "@fontsource/gochi-hand": "^5.3.0",
         "@fontsource/lilita-one": "^5.3.0",
         "@partygame/bots": "workspace:*",
+        "@partygame/client-utils": "workspace:*",
         "@partygame/core": "workspace:*",
         "@partygame/game-client": "workspace:*",
         "@partygame/game-ui": "workspace:*",
@@ -57,6 +58,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@colyseus/sdk": "^0.18.4",
+        "@partygame/client-utils": "workspace:*",
         "@partygame/shared": "workspace:*",
       },
       "devDependencies": {
@@ -176,6 +178,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@partygame/bots": "workspace:*",
+        "@partygame/client-utils": "workspace:*",
         "@partygame/server": "workspace:*",
         "@partygame/shared": "workspace:*",
       },
@@ -197,6 +200,7 @@
         "@colyseus/core": "^0.18.18",
         "@colyseus/schema": "^5.0.35",
         "@colyseus/sdk": "^0.18.4",
+        "@partygame/client-utils": "workspace:*",
         "@partygame/core": "workspace:*",
         "@partygame/shared": "workspace:*",
         "zod": "^4.6.5",
@@ -227,6 +231,7 @@
       "dependencies": {
         "@colyseus/sdk": "^0.18.4",
         "@partygame/bots": "workspace:*",
+        "@partygame/client-utils": "workspace:*",
         "@partygame/server": "workspace:*",
         "@partygame/shared": "workspace:*",
       },

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { waitFor } from "@partygame/shared";
+import { waitFor } from "@partygame/client-utils";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { exitReason, killProcessGroup, taskkill } from "../src/kill.js";
 import { ProcessGroup, type ProcessGroupOptions } from "../src/ProcessGroup.js";

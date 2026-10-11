@@ -12,7 +12,7 @@
 
 ## May import
 
-- Runtime: `@partygame/bots`, `@partygame/server`, `@partygame/shared`
+- Runtime: `@partygame/bots`, `@partygame/client-utils`, `@partygame/server`, `@partygame/shared`
 - Dev: `@partygame/config`, `@partygame/core`
 
 ## Public entry points

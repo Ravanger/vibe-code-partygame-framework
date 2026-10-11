@@ -1,5 +1,5 @@
 import { Client } from "@colyseus/sdk";
-import { resolveRoomCode, waitFor } from "@partygame/shared";
+import { resolveRoomCode, waitFor } from "@partygame/client-utils";
 import type { BaseGameState } from "@partygame/shared/schema";
 import { BotPlayer } from "./BotPlayer.js";
 import { claimName } from "./claimName.js";

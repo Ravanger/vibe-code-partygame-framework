@@ -1,7 +1,7 @@
 import type { Server as HttpServer } from "node:http";
 import { matchMaker, type Room, type Server } from "@colyseus/core";
 import { type Room as ClientRoom, ColyseusSDK } from "@colyseus/sdk";
-import { waitFor } from "@partygame/shared";
+import { waitFor } from "@partygame/client-utils";
 import { createGameServer, type GameServerOptions } from "../createGameServer.js";
 import { serveApi as serveApiOnNode } from "../node.js";
 import { closeHttpServer, freePort } from "../probe.js";

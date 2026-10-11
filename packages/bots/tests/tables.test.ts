@@ -1,8 +1,9 @@
 import { type SchemaType, t as schemaField } from "@colyseus/schema";
+import { resolveRoomCode } from "@partygame/client-utils";
 import { defineGame } from "@partygame/core";
 import { RoomCodeService } from "@partygame/server";
 import { bootTestServer, type TestServer, waitUntil } from "@partygame/server/testing";
-import { LOBBY_PHASE, NAME_MAX_LENGTH, resolveRoomCode } from "@partygame/shared";
+import { LOBBY_PHASE, NAME_MAX_LENGTH } from "@partygame/shared";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import type { BotPlayer } from "../src/BotPlayer.js";
 import { BotTable } from "../src/BotTable.js";

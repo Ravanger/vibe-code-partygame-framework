@@ -1,5 +1,5 @@
+import { waitFor } from "@partygame/client-utils";
 import { type NodeServerHandle, startNodeServer } from "@partygame/server/node";
-import { waitFor } from "@partygame/shared";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { GameClient } from "../src/GameClient.js";
 import { TAP_ROOM, TapGame, TapState } from "./fixtures/tapGame.js";

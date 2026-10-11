@@ -1,4 +1,5 @@
-import { ClientMessage, isServerError, ServerMessage, waitFor } from "@partygame/shared";
+import { waitFor } from "@partygame/client-utils";
+import { ClientMessage, isServerError, ServerMessage } from "@partygame/shared";
 import type { BaseGameState } from "@partygame/shared/schema";
 
 const STEP_TIMEOUT_MS = 5000;

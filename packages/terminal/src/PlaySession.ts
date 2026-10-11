@@ -1,8 +1,8 @@
 import { type BotKit, type BotOptions, type BotPlayer, joinBots } from "@partygame/bots";
+import { joinUrl, tvUrl } from "@partygame/client-utils";
 import type { HostedGame } from "@partygame/server";
 import { type NodeServerHandle, startNodeServer } from "@partygame/server/node";
 import { ServerProbe } from "@partygame/server/probe";
-import { joinUrl, tvUrl } from "@partygame/shared";
 import type { BaseGameState } from "@partygame/shared/schema";
 import { GameClient, type GameRoomOf } from "./GameClient.js";
 import type { Prompter } from "./Prompter.js";

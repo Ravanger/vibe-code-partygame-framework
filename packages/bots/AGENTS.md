@@ -12,7 +12,7 @@ Bot players for any game: `BotPlayer`, `joinBots`, `BotTable`, `DemoTable`, driv
 
 ## May import
 
-- Runtime: `@partygame/shared`
+- Runtime: `@partygame/client-utils`, `@partygame/shared`
 - Dev: `@partygame/config`, `@partygame/core`, `@partygame/server`
 
 ## Public entry points
