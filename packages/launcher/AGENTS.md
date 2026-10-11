@@ -7,7 +7,7 @@
 ## Never put here
 
 - Game rules or game vocabulary.
-- Port-probing primitives that belong in one shared place (moving: #99).
+- Port-probing primitives (they live in `@partygame/server/probe`).
 - Per-game scripts; a game supplies a `LaunchConfig` (moving: #134, game-kit `launch`).
 
 ## May import

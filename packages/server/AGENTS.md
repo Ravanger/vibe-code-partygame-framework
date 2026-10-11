@@ -8,7 +8,7 @@ The generic Colyseus host that runs any `defineGame` definition: rooms, seats, r
 
 - Game rules or game vocabulary.
 - Content loading (`./content`, moving: #81).
-- Port probing and probes in `./node` (moving: #99).
+- Port probing (it lives in `./probe`).
 - Raw Zod messages or ad-hoc close codes sent to clients (moving: #141).
 
 ## May import
