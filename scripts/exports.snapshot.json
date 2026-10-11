@@ -388,7 +388,6 @@
           "KICK_PLAYER": {},
           "LOBBY_PHASE": {},
           "NAME_MAX_LENGTH": {},
-          "Parsed": {},
           "PlayerIdSchema": {},
           "ResolveCodeResponseSchema": {},
           "RoomCodeSchema": {},
@@ -398,13 +397,8 @@
           "ServerError": {},
           "ServerMessage": {},
           "SetNameSchema": {},
-          "between": {},
           "isActionResult": {},
-          "isServerError": {},
-          "joinUrl": {},
-          "resolveRoomCode": {},
-          "tvUrl": {},
-          "waitFor": {}
+          "isServerError": {}
         }
       },
       "./schema": {
