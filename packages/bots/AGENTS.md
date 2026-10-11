@@ -7,12 +7,12 @@ Bot players for any game: `BotPlayer`, `joinBots`, `BotTable`, `DemoTable`, driv
 ## Never put here
 
 - Game-specific strategies (they live in the game).
-- Generic client helpers such as `claimName` and `apiBaseOf` (moving: #102, #130).
+- Generic client helpers such as `claimName` and `apiBaseOf` (they live in `@partygame/client-utils`).
 - Terminal I/O or rendering.
 
 ## May import
 
-- Runtime: `@partygame/shared`
+- Runtime: `@partygame/client-utils`, `@partygame/shared`
 - Dev: `@partygame/config`, `@partygame/core`, `@partygame/server`
 
 ## Public entry points

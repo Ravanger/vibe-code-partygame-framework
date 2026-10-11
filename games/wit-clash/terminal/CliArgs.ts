@@ -1,5 +1,5 @@
 import { parseArgs } from "node:util";
-import { between, type Parsed } from "@partygame/shared";
+import { between, type Parsed } from "@partygame/client-utils";
 import { MAX_PLAYERS, MIN_PLAYERS } from "../src/playerLimits.js";
 
 export interface DemoArgs {

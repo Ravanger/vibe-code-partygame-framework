@@ -1,4 +1,4 @@
-import { ServerProbe } from "@partygame/server/node";
+import { ServerProbe } from "@partygame/server/probe";
 import { PlaySession, type PlaySessionOptions, TerminalPlayer } from "@partygame/terminal";
 import { ScriptedIo } from "@partygame/terminal/testing";
 import { afterEach, describe, expect, it } from "vitest";

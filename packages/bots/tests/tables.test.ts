@@ -1,14 +1,14 @@
 import { type SchemaType, t as schemaField } from "@colyseus/schema";
+import { claimName, resolveRoomCode } from "@partygame/client-utils";
 import { defineGame } from "@partygame/core";
 import { RoomCodeService } from "@partygame/server";
 import { bootTestServer, type TestServer, waitUntil } from "@partygame/server/testing";
-import { LOBBY_PHASE, NAME_MAX_LENGTH, resolveRoomCode } from "@partygame/shared";
+import { LOBBY_PHASE, NAME_MAX_LENGTH } from "@partygame/shared";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import type { BotPlayer } from "../src/BotPlayer.js";
 import { BotTable } from "../src/BotTable.js";
-import { claimName } from "../src/claimName.js";
 import { DemoTable } from "../src/DemoTable.js";
-import { apiBaseOf, joinBots } from "../src/joinBots.js";
+import { joinBots } from "../src/joinBots.js";
 import type { BotKit } from "../src/types.js";
 import { TAP_ROOM, TapGame, TapState } from "./fixtures/tapGame.js";
 
@@ -157,13 +157,6 @@ describe("joinBots", () => {
     const nameFor = () => "x".repeat(NAME_MAX_LENGTH + 1);
     await expect(join(room.state.roomCode, 1, { nameFor })).rejects.toThrow();
     await waitUntil(() => room.state.players.size === 1, "bot gone");
-  });
-});
-
-describe("apiBaseOf", () => {
-  it("maps ws to http and wss to https", () => {
-    expect(apiBaseOf("ws://example.com:2567", 3001)).toBe("http://example.com:3001");
-    expect(apiBaseOf("wss://example.com", 3001)).toBe("https://example.com:3001");
   });
 });
 

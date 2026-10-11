@@ -1,4 +1,5 @@
 import { Client } from "@colyseus/sdk";
+import { resolveRoomCode } from "@partygame/client-utils";
 import {
   type ActionResult,
   ClientMessage,
@@ -6,7 +7,6 @@ import {
   isActionResult,
   isServerError,
   RoomCodeSchema,
-  resolveRoomCode,
   type ServerError,
   ServerMessage,
 } from "@partygame/shared";

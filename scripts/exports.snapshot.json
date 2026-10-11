@@ -31,11 +31,27 @@
           "DemoTableOptions": {},
           "JoinBotsOptions": {},
           "SeatBotsOptions": {},
-          "SeatRoom": {},
-          "apiBaseOf": {},
-          "claimName": {},
           "joinBots": {},
           "outcomeOf": {}
+        }
+      }
+    },
+    "client-utils": {
+      ".": {
+        "target": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.js"
+        },
+        "symbols": {
+          "Parsed": {},
+          "SeatRoom": {},
+          "apiBaseOf": {},
+          "between": {},
+          "claimName": {},
+          "joinUrl": {},
+          "resolveRoomCode": {},
+          "tvUrl": {},
+          "waitFor": {}
         }
       }
     },
@@ -318,11 +334,19 @@
           "NodeServerHandle": {},
           "NodeServerOptions": {},
           "ServeApiOptions": {},
-          "ServerProbe": {},
-          "closeHttpServer": {},
-          "freePort": {},
           "serveApi": {},
           "startNodeServer": {}
+        }
+      },
+      "./probe": {
+        "target": {
+          "types": "./dist/probe.d.ts",
+          "default": "./dist/probe.js"
+        },
+        "symbols": {
+          "ServerProbe": {},
+          "closeHttpServer": {},
+          "freePort": {}
         }
       },
       "./testing": {
@@ -364,7 +388,6 @@
           "KICK_PLAYER": {},
           "LOBBY_PHASE": {},
           "NAME_MAX_LENGTH": {},
-          "Parsed": {},
           "PlayerIdSchema": {},
           "ResolveCodeResponseSchema": {},
           "RoomCodeSchema": {},
@@ -374,13 +397,8 @@
           "ServerError": {},
           "ServerMessage": {},
           "SetNameSchema": {},
-          "between": {},
           "isActionResult": {},
-          "isServerError": {},
-          "joinUrl": {},
-          "resolveRoomCode": {},
-          "tvUrl": {},
-          "waitFor": {}
+          "isServerError": {}
         }
       },
       "./schema": {

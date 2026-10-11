@@ -11,7 +11,7 @@ import {
 
 export const ME = "me-0000001";
 
-export { freePort } from "@partygame/server/node";
+export { freePort } from "@partygame/server/probe";
 
 export const tick = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 

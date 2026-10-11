@@ -13,7 +13,7 @@ Generic Svelte 5 viewmodels and components for the screens every game has (welco
 
 ## May import
 
-- Runtime: `@partygame/game-client`, `@partygame/shared`
+- Runtime: `@partygame/client-utils`, `@partygame/game-client`, `@partygame/shared`
 - Dev: `@partygame/config`
 
 ## Public entry points

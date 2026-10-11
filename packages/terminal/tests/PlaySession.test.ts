@@ -1,7 +1,8 @@
 import type { Room } from "@colyseus/sdk";
 import type { BotKit } from "@partygame/bots";
-import { freePort, ServerProbe, startNodeServer } from "@partygame/server/node";
-import { waitFor } from "@partygame/shared";
+import { waitFor } from "@partygame/client-utils";
+import { startNodeServer } from "@partygame/server/node";
+import { freePort, ServerProbe } from "@partygame/server/probe";
 import { afterEach, describe, expect, it } from "vitest";
 import { GameClient } from "../src/GameClient.js";
 import { PlaySession, type PlaySessionOptions, type SessionPlayer } from "../src/PlaySession.js";

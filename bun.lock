@@ -28,6 +28,7 @@
         "@fontsource/gochi-hand": "^5.3.0",
         "@fontsource/lilita-one": "^5.3.0",
         "@partygame/bots": "workspace:*",
+        "@partygame/client-utils": "workspace:*",
         "@partygame/core": "workspace:*",
         "@partygame/game-client": "workspace:*",
         "@partygame/game-ui": "workspace:*",
@@ -57,6 +58,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@colyseus/sdk": "^0.18.4",
+        "@partygame/client-utils": "workspace:*",
         "@partygame/shared": "workspace:*",
       },
       "devDependencies": {
@@ -74,6 +76,18 @@
       "version": "0.1.0",
       "bin": {
         "partygame": "./src/cli.ts",
+      },
+      "devDependencies": {
+        "@partygame/config": "workspace:*",
+        "typescript": "^6.0.3",
+        "vitest": "^4.1.11",
+      },
+    },
+    "packages/client-utils": {
+      "name": "@partygame/client-utils",
+      "version": "0.1.0",
+      "dependencies": {
+        "@partygame/shared": "workspace:*",
       },
       "devDependencies": {
         "@partygame/config": "workspace:*",
@@ -122,6 +136,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@colyseus/sdk": "^0.18.4",
+        "@partygame/client-utils": "workspace:*",
         "@partygame/shared": "workspace:*",
         "svelte": "^5.57.1",
       },
@@ -140,6 +155,7 @@
       "name": "@partygame/game-ui",
       "version": "0.1.0",
       "dependencies": {
+        "@partygame/client-utils": "workspace:*",
         "@partygame/game-client": "workspace:*",
         "@partygame/shared": "workspace:*",
         "svelte": "^5.57.1",
@@ -162,6 +178,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@partygame/bots": "workspace:*",
+        "@partygame/client-utils": "workspace:*",
         "@partygame/server": "workspace:*",
         "@partygame/shared": "workspace:*",
       },
@@ -183,6 +200,7 @@
         "@colyseus/core": "^0.18.18",
         "@colyseus/schema": "^5.0.35",
         "@colyseus/sdk": "^0.18.4",
+        "@partygame/client-utils": "workspace:*",
         "@partygame/core": "workspace:*",
         "@partygame/shared": "workspace:*",
         "zod": "^4.6.5",
@@ -213,6 +231,7 @@
       "dependencies": {
         "@colyseus/sdk": "^0.18.4",
         "@partygame/bots": "workspace:*",
+        "@partygame/client-utils": "workspace:*",
         "@partygame/server": "workspace:*",
         "@partygame/shared": "workspace:*",
       },
@@ -520,6 +539,8 @@
     "@partygame/bots": ["@partygame/bots@workspace:packages/bots"],
 
     "@partygame/cli": ["@partygame/cli@workspace:packages/cli"],
+
+    "@partygame/client-utils": ["@partygame/client-utils@workspace:packages/client-utils"],
 
     "@partygame/config": ["@partygame/config@workspace:packages/config"],
 

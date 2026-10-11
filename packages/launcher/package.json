@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@partygame/bots": "workspace:*",
+    "@partygame/client-utils": "workspace:*",
     "@partygame/server": "workspace:*",
     "@partygame/shared": "workspace:*"
   },

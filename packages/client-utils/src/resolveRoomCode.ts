@@ -1,4 +1,4 @@
-import { ResolveCodeResponseSchema } from "./protocol.js";
+import { ResolveCodeResponseSchema } from "@partygame/shared";
 
 /** Turns a four-letter code into a room id through `GET {apiBase}/api/resolve-code`. */
 export async function resolveRoomCode(apiBase: string, code: string): Promise<string> {

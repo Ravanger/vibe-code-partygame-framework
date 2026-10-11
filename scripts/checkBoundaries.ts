@@ -27,13 +27,14 @@ const IMPORT = /(?:\bfrom\s*|\bimport\s*\(?\s*)["']([^"']+)["']/g;
 
 const LAYERS: Record<string, { runtime: string[]; dev: string[] }> = {
   shared: { runtime: [], dev: [] },
+  "client-utils": { runtime: ["shared"], dev: [] },
   core: { runtime: ["shared"], dev: [] },
-  server: { runtime: ["core", "shared"], dev: [] },
-  "game-client": { runtime: ["shared"], dev: ["core", "server"] },
-  "game-ui": { runtime: ["game-client", "shared"], dev: [] },
-  bots: { runtime: ["shared"], dev: ["core", "server"] },
-  terminal: { runtime: ["bots", "server", "shared"], dev: ["core"] },
-  launcher: { runtime: ["bots", "server", "shared"], dev: ["core"] },
+  server: { runtime: ["client-utils", "core", "shared"], dev: [] },
+  "game-client": { runtime: ["client-utils", "shared"], dev: ["core", "server"] },
+  "game-ui": { runtime: ["client-utils", "game-client", "shared"], dev: [] },
+  bots: { runtime: ["client-utils", "shared"], dev: ["core", "server"] },
+  terminal: { runtime: ["bots", "client-utils", "server", "shared"], dev: ["core"] },
+  launcher: { runtime: ["bots", "client-utils", "server", "shared"], dev: ["core"] },
   cli: { runtime: [], dev: [] },
   config: { runtime: [], dev: [] },
 };

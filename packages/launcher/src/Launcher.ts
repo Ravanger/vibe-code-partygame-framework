@@ -1,8 +1,8 @@
 import { spawn } from "node:child_process";
 import { join } from "node:path";
 import { type BotConnection, BotTable, type DemoTable } from "@partygame/bots";
-import { ServerProbe } from "@partygame/server/node";
-import { joinUrl, tvUrl } from "@partygame/shared";
+import { joinUrl, tvUrl } from "@partygame/client-utils";
+import { ServerProbe } from "@partygame/server/probe";
 import type { BaseGameState } from "@partygame/shared/schema";
 import type { LaunchArgs } from "./LaunchArgs.js";
 import { type BrowserSpawner, lanUrls, openBrowser } from "./network.js";

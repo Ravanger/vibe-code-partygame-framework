@@ -1,4 +1,4 @@
-import { between, type Parsed } from "@partygame/shared";
+import { between, type Parsed } from "@partygame/client-utils";
 import type { BaseGameState } from "@partygame/shared/schema";
 import type { LaunchConfig } from "./types.js";
 

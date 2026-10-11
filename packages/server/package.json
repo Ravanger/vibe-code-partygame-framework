@@ -13,6 +13,7 @@
     "@colyseus/bun-websockets": "^0.18.3",
     "@colyseus/core": "^0.18.18",
     "@colyseus/schema": "^5.0.35",
+    "@partygame/client-utils": "workspace:*",
     "@partygame/core": "workspace:*",
     "@partygame/shared": "workspace:*",
     "@colyseus/sdk": "^0.18.4",
@@ -32,6 +33,10 @@
     "./node": {
       "types": "./dist/node.d.ts",
       "default": "./dist/node.js"
+    },
+    "./probe": {
+      "types": "./dist/probe.d.ts",
+      "default": "./dist/probe.js"
     },
     "./content": {
       "types": "./dist/content.d.ts",

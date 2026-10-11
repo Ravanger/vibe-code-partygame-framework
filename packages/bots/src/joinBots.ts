@@ -1,8 +1,7 @@
 import { Client } from "@colyseus/sdk";
-import { resolveRoomCode, waitFor } from "@partygame/shared";
+import { apiBaseOf, claimName, resolveRoomCode, waitFor } from "@partygame/client-utils";
 import type { BaseGameState } from "@partygame/shared/schema";
 import { BotPlayer } from "./BotPlayer.js";
-import { claimName } from "./claimName.js";
 import type { BotConnection, BotKit } from "./types.js";
 
 const DEFAULT_TIMEOUT_MS = 5000;
@@ -18,12 +17,6 @@ export interface JoinBotsOptions<TState extends BaseGameState>
   nameFor?: (n: number) => string;
   timeoutMs?: number;
 }
-
-/** `http(s)://host:apiPort` for a game server endpoint (`ws:` maps to `http:`, `wss:` to `https:`). */
-export const apiBaseOf = (endpoint: string, apiPort: number): string => {
-  const url = new URL(endpoint);
-  return `${url.protocol === "wss:" ? "https" : "http"}://${url.hostname}:${apiPort}`;
-};
 
 class BotJoiner<TState extends BaseGameState> {
   private readonly client: Client;

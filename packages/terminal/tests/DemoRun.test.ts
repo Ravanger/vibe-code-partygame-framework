@@ -1,5 +1,5 @@
 import type { BotOutcome, BotStrategy } from "@partygame/bots";
-import { ServerProbe } from "@partygame/server/node";
+import { ServerProbe } from "@partygame/server/probe";
 import { describe, expect, it } from "vitest";
 import { DemoRun, type DemoRunOptions } from "../src/DemoRun.js";
 import { TAP_ROOM, TapGame, TapState } from "./fixtures/tapGame.js";

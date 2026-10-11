@@ -1,11 +1,13 @@
 # @partygame/shared
 
-Wire protocol (message names, error codes), browser-safe state classes, and helpers used everywhere.
+Wire protocol (message names, error codes, zod schemas), limits and browser-safe state classes.
 
 | Import | What |
 |---|---|
-| `@partygame/shared` | `ClientMessage`, `ServerMessage`, `ErrorCode`, `ActionResult`, `ServerError`, `isActionResult`, `isServerError`, `LOBBY_PHASE`, zod schemas (`RoomCodeSchema`, `JoinOptionsSchema`, ...); `waitFor`, `resolveRoomCode`, `joinUrl`, `tvUrl`, `NAME_MAX_LENGTH` |
+| `@partygame/shared` | `ClientMessage`, `ServerMessage`, `ErrorCode`, `ActionResult`, `ServerError`, `isActionResult`, `isServerError`, `LOBBY_PHASE`, zod schemas (`RoomCodeSchema`, `JoinOptionsSchema`, ...), `NAME_MAX_LENGTH` |
 | `@partygame/shared/schema` | `BaseGameState`, `PlayerSchema`: extend these in your game state |
+
+Client helpers (polling, room-code resolution, share links, argument parsing) live in [`@partygame/client-utils`](../client-utils/README.md).
 
 ## Define your game state
 
@@ -43,26 +45,8 @@ room.onMessage(ServerMessage.ERROR, (payload: unknown) => {
 
 Other codes: `INVALID_ACTION`, `UNKNOWN_ACTION`, `WRONG_PHASE`, `UNAUTHORIZED`, `NOT_ENOUGH_PLAYERS`, `NOT_ACTIVE`, `NAME_TAKEN`, `KICKED`, `INTERNAL`.
 
-## Share links
-
-```ts
-import { joinUrl, tvUrl } from "@partygame/shared";
-
-joinUrl("https://party.example/", "ABCD"); // https://party.example/?code=ABCD
-tvUrl("https://party.example/", "ABCD");   // https://party.example/?tv=ABCD
-```
-
-## Other helpers
-
-```ts
-import { resolveRoomCode, waitFor } from "@partygame/shared";
-
-const roomId = await resolveRoomCode("http://localhost:3001", "ABCD"); // GET /api/resolve-code
-await waitFor(() => room.state.phase === "Done", "the game to finish", 5_000); // polls, then throws
-```
-
-`LOBBY_PHASE`, `START_GAME`, `KICK_PLAYER`, `END_GAME` and `SET_OPTIONS` name the built-ins. `NAME_MAX_LENGTH` caps player names. `Parsed<T>` and `between(value, min, max)` help with argument parsing.
+`LOBBY_PHASE`, `START_GAME`, `KICK_PLAYER`, `END_GAME` and `SET_OPTIONS` name the built-ins. `NAME_MAX_LENGTH` caps player names.
 
 Depends on: `@colyseus/schema`, `zod`
 
-Guide: [docs/framework/README.md#client-sdk](../../docs/framework/README.md#client-sdk) ([Helpers](../../docs/framework/README.md#helpers))
+Guide: [docs/framework/README.md#client-sdk](../../docs/framework/README.md#client-sdk)
