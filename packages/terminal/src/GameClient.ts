@@ -1,6 +1,6 @@
 import { Client, type Room } from "@colyseus/sdk";
-import { apiBaseOf, type BotKit, claimName } from "@partygame/bots";
-import { resolveRoomCode, waitFor } from "@partygame/client-utils";
+import type { BotKit } from "@partygame/bots";
+import { apiBaseOf, claimName, resolveRoomCode, waitFor } from "@partygame/client-utils";
 import type { BaseGameState } from "@partygame/shared/schema";
 
 export type GameRoomOf<TState extends BaseGameState> = Room<unknown, TState>;

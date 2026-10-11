@@ -57,7 +57,7 @@ Each package's README has its API. Each package also has an `AGENTS.md` (respons
 | Path | Holds |
 |---|---|
 | [`packages/shared`](packages/shared/README.md) | wire protocol (`protocol.ts`: messages, `ErrorCode`, `ActionResult`, zod schemas), limits, browser-safe state classes (`/schema`) |
-| [`packages/client-utils`](packages/client-utils/README.md) | client helpers hoisted out of `shared`: `waitFor` poll loop, `resolveRoomCode` (the code API), `joinUrl`/`tvUrl` share links, `between`/`Parsed` arg parsing |
+| [`packages/client-utils`](packages/client-utils/README.md) | client helpers hoisted out of `shared`: `waitFor` poll loop, `resolveRoomCode` (the code API), `joinUrl`/`tvUrl` share links, `between`/`Parsed` arg parsing, `claimName`/`SeatRoom`, `apiBaseOf` |
 | [`packages/core`](packages/core/README.md) | pure runtime, no Colyseus: `defineGame`, `actionFactory`, `GameRuntime`, built-in lobby actions, action log, scoring helpers; `/testing` (`FakeHost`, `TestTable`, `replayLog`) |
 | [`packages/server`](packages/server/README.md) | Colyseus host: `createGameServer`, `GameRoom`, `RoomCodeService`, `createApiHandler`; `/bun`, `/node`, `/content`, `/testing` |
 | [`packages/game-client`](packages/game-client/README.md) | Svelte 5 SDK: `GameConnectionManager`, `Countdown`, `resolveEndpoints`; `/testing`, `/test-setup` |

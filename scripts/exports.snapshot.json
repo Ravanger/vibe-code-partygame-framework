@@ -31,9 +31,6 @@
           "DemoTableOptions": {},
           "JoinBotsOptions": {},
           "SeatBotsOptions": {},
-          "SeatRoom": {},
-          "apiBaseOf": {},
-          "claimName": {},
           "joinBots": {},
           "outcomeOf": {}
         }
@@ -47,7 +44,10 @@
         },
         "symbols": {
           "Parsed": {},
+          "SeatRoom": {},
+          "apiBaseOf": {},
           "between": {},
+          "claimName": {},
           "joinUrl": {},
           "resolveRoomCode": {},
           "tvUrl": {},

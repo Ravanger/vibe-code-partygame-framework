@@ -1,7 +1,7 @@
 import { Client } from "@colyseus/sdk";
+import { claimName } from "@partygame/client-utils";
 import type { BaseGameState } from "@partygame/shared/schema";
 import { BotPlayer } from "./BotPlayer.js";
-import { claimName } from "./claimName.js";
 import { type JoinBotsOptions, joinBots } from "./joinBots.js";
 import { RoomWatch } from "./RoomWatch.js";
 import type { BotConnection, BotKit, BotRoom } from "./types.js";

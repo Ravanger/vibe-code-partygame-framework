@@ -1,6 +1,6 @@
 import { BaseGameState } from "@partygame/shared/schema";
 import { describe, expect, it } from "vitest";
-import { claimName, type SeatRoom } from "../src/claimName.js";
+import { claimName, type SeatRoom } from "../src/index.js";
 
 describe("claimName with a scripted room", () => {
   it("ignores error payloads it cannot read, then reports the real refusal", async () => {
