@@ -1,4 +1,4 @@
-import { ErrorCode, type ServerError } from "@partygame/shared";
+import { CLIENT_MESSAGES, ErrorCode, FrameworkError, type ServerError } from "@partygame/shared";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { DispatchPipeline } from "../../src/runtime/DispatchPipeline.js";
@@ -93,50 +93,63 @@ function makePipeline(
   return { pipeline, sent, events };
 }
 
+/** Runs `fn` and returns the FrameworkError it throws; fails the test for any other outcome. */
+function frameworkError(fn: () => void): FrameworkError {
+  try {
+    fn();
+  } catch (error) {
+    if (error instanceof FrameworkError) return error;
+  }
+  throw new Error("expected a FrameworkError");
+}
+
 describe("DispatchPipeline", () => {
-  it("rejects a malformed envelope with INVALID_ACTION without looking anything up", () => {
+  it("rejects a malformed envelope with the fixed INVALID_ACTION message without looking anything up", () => {
     const h = makePipeline();
     h.pipeline.run("p1", "not an object");
-    expect(h.sent).toEqual([{ code: ErrorCode.INVALID_ACTION, message: "Malformed action" }]);
+    expect(h.sent).toEqual([
+      { code: ErrorCode.INVALID_ACTION, message: CLIENT_MESSAGES.INVALID_ACTION },
+    ]);
     expect(h.events).toEqual([]);
   });
 
   it("rejects an envelope whose type is not a valid action name", () => {
     const h = makePipeline();
     h.pipeline.run("p1", { type: "bad-name" });
-    expect(h.sent).toEqual([{ code: ErrorCode.INVALID_ACTION, message: "Malformed action" }]);
+    expect(h.sent).toEqual([
+      { code: ErrorCode.INVALID_ACTION, message: CLIENT_MESSAGES.INVALID_ACTION },
+    ]);
   });
 
-  it("rejects an undeclared action with UNKNOWN_ACTION", () => {
+  it("throws a FrameworkError for an undeclared action", () => {
     const h = makePipeline();
-    h.pipeline.run("p1", { type: "NOPE" });
-    expect(h.sent).toEqual([
-      { code: ErrorCode.UNKNOWN_ACTION, message: "Unknown action NOPE", action: "NOPE" },
-    ]);
+    const error = frameworkError(() => h.pipeline.run("p1", { type: "NOPE" }));
+    expect(error.code).toBe(ErrorCode.UNKNOWN_ACTION);
+    expect(error.message).toBe("Unknown action NOPE");
+    expect(h.sent).toEqual([]);
     expect(h.events).toEqual([]);
   });
 
-  it("rejects a declared-elsewhere action with WRONG_PHASE naming the current phase", () => {
+  it("throws a FrameworkError for a declared-elsewhere action, naming the current phase", () => {
     const h = makePipeline({ declaredElsewhere: ["NOPE"], phaseName: "Scoring" });
-    h.pipeline.run("p1", { type: "NOPE" });
-    expect(h.sent).toEqual([
-      { code: ErrorCode.WRONG_PHASE, message: "NOPE is not allowed in Scoring", action: "NOPE" },
-    ]);
+    const error = frameworkError(() => h.pipeline.run("p1", { type: "NOPE" }));
+    expect(error.code).toBe(ErrorCode.WRONG_PHASE);
+    expect(error.message).toBe("NOPE is not allowed in Scoring");
   });
 
-  it("rejects UNAUTHORIZED for an unknown sender and a non-host on a host-only action, and lets the host through", () => {
+  it("throws a FrameworkError for an unknown sender and a non-host on a host-only action, and lets the host through", () => {
     const { def, ran } = makeDef("host");
     const ghost = makePipeline({ players: [], phaseActions: { GIVE_UP: def } });
-    ghost.pipeline.run("ghost", { type: "GIVE_UP", n: 1 });
-    expect(ghost.sent).toEqual([
-      { code: ErrorCode.UNAUTHORIZED, message: "Not allowed to send GIVE_UP", action: "GIVE_UP" },
-    ]);
+    expect(frameworkError(() => ghost.pipeline.run("ghost", { type: "GIVE_UP", n: 1 })).code).toBe(
+      ErrorCode.UNAUTHORIZED,
+    );
 
     const nonHost = makePipeline({ phaseActions: { GIVE_UP: def } });
-    nonHost.pipeline.run("p1", { type: "GIVE_UP", n: 1 });
-    expect(nonHost.sent).toEqual([
-      { code: ErrorCode.UNAUTHORIZED, message: "Not allowed to send GIVE_UP", action: "GIVE_UP" },
-    ]);
+    const unauthorized = frameworkError(() =>
+      nonHost.pipeline.run("p1", { type: "GIVE_UP", n: 1 }),
+    );
+    expect(unauthorized.code).toBe(ErrorCode.UNAUTHORIZED);
+    expect(unauthorized.message).toBe("Not allowed to send GIVE_UP");
 
     const host = makePipeline({
       players: [player({ id: "h1", role: "host" })],
@@ -147,26 +160,28 @@ describe("DispatchPipeline", () => {
     expect(ran()).toBe(1);
   });
 
-  it("rejects NOT_ACTIVE for a waiting seat", () => {
+  it("throws a FrameworkError for a waiting seat", () => {
     const { def } = makeDef();
     const h = makePipeline({
       players: [player({ isActive: false })],
       phaseActions: { GIVE_UP: def },
     });
-    h.pipeline.run("p1", { type: "GIVE_UP", n: 1 });
-    expect(h.sent).toEqual([
-      { code: ErrorCode.NOT_ACTIVE, message: "You are waiting to be let in", action: "GIVE_UP" },
-    ]);
+    const error = frameworkError(() => h.pipeline.run("p1", { type: "GIVE_UP", n: 1 }));
+    expect(error.code).toBe(ErrorCode.NOT_ACTIVE);
+    expect(error.message).toBe("You are waiting to be let in");
   });
 
-  it("rejects INVALID_ACTION when the payload fails the phase schema", () => {
+  it("rejects INVALID_ACTION with the fixed client message when the payload fails the phase schema", () => {
     const { def, ran } = makeDef();
     const h = makePipeline({ phaseActions: { GIVE_UP: def } });
     h.pipeline.run("p1", { type: "GIVE_UP", n: "not a number" });
-    expect(h.sent).toHaveLength(1);
-    expect(h.sent[0]?.code).toBe(ErrorCode.INVALID_ACTION);
-    expect(h.sent[0]?.action).toBe("GIVE_UP");
-    expect(h.sent[0]?.message).toBeTruthy();
+    expect(h.sent).toEqual([
+      {
+        code: ErrorCode.INVALID_ACTION,
+        message: CLIENT_MESSAGES.INVALID_ACTION,
+        action: "GIVE_UP",
+      },
+    ]);
     expect(ran()).toBe(0);
   });
 

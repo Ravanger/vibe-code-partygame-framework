@@ -1,5 +1,13 @@
-import { END_GAME, ErrorCode, LOBBY_PHASE, SET_OPTIONS, START_GAME } from "@partygame/shared";
-import { prettifyError, z } from "zod";
+import {
+  CLIENT_MESSAGES,
+  END_GAME,
+  ErrorCode,
+  FrameworkError,
+  LOBBY_PHASE,
+  SET_OPTIONS,
+  START_GAME,
+} from "@partygame/shared";
+import { z } from "zod";
 import type {
   ActionDefinition,
   GameContext,
@@ -66,8 +74,10 @@ export class Lobby<TState extends PhaseState, TPrivate, TOptions> {
       payload: z.object({}),
       handler: (ctx) => {
         if (ctx.phase === LOBBY_PHASE) {
-          ctx.reject(ErrorCode.WRONG_PHASE, `${END_GAME} is not allowed in ${LOBBY_PHASE}`);
-          return;
+          throw new FrameworkError(
+            ErrorCode.WRONG_PHASE,
+            `${END_GAME} is not allowed in ${LOBBY_PHASE}`,
+          );
         }
         definition.onEndGame?.(ctx);
         ctx.returnToLobby();
@@ -82,11 +92,10 @@ export class Lobby<TState extends PhaseState, TPrivate, TOptions> {
       payload: z.object({}),
       handler: (ctx) => {
         if (!this.canStart(ctx)) {
-          ctx.reject(
+          throw new FrameworkError(
             ErrorCode.NOT_ENOUGH_PLAYERS,
             `Need at least ${definition.minPlayers} players to start`,
           );
-          return;
         }
         ctx.transition(definition.startPhase);
       },
@@ -103,7 +112,7 @@ export class Lobby<TState extends PhaseState, TPrivate, TOptions> {
         const merged = { ...options.get(), ...partial };
         const parsed = definition.options ? definition.options.safeParse(merged) : undefined;
         if (parsed && !parsed.success) {
-          ctx.reject(ErrorCode.INVALID_ACTION, prettifyError(parsed.error));
+          ctx.reject(ErrorCode.INVALID_ACTION, CLIENT_MESSAGES.INVALID_ACTION);
           return;
         }
         const next = (parsed ? parsed.data : merged) as TOptions;
