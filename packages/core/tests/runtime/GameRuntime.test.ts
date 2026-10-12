@@ -132,8 +132,16 @@ function makeSpec(overrides: Overrides = {}): GameDefinition<S, P, O> {
   });
 }
 
-function setup2(overrides: Overrides = {}, ready = true) {
-  const host = new FakeHost();
+/** A host that can be made to throw from activateWaitingPlayers, for failure-policy guard tests. */
+class FaultyActivateHost extends FakeHost {
+  failActivation = false;
+  activateWaitingPlayers(): void {
+    if (this.failActivation) throw new Error("activate boom");
+    super.activateWaitingPlayers();
+  }
+}
+
+function setup2(overrides: Overrides = {}, ready = true, host: FakeHost = new FakeHost()) {
   host.seat("p1");
   const p2 = host.seat("p2", { isReady: ready });
   const state = newState();
@@ -807,6 +815,29 @@ describe("onError and the default failure policy", () => {
     expect(onErrorRuns).toBe(1);
     expect(runtime.phase).toBe("Lobby");
     expect(state.notice).toBe(NOTICE);
+  });
+
+  it("joins a failure from the default policy's host calls into the rethrow", () => {
+    const host = new FaultyActivateHost();
+    const { runtime, state } = setup2({ ...boomSpec }, true, host);
+    runtime.dispatch("p1", { type: "START_GAME" });
+    host.failActivation = true;
+    let thrown: unknown;
+    try {
+      runtime.dispatch("p2", { type: "BOOM" });
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(AggregateError);
+    expect((thrown as AggregateError).errors.map((e) => String(e))).toEqual([
+      "Error: boom",
+      "Error: activate boom",
+    ]);
+    // The policy still completes its return to the Lobby, and the failure does not linger.
+    expect(runtime.phase).toBe("Lobby");
+    expect(state.notice).toBe(NOTICE);
+    host.failActivation = false;
+    expect(() => runtime.dispatch("p2", { type: "BOOM" })).not.toThrow();
   });
 
   it("does not run the default policy when onError queues returnToLobby", () => {

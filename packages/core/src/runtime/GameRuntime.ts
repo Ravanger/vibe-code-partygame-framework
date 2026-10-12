@@ -294,8 +294,8 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     this.state.notice = FAILURE_NOTICE;
     if (this.phaseName === LOBBY_PHASE) return;
     this.guarded(() => this.spec.onReturnToLobby?.(this.context()));
-    this.host.activateWaitingPlayers();
-    this.actor.send({ type: "GO", phase: LOBBY_PHASE });
+    this.guarded(() => this.host.activateWaitingPlayers());
+    this.guarded(() => this.actor.send({ type: "GO", phase: LOBBY_PHASE }));
   }
 
   /**
