@@ -2,7 +2,6 @@ import { ErrorCode } from "@partygame/shared";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
-  ACTION_LOG,
   type ActionLog,
   actionFactory,
   actionLogMiddleware,
@@ -11,7 +10,6 @@ import {
   mulberry32,
   type PhaseMiddleware,
   type PhaseState,
-  required,
 } from "../src/index.js";
 import { FakeHost } from "../src/testing/FakeHost.js";
 import { replayLog } from "../src/testing/index.js";
@@ -170,7 +168,7 @@ describe("QA probe R.3 — state isolation", () => {
       "phaseEndsAt",
       "pings",
     ]);
-    expect(Object.keys(table.priv).sort()).toEqual([ACTION_LOG, "secret"]);
+    expect(Object.keys(table.priv)).toEqual(["secret"]);
   });
 });
 
@@ -689,42 +687,24 @@ describe("QA probe R.12 — enter phase field", () => {
   });
 });
 
-describe("QA probe R.13 — frozen priv edge", () => {
-  it("a frozen private state never yields a half-written log; the failure is loud, not silent", () => {
+describe("QA probe R.13 — frozen priv", () => {
+  it("a frozen private state is a valid store key: the log works normally and adds no keys", () => {
     const frozenDefinition = defineGame<S, P, O>({
       ...fullDefinition,
       middleware: [actionLogMiddleware()],
       createPrivateState: () => Object.freeze({ secret: "s" }),
     });
-    let table: TestTable<S, P, O> | undefined;
-    let constructionError: unknown;
-    try {
-      table = new TestTable({
-        definition: frozenDefinition,
-        state: newState(),
-        options: { rounds: 2 },
-        players: 2,
-      });
-    } catch (error) {
-      constructionError = error;
-    }
-    // No partial log in either case: the write to priv[ACTION_LOG] fails atomically.
-    expect(getActionLog(table?.priv ?? {})).toBeUndefined();
-    if (constructionError === undefined) {
-      // Deferred like any hook failure (PR #2 semantics): the next runtime op must surface it loudly,
-      // wrapped in the run's AggregateError when several writes failed.
-      const t = required(table, "QA probe R.13 table");
-      let thrown: unknown;
-      try {
-        t.start();
-      } catch (error) {
-        thrown = error;
-      }
-      const errors = thrown instanceof AggregateError ? thrown.errors : [thrown];
-      expect(errors.length).toBeGreaterThan(0);
-      expect(errors.every((e) => e instanceof TypeError)).toBe(true);
-    } else {
-      expect(constructionError).toBeInstanceOf(TypeError);
-    }
+    const table = new TestTable({
+      definition: frozenDefinition,
+      state: newState(),
+      options: { rounds: 2 },
+      players: 2,
+    });
+    expect(() => table.start()).not.toThrow();
+    // The log lives outside priv (a module-level store keyed by it), so freezing priv is harmless.
+    const log = getActionLog(table.priv);
+    expect(log).toBeDefined();
+    expect(log?.entries.length).toBeGreaterThan(1);
+    expect(Object.keys(table.priv)).toEqual(["secret"]);
   });
 });

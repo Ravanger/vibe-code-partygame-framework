@@ -165,13 +165,13 @@ outside the chain), no veto.
 
 #### Built-ins
 - `loggingMiddleware({ log })` — one line per event, no hardcoded console. Exact formats: `enter <phase>`, `timeout <phase>`, `action <ACTION_TYPE> by <senderId> in <phase>`, `transition <from> -> <to>`. No line for `roster-change`.
-- `timingMiddleware()` — records per-phase durations into `ctx.priv` under the key `phaseTimings`; each phase gets `{ enteredAt: number, durationsMs: number[] }`. Started on enter (before the hook), closed when a transition out of that phase is observed. The currently open phase has no final duration yet. Never touches `ctx.state` (it is synced to clients); timing metadata stays server-side.
-- `actionLogMiddleware()` — append-only, JSON-serializable record of every middleware-visible event in `ctx.priv[ACTION_LOG]`; see Action log and replay below.
+- `timingMiddleware()` — records per-phase durations into a store kept outside `ctx.priv` (keyed by it; read back with `getPhaseTimings(priv)`); each phase gets `{ enteredAt: number, durationsMs: number[] }`. Started on enter (before the hook), closed when a transition out of that phase is observed. The currently open phase has no final duration yet. Never touches `ctx.state` (it is synced to clients) or `ctx.priv`; timing metadata stays server-side.
+- `actionLogMiddleware()` — append-only, JSON-serializable record of every middleware-visible event, kept outside `ctx.priv` (read back with `getActionLog(priv)`); see Action log and replay below.
 
 ### Action log and replay
 `actionLogMiddleware()` records everything the middleware sees into an append-only, JSON-serializable log
-in `ctx.priv` — a server-side record of the whole room session. Register it like any other middleware;
-unregistered games pay nothing (the chain early-returns on an empty array).
+kept alongside `ctx.priv` — a server-side record of the whole room session. Register it like any other
+middleware; unregistered games pay nothing (the chain early-returns on an empty array).
 
 ```ts
 import { actionLogMiddleware, getActionLog } from "@partygame/core";
@@ -182,12 +182,12 @@ export const ButtonGame = defineGame<State, Priv>({
 });
 ```
 
-The log is created lazily on the first event and stored under the key `ACTION_LOG` (the same lazy-storage
-pattern as `timingMiddleware`). It never touches `ctx.state`; export it with `JSON.stringify(getActionLog(priv))`.
-The log lives in `ctx.priv`, so a game's private state must be writable: with a frozen or sealed private
-state the first write fails — construction does not throw (a hook failure is deferred, like any other), no
-partial log remains (`getActionLog` stays `undefined`), and the next runtime operation throws a loud
-`TypeError`.
+The log is created lazily on the first event and kept in a module-level store keyed by the private-state
+object (the same pattern as `timingMiddleware`, read back with `getPhaseTimings(priv)`), so framework data
+never collides with a game's own private fields and a frozen or sealed private state works unchanged. It
+never touches `ctx.state`; export it with `JSON.stringify(getActionLog(priv))`. Because the store is keyed
+by the object, `createPrivateState()` must return an object: the `GameRuntime` constructor throws
+`InvalidPrivateStateError` for a primitive or `null`.
 
 **Header** — written on the first entry:
 

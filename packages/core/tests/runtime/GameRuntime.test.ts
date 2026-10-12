@@ -6,6 +6,7 @@ import {
   type GameContext,
   type GameDefinition,
   GameRuntime,
+  InvalidPrivateStateError,
   mulberry32,
   type PhaseState,
 } from "../../src/index.js";
@@ -151,6 +152,12 @@ function inPlay() {
   return ctx;
 }
 
+/** A createPrivateState that lies about its return type, for the non-object guard tests. */
+const lie =
+  (bad: unknown): (() => unknown) =>
+  () =>
+    bad;
+
 describe("construction", () => {
   it("starts in Lobby with no timer and parses options", () => {
     const { runtime, state, host } = setup2();
@@ -178,6 +185,42 @@ describe("construction", () => {
     });
     runtime.dispatch("p1", { type: "START_GAME" });
     expect(seen).toEqual([{ rounds: 9 }]);
+  });
+
+  it("throws InvalidPrivateStateError when createPrivateState returns a primitive or null", () => {
+    for (const bad of [42, "nope", null]) {
+      const spec = makeSpec({
+        createPrivateState: lie(bad) as Spec["createPrivateState"],
+      });
+      const host = new FakeHost();
+      host.seat("p1");
+      expect(
+        () =>
+          new GameRuntime({
+            definition: spec,
+            state: newState(),
+            host,
+            options: { rounds: 3 },
+          }),
+      ).toThrow(InvalidPrivateStateError);
+    }
+  });
+
+  it("names the private-state error with a fixed message", () => {
+    const spec = makeSpec({
+      createPrivateState: lie(null) as Spec["createPrivateState"],
+    });
+    const host = new FakeHost();
+    host.seat("p1");
+    let thrown: unknown;
+    try {
+      new GameRuntime({ definition: spec, state: newState(), host, options: { rounds: 3 } });
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(InvalidPrivateStateError);
+    expect((thrown as Error).name).toBe("InvalidPrivateStateError");
+    expect((thrown as Error).message).toBe("createPrivateState() must return an object");
   });
 });
 

@@ -30,6 +30,14 @@ const STOPPED_ERROR: ServerError = {
 };
 const FAILURE_NOTICE = "The game stopped because of an unexpected error.";
 
+/** Thrown by the {@link GameRuntime} constructor when `createPrivateState()` returns a non-object. */
+export class InvalidPrivateStateError extends Error {
+  constructor() {
+    super("createPrivateState() must return an object");
+    this.name = "InvalidPrivateStateError";
+  }
+}
+
 interface PhaseActor {
   start(): void;
   stop(): void;
@@ -77,7 +85,9 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     this.state = config.state;
     this.host = config.host;
     this.options = config.options;
-    this.priv = this.spec.createPrivateState();
+    const priv = this.spec.createPrivateState();
+    if (typeof priv !== "object" || priv === null) throw new InvalidPrivateStateError();
+    this.priv = priv;
     this.lobby = new Lobby<TState, TPrivate, TOptions>({
       definition: this.spec,
       host: this.host,

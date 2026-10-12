@@ -1,5 +1,5 @@
 export { actionFactory, defineGame, GameDefinitionError } from "./defineGame.js";
-export { GameRuntime, type GameRuntimeConfig } from "./GameRuntime.js";
+export { GameRuntime, type GameRuntimeConfig, InvalidPrivateStateError } from "./GameRuntime.js";
 export type {
   ActionContext,
   ActionDefinition,

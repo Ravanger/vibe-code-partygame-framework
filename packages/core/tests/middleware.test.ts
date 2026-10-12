@@ -3,9 +3,10 @@ import { z } from "zod";
 import {
   actionFactory,
   defineGame,
+  getPhaseTimings,
+  InvalidPrivateStateError,
   loggingMiddleware,
   type MiddlewareContext,
-  PHASE_TIMINGS,
   type PhaseMiddleware,
   type PhaseState,
   type PhaseTimingRecord,
@@ -121,9 +122,56 @@ class TTable extends TestTable<S, P, O> {
 }
 
 const timings = (table: TTable): Record<string, PhaseTimingRecord> =>
-  (table.priv as { [PHASE_TIMINGS]?: Record<string, PhaseTimingRecord> })[PHASE_TIMINGS] ?? {};
+  getPhaseTimings(table.priv) ?? {};
+
+/** A hand-built middleware context, for driving a layer with an out-of-contract priv. */
+const rawContext = (priv: unknown): MiddlewareContext<PhaseState, unknown, unknown> => ({
+  state: { phase: "Lobby", phaseEndsAt: 0, canStart: false },
+  priv,
+  options: {},
+  phase: "Lobby",
+  players: () => [],
+  activePlayers: () => [],
+  player: () => undefined,
+  activateWaitingPlayers: () => {},
+  send: () => {},
+  broadcast: () => {},
+  showTo: () => {},
+  hideFrom: () => {},
+  transition: () => {},
+  returnToLobby: () => {},
+  rng: () => 0,
+  newId: () => "id",
+  now: () => 0,
+  gameName: "G",
+  seed: 1,
+  event: { kind: "enter" },
+  rejectionCount: 0,
+});
+
+describe("getPhaseTimings", () => {
+  it("returns undefined for a non-object priv", () => {
+    expect(getPhaseTimings(42)).toBeUndefined();
+    expect(getPhaseTimings("nope")).toBeUndefined();
+    expect(getPhaseTimings(null)).toBeUndefined();
+    expect(getPhaseTimings(undefined)).toBeUndefined();
+  });
+
+  it("returns the live store, stable across calls", () => {
+    const table = new TTable();
+    const first = timings(table);
+    expect(first).toBeDefined();
+    expect(timings(table)).toBe(first);
+  });
+});
 
 describe("timingMiddleware", () => {
+  it("throws InvalidPrivateStateError when its priv is not an object", () => {
+    const layer = timingMiddleware();
+    expect(() => layer(rawContext(42), () => {})).toThrow(InvalidPrivateStateError);
+    expect(() => layer(rawContext(null), () => {})).toThrow(InvalidPrivateStateError);
+  });
+
   it("records each phase's duration in ms, oldest first", () => {
     const table = new TTable();
     table.start();
