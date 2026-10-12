@@ -265,7 +265,8 @@ the log's shape is malformed — validated up front with named errors: `entries`
 that is not an object or lacks a known `kind`, numeric `t` and `seq` and a string `phase`, `header`
 missing or lacking a string `game`, number `seed` and number `startedAt`, or a roster entry missing its
 `id`/flags — when the first entry is not the construction-time Lobby enter (every recorded session starts
-with it), when the log's `game` does not match the definition, on a mid-game roster change, on out-of-order
+with it), when the log's `game` does not match the definition, when its `version` differs from the
+definition's or is absent (a log predating versioning), on a mid-game roster change, on out-of-order
 entry times,
 when a re-dispatch rejects an action the log records as accepted or accepts one recorded with
 `rejected: true` (a mismatch in either direction means the log is not what this definition produces), or
@@ -279,11 +280,40 @@ lobby joins/leaves (final states still match). A sender that is not in the recor
 joiner of a second session after `returnToLobby`) makes the re-dispatch throw. No log cap; party sessions
 are minutes long.
 
+**Compatibility.** Replay re-runs the definition's handlers and hooks against the recorded events, so a log
+is guaranteed to replay only against the definition that recorded it. Some staleness `replayLog` detects
+outright with a named error (shape, game/version mismatch, ordering, phase and accept/reject divergence);
+other changes replay "successfully" into different state values — the walk asserts phases and action
+outcomes, never state contents.
+
+| Change | Breaks replay? | Why |
+|---|---|---|
+| Handler or hook logic change | Yes | Handlers and hooks re-run; changed logic writes different state (and may draw a different number of RNG values — see below) |
+| Added or removed `ctx.rng()` draw | Yes | The seeded stream is positional: one extra or missing draw shifts every later draw, including `newId` ids, for the rest of the replay |
+| Changed phase `duration` | Yes, when the new deadline falls before a logged event | Logged timeouts stay authoritative (they keep their recorded times), but a replayed timer that beats the log produces a timeout the log does not have — the per-step phase assertion throws |
+| Changed option schema defaults | Yes, unless the same options are passed to `replayLog` | The log records no options; the replayed runtime sees `init.options`, so a changed default re-runs handlers with different inputs |
+| Renamed action or phase | Yes | The log stores names as strings: a renamed action fails its re-dispatch, and a renamed phase contradicts the logged transitions/enters — both throw |
+| New unrelated phase | No | Replay only walks recorded events; a phase that never appears in the log is never entered |
+| Changed UI only | No | The client renders synced state and sends actions; it contributes no logic to the server-side replay |
+| Framework upgrade that changes `GameRuntime` ordering | Yes | Replay runs on the current framework's runtime (transition queue, middleware chain, built-in lobby behavior); if the order of effects changed since recording, the log's consequences no longer match — the step assertions throw, or state diverges |
+
+**What is recorded to detect it.** `header.game` (the definition name) and `header.version` (a free-form
+string the game author bumps; compared by exact equality). The header seed is recorded too, but to reseed
+the runtime, not to compare. Planned: a wider seed type (#34 — the current header stores a 32-bit number)
+and protocol/framework version negotiation (#77); neither changes anything above until it ships.
+
+**Old logs.** A mismatch surfaces as a named `replayLog:` error — or, for changes that only alter state
+values, as a replay that completes with different states. No migration exists: a log without
+`header.version` (recorded before versioning) is refused outright. The recommended practice is to keep the
+game at the recorded name and version to replay its log — bump `version` whenever you change anything the
+table above marks "yes".
+
 **Runtime additions.** Action middleware events now carry the zod-parsed `payload`; every context exposes
-`ctx.gameName` (definition name), `ctx.seed` (room RNG seed, recorded in the log header) and `ctx.newId()`
-(deterministic ids — see the Determinism contract above). Middleware contexts additionally expose
-`ctx.rejectionCount` — the live count of `ctx.reject()` calls for the current dispatch, so a middleware can
-tell after `next()` whether an action's handler rejected.
+`ctx.gameName` (definition name), `ctx.gameVersion` (definition version, recorded in the log header),
+`ctx.seed` (room RNG seed, recorded in the log header) and `ctx.newId()` (deterministic ids — see the
+Determinism contract above). Middleware contexts additionally expose `ctx.rejectionCount` — the live count
+of `ctx.reject()` calls for the current dispatch, so a middleware can tell after `next()` whether an action's
+handler rejected.
 
 ### Errors at definition time
 `defineGame` throws `GameDefinitionError` listing every problem: empty `name` or `version`, reserved or unknown
