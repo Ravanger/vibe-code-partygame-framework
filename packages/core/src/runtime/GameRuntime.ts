@@ -1,5 +1,4 @@
 import {
-  ActionEnvelopeSchema,
   END_GAME,
   ErrorCode,
   KICK_PLAYER,
@@ -8,13 +7,12 @@ import {
   ServerMessage,
 } from "@partygame/shared";
 import { createActor } from "xstate";
-import { prettifyError } from "zod";
 import { newId } from "../utils.js";
+import { DispatchPipeline } from "./DispatchPipeline.js";
 import { Lobby } from "./lobby.js";
 import { buildPhaseMachine } from "./machineFactory.js";
 import { type Pending, TransitionQueue } from "./TransitionQueue.js";
 import type {
-  ActionContext,
   ActionDefinition,
   GameContext,
   GameDefinition,
@@ -62,6 +60,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   private readonly builtins: Record<string, ActionDefinition<TState, TPrivate, TOptions, unknown>>;
   private readonly phases: Record<string, PhaseDefinition<TState, TPrivate, TOptions>>;
   private readonly middleware: PhaseMiddleware<TState, TPrivate, TOptions>[];
+  private readonly pipeline: DispatchPipeline<TState, TPrivate, TOptions>;
   private readonly actor: PhaseActor;
   private readonly queue = new TransitionQueue();
   private readonly failures: unknown[] = [];
@@ -96,6 +95,17 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       [END_GAME]: this.lobby.endGameAction(),
     };
     this.phases = { ...this.spec.phases, [LOBBY_PHASE]: this.lobby.phase() };
+    this.pipeline = new DispatchPipeline<TState, TPrivate, TOptions>({
+      builtins: this.builtins,
+      currentPhaseActions: () => this.current.actions,
+      declaredInAnyPhase: (type) =>
+        Object.values(this.phases).some((p) => p.actions && type in p.actions),
+      phaseName: () => this.phaseName,
+      players: () => this.host.players(),
+      contextFactory: () => this.context(),
+      reject: (playerId, action, code, message) => this.reject(playerId, action, code, message),
+      chain: (event, inner) => this.chain(event, inner),
+    });
     this.current = this.phases[LOBBY_PHASE] as PhaseDefinition<TState, TPrivate, TOptions>;
     this.actor = createActor(
       buildPhaseMachine({
@@ -304,51 +314,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   }
 
   private handle(playerId: string, rawAction: unknown): void {
-    const envelope = ActionEnvelopeSchema.safeParse(rawAction);
-    if (!envelope.success) {
-      this.reject(playerId, undefined, ErrorCode.INVALID_ACTION, "Malformed action");
-      return;
-    }
-    const type = envelope.data.type;
-    const action = this.builtins[type] ?? this.current.actions?.[type];
-    if (!action) {
-      const declaredElsewhere = Object.values(this.phases).some(
-        (p) => p.actions && type in p.actions,
-      );
-      this.reject(
-        playerId,
-        type,
-        declaredElsewhere ? ErrorCode.WRONG_PHASE : ErrorCode.UNKNOWN_ACTION,
-        declaredElsewhere
-          ? `${type} is not allowed in ${this.phaseName}`
-          : `Unknown action ${type}`,
-      );
-      return;
-    }
-    const player = this.host.players().find((p) => p.id === playerId);
-    if (!player || (action.from === "host" && player.role !== "host")) {
-      this.reject(playerId, type, ErrorCode.UNAUTHORIZED, `Not allowed to send ${type}`);
-      return;
-    }
-    if (!player.isActive) {
-      this.reject(playerId, type, ErrorCode.NOT_ACTIVE, "You are waiting to be let in");
-      return;
-    }
-    const payload = action.payload.safeParse(envelope.data);
-    if (!payload.success) {
-      this.reject(playerId, type, ErrorCode.INVALID_ACTION, prettifyError(payload.error));
-      return;
-    }
-    const actionContext: ActionContext<TState, TPrivate, TOptions, unknown> = {
-      ...this.context(),
-      playerId,
-      payload: payload.data,
-      reject: (code, message) => this.reject(playerId, type, code, message),
-    };
-    this.chain(
-      { kind: "action", actionType: type, senderId: playerId, payload: payload.data },
-      () => action.handler(actionContext),
-    );
+    this.pipeline.run(playerId, rawAction);
   }
 
   private reject(
