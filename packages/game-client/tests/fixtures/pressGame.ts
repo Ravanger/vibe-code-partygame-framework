@@ -13,6 +13,7 @@ const action = actionFactory<PressState, Record<string, never>, Record<string, n
 
 const PressGame = defineGame<PressState, Record<string, never>, Record<string, never>>({
   name: "Press",
+  version: "1",
   minPlayers: 2,
   autoStart: true,
   maxPlayers: 3,

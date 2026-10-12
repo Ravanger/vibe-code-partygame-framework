@@ -30,6 +30,7 @@ export function defineGame<
 >(spec: GameDefinition<TState, TPrivate, TOptions>): GameDefinition<TState, TPrivate, TOptions> {
   const problems: string[] = [];
   if (!spec.name) problems.push("name must not be empty");
+  if (!spec.version) problems.push("version must not be empty");
   if (!Number.isInteger(spec.minPlayers) || spec.minPlayers < 1) {
     problems.push("minPlayers must be an integer >= 1");
   }

@@ -1,7 +1,12 @@
-import type { MiddlewareContext, PhaseMiddleware, PhaseState } from "./runtime/index.js";
+import {
+  InvalidPrivateStateError,
+  type MiddlewareContext,
+  type PhaseMiddleware,
+  type PhaseState,
+} from "./runtime/index.js";
 
-/** The key under which the action-log middleware stores its record in `ctx.priv`. */
-export const ACTION_LOG = "actionLog" as const;
+/** One log per `ctx.priv` object; the priv itself never gains a framework key. */
+const logs = new WeakMap<object, ActionLog>();
 
 /** The kind of event an {@link ActionLogEntry} records. */
 export type ActionLogEntryKind = "action" | "transition" | "enter" | "timeout" | "roster-change";
@@ -39,6 +44,11 @@ export interface ActionLogHeader {
   seed: number;
   /** Definition name; `replayLog` refuses a log recorded for another game. */
   game: string;
+  /**
+   * The definition's version; `replayLog` refuses a log with a different version, or one without
+   * (recorded before versioning).
+   */
+  version?: string;
   /** `ctx.now()` at the first entry (the construction-time Lobby enter). */
   startedAt: number;
 }
@@ -68,32 +78,39 @@ export interface ActionLog {
 }
 
 /**
- * Reads the action log recorded under {@link ACTION_LOG}. Returns the stored object itself — a
- * stable reference across calls — or `undefined` when no event has been recorded yet.
+ * Reads the action log recorded for a runtime's private state. Returns the stored object itself —
+ * a stable reference across calls — or `undefined` when no event has been recorded yet (or the
+ * priv is not an object).
  */
 export function getActionLog(priv: unknown): ActionLog | undefined {
-  // ACTION_LOG is added at runtime; it is not part of the game's declared private state.
-  return (priv as Record<string, unknown>)[ACTION_LOG] as ActionLog | undefined;
+  if (typeof priv !== "object" || priv === null) return undefined;
+  return logs.get(priv);
 }
 
 function logOf(ctx: MiddlewareContext<PhaseState, unknown, unknown>): ActionLog {
-  // ACTION_LOG is added at runtime; it is not part of the game's declared private state.
-  const record = ctx.priv as Record<string, unknown>;
-  let log = record[ACTION_LOG] as ActionLog | undefined;
+  const priv = ctx.priv;
+  if (typeof priv !== "object" || priv === null) throw new InvalidPrivateStateError();
+  let log = logs.get(priv);
   if (log === undefined) {
     log = {
-      header: { seed: ctx.seed, game: ctx.gameName, startedAt: ctx.now() },
+      header: {
+        seed: ctx.seed,
+        game: ctx.gameName,
+        version: ctx.gameVersion,
+        startedAt: ctx.now(),
+      },
       entries: [],
     };
-    record[ACTION_LOG] = log;
+    logs.set(priv, log);
   }
   return log;
 }
 
 /**
  * Records every middleware-visible event — actions (type, sender, zod-parsed payload), transitions
- * (from/to), enters, timeouts and roster changes — into an append-only, JSON-serializable log in
- * `ctx.priv[ACTION_LOG]`. The header (seed, game name, start time) is written on the first entry.
+ * (from/to), enters, timeouts and roster changes — into an append-only, JSON-serializable log kept
+ * outside `ctx.priv` (a module-level store keyed by it). The header (seed, game name, start time)
+ * is written on the first entry.
  * Never touches `ctx.state`; the log stays server-side. Actions rejected before the handler chain
  * (malformed envelope, unknown action, unauthorized sender, inactive player, invalid payload) are not
  * logged; an action whose handler calls `ctx.reject()` has reached the chain and is logged with

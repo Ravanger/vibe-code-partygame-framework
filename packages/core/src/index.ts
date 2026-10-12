@@ -1,5 +1,4 @@
 export {
-  ACTION_LOG,
   type ActionLog,
   type ActionLogEntry,
   type ActionLogEntryKind,
@@ -9,9 +8,9 @@ export {
   type RosterSeat,
 } from "./actionLog.js";
 export {
+  getPhaseTimings,
   type LoggingMiddlewareOptions,
   loggingMiddleware,
-  PHASE_TIMINGS,
   type PhaseTimingRecord,
   timingMiddleware,
 } from "./middleware.js";

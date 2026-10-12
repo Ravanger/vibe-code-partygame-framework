@@ -22,6 +22,7 @@ const action = actionFactory<S, P, O>();
 
 const game = defineGame<S, P, O>({
   name: "Types",
+  version: "1",
   minPlayers: 1,
   maxPlayers: 2,
   startPhase: "Play",
@@ -65,6 +66,7 @@ const erasedMiddleware: PhaseMiddleware<PhaseState, unknown, unknown> = (ctx, ne
 
 const withMiddleware = defineGame<S, P, O>({
   name: "TypesMw",
+  version: "1",
   minPlayers: 1,
   maxPlayers: 2,
   startPhase: "Play",

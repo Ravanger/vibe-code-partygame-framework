@@ -24,6 +24,8 @@ export interface PhaseState {
   phaseEndsAt: number;
   /** True while in the Lobby with enough active players for `START_GAME`; written by the runtime. */
   canStart: boolean;
+  /** Set to a fixed message by the runtime's default failure policy when a hook throws (see `GameDefinition.onError`); games may display and clear it. */
+  notice?: string;
 }
 
 /** What every hook receives. */
@@ -63,6 +65,8 @@ export interface GameContext<TState extends PhaseState, TPrivate, TOptions> {
   now(): number;
   /** The definition's name; recorded in the action log header for replay sanity checks. */
   readonly gameName: string;
+  /** The definition's version; recorded in the action log header for replay sanity checks. */
+  readonly gameVersion: string;
   /** The room RNG seed; see `mulberry32`. Recorded in the action log header. */
   readonly seed: number;
 }
@@ -98,13 +102,15 @@ export interface MiddlewareContext<TState extends PhaseState, TPrivate, TOptions
 
 /**
  * A Koa-style onion layer around phase hooks and action handlers; first registered runs
- * outermost. Synchronous in v1: call `next()` to run the inner layer (the next middleware or
- * the hook/handler itself); omit it to skip the hook/handler. Throwing is handled exactly
- * like a hook throw. Method syntax keeps the context parameter bivariant, as `DurationFn`
- * does, so game-typed and erased definitions stay mutually assignable.
+ * outermost. Synchronous in v1 — the `undefined` return type rejects `async` layers at
+ * compile time (an untyped thenable-returning caller still hits the runtime check in
+ * `GameRuntime.chain`): call `next()` to run the inner layer (the next middleware or the
+ * hook/handler itself); omit it to skip the hook/handler. Throwing is handled exactly like
+ * a hook throw. Method syntax keeps the context parameter bivariant, as `DurationFn` does,
+ * so game-typed and erased definitions stay mutually assignable.
  */
 export type PhaseMiddleware<TState extends PhaseState, TPrivate, TOptions> = {
-  run(ctx: MiddlewareContext<TState, TPrivate, TOptions>, next: () => void): void;
+  run(ctx: MiddlewareContext<TState, TPrivate, TOptions>, next: () => void): undefined;
 }["run"];
 
 /** One client action accepted by a phase. */
@@ -143,6 +149,8 @@ export interface GameDefinition<
   TOptions = Record<string, unknown>,
 > {
   name: string;
+  /** Bump when a change would alter how a recorded log replays. */
+  version: string;
   minPlayers: number;
   maxPlayers: number;
   /** Phase entered by `START_GAME`. */
@@ -161,6 +169,12 @@ export interface GameDefinition<
   onReturnToLobby?(ctx: GameContext<TState, TPrivate, TOptions>): void;
   /** The host sent `END_GAME`; runs before `onReturnToLobby`. Use it to tell players why the game stopped. */
   onEndGame?(ctx: GameContext<TState, TPrivate, TOptions>): void;
+  /**
+   * Runs after a hook, handler, middleware or timer threw, with the failure (an `AggregateError`
+   * in original order when several failed in one run). Queueing a transition here replaces the
+   * default return-to-Lobby policy; a throw in this hook is caught and joins the rethrow.
+   */
+  onError?(ctx: GameContext<TState, TPrivate, TOptions>, error: unknown): void;
 }
 
 /** Everything the runtime needs from its environment. Implemented by the server; faked in tests. */

@@ -179,6 +179,8 @@ function authoritativeDurations<TState extends PhaseState, TPrivate, TOptions>(
 
 /**
  * Re-drives a fresh runtime from an {@link ActionLog} and returns deep-cloned state snapshots.
+ * The definition's `name` and `version` must match the log's header: a different game or version
+ * throws, as does a log with no recorded version (one predating versioning).
  * The log must start with the construction-time Lobby enter (seq 1) — every recorded session does,
  * because the middleware creates the log on its first event — and a different first entry throws.
  * Builds a `TestTable` with the log's seed (or `init.seed`) and start time, then walks the entries
@@ -211,6 +213,14 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
   if (definition.name !== log.header.game) {
     throw new Error(
       `replayLog: log was recorded for game "${log.header.game}", not "${definition.name}"`,
+    );
+  }
+  if (typeof log.header.version !== "string") {
+    throw new Error("replayLog: log.header.version is missing; the log predates versioned logs");
+  }
+  if (log.header.version !== definition.version) {
+    throw new Error(
+      `replayLog: log was recorded for version "${log.header.version}", not "${definition.version}"`,
     );
   }
   // The middleware creates the log on its first event, and a runtime's first event is always the

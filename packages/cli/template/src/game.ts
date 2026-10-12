@@ -10,6 +10,7 @@ import type { __PascalName__State } from "./state.js";
 export function create__PascalName__Game() {
   return defineGame<__PascalName__State, __PascalName__Private, __PascalName__Options>({
     name: __DisplayNameJson__,
+    version: "1",
     minPlayers: MIN_PLAYERS,
     maxPlayers: MAX_PLAYERS,
     startPhase: PHASE.Waving,

@@ -17,6 +17,7 @@ const action = actionFactory<TapState, TapPrivate, Record<string, never>>();
 
 export const TapGame = defineGame<TapState, TapPrivate, Record<string, never>>({
   name: "Tap",
+  version: "1",
   minPlayers: 2,
   maxPlayers: 6,
   startPhase: "Tap",

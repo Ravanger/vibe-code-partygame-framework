@@ -1,5 +1,4 @@
 import {
-  ActionEnvelopeSchema,
   END_GAME,
   ErrorCode,
   KICK_PLAYER,
@@ -7,12 +6,13 @@ import {
   type ServerError,
   ServerMessage,
 } from "@partygame/shared";
-import { createActor, setup } from "xstate";
-import { prettifyError } from "zod";
+import { createActor } from "xstate";
 import { newId } from "../utils.js";
+import { DispatchPipeline } from "./DispatchPipeline.js";
 import { Lobby } from "./lobby.js";
+import { buildPhaseMachine } from "./machineFactory.js";
+import { type Pending, TransitionQueue } from "./TransitionQueue.js";
 import type {
-  ActionContext,
   ActionDefinition,
   GameContext,
   GameDefinition,
@@ -24,19 +24,25 @@ import type {
   RuntimeHost,
 } from "./types.js";
 
-const MAX_CHAINED_TRANSITIONS = 100;
 const STOPPED_ERROR: ServerError = {
   code: ErrorCode.NOT_ALLOWED,
   message: "The game has ended",
 };
+const FAILURE_NOTICE = "The game stopped because of an unexpected error.";
+
+/** Thrown by the {@link GameRuntime} constructor when `createPrivateState()` returns a non-object. */
+export class InvalidPrivateStateError extends Error {
+  constructor() {
+    super("createPrivateState() must return an object");
+    this.name = "InvalidPrivateStateError";
+  }
+}
 
 interface PhaseActor {
   start(): void;
   stop(): void;
   send(event: { type: "GO"; phase: string }): void;
 }
-
-type Pending = { kind: "phase"; phase: string } | { kind: "lobby" };
 
 /** Constructor argument of {@link GameRuntime}. */
 export interface GameRuntimeConfig<TState extends PhaseState, TPrivate, TOptions> {
@@ -63,8 +69,9 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   private readonly builtins: Record<string, ActionDefinition<TState, TPrivate, TOptions, unknown>>;
   private readonly phases: Record<string, PhaseDefinition<TState, TPrivate, TOptions>>;
   private readonly middleware: PhaseMiddleware<TState, TPrivate, TOptions>[];
+  private readonly pipeline: DispatchPipeline<TState, TPrivate, TOptions>;
   private readonly actor: PhaseActor;
-  private readonly queue: Pending[] = [];
+  private readonly queue = new TransitionQueue();
   private readonly failures: unknown[] = [];
   private readonly rejections: ServerError[] = [];
   private current: PhaseDefinition<TState, TPrivate, TOptions>;
@@ -78,7 +85,9 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     this.state = config.state;
     this.host = config.host;
     this.options = config.options;
-    this.priv = this.spec.createPrivateState();
+    const priv = this.spec.createPrivateState();
+    if (typeof priv !== "object" || priv === null) throw new InvalidPrivateStateError();
+    this.priv = priv;
     this.lobby = new Lobby<TState, TPrivate, TOptions>({
       definition: this.spec,
       host: this.host,
@@ -97,13 +106,35 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       [END_GAME]: this.lobby.endGameAction(),
     };
     this.phases = { ...this.spec.phases, [LOBBY_PHASE]: this.lobby.phase() };
-    this.current = this.phases[LOBBY_PHASE] as PhaseDefinition<TState, TPrivate, TOptions>;
-    this.actor = createActor(this.buildMachine(), {
-      clock: {
-        setTimeout: (callback, ms) => this.host.setTimeout(() => this.run(callback), ms),
-        clearTimeout: (handle) => this.host.clearTimeout(handle),
-      },
+    this.pipeline = new DispatchPipeline<TState, TPrivate, TOptions>({
+      builtins: this.builtins,
+      currentPhaseActions: () => this.current.actions,
+      declaredInAnyPhase: (type) =>
+        Object.values(this.phases).some((p) => p.actions && type in p.actions),
+      phaseName: () => this.phaseName,
+      players: () => this.host.players(),
+      contextFactory: () => this.context(),
+      reject: (playerId, action, code, message) => this.reject(playerId, action, code, message),
+      chain: (event, inner) => this.chain(event, inner),
     });
+    this.current = this.phases[LOBBY_PHASE] as PhaseDefinition<TState, TPrivate, TOptions>;
+    this.actor = createActor(
+      buildPhaseMachine({
+        phases: this.phases,
+        enter: (name) =>
+          this.enter(name, this.phases[name] as PhaseDefinition<TState, TPrivate, TOptions>),
+        timeout: () =>
+          this.chain({ kind: "timeout" }, () => this.current.onTimeout?.(this.context())),
+        duration: () => this.duration,
+        guard: (fn) => this.guarded(fn),
+      }),
+      {
+        clock: {
+          setTimeout: (callback, ms) => this.host.setTimeout(() => this.run(callback), ms),
+          clearTimeout: (handle) => this.host.clearTimeout(handle),
+        },
+      },
+    );
     this.actor.start();
     this.refreshCanStart();
   }
@@ -140,7 +171,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   /** Stop the actor and clear every timer. The runtime ignores all further calls. */
   stop(): void {
     this.stopped = true;
-    this.queue.length = 0;
+    this.queue.clear();
     this.actor.stop();
   }
 
@@ -170,6 +201,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       newId: () => newId(() => this.host.rng()),
       now: () => this.host.now(),
       gameName: this.spec.name,
+      gameVersion: this.spec.version,
       seed: this.host.seed,
     };
   }
@@ -224,43 +256,6 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     this.chain({ kind: "roster-change" }, () => this.current.onRosterChange?.(this.context()));
   }
 
-  private buildMachine() {
-    const delays: Record<string, () => number> = {};
-    const states: Record<string, object> = {};
-    for (const [name, phase] of Object.entries(this.phases)) {
-      const node: Record<string, unknown> = {
-        entry: () => this.guarded(() => this.enter(name, phase)),
-      };
-      if (phase.duration !== undefined) {
-        delays[name] = () => this.duration;
-        node.after = {
-          [name]: {
-            actions: () =>
-              this.guarded(() =>
-                this.chain({ kind: "timeout" }, () => this.current.onTimeout?.(this.context())),
-              ),
-          },
-        };
-      }
-      states[name] = node;
-    }
-    return setup({
-      types: { events: {} as { type: "GO"; phase: string } },
-      delays,
-    }).createMachine({
-      id: "game",
-      initial: LOBBY_PHASE,
-      on: {
-        GO: Object.keys(states).map((name) => ({
-          guard: ({ event }: { event: { phase: string } }) => event.phase === name,
-          target: `.${name}`,
-          reenter: true,
-        })),
-      },
-      states,
-    });
-  }
-
   private enter(name: string, phase: PhaseDefinition<TState, TPrivate, TOptions>): void {
     this.phaseName = name;
     this.hasStarted ||= name !== LOBBY_PHASE;
@@ -285,26 +280,63 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     }
   }
 
-  private rethrowFailure(): void {
-    const [failure] = this.failures.splice(0);
-    if (failure !== undefined) throw failure;
+  /** Run a queued transition, collecting a direct throw (an unguarded `onReturnToLobby`) as a failure. */
+  private applyGuarded(next: Pending): void {
+    try {
+      this.apply(next);
+    } catch (error) {
+      this.failures.push(error);
+    }
+  }
+
+  /** The default failure policy: a fixed notice, and the Lobby when not already there. */
+  private defaultFailurePolicy(): void {
+    this.state.notice = FAILURE_NOTICE;
+    if (this.phaseName === LOBBY_PHASE) return;
+    this.guarded(() => this.spec.onReturnToLobby?.(this.context()));
+    this.guarded(() => this.host.activateWaitingPlayers());
+    this.guarded(() => this.actor.send({ type: "GO", phase: LOBBY_PHASE }));
+  }
+
+  /**
+   * One failed run: report every collected failure to `onError` once, then apply the default
+   * policy unless `onError` queued its own transition, and rethrow what was reported so callers
+   * (`dispatch`, `GameRoom.act`) still see the failure. Failures raised by `onError` or the
+   * policy itself join the rethrow; they are logged, not recursed on.
+   */
+  private failRun(): void {
+    const failed = this.failures.splice(0);
+    let reported: unknown =
+      failed.length === 1 ? failed[0] : new AggregateError(failed, "Game hook failed");
+    this.queue.clear();
+    this.guarded(() => this.spec.onError?.(this.context(), reported));
+    if (this.queue.isEmpty()) {
+      this.defaultFailurePolicy();
+    } else {
+      this.queue.drain(
+        (next) => this.applyGuarded(next),
+        () => {},
+      );
+    }
+    const extra = this.failures.splice(0);
+    if (extra.length > 0) reported = new AggregateError([...failed, ...extra], "Game hook failed");
+    throw reported;
   }
 
   private run(fn: () => void): void {
     try {
-      fn();
-      this.rethrowFailure();
-      let steps = 0;
-      for (let next = this.queue.shift(); next; next = this.queue.shift()) {
-        if (++steps > MAX_CHAINED_TRANSITIONS) {
-          throw new Error(`More than ${MAX_CHAINED_TRANSITIONS} chained transitions; phase loop?`);
-        }
-        this.apply(next);
-        this.rethrowFailure();
+      try {
+        fn();
+      } catch (error) {
+        this.failures.push(error);
       }
-    } catch (error) {
-      this.queue.length = 0;
-      throw error;
+      if (this.failures.length > 0) this.failRun();
+      this.queue.drain(
+        (next) => this.applyGuarded(next),
+        () => {
+          if (this.failures.length > 0) this.failRun();
+        },
+      );
     } finally {
       this.refreshCanStart();
     }
@@ -320,7 +352,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
 
   private apply(next: Pending): void {
     // An observer throw must not cancel the transition it observes (docs: middleware cannot veto);
-    // defer it like any hook failure and let the transition apply, then surface via rethrowFailure.
+    // defer it like any hook failure and let the transition apply, then surface via failRun.
     this.guarded(() =>
       this.observeTransition(this.phaseName, next.kind === "lobby" ? LOBBY_PHASE : next.phase),
     );
@@ -335,51 +367,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   }
 
   private handle(playerId: string, rawAction: unknown): void {
-    const envelope = ActionEnvelopeSchema.safeParse(rawAction);
-    if (!envelope.success) {
-      this.reject(playerId, undefined, ErrorCode.INVALID_ACTION, "Malformed action");
-      return;
-    }
-    const type = envelope.data.type;
-    const action = this.builtins[type] ?? this.current.actions?.[type];
-    if (!action) {
-      const declaredElsewhere = Object.values(this.phases).some(
-        (p) => p.actions && type in p.actions,
-      );
-      this.reject(
-        playerId,
-        type,
-        declaredElsewhere ? ErrorCode.WRONG_PHASE : ErrorCode.UNKNOWN_ACTION,
-        declaredElsewhere
-          ? `${type} is not allowed in ${this.phaseName}`
-          : `Unknown action ${type}`,
-      );
-      return;
-    }
-    const player = this.host.players().find((p) => p.id === playerId);
-    if (!player || (action.from === "host" && player.role !== "host")) {
-      this.reject(playerId, type, ErrorCode.UNAUTHORIZED, `Not allowed to send ${type}`);
-      return;
-    }
-    if (!player.isActive) {
-      this.reject(playerId, type, ErrorCode.NOT_ACTIVE, "You are waiting to be let in");
-      return;
-    }
-    const payload = action.payload.safeParse(envelope.data);
-    if (!payload.success) {
-      this.reject(playerId, type, ErrorCode.INVALID_ACTION, prettifyError(payload.error));
-      return;
-    }
-    const actionContext: ActionContext<TState, TPrivate, TOptions, unknown> = {
-      ...this.context(),
-      playerId,
-      payload: payload.data,
-      reject: (code, message) => this.reject(playerId, type, code, message),
-    };
-    this.chain(
-      { kind: "action", actionType: type, senderId: playerId, payload: payload.data },
-      () => action.handler(actionContext),
-    );
+    this.pipeline.run(playerId, rawAction);
   }
 
   private reject(

@@ -1,4 +1,9 @@
-import type { PhaseMiddleware, PhaseState } from "./runtime/index.js";
+import {
+  InvalidPrivateStateError,
+  type MiddlewareContext,
+  type PhaseMiddleware,
+  type PhaseState,
+} from "./runtime/index.js";
 
 /** Options for {@link loggingMiddleware}. */
 export interface LoggingMiddlewareOptions {
@@ -36,10 +41,7 @@ export function loggingMiddleware(
   };
 }
 
-/** The key under which {@link timingMiddleware} stores its record in `ctx.priv`. */
-export const PHASE_TIMINGS = "phaseTimings" as const;
-
-/** One phase's timing record, stored by {@link timingMiddleware} at `priv[PHASE_TIMINGS]`. */
+/** One phase's timing record, stored by {@link timingMiddleware} outside `priv`. */
 export interface PhaseTimingRecord {
   /** Epoch ms when the phase was most recently entered. */
   enteredAt: number;
@@ -47,32 +49,47 @@ export interface PhaseTimingRecord {
   durationsMs: number[];
 }
 
-function timingsOf(priv: unknown): Record<string, PhaseTimingRecord> {
-  // PHASE_TIMINGS is added at runtime; it is not part of the game's declared private state.
-  const record = priv as Record<string, unknown>;
-  let store = record[PHASE_TIMINGS];
+/** One timing store per `ctx.priv` object; the priv itself never gains a framework key. */
+const timings = new WeakMap<object, Record<string, PhaseTimingRecord>>();
+
+/**
+ * Reads the phase-timing store recorded for a runtime's private state. Returns the stored object
+ * itself — a stable reference across calls — or `undefined` when no phase has been entered yet
+ * (or the priv is not an object).
+ */
+export function getPhaseTimings(priv: unknown): Record<string, PhaseTimingRecord> | undefined {
+  if (typeof priv !== "object" || priv === null) return undefined;
+  return timings.get(priv);
+}
+
+function timingsOf(
+  ctx: MiddlewareContext<PhaseState, unknown, unknown>,
+): Record<string, PhaseTimingRecord> {
+  const priv = ctx.priv;
+  if (typeof priv !== "object" || priv === null) throw new InvalidPrivateStateError();
+  let store = timings.get(priv);
   if (store === undefined) {
     store = {};
-    record[PHASE_TIMINGS] = store;
+    timings.set(priv, store);
   }
-  return store as Record<string, PhaseTimingRecord>;
+  return store;
 }
 
 /**
- * Records how long each phase stays open into `ctx.priv[PHASE_TIMINGS]`. Started on enter
- * (before the hook runs), closed when a transition out of the phase is observed. Never
- * touches `ctx.state`; timing metadata stays server-side. The currently open phase has no
- * final duration yet.
+ * Records how long each phase stays open into a store kept outside `ctx.priv` (keyed by it; read
+ * back with `getPhaseTimings`). Started on enter (before the hook runs), closed when a transition
+ * out of the phase is observed. Never touches `ctx.state`; timing metadata stays server-side. The
+ * currently open phase has no final duration yet.
  */
 export function timingMiddleware(): PhaseMiddleware<PhaseState, unknown, unknown> {
   return (ctx, next) => {
     const event = ctx.event;
     if (event.kind === "enter") {
-      const store = timingsOf(ctx.priv);
+      const store = timingsOf(ctx);
       const existing = store[ctx.phase];
       store[ctx.phase] = { enteredAt: ctx.now(), durationsMs: existing?.durationsMs ?? [] };
     } else if (event.kind === "transition") {
-      const record = timingsOf(ctx.priv)[event.from];
+      const record = timingsOf(ctx)[event.from];
       if (record !== undefined) {
         record.durationsMs.push(ctx.now() - record.enteredAt);
       }

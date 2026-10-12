@@ -3,8 +3,10 @@ import { z } from "zod";
 import {
   actionFactory,
   defineGame,
+  getPhaseTimings,
+  InvalidPrivateStateError,
   loggingMiddleware,
-  PHASE_TIMINGS,
+  type MiddlewareContext,
   type PhaseMiddleware,
   type PhaseState,
   type PhaseTimingRecord,
@@ -29,6 +31,7 @@ class LTable extends TestTable<S, P, O> {
     super({
       definition: defineGame<S, P, O>({
         name: "Log",
+        version: "1",
         minPlayers: 1,
         maxPlayers: 4,
         startPhase: "Play",
@@ -91,6 +94,7 @@ class TTable extends TestTable<S, P, O> {
     super({
       definition: defineGame<S, P, O>({
         name: "Timed",
+        version: "1",
         minPlayers: 1,
         maxPlayers: 4,
         startPhase: "Play",
@@ -120,9 +124,57 @@ class TTable extends TestTable<S, P, O> {
 }
 
 const timings = (table: TTable): Record<string, PhaseTimingRecord> =>
-  (table.priv as { [PHASE_TIMINGS]?: Record<string, PhaseTimingRecord> })[PHASE_TIMINGS] ?? {};
+  getPhaseTimings(table.priv) ?? {};
+
+/** A hand-built middleware context, for driving a layer with an out-of-contract priv. */
+const rawContext = (priv: unknown): MiddlewareContext<PhaseState, unknown, unknown> => ({
+  state: { phase: "Lobby", phaseEndsAt: 0, canStart: false },
+  priv,
+  options: {},
+  phase: "Lobby",
+  players: () => [],
+  activePlayers: () => [],
+  player: () => undefined,
+  activateWaitingPlayers: () => {},
+  send: () => {},
+  broadcast: () => {},
+  showTo: () => {},
+  hideFrom: () => {},
+  transition: () => {},
+  returnToLobby: () => {},
+  rng: () => 0,
+  newId: () => "id",
+  now: () => 0,
+  gameName: "G",
+  gameVersion: "1",
+  seed: 1,
+  event: { kind: "enter" },
+  rejectionCount: 0,
+});
+
+describe("getPhaseTimings", () => {
+  it("returns undefined for a non-object priv", () => {
+    expect(getPhaseTimings(42)).toBeUndefined();
+    expect(getPhaseTimings("nope")).toBeUndefined();
+    expect(getPhaseTimings(null)).toBeUndefined();
+    expect(getPhaseTimings(undefined)).toBeUndefined();
+  });
+
+  it("returns the live store, stable across calls", () => {
+    const table = new TTable();
+    const first = timings(table);
+    expect(first).toBeDefined();
+    expect(timings(table)).toBe(first);
+  });
+});
 
 describe("timingMiddleware", () => {
+  it("throws InvalidPrivateStateError when its priv is not an object", () => {
+    const layer = timingMiddleware();
+    expect(() => layer(rawContext(42), () => {})).toThrow(InvalidPrivateStateError);
+    expect(() => layer(rawContext(null), () => {})).toThrow(InvalidPrivateStateError);
+  });
+
   it("records each phase's duration in ms, oldest first", () => {
     const table = new TTable();
     table.start();
@@ -170,5 +222,28 @@ describe("timingMiddleware", () => {
     const t = timings(table);
     expect(t.Play).toBeUndefined();
     expect(t.Score?.durationsMs).toEqual([]);
+  });
+});
+
+describe("compile-time sync rule", () => {
+  it("rejects an async layer at compile time and accepts a synchronous one", () => {
+    // If the chain's return type were ever widened back to `void`, the async layer below would
+    // become assignable, `rejected` would resolve to `true`, and this file would stop compiling.
+    const asyncLayer = async (
+      _ctx: MiddlewareContext<PhaseState, unknown, unknown>,
+      next: () => void,
+    ) => {
+      next();
+    };
+    type IsAssignable<F, T> = F extends T ? true : false;
+    const rejected: IsAssignable<
+      typeof asyncLayer,
+      PhaseMiddleware<PhaseState, unknown, unknown>
+    > = false;
+    expect(rejected).toBe(false);
+    const sync: PhaseMiddleware<PhaseState, unknown, unknown> = (_ctx, next) => {
+      next();
+    };
+    expect(sync).toBeTypeOf("function");
   });
 });

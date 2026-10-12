@@ -30,6 +30,7 @@ const action = actionFactory<BuzzerState, BuzzerPrivate, BuzzerOptions>();
 
 export const BuzzerGame = defineGame<BuzzerState, BuzzerPrivate, BuzzerOptions>({
   name: "Buzzer",
+  version: "1",
   minPlayers: 2,
   maxPlayers: 3,
   startPhase: "Buzz",
@@ -118,6 +119,7 @@ export const BuzzerGame = defineGame<BuzzerState, BuzzerPrivate, BuzzerOptions>(
 
 export const PlainGame = defineGame<BaseGameState, Record<string, never>, Record<string, unknown>>({
   name: "Plain",
+  version: "1",
   minPlayers: 1,
   maxPlayers: 2,
   startPhase: "Play",

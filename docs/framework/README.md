@@ -122,13 +122,15 @@ Returning to the Lobby activates every waiting (mid-game) joiner.
 Game-level middleware registered on `defineGame` runs around every phase's `onEnter`, `onTimeout`, `onRosterChange` and
 around every action handler (including the built-in lobby actions), and observes transitions. It is Koa-style onion
 middleware: the first entry in the array is outermost, each layer calls `next()` to reach the next one, and chains are
-synchronous in v1.
+synchronous in v1 — `PhaseMiddleware` returns `undefined`, so an `async` layer is a compile error (the runtime still
+rejects a thenable return value from untyped callers).
 
 ```ts
 const log: string[] = [];
 
 export const ButtonGame = defineGame<State, Priv>({
   name: "FirstToPress",
+  version: "1",
   // ...phases as in Minimal game
   middleware: [
     (ctx, next) => { log.push(`outer ${ctx.event.kind}`); next(); }, // first registered is outermost
@@ -164,13 +166,13 @@ outside the chain), no veto.
 
 #### Built-ins
 - `loggingMiddleware({ log })` — one line per event, no hardcoded console. Exact formats: `enter <phase>`, `timeout <phase>`, `action <ACTION_TYPE> by <senderId> in <phase>`, `transition <from> -> <to>`. No line for `roster-change`.
-- `timingMiddleware()` — records per-phase durations into `ctx.priv` under the key `phaseTimings`; each phase gets `{ enteredAt: number, durationsMs: number[] }`. Started on enter (before the hook), closed when a transition out of that phase is observed. The currently open phase has no final duration yet. Never touches `ctx.state` (it is synced to clients); timing metadata stays server-side.
-- `actionLogMiddleware()` — append-only, JSON-serializable record of every middleware-visible event in `ctx.priv[ACTION_LOG]`; see Action log and replay below.
+- `timingMiddleware()` — records per-phase durations into a store kept outside `ctx.priv` (keyed by it; read back with `getPhaseTimings(priv)`); each phase gets `{ enteredAt: number, durationsMs: number[] }`. Started on enter (before the hook), closed when a transition out of that phase is observed. The currently open phase has no final duration yet. Never touches `ctx.state` (it is synced to clients) or `ctx.priv`; timing metadata stays server-side.
+- `actionLogMiddleware()` — append-only, JSON-serializable record of every middleware-visible event, kept outside `ctx.priv` (read back with `getActionLog(priv)`); see Action log and replay below.
 
 ### Action log and replay
 `actionLogMiddleware()` records everything the middleware sees into an append-only, JSON-serializable log
-in `ctx.priv` — a server-side record of the whole room session. Register it like any other middleware;
-unregistered games pay nothing (the chain early-returns on an empty array).
+kept alongside `ctx.priv` — a server-side record of the whole room session. Register it like any other
+middleware; unregistered games pay nothing (the chain early-returns on an empty array).
 
 ```ts
 import { actionLogMiddleware, getActionLog } from "@partygame/core";
@@ -181,12 +183,12 @@ export const ButtonGame = defineGame<State, Priv>({
 });
 ```
 
-The log is created lazily on the first event and stored under the key `ACTION_LOG` (the same lazy-storage
-pattern as `timingMiddleware`). It never touches `ctx.state`; export it with `JSON.stringify(getActionLog(priv))`.
-The log lives in `ctx.priv`, so a game's private state must be writable: with a frozen or sealed private
-state the first write fails — construction does not throw (a hook failure is deferred, like any other), no
-partial log remains (`getActionLog` stays `undefined`), and the next runtime operation throws a loud
-`TypeError`.
+The log is created lazily on the first event and kept in a module-level store keyed by the private-state
+object (the same pattern as `timingMiddleware`, read back with `getPhaseTimings(priv)`), so framework data
+never collides with a game's own private fields and a frozen or sealed private state works unchanged. It
+never touches `ctx.state`; export it with `JSON.stringify(getActionLog(priv))`. Because the store is keyed
+by the object, `createPrivateState()` must return an object: the `GameRuntime` constructor throws
+`InvalidPrivateStateError` for a primitive or `null`.
 
 **Header** — written on the first entry:
 
@@ -194,6 +196,7 @@ partial log remains (`getActionLog` stays `undefined`), and the next runtime ope
 |---|---|
 | `seed` | Room RNG seed (see Determinism contract) |
 | `game` | Definition name; `replayLog` refuses a log recorded for another game |
+| `version` | Definition version; `replayLog` refuses a log recorded for another version, or one without it (recorded before versioning) |
 | `startedAt` | `ctx.now()` at the first entry (the construction-time Lobby enter) |
 
 **Entries** — one per middleware-visible event, in append order:
@@ -262,7 +265,8 @@ the log's shape is malformed — validated up front with named errors: `entries`
 that is not an object or lacks a known `kind`, numeric `t` and `seq` and a string `phase`, `header`
 missing or lacking a string `game`, number `seed` and number `startedAt`, or a roster entry missing its
 `id`/flags — when the first entry is not the construction-time Lobby enter (every recorded session starts
-with it), when the log's `game` does not match the definition, on a mid-game roster change, on out-of-order
+with it), when the log's `game` does not match the definition, when its `version` differs from the
+definition's or is absent (a log predating versioning), on a mid-game roster change, on out-of-order
 entry times,
 when a re-dispatch rejects an action the log records as accepted or accepts one recorded with
 `rejected: true` (a mismatch in either direction means the log is not what this definition produces), or
@@ -276,16 +280,56 @@ lobby joins/leaves (final states still match). A sender that is not in the recor
 joiner of a second session after `returnToLobby`) makes the re-dispatch throw. No log cap; party sessions
 are minutes long.
 
+**Compatibility.** Replay re-runs the definition's handlers and hooks against the recorded events, so a log
+is guaranteed to replay only against the definition that recorded it. Some staleness `replayLog` detects
+outright with a named error (shape, game/version mismatch, ordering, phase and accept/reject divergence);
+other changes replay "successfully" into different state values — the walk asserts phases and action
+outcomes, never state contents.
+
+| Change | Breaks replay? | Why |
+|---|---|---|
+| Handler or hook logic change | Yes | Handlers and hooks re-run; changed logic writes different state (and may draw a different number of RNG values — see below) |
+| Added or removed `ctx.rng()` draw | Yes | The seeded stream is positional: one extra or missing draw shifts every later draw, including `newId` ids, for the rest of the replay |
+| Changed phase `duration` | Yes, when the new deadline falls before a logged event | Logged timeouts stay authoritative (they keep their recorded times), but a replayed timer that beats the log produces a timeout the log does not have — the per-step phase assertion throws |
+| Changed option schema defaults | Yes, unless the same options are passed to `replayLog` | The log records no options; the replayed runtime sees `init.options`, so a changed default re-runs handlers with different inputs |
+| Renamed action or phase | Yes | The log stores names as strings: a renamed action fails its re-dispatch, and a renamed phase contradicts the logged transitions/enters — both throw |
+| New unrelated phase | No | Replay only walks recorded events; a phase that never appears in the log is never entered |
+| Changed UI only | No | The client renders synced state and sends actions; it contributes no logic to the server-side replay |
+| Framework upgrade that changes `GameRuntime` ordering | Yes | Replay runs on the current framework's runtime (transition queue, middleware chain, built-in lobby behavior); if the order of effects changed since recording, the log's consequences no longer match — the step assertions throw, or state diverges |
+
+**What is recorded to detect it.** `header.game` (the definition name) and `header.version` (a free-form
+string the game author bumps; compared by exact equality). The header seed is recorded too, but to reseed
+the runtime, not to compare. Planned: a wider seed type (#34 — the current header stores a 32-bit number)
+and protocol/framework version negotiation (#77); neither changes anything above until it ships.
+
+**Old logs.** A mismatch surfaces as a named `replayLog:` error — or, for changes that only alter state
+values, as a replay that completes with different states. No migration exists: a log without
+`header.version` (recorded before versioning) is refused outright. The recommended practice is to keep the
+game at the recorded name and version to replay its log — bump `version` whenever you change anything the
+table above marks "yes".
+
 **Runtime additions.** Action middleware events now carry the zod-parsed `payload`; every context exposes
-`ctx.gameName` (definition name), `ctx.seed` (room RNG seed, recorded in the log header) and `ctx.newId()`
-(deterministic ids — see the Determinism contract above). Middleware contexts additionally expose
-`ctx.rejectionCount` — the live count of `ctx.reject()` calls for the current dispatch, so a middleware can
-tell after `next()` whether an action's handler rejected.
+`ctx.gameName` (definition name), `ctx.gameVersion` (definition version, recorded in the log header),
+`ctx.seed` (room RNG seed, recorded in the log header) and `ctx.newId()` (deterministic ids — see the
+Determinism contract above). Middleware contexts additionally expose `ctx.rejectionCount` — the live count
+of `ctx.reject()` calls for the current dispatch, so a middleware can tell after `next()` whether an action's
+handler rejected.
 
 ### Errors at definition time
-`defineGame` throws `GameDefinitionError` listing every problem: reserved or unknown phase names, missing `startPhase`,
-`duration` without `onTimeout`, bad player limits, bad action names.
+`defineGame` throws `GameDefinitionError` listing every problem: empty `name` or `version`, reserved or unknown
+phase names, missing `startPhase`, `duration` without `onTimeout`, bad player limits, bad action names.
 A `ctx.transition()` to an undeclared phase throws at the call site.
+
+### Errors at runtime
+A throwing `onEnter`, `onTimeout`, `onRosterChange`, action handler, middleware or timer callback cannot wedge the room.
+The runtime collects every failure of one run and hands them to `definition.onError(ctx, error)` — the single error when
+one failed, an `AggregateError` in original order when several did. A throwing `onError` is caught; its failure joins the
+rethrow below instead of recursing into `onError` again.
+By default (no `onError`, or one that queues no transition) the runtime applies a fixed policy: it sets `state.notice` to
+a short fixed message and returns the room to the Lobby — notice only when already there — so the host can start again.
+If `onError` queues its own way out with `ctx.transition()` or `ctx.returnToLobby()`, that runs instead of the default policy.
+The run still rethrows what it reported, so the server logs the failure and a failed action answers `INTERNAL`;
+a throwing hook never leaves the room mid-phase.
 
 ## Minimal game: first to press the button
 
@@ -300,6 +344,7 @@ const action = actionFactory<State, Priv, Record<string, unknown>>();
 
 export const ButtonGame = defineGame<State, Priv>({
   name: "FirstToPress",
+  version: "1",
   minPlayers: 2,
   maxPlayers: 8,
   startPhase: "Round",
@@ -401,7 +446,7 @@ Scores live in a `Record<playerId, number>` mutated only through `awardPoints(sc
 ## Server
 
 `@partygame/server` hosts any game on Colyseus. Your state class extends `BaseGameState` (`phase`, `phaseEndsAt`, `roomCode`,
-`serverNow`, `spectatorCount`, `options` as JSON, `notice` (a message for the room, e.g. why it is back in the lobby; the framework never writes it, your `onEndGame`/`onReturnToLobby` do), `minPlayers`, `maxPlayers`, `players` keyed by `playerId`).
+`serverNow`, `spectatorCount`, `options` as JSON, `notice` (a message for the room, e.g. why it is back in the lobby; games write it in `onEndGame`/`onReturnToLobby`, and the runtime sets a fixed one when a hook throws — see "Errors at runtime"), `minPlayers`, `maxPlayers`, `players` keyed by `playerId`).
 State uses `@colyseus/schema` 5's decorator-free `schema()`; no compiler flags are needed:
 
 ```ts
@@ -566,7 +611,7 @@ vitest `setupFiles`: it shims the storages and makes the SDK use `ws` under jsdo
 | `AppRouter` | Routes the connection status and room phase to a screen of your screen table (see below). `createAppRouter(manager, screens)` builds one. |
 | `WaitingRoomViewModel` | The lobby: seats (`LobbyPlayer`), ready count, host-only start and kick (with confirmation), name field, share URL, copy code, `notice`. |
 
-The waiting room reads `players`, `minPlayers`, `maxPlayers`, `canStart`, `spectatorCount` and `notice` from `BaseGameState`. The framework never writes `notice`; a game sets it (for example in `onEndGame` or `onReturnToLobby`) to say why the room is back in the lobby, and the waiting room shows it.
+The waiting room reads `players`, `minPlayers`, `maxPlayers`, `canStart`, `spectatorCount` and `notice` from `BaseGameState`. A game sets `notice` (for example in `onEndGame` or `onReturnToLobby`) to say why the room is back in the lobby; the runtime also writes a fixed message when a hook throws (see "Errors at runtime"), and the waiting room shows whatever is there.
 
 The game plugs its rules in through the constructor. `GameControlsViewModel` takes an `isGameOver` predicate (default: never over); the host cannot end a game that is over:
 

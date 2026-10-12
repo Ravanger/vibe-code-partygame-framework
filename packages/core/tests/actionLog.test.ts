@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
-  ACTION_LOG,
   type ActionLog,
   actionFactory,
   actionLogMiddleware,
   defineGame,
   getActionLog,
+  getPhaseTimings,
+  InvalidPrivateStateError,
+  type MiddlewareContext,
   type PhaseState,
+  timingMiddleware,
 } from "../src/index.js";
 import { TestTable } from "../src/testing/TestTable.js";
 
@@ -28,6 +31,7 @@ class ATable extends TestTable<S, P, O> {
     super({
       definition: defineGame<S, P, O>({
         name: "Logged",
+        version: "1",
         minPlayers: 1,
         maxPlayers: 4,
         startPhase: "Play",
@@ -71,26 +75,63 @@ class ATable extends TestTable<S, P, O> {
   }
 }
 
+/** A hand-built middleware context, for driving a layer with an out-of-contract priv. */
+const rawContext = (priv: unknown): MiddlewareContext<PhaseState, unknown, unknown> => ({
+  state: { phase: "Lobby", phaseEndsAt: 0, canStart: false },
+  priv,
+  options: {},
+  phase: "Lobby",
+  players: () => [],
+  activePlayers: () => [],
+  player: () => undefined,
+  activateWaitingPlayers: () => {},
+  send: () => {},
+  broadcast: () => {},
+  showTo: () => {},
+  hideFrom: () => {},
+  transition: () => {},
+  returnToLobby: () => {},
+  rng: () => 0,
+  newId: () => "id",
+  now: () => 0,
+  gameName: "G",
+  gameVersion: "1",
+  seed: 1,
+  event: { kind: "enter" },
+  rejectionCount: 0,
+});
+
 describe("getActionLog", () => {
   it("returns undefined when no log has been recorded", () => {
     expect(getActionLog({ secret: "s" })).toBeUndefined();
   });
 
-  it("returns the stored log under the ACTION_LOG key, stable across calls", () => {
-    const priv: Record<string, unknown> = { secret: "s" };
-    const log = { header: { seed: 1, game: "G", startedAt: 0 }, entries: [] as unknown[] };
-    priv[ACTION_LOG] = log;
-    expect(getActionLog(priv)).toBe(log);
-    expect(getActionLog(priv)).toBe(log);
+  it("returns undefined for a non-object priv", () => {
+    expect(getActionLog(42)).toBeUndefined();
+    expect(getActionLog("nope")).toBeUndefined();
+    expect(getActionLog(null)).toBeUndefined();
+    expect(getActionLog(undefined)).toBeUndefined();
+  });
+
+  it("returns the live log, stable across calls", () => {
+    const table = new ATable();
+    expect(table.log()).toBeDefined();
+    expect(table.log()).toBe(table.log());
   });
 });
 
 describe("actionLogMiddleware", () => {
+  it("throws InvalidPrivateStateError when its priv is not an object", () => {
+    const layer = actionLogMiddleware();
+    expect(() => layer(rawContext(42), () => {})).toThrow(InvalidPrivateStateError);
+    expect(() => layer(rawContext(null), () => {})).toThrow(InvalidPrivateStateError);
+  });
+
   it("writes the header on the first entry and starts with the Lobby enter", () => {
     const table = new ATable();
     const log = table.log();
     expect(log).toBeDefined();
-    expect(log?.header).toEqual({ seed: 0, game: "Logged", startedAt: 1_000_000 });
+    expect(log?.header).toEqual({ seed: 0, game: "Logged", version: "1", startedAt: 1_000_000 });
     expect(log?.entries[0]).toEqual({ seq: 1, t: 1_000_000, phase: "Lobby", kind: "enter" });
   });
 
@@ -201,10 +242,10 @@ describe("action log content, ordering and isolation", () => {
     expect(Object.keys(deep?.payload as object)).toEqual(["data"]);
   });
 
-  it("never touches ctx.state; the log lives only under priv[ACTION_LOG]", () => {
+  it("never touches ctx.state or priv: no framework keys land in the game's private state", () => {
     const table = scriptedSession();
     expect(Object.keys(table.state)).toEqual(["phase", "phaseEndsAt", "canStart", "log"]);
-    expect(Object.keys(table.priv).sort()).toEqual([ACTION_LOG, "secret"]);
+    expect(Object.keys(table.priv)).toEqual(["secret"]);
   });
 
   it("round-trips through JSON.stringify and JSON.parse", () => {
@@ -214,6 +255,42 @@ describe("action log content, ordering and isolation", () => {
     const roundTripped = JSON.parse(JSON.stringify(log));
     expect(roundTripped).toEqual(log);
     expect(getActionLog(table.priv)).toBe(log);
+  });
+});
+
+describe("framework data stays out of the game's priv", () => {
+  interface P2 {
+    actionLog: string;
+    phaseTimings: number;
+  }
+
+  const collisionTable = (): TestTable<S, P2, O> =>
+    new TestTable({
+      definition: defineGame<S, P2, O>({
+        name: "Collision",
+        version: "1",
+        minPlayers: 1,
+        maxPlayers: 4,
+        startPhase: "Play",
+        createPrivateState: () => ({ actionLog: "mine", phaseTimings: 1 }),
+        phases: {
+          Play: { duration: 1000, onTimeout: (ctx) => ctx.transition("Score") },
+          Score: {},
+        },
+        middleware: [actionLogMiddleware(), timingMiddleware()],
+      }),
+      state: { phase: "", phaseEndsAt: 0, canStart: false, log: [] },
+      options: { rounds: 2 },
+      players: 2,
+    });
+
+  it("keeps game fields named like the old store keys untouched and adds no framework keys", () => {
+    const table = collisionTable();
+    table.start();
+    expect(table.priv).toEqual({ actionLog: "mine", phaseTimings: 1 });
+    expect(Object.keys(table.priv)).toEqual(["actionLog", "phaseTimings"]);
+    expect(getActionLog(table.priv)?.entries.length).toBeGreaterThan(0);
+    expect(getPhaseTimings(table.priv)?.Play).toBeDefined();
   });
 });
 
