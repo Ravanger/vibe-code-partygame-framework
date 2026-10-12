@@ -12,6 +12,7 @@ import { prettifyError } from "zod";
 import { newId } from "../utils.js";
 import { Lobby } from "./lobby.js";
 import { buildPhaseMachine } from "./machineFactory.js";
+import { type Pending, TransitionQueue } from "./TransitionQueue.js";
 import type {
   ActionContext,
   ActionDefinition,
@@ -25,7 +26,6 @@ import type {
   RuntimeHost,
 } from "./types.js";
 
-const MAX_CHAINED_TRANSITIONS = 100;
 const STOPPED_ERROR: ServerError = {
   code: ErrorCode.NOT_ALLOWED,
   message: "The game has ended",
@@ -36,8 +36,6 @@ interface PhaseActor {
   stop(): void;
   send(event: { type: "GO"; phase: string }): void;
 }
-
-type Pending = { kind: "phase"; phase: string } | { kind: "lobby" };
 
 /** Constructor argument of {@link GameRuntime}. */
 export interface GameRuntimeConfig<TState extends PhaseState, TPrivate, TOptions> {
@@ -65,7 +63,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   private readonly phases: Record<string, PhaseDefinition<TState, TPrivate, TOptions>>;
   private readonly middleware: PhaseMiddleware<TState, TPrivate, TOptions>[];
   private readonly actor: PhaseActor;
-  private readonly queue: Pending[] = [];
+  private readonly queue = new TransitionQueue();
   private readonly failures: unknown[] = [];
   private readonly rejections: ServerError[] = [];
   private current: PhaseDefinition<TState, TPrivate, TOptions>;
@@ -152,7 +150,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   /** Stop the actor and clear every timer. The runtime ignores all further calls. */
   stop(): void {
     this.stopped = true;
-    this.queue.length = 0;
+    this.queue.clear();
     this.actor.stop();
   }
 
@@ -269,16 +267,12 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     try {
       fn();
       this.rethrowFailure();
-      let steps = 0;
-      for (let next = this.queue.shift(); next; next = this.queue.shift()) {
-        if (++steps > MAX_CHAINED_TRANSITIONS) {
-          throw new Error(`More than ${MAX_CHAINED_TRANSITIONS} chained transitions; phase loop?`);
-        }
-        this.apply(next);
-        this.rethrowFailure();
-      }
+      this.queue.drain(
+        (next) => this.apply(next),
+        () => this.rethrowFailure(),
+      );
     } catch (error) {
-      this.queue.length = 0;
+      this.queue.clear();
       throw error;
     } finally {
       this.refreshCanStart();
