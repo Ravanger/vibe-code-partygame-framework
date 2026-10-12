@@ -381,9 +381,13 @@
           "ACTION_NAME_PATTERN": {},
           "ActionEnvelopeSchema": {},
           "ActionResult": {},
+          "CLIENT_MESSAGES": {},
+          "CLOSE_CODES": {},
           "ClientMessage": {},
+          "CloseCode": {},
           "END_GAME": {},
           "ErrorCode": {},
+          "FrameworkError": {},
           "JoinOptionsSchema": {},
           "KICK_PLAYER": {},
           "LOBBY_PHASE": {},
@@ -397,6 +401,7 @@
           "ServerError": {},
           "ServerMessage": {},
           "SetNameSchema": {},
+          "closeCodeEntry": {},
           "isActionResult": {},
           "isServerError": {}
         }
