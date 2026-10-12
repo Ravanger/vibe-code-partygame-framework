@@ -65,6 +65,8 @@ export interface GameContext<TState extends PhaseState, TPrivate, TOptions> {
   now(): number;
   /** The definition's name; recorded in the action log header for replay sanity checks. */
   readonly gameName: string;
+  /** The definition's version; recorded in the action log header for replay sanity checks. */
+  readonly gameVersion: string;
   /** The room RNG seed; see `mulberry32`. Recorded in the action log header. */
   readonly seed: number;
 }
@@ -147,6 +149,8 @@ export interface GameDefinition<
   TOptions = Record<string, unknown>,
 > {
   name: string;
+  /** Bump when a change would alter how a recorded log replays. */
+  version: string;
   minPlayers: number;
   maxPlayers: number;
   /** Phase entered by `START_GAME`. */

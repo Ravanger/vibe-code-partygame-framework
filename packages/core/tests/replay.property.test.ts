@@ -20,6 +20,7 @@ const action = actionFactory<S, Record<string, never>, Record<string, never>>();
 
 const definition = defineGame<S, Record<string, never>, Record<string, never>>({
   name: "PropertyReplay",
+  version: "1",
   minPlayers: 2,
   maxPlayers: 4,
   startPhase: "Tap",

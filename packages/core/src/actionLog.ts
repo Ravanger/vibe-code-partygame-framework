@@ -44,6 +44,11 @@ export interface ActionLogHeader {
   seed: number;
   /** Definition name; `replayLog` refuses a log recorded for another game. */
   game: string;
+  /**
+   * The definition's version; `replayLog` refuses a log with a different version, or one without
+   * (recorded before versioning).
+   */
+  version?: string;
   /** `ctx.now()` at the first entry (the construction-time Lobby enter). */
   startedAt: number;
 }
@@ -88,7 +93,12 @@ function logOf(ctx: MiddlewareContext<PhaseState, unknown, unknown>): ActionLog 
   let log = logs.get(priv);
   if (log === undefined) {
     log = {
-      header: { seed: ctx.seed, game: ctx.gameName, startedAt: ctx.now() },
+      header: {
+        seed: ctx.seed,
+        game: ctx.gameName,
+        version: ctx.gameVersion,
+        startedAt: ctx.now(),
+      },
       entries: [],
     };
     logs.set(priv, log);

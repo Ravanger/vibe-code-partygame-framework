@@ -23,6 +23,7 @@ const action = actionFactory<S, { marker: string }, Record<string, never>>();
 
 const definition = defineGame<S, { marker: string }, Record<string, never>>({
   name: "TapReplay",
+  version: "1",
   minPlayers: 1,
   maxPlayers: 4,
   startPhase: "Tap",
@@ -109,6 +110,7 @@ interface RollState extends PhaseState {
 
 const rollDefinition = defineGame<RollState, Record<string, never>, Record<string, never>>({
   name: "Roll",
+  version: "1",
   minPlayers: 1,
   maxPlayers: 2,
   startPhase: "Roll",
@@ -165,6 +167,36 @@ describe("replayLog", () => {
         players: 2,
       }),
     ).toThrow('log was recorded for game "TapReplay", not "OtherGame"');
+  });
+
+  it("throws when the log was recorded for another version", () => {
+    const live = liveTable();
+    live.start();
+    const other = defineGame<S, { marker: string }, Record<string, never>>({
+      ...definition,
+      version: "2",
+    });
+    expect(() =>
+      replayLog(other, getActionLog(live.priv) as ActionLog, {
+        state: newState(),
+        options: {},
+        players: 2,
+      }),
+    ).toThrow('log was recorded for version "1", not "2"');
+  });
+
+  it("throws when the log predates versioning (no header.version)", () => {
+    const live = liveTable();
+    live.start();
+    const log = getActionLog(live.priv) as ActionLog;
+    delete log.header.version;
+    expect(() =>
+      replayLog(definition, log, {
+        state: newState(),
+        options: {},
+        players: 2,
+      }),
+    ).toThrow("log.header.version is missing; the log predates versioned logs");
   });
 
   it("throws when the first entry is not the construction-time Lobby enter (entry removed)", () => {
@@ -629,6 +661,7 @@ describe("replay restores recorded seat flags", () => {
 
   const benchDefinition = defineGame<BenchState, Record<string, never>, Record<string, never>>({
     name: "Bench",
+    version: "1",
     minPlayers: 1,
     maxPlayers: 4,
     startPhase: "Play",
@@ -710,6 +743,7 @@ describe("replay round-trip", () => {
 
   const spinDefinition = defineGame<SpinState, Record<string, never>, Record<string, never>>({
     name: "Spin",
+    version: "1",
     minPlayers: 1,
     maxPlayers: 4,
     startPhase: "Spin",

@@ -23,6 +23,7 @@ export function createWitClashGame({ categories }: WitClashConfig) {
   if (categories.all().length === 0) throw new Error("WitClash needs at least one category");
   return defineGame<WitClashState, WitClashPrivate, WitClashOptions>({
     name: "WitClash",
+    version: "1",
     minPlayers: MIN_PLAYERS,
     maxPlayers: MAX_PLAYERS,
     startPhase: PHASE.CategorySelection,

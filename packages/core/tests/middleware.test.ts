@@ -31,6 +31,7 @@ class LTable extends TestTable<S, P, O> {
     super({
       definition: defineGame<S, P, O>({
         name: "Log",
+        version: "1",
         minPlayers: 1,
         maxPlayers: 4,
         startPhase: "Play",
@@ -93,6 +94,7 @@ class TTable extends TestTable<S, P, O> {
     super({
       definition: defineGame<S, P, O>({
         name: "Timed",
+        version: "1",
         minPlayers: 1,
         maxPlayers: 4,
         startPhase: "Play",
@@ -144,6 +146,7 @@ const rawContext = (priv: unknown): MiddlewareContext<PhaseState, unknown, unkno
   newId: () => "id",
   now: () => 0,
   gameName: "G",
+  gameVersion: "1",
   seed: 1,
   event: { kind: "enter" },
   rejectionCount: 0,

@@ -25,6 +25,7 @@ const action = actionFactory<S, P, O>();
 const game = (middleware: PhaseMiddleware<S, P, O>[]) =>
   defineGame<S, P, O>({
     name: "Mw",
+    version: "1",
     minPlayers: 1,
     maxPlayers: 4,
     startPhase: "Play",

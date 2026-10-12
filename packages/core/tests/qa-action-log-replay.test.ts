@@ -36,6 +36,7 @@ const action = actionFactory<S, P, O>();
 /** The probe fixture game: a timed Play phase with custom + built-in actions, and an un-timed Score. */
 const fullDefinition = defineGame<S, P, O>({
   name: "QAFull",
+  version: "1",
   minPlayers: 1,
   maxPlayers: 4,
   startPhase: "Play",
@@ -281,6 +282,7 @@ describe("QA probe R.5 — RNG determinism", () => {
       Record<string, never>
     >({
       name: "QARoll",
+      version: "1",
       minPlayers: 1,
       maxPlayers: 2,
       startPhase: "Roll",
@@ -368,6 +370,7 @@ describe("QA probe R.7 — adversarial replay round-trip", () => {
 
   const rideDefinition = defineGame<RideState, Record<string, never>, Record<string, never>>({
     name: "QARide",
+    version: "1",
     minPlayers: 1,
     maxPlayers: 4,
     startPhase: "Work",
@@ -473,6 +476,7 @@ describe("QA probe R.7 extension — RNG parity for function durations", () => {
 
   const durDefinition = defineGame<DurState, Record<string, never>, Record<string, never>>({
     name: "QADur",
+    version: "1",
     minPlayers: 1,
     maxPlayers: 2,
     startPhase: "Wait",

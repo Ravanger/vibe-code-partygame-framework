@@ -31,6 +31,7 @@ class ATable extends TestTable<S, P, O> {
     super({
       definition: defineGame<S, P, O>({
         name: "Logged",
+        version: "1",
         minPlayers: 1,
         maxPlayers: 4,
         startPhase: "Play",
@@ -94,6 +95,7 @@ const rawContext = (priv: unknown): MiddlewareContext<PhaseState, unknown, unkno
   newId: () => "id",
   now: () => 0,
   gameName: "G",
+  gameVersion: "1",
   seed: 1,
   event: { kind: "enter" },
   rejectionCount: 0,
@@ -129,7 +131,7 @@ describe("actionLogMiddleware", () => {
     const table = new ATable();
     const log = table.log();
     expect(log).toBeDefined();
-    expect(log?.header).toEqual({ seed: 0, game: "Logged", startedAt: 1_000_000 });
+    expect(log?.header).toEqual({ seed: 0, game: "Logged", version: "1", startedAt: 1_000_000 });
     expect(log?.entries[0]).toEqual({ seq: 1, t: 1_000_000, phase: "Lobby", kind: "enter" });
   });
 
@@ -266,6 +268,7 @@ describe("framework data stays out of the game's priv", () => {
     new TestTable({
       definition: defineGame<S, P2, O>({
         name: "Collision",
+        version: "1",
         minPlayers: 1,
         maxPlayers: 4,
         startPhase: "Play",

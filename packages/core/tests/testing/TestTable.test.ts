@@ -13,6 +13,7 @@ const action = actionFactory<TapState, { marker: string }, Record<string, never>
 const makeDefinition = (minPlayers = 2) =>
   defineGame<TapState, { marker: string }, Record<string, never>>({
     name: "Tap",
+    version: "1",
     minPlayers,
     maxPlayers: 6,
     startPhase: "Tap",

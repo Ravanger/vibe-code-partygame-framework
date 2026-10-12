@@ -32,6 +32,7 @@ const fakeContext = (): GameContext<PhaseState, unknown, unknown> => ({
   newId: () => "id",
   now: () => 0,
   gameName: "Test",
+  gameVersion: "1",
   seed: 1,
 });
 

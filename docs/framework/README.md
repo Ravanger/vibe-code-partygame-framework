@@ -130,6 +130,7 @@ const log: string[] = [];
 
 export const ButtonGame = defineGame<State, Priv>({
   name: "FirstToPress",
+  version: "1",
   // ...phases as in Minimal game
   middleware: [
     (ctx, next) => { log.push(`outer ${ctx.event.kind}`); next(); }, // first registered is outermost
@@ -195,6 +196,7 @@ by the object, `createPrivateState()` must return an object: the `GameRuntime` c
 |---|---|
 | `seed` | Room RNG seed (see Determinism contract) |
 | `game` | Definition name; `replayLog` refuses a log recorded for another game |
+| `version` | Definition version; `replayLog` refuses a log recorded for another version, or one without it (recorded before versioning) |
 | `startedAt` | `ctx.now()` at the first entry (the construction-time Lobby enter) |
 
 **Entries** — one per middleware-visible event, in append order:
@@ -284,8 +286,8 @@ are minutes long.
 tell after `next()` whether an action's handler rejected.
 
 ### Errors at definition time
-`defineGame` throws `GameDefinitionError` listing every problem: reserved or unknown phase names, missing `startPhase`,
-`duration` without `onTimeout`, bad player limits, bad action names.
+`defineGame` throws `GameDefinitionError` listing every problem: empty `name` or `version`, reserved or unknown
+phase names, missing `startPhase`, `duration` without `onTimeout`, bad player limits, bad action names.
 A `ctx.transition()` to an undeclared phase throws at the call site.
 
 ### Errors at runtime
@@ -312,6 +314,7 @@ const action = actionFactory<State, Priv, Record<string, unknown>>();
 
 export const ButtonGame = defineGame<State, Priv>({
   name: "FirstToPress",
+  version: "1",
   minPlayers: 2,
   maxPlayers: 8,
   startPhase: "Round",

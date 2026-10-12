@@ -43,6 +43,7 @@ type PaddedState = SchemaType<typeof PaddedState>;
 
 const PaddedGame = defineGame<PaddedState, Record<string, never>, Record<string, never>>({
   name: "TapPadded",
+  version: "1",
   minPlayers: 1,
   maxPlayers: 6,
   startPhase: "Idle",

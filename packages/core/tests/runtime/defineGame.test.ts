@@ -11,6 +11,7 @@ import {
 type S = PhaseState;
 const valid = (): GameDefinition<S> => ({
   name: "G",
+  version: "1",
   minPlayers: 2,
   maxPlayers: 4,
   startPhase: "Play",
@@ -36,6 +37,10 @@ describe("defineGame", () => {
 
   it("rejects an empty name", () => {
     expect(errorsOf({ ...valid(), name: "" })).toContain("name");
+  });
+
+  it("rejects an empty version", () => {
+    expect(errorsOf({ ...valid(), version: "" })).toContain("version must not be empty");
   });
 
   it("rejects bad player limits", () => {

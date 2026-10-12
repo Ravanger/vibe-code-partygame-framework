@@ -36,6 +36,7 @@ type Overrides = Partial<Omit<Spec, "options" | "onReturnToLobby" | "onPlayerSyn
 function makeSpec(overrides: Overrides = {}): GameDefinition<S, P, O> {
   return defineGame<S, P, O>({
     name: "Test",
+    version: "1",
     minPlayers: 2,
     maxPlayers: 4,
     startPhase: "Play",
