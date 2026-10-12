@@ -122,7 +122,8 @@ Returning to the Lobby activates every waiting (mid-game) joiner.
 Game-level middleware registered on `defineGame` runs around every phase's `onEnter`, `onTimeout`, `onRosterChange` and
 around every action handler (including the built-in lobby actions), and observes transitions. It is Koa-style onion
 middleware: the first entry in the array is outermost, each layer calls `next()` to reach the next one, and chains are
-synchronous in v1.
+synchronous in v1 — `PhaseMiddleware` returns `undefined`, so an `async` layer is a compile error (the runtime still
+rejects a thenable return value from untyped callers).
 
 ```ts
 const log: string[] = [];

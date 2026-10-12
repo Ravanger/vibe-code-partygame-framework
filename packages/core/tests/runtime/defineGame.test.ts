@@ -102,7 +102,14 @@ describe("defineGame", () => {
   });
 
   it("accepts a valid middleware array", () => {
-    const spec: GameDefinition<S> = { ...valid(), middleware: [(_ctx, next) => next()] };
+    const spec: GameDefinition<S> = {
+      ...valid(),
+      middleware: [
+        (_ctx, next) => {
+          next();
+        },
+      ],
+    };
     expect(defineGame(spec)).toBe(spec);
   });
 

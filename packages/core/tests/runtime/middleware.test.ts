@@ -4,6 +4,7 @@ import { z } from "zod";
 import {
   actionFactory,
   defineGame,
+  type MiddlewareContext,
   type PhaseMiddleware,
   type PhaseState,
 } from "../../src/index.js";
@@ -443,13 +444,18 @@ describe("middleware next() re-entrancy", () => {
   });
 });
 
+/** The one boundary an untyped layer crosses to reach the chain: a single cast from `unknown`. */
+const smuggle = (layer: unknown): PhaseMiddleware<S, P, O> => layer as PhaseMiddleware<S, P, O>;
+
 describe("middleware must be synchronous", () => {
   it("throws when a middleware returns a promise instead of running synchronously", () => {
-    const slow: PhaseMiddleware<S, P, O> = async (_ctx, next) => {
+    // Untyped by design: the compile-time rule (see tests/middleware.test.ts) is for typed
+    // authors; this test drives the runtime backstop an untyped caller would hit.
+    const slow = async (_ctx: MiddlewareContext<S, P, O>, next: () => void) => {
       await Promise.resolve();
       next();
     };
-    const table = new MTable([slow]);
+    const table = new MTable([smuggle(slow)]);
     // The initial Lobby enter happens at construction; its failure is deferred like any hook failure,
     // and joins this run's action failure in the rethrown AggregateError.
     let thrown: unknown;
@@ -463,11 +469,12 @@ describe("middleware must be synchronous", () => {
   });
 
   it("ignores non-promise return values", () => {
-    const tag: PhaseMiddleware<S, P, O> = (_ctx, next) => {
+    // Untyped by design, like the promise case above: this drives the runtime backstop.
+    const tag = (_ctx: MiddlewareContext<S, P, O>, next: () => void) => {
       next();
       return {};
     };
-    const table = new MTable([tag]);
+    const table = new MTable([smuggle(tag)]);
     table.start();
     expect(table.act("p2", "PING")).toBeUndefined();
     expect(table.state.log).toContain("ping");

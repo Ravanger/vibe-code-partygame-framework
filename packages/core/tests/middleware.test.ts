@@ -4,6 +4,7 @@ import {
   actionFactory,
   defineGame,
   loggingMiddleware,
+  type MiddlewareContext,
   PHASE_TIMINGS,
   type PhaseMiddleware,
   type PhaseState,
@@ -170,5 +171,28 @@ describe("timingMiddleware", () => {
     const t = timings(table);
     expect(t.Play).toBeUndefined();
     expect(t.Score?.durationsMs).toEqual([]);
+  });
+});
+
+describe("compile-time sync rule", () => {
+  it("rejects an async layer at compile time and accepts a synchronous one", () => {
+    // If the chain's return type were ever widened back to `void`, the async layer below would
+    // become assignable, `rejected` would resolve to `true`, and this file would stop compiling.
+    const asyncLayer = async (
+      _ctx: MiddlewareContext<PhaseState, unknown, unknown>,
+      next: () => void,
+    ) => {
+      next();
+    };
+    type IsAssignable<F, T> = F extends T ? true : false;
+    const rejected: IsAssignable<
+      typeof asyncLayer,
+      PhaseMiddleware<PhaseState, unknown, unknown>
+    > = false;
+    expect(rejected).toBe(false);
+    const sync: PhaseMiddleware<PhaseState, unknown, unknown> = (_ctx, next) => {
+      next();
+    };
+    expect(sync).toBeTypeOf("function");
   });
 });

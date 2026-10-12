@@ -100,13 +100,15 @@ export interface MiddlewareContext<TState extends PhaseState, TPrivate, TOptions
 
 /**
  * A Koa-style onion layer around phase hooks and action handlers; first registered runs
- * outermost. Synchronous in v1: call `next()` to run the inner layer (the next middleware or
- * the hook/handler itself); omit it to skip the hook/handler. Throwing is handled exactly
- * like a hook throw. Method syntax keeps the context parameter bivariant, as `DurationFn`
- * does, so game-typed and erased definitions stay mutually assignable.
+ * outermost. Synchronous in v1 — the `undefined` return type rejects `async` layers at
+ * compile time (an untyped thenable-returning caller still hits the runtime check in
+ * `GameRuntime.chain`): call `next()` to run the inner layer (the next middleware or the
+ * hook/handler itself); omit it to skip the hook/handler. Throwing is handled exactly like
+ * a hook throw. Method syntax keeps the context parameter bivariant, as `DurationFn` does,
+ * so game-typed and erased definitions stay mutually assignable.
  */
 export type PhaseMiddleware<TState extends PhaseState, TPrivate, TOptions> = {
-  run(ctx: MiddlewareContext<TState, TPrivate, TOptions>, next: () => void): void;
+  run(ctx: MiddlewareContext<TState, TPrivate, TOptions>, next: () => void): undefined;
 }["run"];
 
 /** One client action accepted by a phase. */
