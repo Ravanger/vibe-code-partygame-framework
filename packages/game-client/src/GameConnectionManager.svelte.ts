@@ -2,7 +2,9 @@ import { Client } from "@colyseus/sdk";
 import { resolveRoomCode } from "@partygame/client-utils";
 import {
   type ActionResult,
+  CLIENT_MESSAGES,
   ClientMessage,
+  closeCodeEntry,
   ErrorCode,
   isActionResult,
   isServerError,
@@ -198,14 +200,14 @@ export class GameConnectionManager<TState extends BaseGameState = BaseGameState>
 
   /** Sends a game action and resolves with the server's verdict. Failures are also kept in `lastServerError`. */
   async sendAction(type: string, payload: object = {}): Promise<ActionResult> {
-    if (!this.room) return this.fail("Not connected");
+    if (!this.room) return this.fail();
     try {
       const result = await this.room.request(ClientMessage.ACTION, { ...payload, type });
-      if (!isActionResult(result)) return this.fail("Malformed reply from the server");
-      if (!result.ok) this.lastServerError = result.error;
+      if (!isActionResult(result)) return this.fail();
+      if (!result.ok) this.setLastError(result.error);
       return result;
-    } catch (error) {
-      return this.fail(error instanceof Error ? error.message : "The request failed");
+    } catch {
+      return this.fail();
     }
   }
 
@@ -220,7 +222,7 @@ export class GameConnectionManager<TState extends BaseGameState = BaseGameState>
   }
 
   dismissError(): void {
-    this.lastServerError = undefined;
+    this.setLastError(undefined);
   }
 
   /** Adopts an already-connected room. `create`/`join`/`resume` end here; tests may call it with a `StubRoom`. */
@@ -238,10 +240,11 @@ export class GameConnectionManager<TState extends BaseGameState = BaseGameState>
         this.rememberToken(room);
       }),
     );
-    room.onLeave(() =>
+    room.onLeave((code) =>
       this.whileAttached(room, () => {
         this.session.clear();
         this.spectating = false;
+        this.recordClose(code);
         this.detach("disconnected");
       }),
     );
@@ -291,6 +294,7 @@ export class GameConnectionManager<TState extends BaseGameState = BaseGameState>
       this.attach(room);
     } catch (error) {
       if (generation === this.generation) this.status = "disconnected";
+      this.recordRejection(error);
       throw error;
     }
   }
@@ -367,12 +371,31 @@ export class GameConnectionManager<TState extends BaseGameState = BaseGameState>
   }
 
   private serverErrorReceived(payload: unknown): void {
-    if (isServerError(payload)) this.lastServerError = payload;
+    if (isServerError(payload)) this.setLastError(payload);
   }
 
-  private fail(message: string): ActionResult {
-    const error: ServerError = { code: ErrorCode.INTERNAL, message };
+  /** The single writer for `lastServerError`: server ERROR payloads, failed actions and close codes all land here. */
+  private setLastError(error: ServerError | undefined): void {
     this.lastServerError = error;
+  }
+
+  /** Records a numeric close code when it is in CLOSE_CODES; unknown codes leave `lastServerError` untouched. */
+  private recordClose(code: number): void {
+    const entry = closeCodeEntry(code);
+    if (entry) this.setLastError({ code: entry.errorCode, message: entry.message });
+  }
+
+  /** Reads the numeric close code off an SDK rejection with a type guard and records it; other rejections are ignored. */
+  private recordRejection(error: unknown): void {
+    if (typeof error !== "object" || error === null || !("code" in error)) return;
+    const code = error.code;
+    if (typeof code === "number") this.recordClose(code);
+  }
+
+  /** A client-side action failure: the fixed INTERNAL message, never the raw exception text. */
+  private fail(): ActionResult {
+    const error: ServerError = { code: ErrorCode.INTERNAL, message: CLIENT_MESSAGES.INTERNAL };
+    this.setLastError(error);
     return { ok: false, error };
   }
 }

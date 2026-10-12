@@ -1,10 +1,10 @@
 import { Client } from "@colyseus/sdk";
-import { ErrorCode } from "@partygame/shared";
+import { CLIENT_MESSAGES, CLOSE_CODES, ErrorCode } from "@partygame/shared";
 import { BaseGameState, PlayerSchema } from "@partygame/shared/schema";
 import { flushSync } from "svelte";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GameConnectionManager } from "../src/GameConnectionManager.svelte.js";
-import { StubRoom } from "../src/testing.js";
+import { fakeFetch, StubRoom } from "../src/testing.js";
 import { observe } from "./observe.svelte.js";
 
 let counter = 0;
@@ -29,6 +29,7 @@ const settle = () => new Promise((resolve) => setTimeout(resolve));
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   localStorage.clear();
   sessionStorage.clear();
 });
@@ -49,9 +50,9 @@ describe("before a room", () => {
     const result = await manager.sendAction("PRESS");
     expect(result).toEqual({
       ok: false,
-      error: { code: ErrorCode.INTERNAL, message: "Not connected" },
+      error: { code: ErrorCode.INTERNAL, message: CLIENT_MESSAGES.INTERNAL },
     });
-    expect(manager.lastServerError?.message).toBe("Not connected");
+    expect(manager.lastServerError?.message).toBe(CLIENT_MESSAGES.INTERNAL);
     await expect(manager.join("no1")).rejects.toThrow("4 letters");
     manager.setName("ignored");
   });
@@ -194,19 +195,22 @@ describe("sendAction", () => {
     expect(manager.lastServerError).toBeUndefined();
   });
 
-  it("turns a transport failure into an INTERNAL result", async () => {
+  it("turns a transport failure into a fixed INTERNAL result and never leaks its text", async () => {
     const manager = newManager();
     const { room } = seated(manager);
-    room.request = () => Promise.reject(new Error("connection closed"));
+    room.request = () => Promise.reject(new Error('Zod: buzzMs must be "fast"'));
     manager.attach(room);
     const result = await manager.sendAction("PRESS");
     expect(result).toEqual({
       ok: false,
-      error: { code: ErrorCode.INTERNAL, message: "connection closed" },
+      error: { code: ErrorCode.INTERNAL, message: CLIENT_MESSAGES.INTERNAL },
     });
     room.request = () => Promise.reject("odd");
     expect((await manager.sendAction("PRESS")).ok).toBe(false);
-    expect(manager.lastServerError?.message).toBe("The request failed");
+    expect(manager.lastServerError).toEqual({
+      code: ErrorCode.INTERNAL,
+      message: CLIENT_MESSAGES.INTERNAL,
+    });
   });
 
   it("does not trust a malformed reply", async () => {
@@ -217,8 +221,44 @@ describe("sendAction", () => {
     const result = await manager.sendAction("PRESS");
     expect(result).toEqual({
       ok: false,
-      error: { code: ErrorCode.INTERNAL, message: "Malformed reply from the server" },
+      error: { code: ErrorCode.INTERNAL, message: CLIENT_MESSAGES.INTERNAL },
     });
+  });
+});
+
+describe("refused joins", () => {
+  it("records a refused join as the fixed close-code error and keeps rejecting", async () => {
+    const manager = newManager();
+    vi.stubGlobal("fetch", fakeFetch({ roomId: "room-1" }).fetch);
+    vi.spyOn(Client.prototype, "joinById").mockRejectedValue(
+      Object.assign(new Error("Room is full"), { code: CLOSE_CODES.ROOM_FULL.code }),
+    );
+    await expect(manager.join("ABCD")).rejects.toThrow();
+    expect(manager.lastServerError).toEqual({
+      code: CLOSE_CODES.ROOM_FULL.errorCode,
+      message: CLOSE_CODES.ROOM_FULL.message,
+    });
+    expect(manager.status).toBe("disconnected");
+  });
+
+  it("records a refused token reconnect the same way and reports false", async () => {
+    const manager = newManager();
+    sessionStorage.setItem(`unit${counter}.reconnectionToken`, "stale");
+    vi.spyOn(Client.prototype, "reconnect").mockRejectedValue(
+      Object.assign(new Error("Your seat was removed"), { code: CLOSE_CODES.SEAT_REMOVED.code }),
+    );
+    expect(await manager.resume()).toBe(false);
+    expect(manager.lastServerError).toEqual({
+      code: CLOSE_CODES.SEAT_REMOVED.errorCode,
+      message: CLOSE_CODES.SEAT_REMOVED.message,
+    });
+  });
+
+  it("never records the text of a rejection without a close code", async () => {
+    const manager = newManager();
+    vi.spyOn(Client.prototype, "create").mockRejectedValue(new Error('Zod: buzzMs must be "fast"'));
+    await expect(manager.create()).rejects.toThrow();
+    expect(manager.lastServerError).toBeUndefined();
   });
 });
 
@@ -288,6 +328,24 @@ describe("connection lifecycle", () => {
     expect(manager.state).toBeUndefined();
     expect(sessionStorage.getItem(`unit${counter}.reconnectionToken`)).toBeNull();
     expect(localStorage.getItem(`unit${counter}.roomCode`)).toBeNull();
+  });
+
+  it("records a known close code on leave and ignores unknown ones", () => {
+    const manager = newManager();
+    const first = seated(manager);
+    manager.attach(first.room);
+    first.room.closed(CLOSE_CODES.SEAT_REMOVED.code, "internal detail");
+    expect(manager.lastServerError).toEqual({
+      code: CLOSE_CODES.SEAT_REMOVED.errorCode,
+      message: CLOSE_CODES.SEAT_REMOVED.message,
+    });
+    const second = seated(manager);
+    manager.attach(second.room);
+    second.room.closed(1006, "internal detail");
+    expect(manager.lastServerError).toEqual({
+      code: CLOSE_CODES.SEAT_REMOVED.errorCode,
+      message: CLOSE_CODES.SEAT_REMOVED.message,
+    });
   });
 
   it("ignores events from a room it already left", () => {
