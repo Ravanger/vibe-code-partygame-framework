@@ -20,18 +20,29 @@ export class TransitionQueue {
     this.items.length = 0;
   }
 
+  /** True when no transition is pending. */
+  isEmpty(): boolean {
+    return this.items.length === 0;
+  }
+
   /**
    * Apply queued transitions FIFO, including ones pushed while applying. `afterEach` runs after
-   * every apply so the runtime can surface hook failures between steps. Throws on the 101st step.
+   * every apply so the runtime can surface hook failures between steps. Throws on the 101st step,
+   * and discards whatever is still queued whenever a step throws.
    */
   drain(apply: (next: Pending) => void, afterEach: () => void): void {
     let steps = 0;
-    for (let next = this.items.shift(); next; next = this.items.shift()) {
-      if (++steps > MAX_CHAINED_TRANSITIONS) {
-        throw new Error(`More than ${MAX_CHAINED_TRANSITIONS} chained transitions; phase loop?`);
+    try {
+      for (let next = this.items.shift(); next; next = this.items.shift()) {
+        if (++steps > MAX_CHAINED_TRANSITIONS) {
+          throw new Error(`More than ${MAX_CHAINED_TRANSITIONS} chained transitions; phase loop?`);
+        }
+        apply(next);
+        afterEach();
       }
-      apply(next);
-      afterEach();
+    } catch (error) {
+      this.clear();
+      throw error;
     }
   }
 }

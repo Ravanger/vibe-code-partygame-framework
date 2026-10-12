@@ -660,15 +660,20 @@ describe("QA probe R.11 — middleware interplay with a throwing observer", () =
   it.each([
     ["log outer, throwing inner", [actionLogMiddleware(), throwingObserver()]],
     ["throwing outer, log inner", [throwingObserver(), actionLogMiddleware()]],
-  ])("%s: the transition still applies and the log records it", (_label, middleware) => {
-    const table = new FTable(middleware);
-    expect(() => table.start()).toThrow("observer boom"); // PR #2: observer throws surface
-    expect(table.phase).toBe("Play"); // …but never cancel the observed transition
-    const log = getActionLog(table.priv);
-    expect(
-      log?.entries.some((e) => e.kind === "transition" && e.from === "Lobby" && e.to === "Play"),
-    ).toBe(true);
-  });
+  ])(
+    "%s: the transition still applies, is logged, and the default policy returns the room",
+    (_label, middleware) => {
+      const table = new FTable(middleware);
+      expect(() => table.start()).toThrow("observer boom"); // PR #2: observer throws surface
+      const log = getActionLog(table.priv);
+      expect(
+        log?.entries.some((e) => e.kind === "transition" && e.from === "Lobby" && e.to === "Play"),
+      ).toBe(true);
+      expect(log?.entries.some((e) => e.kind === "enter" && e.phase === "Play")).toBe(true); // …but never cancel the observed transition
+      expect(table.phase).toBe("Lobby"); // then the default failure policy returns the room
+      expect(table.state.notice).toBeTruthy();
+    },
+  );
 });
 
 describe("QA probe R.12 — enter phase field", () => {
@@ -706,9 +711,18 @@ describe("QA probe R.13 — frozen priv edge", () => {
     // No partial log in either case: the write to priv[ACTION_LOG] fails atomically.
     expect(getActionLog(table?.priv ?? {})).toBeUndefined();
     if (constructionError === undefined) {
-      // Deferred like any hook failure (PR #2 semantics): the next runtime op must surface it loudly.
+      // Deferred like any hook failure (PR #2 semantics): the next runtime op must surface it loudly,
+      // wrapped in the run's AggregateError when several writes failed.
       const t = required(table, "QA probe R.13 table");
-      expect(() => t.start()).toThrow(TypeError);
+      let thrown: unknown;
+      try {
+        t.start();
+      } catch (error) {
+        thrown = error;
+      }
+      const errors = thrown instanceof AggregateError ? thrown.errors : [thrown];
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.every((e) => e instanceof TypeError)).toBe(true);
     } else {
       expect(constructionError).toBeInstanceOf(TypeError);
     }

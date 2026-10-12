@@ -66,6 +66,35 @@ describe("TransitionQueue", () => {
     expect(applied).toEqual([]);
   });
 
+  it("discards still-queued items when a step throws", () => {
+    const queue = new TransitionQueue();
+    queue.push(phase("A"));
+    queue.push({ kind: "lobby" });
+    expect(() =>
+      queue.drain(
+        (next) => {
+          if (next.kind === "phase") throw new Error("step boom");
+        },
+        () => {},
+      ),
+    ).toThrow("step boom");
+    const applied: string[] = [];
+    queue.drain(
+      (next) => applied.push(label(next)),
+      () => {},
+    );
+    expect(applied).toEqual([]);
+  });
+
+  it("isEmpty reflects the pending items", () => {
+    const queue = new TransitionQueue();
+    expect(queue.isEmpty()).toBe(true);
+    queue.push(phase("A"));
+    expect(queue.isEmpty()).toBe(false);
+    queue.clear();
+    expect(queue.isEmpty()).toBe(true);
+  });
+
   it("runs afterEach after every apply", () => {
     const queue = new TransitionQueue();
     queue.push(phase("A"));

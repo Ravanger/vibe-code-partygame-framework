@@ -287,6 +287,17 @@ tell after `next()` whether an action's handler rejected.
 `duration` without `onTimeout`, bad player limits, bad action names.
 A `ctx.transition()` to an undeclared phase throws at the call site.
 
+### Errors at runtime
+A throwing `onEnter`, `onTimeout`, `onRosterChange`, action handler, middleware or timer callback cannot wedge the room.
+The runtime collects every failure of one run and hands them to `definition.onError(ctx, error)` — the single error when
+one failed, an `AggregateError` in original order when several did. A throwing `onError` is caught; its failure joins the
+rethrow below instead of recursing into `onError` again.
+By default (no `onError`, or one that queues no transition) the runtime applies a fixed policy: it sets `state.notice` to
+a short fixed message and returns the room to the Lobby — notice only when already there — so the host can start again.
+If `onError` queues its own way out with `ctx.transition()` or `ctx.returnToLobby()`, that runs instead of the default policy.
+The run still rethrows what it reported, so the server logs the failure and a failed action answers `INTERNAL`;
+a throwing hook never leaves the room mid-phase.
+
 ## Minimal game: first to press the button
 
 ```ts
@@ -401,7 +412,7 @@ Scores live in a `Record<playerId, number>` mutated only through `awardPoints(sc
 ## Server
 
 `@partygame/server` hosts any game on Colyseus. Your state class extends `BaseGameState` (`phase`, `phaseEndsAt`, `roomCode`,
-`serverNow`, `spectatorCount`, `options` as JSON, `notice` (a message for the room, e.g. why it is back in the lobby; the framework never writes it, your `onEndGame`/`onReturnToLobby` do), `minPlayers`, `maxPlayers`, `players` keyed by `playerId`).
+`serverNow`, `spectatorCount`, `options` as JSON, `notice` (a message for the room, e.g. why it is back in the lobby; games write it in `onEndGame`/`onReturnToLobby`, and the runtime sets a fixed one when a hook throws — see "Errors at runtime"), `minPlayers`, `maxPlayers`, `players` keyed by `playerId`).
 State uses `@colyseus/schema` 5's decorator-free `schema()`; no compiler flags are needed:
 
 ```ts
@@ -566,7 +577,7 @@ vitest `setupFiles`: it shims the storages and makes the SDK use `ws` under jsdo
 | `AppRouter` | Routes the connection status and room phase to a screen of your screen table (see below). `createAppRouter(manager, screens)` builds one. |
 | `WaitingRoomViewModel` | The lobby: seats (`LobbyPlayer`), ready count, host-only start and kick (with confirmation), name field, share URL, copy code, `notice`. |
 
-The waiting room reads `players`, `minPlayers`, `maxPlayers`, `canStart`, `spectatorCount` and `notice` from `BaseGameState`. The framework never writes `notice`; a game sets it (for example in `onEndGame` or `onReturnToLobby`) to say why the room is back in the lobby, and the waiting room shows it.
+The waiting room reads `players`, `minPlayers`, `maxPlayers`, `canStart`, `spectatorCount` and `notice` from `BaseGameState`. A game sets `notice` (for example in `onEndGame` or `onReturnToLobby`) to say why the room is back in the lobby; the runtime also writes a fixed message when a hook throws (see "Errors at runtime"), and the waiting room shows whatever is there.
 
 The game plugs its rules in through the constructor. `GameControlsViewModel` takes an `isGameOver` predicate (default: never over); the host cannot end a game that is over:
 

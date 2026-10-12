@@ -471,15 +471,16 @@ describe("handlers and transitions", () => {
     expect(() => runtime.dispatch("p2", { type: "BAD_TARGET" })).toThrow('Unknown phase "Missing"');
   });
 
-  it("drops queued transitions when a handler throws", () => {
-    const { runtime } = inPlay();
+  it("drops queued transitions when a handler throws and returns to the Lobby", () => {
+    const { runtime, state } = inPlay();
     expect(() => runtime.dispatch("p2", { type: "BOOM" })).toThrow("boom");
-    expect(runtime.phase).toBe("Play");
+    expect(runtime.phase).toBe("Lobby");
+    expect(state.notice).toBeTruthy();
   });
 
-  it("surfaces an onEnter failure to the caller and keeps working", () => {
+  it("surfaces an onEnter failure to the caller, returns to the Lobby and keeps working", () => {
     let explode = true;
-    const { runtime } = setup2({
+    const { runtime, state } = setup2({
       phases: {
         Play: {
           onEnter: () => {
@@ -497,14 +498,17 @@ describe("handlers and transitions", () => {
       },
     });
     expect(() => runtime.dispatch("p1", { type: "START_GAME" })).toThrow("enter boom");
+    expect(runtime.phase).toBe("Lobby");
+    expect(state.notice).toBeTruthy();
     explode = false;
+    runtime.dispatch("p1", { type: "START_GAME" });
     runtime.dispatch("p1", { type: "GO_ON" });
     expect(runtime.phase).toBe("Score");
   });
 
-  it("surfaces an onTimeout failure to the timer's caller and keeps working", () => {
+  it("surfaces an onTimeout failure to the timer's caller, returns to the Lobby and keeps working", () => {
     let explode = true;
-    const { runtime, host } = setup2({
+    const { runtime, host, state } = setup2({
       phases: {
         Play: {
           duration: 100,
@@ -524,7 +528,10 @@ describe("handlers and transitions", () => {
     });
     runtime.dispatch("p1", { type: "START_GAME" });
     expect(() => host.advance(100)).toThrow("timeout boom");
+    expect(runtime.phase).toBe("Lobby");
+    expect(state.notice).toBeTruthy();
     explode = false;
+    runtime.dispatch("p1", { type: "START_GAME" });
     runtime.dispatch("p1", { type: "GO_ON" });
     expect(runtime.phase).toBe("Score");
   });
@@ -554,6 +561,260 @@ describe("handlers and transitions", () => {
     runtime.dispatch("p1", { type: "START_GAME" });
     runtime.dispatch("p1", { type: "HOME" });
     expect(runtime.phase).toBe("Lobby");
+  });
+});
+
+describe("onError and the default failure policy", () => {
+  const NOTICE = "The game stopped because of an unexpected error.";
+  const boomSpec = {
+    phases: {
+      Play: {
+        actions: {
+          GUESS: action({
+            from: "player",
+            payload: z.object({ n: z.number() }),
+            handler: (ctx) => ctx.transition("Bad"),
+          }),
+          BOOM: action({
+            from: "player",
+            payload: z.object({}),
+            handler: () => {
+              throw new Error("boom");
+            },
+          }),
+        },
+      },
+      Bad: {
+        onEnter: () => {
+          throw new Error("enter boom");
+        },
+      },
+      Score: {},
+    },
+  };
+
+  it("hands onError every failure of one run, in order, as one AggregateError", () => {
+    const seen: unknown[] = [];
+    const { runtime } = setup2({
+      ...boomSpec,
+      middleware: [
+        (ctx, next) => {
+          if (ctx.event.kind === "transition" && ctx.event.to === "Bad") {
+            throw new Error("observe boom");
+          }
+          next();
+        },
+      ],
+      onError: (_ctx, error) => {
+        seen.push(error);
+      },
+    });
+    runtime.dispatch("p1", { type: "START_GAME" });
+    let thrown: unknown;
+    try {
+      runtime.dispatch("p2", { type: "GUESS", n: 1 });
+    } catch (error) {
+      thrown = error;
+    }
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toBeInstanceOf(AggregateError);
+    const errors = (seen[0] as AggregateError).errors;
+    expect(errors.map((e) => String(e))).toEqual(["Error: observe boom", "Error: enter boom"]);
+    expect(thrown).toBe(seen[0]);
+  });
+
+  it("hands a single failure to onError unwrapped and rethrows it", () => {
+    const seen: unknown[] = [];
+    const { runtime } = setup2({
+      ...boomSpec,
+      onError: (_ctx, error) => {
+        seen.push(error);
+      },
+    });
+    runtime.dispatch("p1", { type: "START_GAME" });
+    let thrown: unknown;
+    try {
+      runtime.dispatch("p2", { type: "BOOM" });
+    } catch (error) {
+      thrown = error;
+    }
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toBeInstanceOf(Error);
+    expect(seen[0]).not.toBeInstanceOf(AggregateError);
+    expect((seen[0] as Error).message).toBe("boom");
+    expect(thrown).toBe(seen[0]);
+  });
+
+  it("returns the room to the Lobby with a fixed notice when a hook throws and there is no onError", () => {
+    const { runtime, state } = setup2(boomSpec);
+    runtime.dispatch("p1", { type: "START_GAME" });
+    expect(() => runtime.dispatch("p2", { type: "GUESS", n: 1 })).toThrow("enter boom");
+    expect(runtime.phase).toBe("Lobby");
+    expect(state.notice).toBe(NOTICE);
+    runtime.dispatch("p1", { type: "START_GAME" });
+    expect(runtime.phase).toBe("Play");
+  });
+
+  it("sets only the notice when the failure happens in the Lobby", () => {
+    const { runtime, state } = setup2({
+      onPlayerSync: () => {
+        throw new Error("sync boom");
+      },
+    });
+    expect(() => runtime.syncPlayer("p1")).toThrow("sync boom");
+    expect(runtime.phase).toBe("Lobby");
+    expect(state.notice).toBe(NOTICE);
+    expect(state.log).toEqual([]);
+  });
+
+  it("applies the same policy to a throwing timer callback", () => {
+    const { runtime, host, state } = setup2({
+      phases: {
+        Play: {
+          duration: 100,
+          onTimeout: () => {
+            throw new Error("timeout boom");
+          },
+        },
+        Score: {},
+      },
+    });
+    runtime.dispatch("p1", { type: "START_GAME" });
+    expect(() => host.advance(100)).toThrow("timeout boom");
+    expect(runtime.phase).toBe("Lobby");
+    expect(state.notice).toBe(NOTICE);
+  });
+
+  it("applies the same policy to a throwing middleware", () => {
+    const { runtime, state } = setup2({
+      phases: {
+        Play: {
+          actions: {
+            GUESS: action({
+              from: "player",
+              payload: z.object({ n: z.number() }),
+              handler: (ctx) => ctx.state.log.push("guess"),
+            }),
+          },
+        },
+        Score: {},
+      },
+      middleware: [
+        (ctx, next) => {
+          if (ctx.event.kind === "action" && ctx.event.actionType === "GUESS") {
+            throw new Error("middleware boom");
+          }
+          next();
+        },
+      ],
+    });
+    runtime.dispatch("p1", { type: "START_GAME" });
+    expect(() => runtime.dispatch("p2", { type: "GUESS", n: 1 })).toThrow("middleware boom");
+    expect(runtime.phase).toBe("Lobby");
+    expect(state.notice).toBe(NOTICE);
+  });
+
+  it("catches a throwing onError, surfaces its failure through the rethrow and still applies the default policy", () => {
+    const { runtime, state } = setup2({
+      ...boomSpec,
+      onError: () => {
+        throw new Error("onError boom");
+      },
+    });
+    runtime.dispatch("p1", { type: "START_GAME" });
+    let thrown: unknown;
+    try {
+      runtime.dispatch("p2", { type: "BOOM" });
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(AggregateError);
+    expect((thrown as AggregateError).errors.map((e) => String(e))).toEqual([
+      "Error: boom",
+      "Error: onError boom",
+    ]);
+    expect(runtime.phase).toBe("Lobby");
+    expect(state.notice).toBe(NOTICE);
+  });
+
+  it("logs a failure raised by the default policy itself instead of recursing", () => {
+    let onErrorRuns = 0;
+    const { runtime, state } = setup2({
+      ...boomSpec,
+      onReturnToLobby: () => {
+        throw new Error("lobby boom");
+      },
+      onError: (_ctx, _error) => {
+        ++onErrorRuns;
+      },
+    });
+    runtime.dispatch("p1", { type: "START_GAME" });
+    let thrown: unknown;
+    try {
+      runtime.dispatch("p2", { type: "BOOM" });
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(AggregateError);
+    expect((thrown as AggregateError).errors.map((e) => String(e))).toEqual([
+      "Error: boom",
+      "Error: lobby boom",
+    ]);
+    expect(onErrorRuns).toBe(1);
+    expect(runtime.phase).toBe("Lobby");
+    expect(state.notice).toBe(NOTICE);
+  });
+
+  it("does not run the default policy when onError queues returnToLobby", () => {
+    const { runtime, state } = setup2({
+      ...boomSpec,
+      onError: (ctx) => {
+        ctx.returnToLobby();
+      },
+    });
+    runtime.dispatch("p1", { type: "START_GAME" });
+    expect(() => runtime.dispatch("p2", { type: "BOOM" })).toThrow("boom");
+    expect(runtime.phase).toBe("Lobby");
+    expect(state.notice).toBeUndefined();
+  });
+
+  it("applies the transition onError queued instead of the default policy", () => {
+    const { runtime, state } = setup2({
+      ...boomSpec,
+      onError: (ctx) => {
+        ctx.transition("Score");
+      },
+    });
+    runtime.dispatch("p1", { type: "START_GAME" });
+    expect(() => runtime.dispatch("p2", { type: "BOOM" })).toThrow("boom");
+    expect(runtime.phase).toBe("Score");
+    expect(state.notice).toBeUndefined();
+  });
+
+  it("logs a failure from applying onError's own transition without recursing", () => {
+    const { runtime, state } = setup2({
+      ...boomSpec,
+      onReturnToLobby: () => {
+        throw new Error("lobby boom");
+      },
+      onError: (ctx) => {
+        ctx.returnToLobby();
+      },
+    });
+    runtime.dispatch("p1", { type: "START_GAME" });
+    let thrown: unknown;
+    try {
+      runtime.dispatch("p2", { type: "BOOM" });
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(AggregateError);
+    expect((thrown as AggregateError).errors.map((e) => String(e))).toEqual([
+      "Error: boom",
+      "Error: lobby boom",
+    ]);
+    expect(runtime.phase).toBe("Play");
+    expect(state.notice).toBeUndefined();
   });
 });
 

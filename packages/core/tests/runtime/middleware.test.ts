@@ -299,7 +299,7 @@ describe("middleware transition observation", () => {
 });
 
 describe("middleware throws behave like hook throws", () => {
-  it("surfaces an action-path throw to the caller and drops queued transitions", () => {
+  it("surfaces an action-path throw to the caller, drops queued transitions and returns to the Lobby", () => {
     // Baseline: GameRuntime.test.ts "drops queued transitions when a handler throws".
     const mw: PhaseMiddleware<S, P, O> = (ctx, next) => {
       if (ctx.event.kind === "action" && ctx.event.actionType === "GO") {
@@ -311,10 +311,11 @@ describe("middleware throws behave like hook throws", () => {
     const table = new MTable([mw]);
     table.start();
     expect(() => table.act("p2", "GO")).toThrow("mw boom");
-    expect(table.phase).toBe("Play");
+    expect(table.phase).toBe("Lobby");
+    expect(table.state.notice).toBeTruthy();
   });
 
-  it("surfaces an enter-path throw to the caller and keeps working", () => {
+  it("surfaces an enter-path throw to the caller, returns to the Lobby and keeps working", () => {
     // Baseline: GameRuntime.test.ts "surfaces an onEnter failure to the caller and keeps working".
     let explode = true;
     const mw: PhaseMiddleware<S, P, O> = (ctx, next) => {
@@ -325,12 +326,15 @@ describe("middleware throws behave like hook throws", () => {
     };
     const table = new MTable([mw]);
     expect(() => table.start()).toThrow("mw enter boom");
+    expect(table.phase).toBe("Lobby");
+    expect(table.state.notice).toBeTruthy();
     explode = false;
+    table.start();
     table.act("p2", "GO");
     expect(table.phase).toBe("Score");
   });
 
-  it("surfaces a timeout-path throw to the timer's caller and keeps working", () => {
+  it("surfaces a timeout-path throw to the timer's caller, returns to the Lobby and keeps working", () => {
     // Baseline: GameRuntime.test.ts "surfaces an onTimeout failure to the timer's caller and keeps working".
     let explode = true;
     const mw: PhaseMiddleware<S, P, O> = (ctx, next) => {
@@ -342,12 +346,15 @@ describe("middleware throws behave like hook throws", () => {
     const table = new MTable([mw]);
     table.start();
     expect(() => table.tick(1000)).toThrow("mw timeout boom");
+    expect(table.phase).toBe("Lobby");
+    expect(table.state.notice).toBeTruthy();
     explode = false;
+    table.start();
     table.act("p2", "GO");
     expect(table.phase).toBe("Score");
   });
 
-  it("surfaces a roster-path throw to the caller and keeps working", () => {
+  it("surfaces a roster-path throw to the caller, returns to the Lobby and keeps working", () => {
     // No dedicated roster baseline in GameRuntime.test.ts: rosterChanged() runs inside run(),
     // so a throw propagates like the enter/timeout hook throws above.
     let explode = true;
@@ -360,7 +367,10 @@ describe("middleware throws behave like hook throws", () => {
     const table = new MTable([mw]);
     table.start();
     expect(() => table.leave("p2")).toThrow("mw roster boom");
+    expect(table.phase).toBe("Lobby");
+    expect(table.state.notice).toBeTruthy();
     explode = false;
+    table.start();
     table.joinLate("p3");
     expect(table.state.log).toContain("roster");
   });
@@ -378,8 +388,13 @@ describe("middleware throws behave like hook throws", () => {
     };
     const table = new MTable([mw]);
     expect(() => table.start()).toThrow("mw transition boom");
-    expect(table.phase).toBe("Play");
+    // The observed transition still applied (Play was entered)…
+    expect(table.state.log).toContain("enter:Play");
+    // …and the default failure policy then returned the room to the Lobby.
+    expect(table.phase).toBe("Lobby");
+    expect(table.state.notice).toBeTruthy();
     explode = false;
+    table.start();
     table.act("p2", "GO");
     expect(table.phase).toBe("Score");
   });
@@ -388,8 +403,9 @@ describe("middleware throws behave like hook throws", () => {
 describe("middleware next() re-entrancy", () => {
   it("throws when a middleware calls next() twice for one enter event, and runs the hook once", () => {
     // Targets Play only: the initial Lobby enter happens at construction.
+    let explode = true;
     const double: PhaseMiddleware<S, P, O> = (ctx, next) => {
-      if (ctx.event.kind === "enter" && ctx.phase === "Play") {
+      if (ctx.event.kind === "enter" && ctx.phase === "Play" && explode) {
         next();
         next();
       } else {
@@ -399,7 +415,11 @@ describe("middleware next() re-entrancy", () => {
     const table = new MTable([double]);
     expect(() => table.start()).toThrow("middleware[0] called next() twice for one enter event");
     expect(table.state.log).toEqual(["enter:Play"]);
+    expect(table.phase).toBe("Lobby");
+    expect(table.state.notice).toBeTruthy();
     // The runtime keeps working after the throw, like any hook throw.
+    explode = false;
+    table.start();
     table.act("p2", "GO");
     expect(table.phase).toBe("Score");
   });
@@ -430,10 +450,16 @@ describe("middleware must be synchronous", () => {
       next();
     };
     const table = new MTable([slow]);
-    // The initial Lobby enter happens at construction; its failure is deferred like any hook failure.
-    expect(() => table.start()).toThrow(
-      "middleware[0] returned a Promise; the middleware chain is synchronous",
-    );
+    // The initial Lobby enter happens at construction; its failure is deferred like any hook failure,
+    // and joins this run's action failure in the rethrown AggregateError.
+    let thrown: unknown;
+    try {
+      table.start();
+    } catch (error) {
+      thrown = error;
+    }
+    const errors = thrown instanceof AggregateError ? thrown.errors : [thrown];
+    expect(errors.some((e) => String(e).includes("middleware[0] returned a Promise"))).toBe(true);
   });
 
   it("ignores non-promise return values", () => {

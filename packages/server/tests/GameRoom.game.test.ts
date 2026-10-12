@@ -64,19 +64,24 @@ describe("GameRoom actions", () => {
     await waitUntil(() => stateOf(room).phase === "Buzz", "started");
   });
 
-  it("survives a throwing action handler", async () => {
+  it("survives a throwing action handler and returns to the Lobby", async () => {
     const { room, p1 } = await startedRoom(t);
     p1.client.send("ACTION", { type: "BOOM" });
+    // The default failure policy returns the room to the Lobby with a notice.
+    await waitUntil(() => stateOf(room).phase === "Lobby", "back in the Lobby");
+    expect(stateOf(room).notice).toBeTruthy();
+    // The host can start again and the room still handles actions.
+    p1.client.send("ACTION", { type: "START_GAME" });
+    await waitUntil(() => stateOf(room).phase === "Buzz", "restarted");
     p1.client.send("ACTION", { type: "BUZZ" });
     await waitUntil(() => stateOf(room).winner === pid(1), "room still handles actions");
   });
 
-  it("survives a throwing timeout hook", async () => {
-    const { room, p2 } = await startedRoom(t, { buzzMs: 60, explodeOnTimeout: true });
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    expect(stateOf(room).phase).toBe("Buzz");
-    p2.client.send("ACTION", { type: "BUZZ" });
-    await waitUntil(() => stateOf(room).winner === pid(2), "room still handles actions");
+  it("survives a throwing timeout hook and returns to the Lobby", async () => {
+    const { room } = await startedRoom(t, { buzzMs: 60, explodeOnTimeout: true });
+    // The exploding timeout no longer wedges the room in Buzz; it ends in the Lobby with a notice.
+    await waitUntil(() => stateOf(room).phase === "Lobby", "back in the Lobby");
+    expect(stateOf(room).notice).toBeTruthy();
   });
 });
 
@@ -114,7 +119,7 @@ describe("GameRoom action requests", () => {
     });
   });
 
-  it("answers INTERNAL when the action handler throws, and keeps serving", async () => {
+  it("answers INTERNAL when the action handler throws, returns the room to the Lobby and keeps serving", async () => {
     const { room, p1 } = await startedRoom(t);
     const failed = await p1.client.request<unknown, ActionResult>(ClientMessage.ACTION, {
       type: "BOOM",
@@ -123,6 +128,10 @@ describe("GameRoom action requests", () => {
       ok: false,
       error: { code: "INTERNAL", message: expect.any(String) },
     });
+    expect(stateOf(room).phase).toBe("Lobby");
+    expect(stateOf(room).notice).toBeTruthy();
+    await p1.client.request(ClientMessage.ACTION, { type: "START_GAME" });
+    await waitUntil(() => stateOf(room).phase === "Buzz", "restarted");
     await p1.client.request(ClientMessage.ACTION, { type: "BUZZ" });
     expect(stateOf(room).winner).toBe(pid(1));
   });

@@ -28,6 +28,7 @@ const STOPPED_ERROR: ServerError = {
   code: ErrorCode.NOT_ALLOWED,
   message: "The game has ended",
 };
+const FAILURE_NOTICE = "The game stopped because of an unexpected error.";
 
 interface PhaseActor {
   start(): void;
@@ -268,22 +269,63 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     }
   }
 
-  private rethrowFailure(): void {
-    const [failure] = this.failures.splice(0);
-    if (failure !== undefined) throw failure;
+  /** Run a queued transition, collecting a direct throw (an unguarded `onReturnToLobby`) as a failure. */
+  private applyGuarded(next: Pending): void {
+    try {
+      this.apply(next);
+    } catch (error) {
+      this.failures.push(error);
+    }
+  }
+
+  /** The default failure policy: a fixed notice, and the Lobby when not already there. */
+  private defaultFailurePolicy(): void {
+    this.state.notice = FAILURE_NOTICE;
+    if (this.phaseName === LOBBY_PHASE) return;
+    this.guarded(() => this.spec.onReturnToLobby?.(this.context()));
+    this.host.activateWaitingPlayers();
+    this.actor.send({ type: "GO", phase: LOBBY_PHASE });
+  }
+
+  /**
+   * One failed run: report every collected failure to `onError` once, then apply the default
+   * policy unless `onError` queued its own transition, and rethrow what was reported so callers
+   * (`dispatch`, `GameRoom.act`) still see the failure. Failures raised by `onError` or the
+   * policy itself join the rethrow; they are logged, not recursed on.
+   */
+  private failRun(): void {
+    const failed = this.failures.splice(0);
+    let reported: unknown =
+      failed.length === 1 ? failed[0] : new AggregateError(failed, "Game hook failed");
+    this.queue.clear();
+    this.guarded(() => this.spec.onError?.(this.context(), reported));
+    if (this.queue.isEmpty()) {
+      this.defaultFailurePolicy();
+    } else {
+      this.queue.drain(
+        (next) => this.applyGuarded(next),
+        () => {},
+      );
+    }
+    const extra = this.failures.splice(0);
+    if (extra.length > 0) reported = new AggregateError([...failed, ...extra], "Game hook failed");
+    throw reported;
   }
 
   private run(fn: () => void): void {
     try {
-      fn();
-      this.rethrowFailure();
+      try {
+        fn();
+      } catch (error) {
+        this.failures.push(error);
+      }
+      if (this.failures.length > 0) this.failRun();
       this.queue.drain(
-        (next) => this.apply(next),
-        () => this.rethrowFailure(),
+        (next) => this.applyGuarded(next),
+        () => {
+          if (this.failures.length > 0) this.failRun();
+        },
       );
-    } catch (error) {
-      this.queue.clear();
-      throw error;
     } finally {
       this.refreshCanStart();
     }
@@ -299,7 +341,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
 
   private apply(next: Pending): void {
     // An observer throw must not cancel the transition it observes (docs: middleware cannot veto);
-    // defer it like any hook failure and let the transition apply, then surface via rethrowFailure.
+    // defer it like any hook failure and let the transition apply, then surface via failRun.
     this.guarded(() =>
       this.observeTransition(this.phaseName, next.kind === "lobby" ? LOBBY_PHASE : next.phase),
     );

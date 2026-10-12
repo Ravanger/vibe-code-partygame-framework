@@ -24,6 +24,8 @@ export interface PhaseState {
   phaseEndsAt: number;
   /** True while in the Lobby with enough active players for `START_GAME`; written by the runtime. */
   canStart: boolean;
+  /** Set to a fixed message by the runtime's default failure policy when a hook throws (see `GameDefinition.onError`); games may display and clear it. */
+  notice?: string;
 }
 
 /** What every hook receives. */
@@ -161,6 +163,12 @@ export interface GameDefinition<
   onReturnToLobby?(ctx: GameContext<TState, TPrivate, TOptions>): void;
   /** The host sent `END_GAME`; runs before `onReturnToLobby`. Use it to tell players why the game stopped. */
   onEndGame?(ctx: GameContext<TState, TPrivate, TOptions>): void;
+  /**
+   * Runs after a hook, handler, middleware or timer threw, with the failure (an `AggregateError`
+   * in original order when several failed in one run). Queueing a transition here replaces the
+   * default return-to-Lobby policy; a throw in this hook is caught and joins the rethrow.
+   */
+  onError?(ctx: GameContext<TState, TPrivate, TOptions>, error: unknown): void;
 }
 
 /** Everything the runtime needs from its environment. Implemented by the server; faked in tests. */
