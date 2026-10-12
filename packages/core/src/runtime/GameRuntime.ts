@@ -7,10 +7,11 @@ import {
   type ServerError,
   ServerMessage,
 } from "@partygame/shared";
-import { createActor, setup } from "xstate";
+import { createActor } from "xstate";
 import { prettifyError } from "zod";
 import { newId } from "../utils.js";
 import { Lobby } from "./lobby.js";
+import { buildPhaseMachine } from "./machineFactory.js";
 import type {
   ActionContext,
   ActionDefinition,
@@ -98,12 +99,23 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     };
     this.phases = { ...this.spec.phases, [LOBBY_PHASE]: this.lobby.phase() };
     this.current = this.phases[LOBBY_PHASE] as PhaseDefinition<TState, TPrivate, TOptions>;
-    this.actor = createActor(this.buildMachine(), {
-      clock: {
-        setTimeout: (callback, ms) => this.host.setTimeout(() => this.run(callback), ms),
-        clearTimeout: (handle) => this.host.clearTimeout(handle),
+    this.actor = createActor(
+      buildPhaseMachine({
+        phases: this.phases,
+        enter: (name) =>
+          this.enter(name, this.phases[name] as PhaseDefinition<TState, TPrivate, TOptions>),
+        timeout: () =>
+          this.chain({ kind: "timeout" }, () => this.current.onTimeout?.(this.context())),
+        duration: () => this.duration,
+        guard: (fn) => this.guarded(fn),
+      }),
+      {
+        clock: {
+          setTimeout: (callback, ms) => this.host.setTimeout(() => this.run(callback), ms),
+          clearTimeout: (handle) => this.host.clearTimeout(handle),
+        },
       },
-    });
+    );
     this.actor.start();
     this.refreshCanStart();
   }
@@ -222,43 +234,6 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
 
   private rosterChange(): void {
     this.chain({ kind: "roster-change" }, () => this.current.onRosterChange?.(this.context()));
-  }
-
-  private buildMachine() {
-    const delays: Record<string, () => number> = {};
-    const states: Record<string, object> = {};
-    for (const [name, phase] of Object.entries(this.phases)) {
-      const node: Record<string, unknown> = {
-        entry: () => this.guarded(() => this.enter(name, phase)),
-      };
-      if (phase.duration !== undefined) {
-        delays[name] = () => this.duration;
-        node.after = {
-          [name]: {
-            actions: () =>
-              this.guarded(() =>
-                this.chain({ kind: "timeout" }, () => this.current.onTimeout?.(this.context())),
-              ),
-          },
-        };
-      }
-      states[name] = node;
-    }
-    return setup({
-      types: { events: {} as { type: "GO"; phase: string } },
-      delays,
-    }).createMachine({
-      id: "game",
-      initial: LOBBY_PHASE,
-      on: {
-        GO: Object.keys(states).map((name) => ({
-          guard: ({ event }: { event: { phase: string } }) => event.phase === name,
-          target: `.${name}`,
-          reenter: true,
-        })),
-      },
-      states,
-    });
   }
 
   private enter(name: string, phase: PhaseDefinition<TState, TPrivate, TOptions>): void {
