@@ -1,4 +1,5 @@
 import { CloseCode } from "@colyseus/core";
+import { CLOSE_CODES } from "@partygame/shared";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import type { TestServer } from "../src/testing/index.js";
 import { sleep, waitUntil } from "../src/testing/index.js";
@@ -78,7 +79,10 @@ describe("GameRoom reconnection", () => {
     await waitUntil(() => stateOf(room).players.get(pid(2))?.isConnected === false, "dropped");
     p1.client.send("ACTION", { type: "KICK_PLAYER", playerId: pid(2) });
     await waitUntil(() => !stateOf(room).players.has(pid(2)), "seat removed");
-    await expect(t.sdk.reconnect(token)).rejects.toThrow();
+    await expect(t.sdk.reconnect(token)).rejects.toMatchObject({
+      code: CLOSE_CODES.SEAT_REMOVED.code,
+      message: CLOSE_CODES.SEAT_REMOVED.message,
+    });
     expect(room.clients.length).toBe(1);
     expect(stateOf(room).players.has(pid(2))).toBe(false);
   });

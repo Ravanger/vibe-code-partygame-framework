@@ -1,3 +1,4 @@
+import { CLIENT_MESSAGES, CLOSE_CODES } from "@partygame/shared";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { collectMessages, type TestServer, waitUntil } from "../src/testing/index.js";
 import { bootBuzzer, clientState, pid, seat, stateOf } from "./support.js";
@@ -39,18 +40,24 @@ describe("GameRoom joining", () => {
   });
 
   it.each([{}, { playerId: "short" }, { playerId: pid(1), spectator: "yes" }])(
-    "rejects invalid join options %j",
+    "rejects invalid join options %j with the INVALID_OPTIONS close code",
     async (options) => {
       const room = await t.createRoom("buzzer");
-      await expect(t.sdk.joinById(room.roomId, options)).rejects.toThrow();
+      await expect(t.sdk.joinById(room.roomId, options)).rejects.toMatchObject({
+        code: CLOSE_CODES.INVALID_OPTIONS.code,
+        message: CLOSE_CODES.INVALID_OPTIONS.message,
+      });
       expect(stateOf(room).players.size).toBe(0);
     },
   );
 
-  it("rejects a player past maxPlayers but still admits spectators", async () => {
+  it("rejects a player past maxPlayers with the ROOM_FULL close code but still admits spectators", async () => {
     const room = await t.createRoom("buzzer");
     for (const n of [1, 2, 3]) await t.join(room, { playerId: pid(n) });
-    await expect(t.join(room, { playerId: pid(4) })).rejects.toThrow();
+    await expect(t.join(room, { playerId: pid(4) })).rejects.toMatchObject({
+      code: CLOSE_CODES.ROOM_FULL.code,
+      message: CLOSE_CODES.ROOM_FULL.message,
+    });
     expect(stateOf(room).players.size).toBe(3);
     await t.join(room, { playerId: pid(5), spectator: true });
     expect(stateOf(room).spectatorCount).toBe(1);
@@ -66,7 +73,7 @@ describe("GameRoom joining", () => {
     expect(stateOf(room).players.get(pid(3))?.isActive).toBe(false);
     late.client.send("ACTION", { type: "BUZZ" });
     await waitUntil(() => late.errors.length > 0, "NOT_ACTIVE");
-    expect(late.errors[0]).toMatchObject({ code: "NOT_ACTIVE", action: "BUZZ" });
+    expect(late.errors[0]).toEqual({ code: "NOT_ACTIVE", message: CLIENT_MESSAGES.NOT_ACTIVE });
   });
 });
 
@@ -115,8 +122,8 @@ describe("GameRoom spectators", () => {
     tv.send("ACTION", { type: "START_GAME" });
     await waitUntil(() => errors.length === 2, "two refusals");
     expect(errors).toEqual([
-      { code: "UNAUTHORIZED", message: expect.any(String) },
-      { code: "UNAUTHORIZED", message: expect.any(String) },
+      { code: "UNAUTHORIZED", message: CLIENT_MESSAGES.UNAUTHORIZED },
+      { code: "UNAUTHORIZED", message: CLIENT_MESSAGES.UNAUTHORIZED },
     ]);
     await tv.leave(true);
     await waitUntil(() => stateOf(room).spectatorCount === 0, "uncounted");
@@ -138,7 +145,7 @@ describe("GameRoom SET_NAME", () => {
     const errors = collectMessages(client, "ERROR");
     client.send("SET_NAME", "   ");
     await waitUntil(() => errors.length === 1, "invalid name");
-    expect(errors[0]).toMatchObject({ code: "INVALID_ACTION" });
+    expect(errors[0]).toEqual({ code: "INVALID_ACTION", message: CLIENT_MESSAGES.INVALID_ACTION });
     expect(stateOf(room).players.get(pid(1))?.isReady).toBe(false);
     client.send("SET_NAME", "  Ann  ");
     await waitUntil(() => stateOf(room).players.get(pid(1))?.isReady === true, "ready");
@@ -152,7 +159,7 @@ describe("GameRoom SET_NAME", () => {
     const errors = collectMessages(bob, "ERROR");
     bob.send("SET_NAME", "  aNN ");
     await waitUntil(() => errors.length === 1, "name taken");
-    expect(errors[0]).toEqual({ code: "NAME_TAKEN", message: "That name is already taken" });
+    expect(errors[0]).toEqual({ code: "NAME_TAKEN", message: CLIENT_MESSAGES.NAME_TAKEN });
     expect(stateOf(room).players.get(pid(2))).toMatchObject({ name: "", isReady: false });
     const own = collectMessages(ann, "ERROR");
     ann.send("SET_NAME", "ANN");

@@ -1,4 +1,5 @@
 import { matchMaker, type Room } from "@colyseus/core";
+import { CLOSE_CODES } from "@partygame/shared";
 import { BaseGameState } from "@partygame/shared/schema";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { bootTestServer, type TestServer } from "../src/testing/index.js";
@@ -16,10 +17,13 @@ beforeAll(async () => {
 afterAll(() => t.shutdown());
 
 describe("GameRoom with invalid create options", () => {
-  it("fails to create and never registers a room code", async () => {
+  it("fails to create with the INVALID_OPTIONS close code and no Zod text, and never registers a room code", async () => {
     const register = vi.spyOn(t.roomCodeService, "generateAndRegister");
     const unregister = vi.spyOn(t.roomCodeService, "unregister");
-    await expect(t.createRoom("buzzer", { buzzMs: "x" })).rejects.toThrow();
+    await expect(t.createRoom("buzzer", { buzzMs: "x" })).rejects.toMatchObject({
+      code: CLOSE_CODES.INVALID_OPTIONS.code,
+      message: CLOSE_CODES.INVALID_OPTIONS.message,
+    });
     expect(register).not.toHaveBeenCalled();
     expect(unregister).not.toHaveBeenCalled();
     register.mockRestore();

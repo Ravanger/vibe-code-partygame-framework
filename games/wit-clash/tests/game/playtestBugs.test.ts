@@ -1,3 +1,4 @@
+import { CLIENT_MESSAGES } from "@partygame/shared";
 import { describe, expect, it } from "vitest";
 import { Table } from "./support.js";
 
@@ -6,7 +7,9 @@ describe("playtest regressions (token reconnect is covered in integration.reconn
     const t = new Table({ players: 2 });
     t.act("p1", "START_GAME");
     expect(t.phase).toBe("Lobby");
-    expect(t.errors("p1")).toMatchObject([{ code: "NOT_ENOUGH_PLAYERS", action: "START_GAME" }]);
+    expect(t.errors("p1")).toEqual([
+      { code: "NOT_ENOUGH_PLAYERS", message: CLIENT_MESSAGES.NOT_ENOUGH_PLAYERS },
+    ]);
   });
 
   it("a last pending voter leaving resolves the vote immediately", () => {

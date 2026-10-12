@@ -10,7 +10,10 @@ import {
 } from "@partygame/core";
 import {
   type ActionResult,
+  CLIENT_MESSAGES,
+  CLOSE_CODES,
   ClientMessage,
+  type CloseCode,
   ErrorCode,
   JoinOptionsSchema,
   LOBBY_PHASE,
@@ -27,11 +30,11 @@ const SPECTATOR_SLOTS = 32;
 const FRAMEWORK_KEYS = ["playerId", "name", "spectator", "seats"];
 const SPECTATOR_ERROR: ProtocolError = {
   code: ErrorCode.UNAUTHORIZED,
-  message: "Spectators cannot act",
+  message: CLIENT_MESSAGES.UNAUTHORIZED,
 };
 const ACTION_FAILED: ActionResult = {
   ok: false,
-  error: { code: ErrorCode.INTERNAL, message: "The action failed on the server" },
+  error: { code: ErrorCode.INTERNAL, message: CLIENT_MESSAGES.INTERNAL },
 };
 
 export interface GameRoomConfig {
@@ -56,6 +59,9 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
   private readonly seed = randomSeed();
   /** Seeded PRNG so a room's randomness is reproducible from its log header. */
   private readonly rngFn = mulberry32(this.seed);
+  /** Builds the Colyseus close `ServerError` for a {@link CLOSE_CODES} entry; the only place one is made. */
+  private readonly closeWith = (entry: CloseCode): ServerError =>
+    new ServerError(entry.code, entry.message);
 
   constructor(private readonly config: GameRoomConfig) {
     super();
@@ -64,14 +70,16 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
   onCreate(options: Record<string, unknown>): void {
     const { definition, stateClass, roomCodeService } = this.config;
     const roomOptions = RoomOptionsSchema.safeParse(options);
-    if (!roomOptions.success) throw new ServerError(4400, "Invalid room options");
+    if (!roomOptions.success) throw this.closeWith(CLOSE_CODES.INVALID_OPTIONS);
     if (roomOptions.data.seats) this.seatList = new Set(roomOptions.data.seats);
     this.autoDispose = false;
     this.maxClients = definition.maxPlayers + SPECTATOR_SLOTS;
     const rawOptions = Object.fromEntries(
       Object.entries(options).filter(([key]) => !FRAMEWORK_KEYS.includes(key)),
     );
-    const parsedOptions = definition.options ? definition.options.parse(rawOptions) : rawOptions;
+    const optionsResult = definition.options?.safeParse(rawOptions);
+    if (optionsResult && !optionsResult.success) throw this.closeWith(CLOSE_CODES.INVALID_OPTIONS);
+    const parsedOptions = optionsResult ? optionsResult.data : rawOptions;
     const state = new stateClass();
     state.minPlayers = definition.minPlayers;
     state.maxPlayers = definition.maxPlayers;
@@ -94,11 +102,11 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
 
   onJoin(client: Client, options?: unknown): void {
     const parsed = JoinOptionsSchema.safeParse(options);
-    if (!parsed.success) throw new ServerError(4400, "Invalid join options");
+    if (!parsed.success) throw this.closeWith(CLOSE_CODES.INVALID_OPTIONS);
     const { playerId, name, spectator } = parsed.data;
-    if (this.kicked.has(playerId)) throw new ServerError(4403, "You were removed from this room");
+    if (this.kicked.has(playerId)) throw this.closeWith(CLOSE_CODES.JOIN_REFUSED);
     if (!spectator && this.seatList && !this.seatList.has(playerId)) {
-      throw new ServerError(4403, "This room is watch-only");
+      throw this.closeWith(CLOSE_CODES.JOIN_REFUSED);
     }
     const view = new StateView();
     client.view = view;
@@ -116,7 +124,7 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
       return;
     }
     if (this.state.players.size >= this.config.definition.maxPlayers) {
-      throw new ServerError(4401, "Room is full");
+      throw this.closeWith(CLOSE_CODES.ROOM_FULL);
     }
     const seat = new PlayerSchema();
     seat.id = playerId;
@@ -138,7 +146,7 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
 
   onReconnect(client: Client): void {
     const seat = this.seatBySession(client);
-    if (!seat) throw new ServerError(4402, "Your seat was removed");
+    if (!seat) throw this.closeWith(CLOSE_CODES.SEAT_REMOVED);
     this.cancelDispose();
     this.reconnected(seat, client);
   }
@@ -180,7 +188,10 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     kick: (playerId) => {
       this.kicked.add(playerId);
       const client = this.clientFor(playerId);
-      client?.send(ServerMessage.ERROR, { code: ErrorCode.KICKED, message: "Removed by the host" });
+      client?.send(ServerMessage.ERROR, {
+        code: ErrorCode.KICKED,
+        message: CLIENT_MESSAGES.KICKED,
+      });
       this.dropSeat(playerId);
       this.scheduleDisposeIfEmpty();
       client?.leave();
@@ -200,13 +211,16 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     if (!seat) return;
     const name = SetNameSchema.safeParse(raw);
     if (!name.success) {
-      client.send(ServerMessage.ERROR, { code: ErrorCode.INVALID_ACTION, message: "Invalid name" });
+      client.send(ServerMessage.ERROR, {
+        code: ErrorCode.INVALID_ACTION,
+        message: CLIENT_MESSAGES.INVALID_ACTION,
+      });
       return;
     }
     if (this.nameTaken(seat.id, name.data)) {
       client.send(ServerMessage.ERROR, {
         code: ErrorCode.NAME_TAKEN,
-        message: "That name is already taken",
+        message: CLIENT_MESSAGES.NAME_TAKEN,
       });
       return;
     }
