@@ -1,4 +1,4 @@
-import { ErrorCode } from "@partygame/shared";
+import { CLIENT_MESSAGES, ErrorCode } from "@partygame/shared";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
@@ -182,7 +182,7 @@ describe("QA probe R.4 — rejection exclusion", () => {
 
     expect(table.runtime.dispatch("p2", 42)).toEqual({
       code: ErrorCode.INVALID_ACTION,
-      message: "Malformed action",
+      message: CLIENT_MESSAGES.INVALID_ACTION,
     }); // malformed envelope
     expect(table.act("p2", "PING", { n: "not a number" })).toMatchObject({
       code: ErrorCode.INVALID_ACTION,

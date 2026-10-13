@@ -3,6 +3,7 @@ import type { BotKit } from "@partygame/bots";
 import { waitFor } from "@partygame/client-utils";
 import { startNodeServer } from "@partygame/server/node";
 import { freePort, ServerProbe } from "@partygame/server/probe";
+import { CLOSE_CODES } from "@partygame/shared";
 import { afterEach, describe, expect, it } from "vitest";
 import { GameClient } from "../src/GameClient.js";
 import { PlaySession, type PlaySessionOptions, type SessionPlayer } from "../src/PlaySession.js";
@@ -173,7 +174,7 @@ describe("PlaySession", () => {
       new ScriptedIo(),
       new ViteUp(),
     );
-    await expect(session.run()).rejects.toThrow("watch-only");
+    await expect(session.run()).rejects.toThrow(CLOSE_CODES.JOIN_REFUSED.message);
   });
 
   it("prints no links when the client is not running", async () => {

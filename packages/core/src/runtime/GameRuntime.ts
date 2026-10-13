@@ -1,6 +1,8 @@
 import {
+  CLIENT_MESSAGES,
   END_GAME,
   ErrorCode,
+  FrameworkError,
   KICK_PLAYER,
   LOBBY_PHASE,
   type ServerError,
@@ -146,13 +148,23 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
 
   /**
    * Handle a client `ACTION` message. Every rejection is sent to `playerId` as `ERROR`;
-   * the first one is also returned so a request can answer with it.
-   * After {@link GameRuntime.stop} every action fails with `NOT_ALLOWED`.
+   * the first one is also returned so a request can answer with it. A {@link FrameworkError}
+   * thrown by the pipeline or a handler answers with its code and the fixed client message,
+   * without running the failure policy. After {@link GameRuntime.stop} every action fails
+   * with `NOT_ALLOWED`.
    */
   dispatch(playerId: string, rawAction: unknown): ServerError | undefined {
     if (this.stopped) return STOPPED_ERROR;
     this.rejections.length = 0;
-    this.run(() => this.handle(playerId, rawAction));
+    try {
+      this.run(() => this.handle(playerId, rawAction));
+    } catch (error) {
+      if (!(error instanceof FrameworkError)) throw error;
+      const serverError: ServerError = { code: error.code, message: CLIENT_MESSAGES[error.code] };
+      this.rejections.push(serverError);
+      this.host.send(playerId, ServerMessage.ERROR, serverError);
+      return serverError;
+    }
     return this.rejections[0];
   }
 
@@ -328,6 +340,11 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       try {
         fn();
       } catch (error) {
+        // A typed client-visible outcome, not a hook failure: skip the failure policy and let dispatch map it.
+        if (error instanceof FrameworkError) {
+          this.queue.clear();
+          throw error;
+        }
         this.failures.push(error);
       }
       if (this.failures.length > 0) this.failRun();

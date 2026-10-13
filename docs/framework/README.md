@@ -331,6 +331,35 @@ If `onError` queues its own way out with `ctx.transition()` or `ctx.returnToLobb
 The run still rethrows what it reported, so the server logs the failure and a failed action answers `INTERNAL`;
 a throwing hook never leaves the room mid-phase.
 
+### Error model
+Client-visible error strings are fixed and table-driven; raw Zod or exception text never reaches a client.
+
+- Internally, core and server throw `FrameworkError(code, message)` from `@partygame/shared`. Its `message` is for
+  server logs and the action log only — clients never see it.
+- A `FrameworkError` thrown anywhere in a dispatch (a pipeline check or an action handler) is mapped to
+  `{ code, CLIENT_MESSAGES[code] }` for both the pushed `ERROR` and the action's answer, and the room stays in its
+  phase: no failure policy, no return to the Lobby. A non-`FrameworkError` throw still goes through the failure
+  policy above and answers `INTERNAL`.
+- Join/create refusals close the connection with a `CLOSE_CODES` number; the client sees the entry's fixed message:
+
+  | Close code | Name | `ErrorCode` | Client message |
+  |---|---|---|---|
+  | 4400 | `INVALID_OPTIONS` | `INVALID_ACTION` | Invalid room options |
+  | 4401 | `ROOM_FULL` | `NOT_ALLOWED` | Room is full |
+  | 4402 | `SEAT_REMOVED` | `KICKED` | Your seat was removed |
+  | 4403 | `JOIN_REFUSED` | `NOT_ALLOWED` | You cannot join this room |
+
+- Invalid create or join options are `safeParse`d and refused with the close code above, so a bad option never
+  surfaces Zod text. Hook failures reach clients only as `INTERNAL` plus the fixed failure notice.
+- `ctx.reject(code, message)` is the one game-authored exception: your message is passed through to the client.
+  Keep it short and player-facing; the code still comes from `ErrorCode`.
+- The client keeps one `lastServerError` (`GameConnectionManager.lastServerError`): server `ERROR` payloads,
+  failed action answers, refused joins (looked up by close code) and a fixed `INTERNAL` for local failures.
+  Clear it with `dismissError()`.
+
+`CLIENT_MESSAGES` holds the fixed string per `ErrorCode`; `closeCodeEntry(code)` looks up a close-code entry by
+number. Both live in `packages/shared/src/errors.ts`, the single source for the table above.
+
 ## Minimal game: first to press the button
 
 ```ts

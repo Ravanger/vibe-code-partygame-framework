@@ -1,4 +1,4 @@
-import { type ActionResult, ClientMessage } from "@partygame/shared";
+import { type ActionResult, CLIENT_MESSAGES, CLOSE_CODES, ClientMessage } from "@partygame/shared";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import type { TestServer } from "../src/testing/index.js";
 import { collectMessages, waitUntil } from "../src/testing/index.js";
@@ -43,16 +43,16 @@ describe("GameRoom actions", () => {
     p1.client.send("ACTION", { type: "START_GAME" });
     await waitUntil(() => p1.errors.length === 4, "four errors");
     expect(p1.errors).toEqual([
-      { code: "WRONG_PHASE", message: expect.any(String), action: "BUZZ" },
-      { code: "UNKNOWN_ACTION", message: expect.any(String), action: "NOPE" },
-      { code: "INVALID_ACTION", message: expect.any(String) },
-      { code: "NOT_ENOUGH_PLAYERS", message: expect.any(String), action: "START_GAME" },
+      { code: "WRONG_PHASE", message: CLIENT_MESSAGES.WRONG_PHASE },
+      { code: "UNKNOWN_ACTION", message: CLIENT_MESSAGES.UNKNOWN_ACTION },
+      { code: "INVALID_ACTION", message: CLIENT_MESSAGES.INVALID_ACTION },
+      { code: "NOT_ENOUGH_PLAYERS", message: CLIENT_MESSAGES.NOT_ENOUGH_PLAYERS },
     ]);
     const guestErrors: unknown[] = [];
     p2.onMessage("ERROR", (e: unknown) => guestErrors.push(e));
     p2.send("ACTION", { type: "START_GAME" });
     await waitUntil(() => guestErrors.length === 1, "unauthorized");
-    expect(guestErrors[0]).toMatchObject({ code: "UNAUTHORIZED" });
+    expect(guestErrors[0]).toEqual({ code: "UNAUTHORIZED", message: CLIENT_MESSAGES.UNAUTHORIZED });
   });
 
   it("lets the host start manually", async () => {
@@ -101,7 +101,7 @@ describe("GameRoom action requests", () => {
     const result = await p1.client.request<unknown, ActionResult>(ClientMessage.ACTION, {
       type: "BUZZ",
     });
-    const error = { code: "WRONG_PHASE", message: expect.any(String), action: "BUZZ" };
+    const error = { code: "WRONG_PHASE", message: CLIENT_MESSAGES.WRONG_PHASE };
     expect(result).toEqual({ ok: false, error });
     await waitUntil(() => p1.errors.length === 1, "pushed ERROR");
     expect(p1.errors[0]).toEqual(error);
@@ -115,21 +115,25 @@ describe("GameRoom action requests", () => {
     });
     expect(result).toEqual({
       ok: false,
-      error: { code: "UNAUTHORIZED", message: expect.any(String) },
+      error: { code: "UNAUTHORIZED", message: CLIENT_MESSAGES.UNAUTHORIZED },
     });
   });
 
-  it("answers INTERNAL when the action handler throws, returns the room to the Lobby and keeps serving", async () => {
+  it("answers INTERNAL with the fixed message when the action handler throws, returns to the Lobby and keeps serving", async () => {
     const { room, p1 } = await startedRoom(t);
     const failed = await p1.client.request<unknown, ActionResult>(ClientMessage.ACTION, {
       type: "BOOM",
     });
     expect(failed).toEqual({
       ok: false,
-      error: { code: "INTERNAL", message: expect.any(String) },
+      error: { code: "INTERNAL", message: CLIENT_MESSAGES.INTERNAL },
     });
     expect(stateOf(room).phase).toBe("Lobby");
-    expect(stateOf(room).notice).toBeTruthy();
+    const notice = stateOf(room).notice;
+    expect(notice).toBeTruthy();
+    // The exception text ("boom") must never reach a client.
+    expect(notice).not.toContain("boom");
+    for (const error of p1.errors) expect(JSON.stringify(error)).not.toContain("boom");
     await p1.client.request(ClientMessage.ACTION, { type: "START_GAME" });
     await waitUntil(() => stateOf(room).phase === "Buzz", "restarted");
     await p1.client.request(ClientMessage.ACTION, { type: "BUZZ" });
@@ -161,7 +165,11 @@ describe("GameRoom host controls", () => {
     );
     p1.client.send("ACTION", { type: "SET_OPTIONS", buzzMs: "x" });
     await waitUntil(() => p1.errors.length === 1, "invalid option");
-    expect(p1.errors[0]).toMatchObject({ code: "INVALID_ACTION", action: "SET_OPTIONS" });
+    expect(p1.errors[0]).toEqual({
+      code: "INVALID_ACTION",
+      message: CLIENT_MESSAGES.INVALID_ACTION,
+      action: "SET_OPTIONS",
+    });
     expect(JSON.parse(stateOf(room).options).buzzMs).toBe(4321);
   });
 
@@ -169,7 +177,7 @@ describe("GameRoom host controls", () => {
     const { room, p1, p2 } = await startedRoom(t);
     p1.client.send("ACTION", { type: "KICK_PLAYER", playerId: pid(2) });
     await waitUntil(() => p2.errors.length === 1, "kicked");
-    expect(p2.errors[0]).toMatchObject({ code: "KICKED" });
+    expect(p2.errors[0]).toEqual({ code: "KICKED", message: CLIENT_MESSAGES.KICKED });
     await waitUntil(() => !stateOf(room).players.has(pid(2)), "seat removed");
     await waitUntil(() => room.clients.length === 1, "connection closed");
   });
@@ -179,10 +187,14 @@ describe("GameRoom host controls", () => {
     p1.client.send("ACTION", { type: "KICK_PLAYER", playerId: pid(2) });
     await waitUntil(() => p2.errors.length === 1, "kicked");
     await waitUntil(() => !stateOf(room).players.has(pid(2)), "seat removed");
-    await expect(t.join(room, { playerId: pid(2) })).rejects.toThrow("removed from this room");
-    await expect(t.join(room, { playerId: pid(2), spectator: true })).rejects.toThrow(
-      "removed from this room",
-    );
+    await expect(t.join(room, { playerId: pid(2) })).rejects.toMatchObject({
+      code: CLOSE_CODES.JOIN_REFUSED.code,
+      message: CLOSE_CODES.JOIN_REFUSED.message,
+    });
+    await expect(t.join(room, { playerId: pid(2), spectator: true })).rejects.toMatchObject({
+      code: CLOSE_CODES.JOIN_REFUSED.code,
+      message: CLOSE_CODES.JOIN_REFUSED.message,
+    });
     expect(stateOf(room).players.has(pid(2))).toBe(false);
     const other = await t.join(room, { playerId: pid(3) });
     expect(other.sessionId).toBeTruthy();

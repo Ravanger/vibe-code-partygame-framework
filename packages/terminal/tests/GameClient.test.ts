@@ -1,5 +1,6 @@
 import { waitFor } from "@partygame/client-utils";
 import { type NodeServerHandle, startNodeServer } from "@partygame/server/node";
+import { CLOSE_CODES } from "@partygame/shared";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { GameClient } from "../src/GameClient.js";
 import { TAP_ROOM, TapGame, TapState } from "./fixtures/tapGame.js";
@@ -37,7 +38,7 @@ describe("GameClient", () => {
     const hostId = crypto.randomUUID();
     const host = await client.create(hostId, "Ann", { seats: [hostId] });
     await expect(client.join(host.state.roomCode, crypto.randomUUID(), "Zed")).rejects.toThrow(
-      "watch-only",
+      CLOSE_CODES.JOIN_REFUSED.message,
     );
     await host.leave(true);
   });

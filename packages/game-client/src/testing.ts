@@ -43,7 +43,7 @@ export class StubRoom<TState extends BaseGameState> implements RoomLike<TState> 
   private readonly stateChange = signal<[TState]>();
   private readonly drop = signal<[]>();
   private readonly reconnect = signal<[]>();
-  private readonly leaveSignal = signal<[]>();
+  private readonly leaveSignal = signal<[number, string]>();
   private readonly handlers = new Map<string, Set<(payload: unknown) => void>>();
 
   constructor(readonly state: TState) {}
@@ -71,7 +71,7 @@ export class StubRoom<TState extends BaseGameState> implements RoomLike<TState> 
   }
 
   async leave(): Promise<number> {
-    this.leaveSignal.fire();
+    this.leaveSignal.fire(1000, "");
     return 1000;
   }
 
@@ -91,8 +91,9 @@ export class StubRoom<TState extends BaseGameState> implements RoomLike<TState> 
     this.reconnect.fire();
   }
 
-  closed(): void {
-    this.leaveSignal.fire();
+  /** Fires `onLeave` with a close code; defaults to a consented leave. */
+  closed(code = 1000, message = ""): void {
+    this.leaveSignal.fire(code, message);
   }
 
   messageListeners(type: string): number {

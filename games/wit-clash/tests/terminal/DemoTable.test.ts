@@ -1,6 +1,7 @@
 import type { Room } from "@colyseus/sdk";
 import type { DemoTable } from "@partygame/bots";
 import { type TestServer, waitUntil } from "@partygame/server/testing";
+import { CLOSE_CODES } from "@partygame/shared";
 import { GameClient } from "@partygame/terminal";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { witClashKit } from "../../bots/witClashBot.js";
@@ -78,11 +79,11 @@ describe("DemoTable", () => {
     const client = new GameClient(t.endpoint, apiPort, witClashKit());
     await watch(code);
     await expect(client.join(code, crypto.randomUUID(), "Intruder")).rejects.toThrow(
-      "This room is watch-only",
+      CLOSE_CODES.JOIN_REFUSED.message,
     );
     await table.seatBots();
     await expect(client.join(code, crypto.randomUUID(), "Late")).rejects.toThrow(
-      "This room is watch-only",
+      CLOSE_CODES.JOIN_REFUSED.message,
     );
   });
 

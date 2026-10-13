@@ -1,3 +1,4 @@
+import { CLOSE_CODES } from "@partygame/shared";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import type { TestServer } from "../src/testing/index.js";
 import { bootBuzzer, pid, stateOf } from "./support.js";
@@ -14,7 +15,10 @@ describe("GameRoom with a seats list", () => {
     const room = await t.createRoom("buzzer", { seats: [pid(1), pid(2)] });
     await t.join(room, { playerId: pid(1) });
     await t.join(room, { playerId: pid(2) });
-    await expect(t.join(room, { playerId: pid(3) })).rejects.toThrow("This room is watch-only");
+    await expect(t.join(room, { playerId: pid(3) })).rejects.toMatchObject({
+      code: CLOSE_CODES.JOIN_REFUSED.code,
+      message: CLOSE_CODES.JOIN_REFUSED.message,
+    });
     await t.join(room, { playerId: pid(3), spectator: true });
     expect(stateOf(room).players.size).toBe(2);
     expect(stateOf(room).spectatorCount).toBe(1);
@@ -29,16 +33,21 @@ describe("GameRoom with a seats list", () => {
 
   it("refuses everyone who wants a seat when the list is empty", async () => {
     const room = await t.createRoom("buzzer", { seats: [] });
-    await expect(t.join(room, { playerId: pid(1) })).rejects.toThrow("This room is watch-only");
+    await expect(t.join(room, { playerId: pid(1) })).rejects.toMatchObject({
+      code: CLOSE_CODES.JOIN_REFUSED.code,
+      message: CLOSE_CODES.JOIN_REFUSED.message,
+    });
   });
 
   it("rejects a malformed list at creation", async () => {
-    await expect(t.createRoom("buzzer", { seats: ["short"] })).rejects.toThrow(
-      "Invalid room options",
-    );
-    await expect(t.createRoom("buzzer", { seats: "player-0001" })).rejects.toThrow(
-      "Invalid room options",
-    );
+    await expect(t.createRoom("buzzer", { seats: ["short"] })).rejects.toMatchObject({
+      code: CLOSE_CODES.INVALID_OPTIONS.code,
+      message: CLOSE_CODES.INVALID_OPTIONS.message,
+    });
+    await expect(t.createRoom("buzzer", { seats: "player-0001" })).rejects.toMatchObject({
+      code: CLOSE_CODES.INVALID_OPTIONS.code,
+      message: CLOSE_CODES.INVALID_OPTIONS.message,
+    });
   });
 
   it("is open to everyone without the option", async () => {

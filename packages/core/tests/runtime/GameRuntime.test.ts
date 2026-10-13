@@ -1,3 +1,4 @@
+import { CLIENT_MESSAGES, ErrorCode, FrameworkError } from "@partygame/shared";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
@@ -95,6 +96,13 @@ function makeSpec(overrides: Overrides = {}): GameDefinition<S, P, O> {
             handler: (ctx) => {
               ctx.transition("Score");
               throw new Error("boom");
+            },
+          }),
+          TYPED: action({
+            from: "player",
+            payload: z.object({}),
+            handler: () => {
+              throw new FrameworkError(ErrorCode.NOT_ALLOWED, "internal detail");
             },
           }),
           BAD_TARGET: action({
@@ -264,7 +272,7 @@ describe("Lobby", () => {
     const { runtime, host } = setup2();
     runtime.dispatch("p2", { type: "START_GAME" });
     expect(host.errorsTo("p2")).toEqual([
-      { code: "UNAUTHORIZED", message: expect.any(String), action: "START_GAME" },
+      { code: "UNAUTHORIZED", message: CLIENT_MESSAGES.UNAUTHORIZED },
     ]);
     expect(runtime.phase).toBe("Lobby");
   });
@@ -273,7 +281,7 @@ describe("Lobby", () => {
     const { runtime, host } = setup2({ minPlayers: 3 });
     runtime.dispatch("p1", { type: "START_GAME" });
     expect(host.errorsTo("p1")).toEqual([
-      { code: "NOT_ENOUGH_PLAYERS", message: expect.any(String), action: "START_GAME" },
+      { code: "NOT_ENOUGH_PLAYERS", message: CLIENT_MESSAGES.NOT_ENOUGH_PLAYERS },
     ]);
     expect(runtime.phase).toBe("Lobby");
   });
@@ -395,7 +403,7 @@ describe("dispatch rejections", () => {
       const { runtime, host } = inPlay();
       runtime.dispatch("p1", raw);
       expect(host.errorsTo("p1")).toEqual([
-        { code: "INVALID_ACTION", message: expect.any(String) },
+        { code: "INVALID_ACTION", message: CLIENT_MESSAGES.INVALID_ACTION },
       ]);
     },
   );
@@ -404,7 +412,7 @@ describe("dispatch rejections", () => {
     const { runtime, host } = inPlay();
     runtime.dispatch("p1", { type: "NO_SUCH" });
     expect(host.errorsTo("p1")).toEqual([
-      { code: "UNKNOWN_ACTION", message: expect.any(String), action: "NO_SUCH" },
+      { code: "UNKNOWN_ACTION", message: CLIENT_MESSAGES.UNKNOWN_ACTION },
     ]);
   });
 
@@ -413,7 +421,7 @@ describe("dispatch rejections", () => {
     runtime.dispatch("p1", { type: "GUESS", n: 1 });
     runtime.dispatch("p1", { type: "GUESS", n: 1 });
     expect(host.errorsTo("p1")).toEqual([
-      { code: "WRONG_PHASE", message: expect.any(String), action: "GUESS" },
+      { code: "WRONG_PHASE", message: CLIENT_MESSAGES.WRONG_PHASE },
     ]);
   });
 
@@ -421,21 +429,50 @@ describe("dispatch rejections", () => {
     const { runtime, host } = inPlay();
     runtime.dispatch("p2", { type: "BOSS" });
     runtime.dispatch("ghost", { type: "GUESS", n: 1 });
-    expect(host.errorsTo("p2")[0]).toMatchObject({ code: "UNAUTHORIZED", action: "BOSS" });
-    expect(host.errorsTo("ghost")[0]).toMatchObject({ code: "UNAUTHORIZED", action: "GUESS" });
+    expect(host.errorsTo("p2")[0]).toMatchObject({ code: "UNAUTHORIZED" });
+    expect(host.errorsTo("ghost")[0]).toMatchObject({ code: "UNAUTHORIZED" });
   });
 
   it("inactive sender", () => {
     const { runtime, host, p2 } = inPlay();
     p2.isActive = false;
     runtime.dispatch("p2", { type: "GUESS", n: 1 });
-    expect(host.errorsTo("p2")[0]).toMatchObject({ code: "NOT_ACTIVE", action: "GUESS" });
+    expect(host.errorsTo("p2")[0]).toMatchObject({
+      code: "NOT_ACTIVE",
+      message: CLIENT_MESSAGES.NOT_ACTIVE,
+    });
   });
 
-  it("payload failing its schema", () => {
+  it("payload failing its schema answers the fixed INVALID_ACTION message", () => {
+    const { runtime, state } = inPlay();
+    expect(runtime.dispatch("p2", { type: "GUESS", n: "one" })).toEqual({
+      code: ErrorCode.INVALID_ACTION,
+      message: CLIENT_MESSAGES.INVALID_ACTION,
+      action: "GUESS",
+    });
+    expect(state.log).toEqual([]);
+  });
+
+  it("built-in actions with a bad payload answer the fixed INVALID_ACTION message", () => {
+    const { runtime } = setup2();
+    expect(runtime.dispatch("p1", { type: "KICK_PLAYER", playerId: 42 })).toEqual({
+      code: ErrorCode.INVALID_ACTION,
+      message: CLIENT_MESSAGES.INVALID_ACTION,
+      action: "KICK_PLAYER",
+    });
+    expect(runtime.dispatch("p1", { type: "SET_OPTIONS", rounds: "x" })).toEqual({
+      code: ErrorCode.INVALID_ACTION,
+      message: CLIENT_MESSAGES.INVALID_ACTION,
+      action: "SET_OPTIONS",
+    });
+  });
+
+  it("maps a handler-thrown FrameworkError to its fixed client message without failing the run", () => {
     const { runtime, host, state } = inPlay();
-    runtime.dispatch("p2", { type: "GUESS", n: "one" });
-    expect(host.errorsTo("p2")[0]).toMatchObject({ code: "INVALID_ACTION", action: "GUESS" });
+    const result = runtime.dispatch("p2", { type: "TYPED" });
+    expect(result).toEqual({ code: ErrorCode.NOT_ALLOWED, message: CLIENT_MESSAGES.NOT_ALLOWED });
+    expect(host.errorsTo("p2")).toEqual([result]);
+    expect(runtime.phase).toBe("Play");
     expect(state.log).toEqual([]);
   });
 
@@ -461,11 +498,36 @@ describe("dispatch result", () => {
   });
 
   it.each([
-    ["malformed envelope", "p1", "x", { code: "INVALID_ACTION" }],
-    ["unknown action", "p1", { type: "NO_SUCH" }, { code: "UNKNOWN_ACTION", action: "NO_SUCH" }],
-    ["unseated sender", "ghost", { type: "BOSS" }, { code: "UNAUTHORIZED", action: "BOSS" }],
-    ["bad payload", "p1", { type: "GUESS", n: "x" }, { code: "INVALID_ACTION", action: "GUESS" }],
-    ["handler reject", "p1", { type: "NOPE" }, { code: "NOT_ALLOWED", action: "NOPE" }],
+    [
+      "malformed envelope",
+      "p1",
+      "x",
+      { code: "INVALID_ACTION", message: CLIENT_MESSAGES.INVALID_ACTION },
+    ],
+    [
+      "unknown action",
+      "p1",
+      { type: "NO_SUCH" },
+      { code: "UNKNOWN_ACTION", message: CLIENT_MESSAGES.UNKNOWN_ACTION },
+    ],
+    [
+      "unseated sender",
+      "ghost",
+      { type: "BOSS" },
+      { code: "UNAUTHORIZED", message: CLIENT_MESSAGES.UNAUTHORIZED },
+    ],
+    [
+      "bad payload",
+      "p1",
+      { type: "GUESS", n: "x" },
+      { code: "INVALID_ACTION", message: CLIENT_MESSAGES.INVALID_ACTION, action: "GUESS" },
+    ],
+    [
+      "handler reject",
+      "p1",
+      { type: "NOPE" },
+      { code: "NOT_ALLOWED", message: "no thanks", action: "NOPE" },
+    ],
   ])("returns the rejection for %s and still sends it", (_label, sender, raw, expected) => {
     const { runtime, host } = inPlay();
     const result = runtime.dispatch(sender, raw);
@@ -1043,7 +1105,7 @@ describe("KICK_PLAYER", () => {
   it("is host only", () => {
     const { runtime, host } = inPlay();
     runtime.dispatch("p2", { type: "KICK_PLAYER", playerId: "p1" });
-    expect(host.errorsTo("p2")[0]).toMatchObject({ code: "UNAUTHORIZED", action: "KICK_PLAYER" });
+    expect(host.errorsTo("p2")[0]).toMatchObject({ code: "UNAUTHORIZED" });
     expect(host.kicked).toEqual([]);
   });
 
@@ -1107,7 +1169,7 @@ describe("END_GAME", () => {
   it("is host only", () => {
     const { runtime, host, state } = startedWithHook();
     runtime.dispatch("p2", { type: "END_GAME" });
-    expect(host.errorsTo("p2")[0]).toMatchObject({ code: "UNAUTHORIZED", action: "END_GAME" });
+    expect(host.errorsTo("p2")[0]).toMatchObject({ code: "UNAUTHORIZED" });
     expect(runtime.phase).toBe("Play");
     expect(state.log).toEqual([]);
   });
@@ -1115,9 +1177,8 @@ describe("END_GAME", () => {
   it("is refused in the Lobby", () => {
     const { runtime, state } = withHook();
     expect(runtime.dispatch("p1", { type: "END_GAME" })).toEqual({
-      code: "WRONG_PHASE",
-      message: "END_GAME is not allowed in Lobby",
-      action: "END_GAME",
+      code: ErrorCode.WRONG_PHASE,
+      message: CLIENT_MESSAGES.WRONG_PHASE,
     });
     expect(state.log).toEqual([]);
   });
@@ -1152,7 +1213,7 @@ describe("SET_OPTIONS", () => {
     expect(host.errorsTo("p2")[0]).toMatchObject({ code: "UNAUTHORIZED" });
     runtime.dispatch("p1", { type: "START_GAME" });
     runtime.dispatch("p1", { type: "SET_OPTIONS", rounds: 5 });
-    expect(host.errorsTo("p1")[0]).toMatchObject({ code: "WRONG_PHASE", action: "SET_OPTIONS" });
+    expect(host.errorsTo("p1")[0]).toMatchObject({ code: "WRONG_PHASE" });
     expect(host.published).toEqual([]);
   });
 

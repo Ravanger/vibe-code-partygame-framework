@@ -22,6 +22,7 @@ Each rule names the gate that enforces it; `not enforced yet: #N` means a review
 14. MUST document every public API (JSDoc plus `docs/framework/README.md`) in the same PR. (`bun run check:exports` snapshots the surface; docs not enforced yet: #113)
 15. MUST put agent files (plans, logs, checklists, notes) in `.AGENTS/`; `docs/` is for developers and users only; no new files in the repo root. (`bun run check:conventions`)
 16. MUST NOT commit or push unless the human asks. (branch protection on `main`: nothing merges without a PR and green CI)
+17. MUST NOT send raw Zod or exception text to a client; client-visible error strings come from `CLIENT_MESSAGES`, `CLOSE_CODES` or a game-authored `ctx.reject` message (`docs/framework/README.md`, Error model). (reviewer)
 
 A `lefthook` pre-commit hook (`lefthook.yml`, installed by `bun install`) runs `biome check --staged`, `check:paths` and `check:gates --staged`; `git commit --no-verify` is forbidden. If it refuses a gate edit, stop and ask a maintainer (`docs/HOSTING.md`).
 

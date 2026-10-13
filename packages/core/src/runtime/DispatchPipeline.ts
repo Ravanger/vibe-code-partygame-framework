@@ -1,5 +1,9 @@
-import { ActionEnvelopeSchema, ErrorCode } from "@partygame/shared";
-import { prettifyError } from "zod";
+import {
+  ActionEnvelopeSchema,
+  CLIENT_MESSAGES,
+  ErrorCode,
+  FrameworkError,
+} from "@partygame/shared";
 import type {
   ActionContext,
   ActionDefinition,
@@ -39,35 +43,35 @@ export class DispatchPipeline<TState extends PhaseState, TPrivate, TOptions> {
   run(playerId: string, rawAction: unknown): void {
     const envelope = ActionEnvelopeSchema.safeParse(rawAction);
     if (!envelope.success) {
-      this.deps.reject(playerId, undefined, ErrorCode.INVALID_ACTION, "Malformed action");
+      this.deps.reject(
+        playerId,
+        undefined,
+        ErrorCode.INVALID_ACTION,
+        CLIENT_MESSAGES.INVALID_ACTION,
+      );
       return;
     }
     const type = envelope.data.type;
     const action = this.deps.builtins[type] ?? this.deps.currentPhaseActions()?.[type];
     if (!action) {
       const declaredElsewhere = this.deps.declaredInAnyPhase(type);
-      this.deps.reject(
-        playerId,
-        type,
+      throw new FrameworkError(
         declaredElsewhere ? ErrorCode.WRONG_PHASE : ErrorCode.UNKNOWN_ACTION,
         declaredElsewhere
           ? `${type} is not allowed in ${this.deps.phaseName()}`
           : `Unknown action ${type}`,
       );
-      return;
     }
     const player = this.deps.players().find((p) => p.id === playerId);
     if (!player || (action.from === "host" && player.role !== "host")) {
-      this.deps.reject(playerId, type, ErrorCode.UNAUTHORIZED, `Not allowed to send ${type}`);
-      return;
+      throw new FrameworkError(ErrorCode.UNAUTHORIZED, `Not allowed to send ${type}`);
     }
     if (!player.isActive) {
-      this.deps.reject(playerId, type, ErrorCode.NOT_ACTIVE, "You are waiting to be let in");
-      return;
+      throw new FrameworkError(ErrorCode.NOT_ACTIVE, "You are waiting to be let in");
     }
     const payload = action.payload.safeParse(envelope.data);
     if (!payload.success) {
-      this.deps.reject(playerId, type, ErrorCode.INVALID_ACTION, prettifyError(payload.error));
+      this.deps.reject(playerId, type, ErrorCode.INVALID_ACTION, CLIENT_MESSAGES.INVALID_ACTION);
       return;
     }
     const actionContext: ActionContext<TState, TPrivate, TOptions, unknown> = {
