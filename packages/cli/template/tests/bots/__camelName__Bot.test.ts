@@ -6,8 +6,8 @@ import {
   __PascalName__Bot,
 } from "../../bots/__camelName__Bot.js";
 import { ACTION } from "../../src/actionNames.js";
+import { META } from "../../src/meta.js";
 import { PHASE } from "../../src/phaseNames.js";
-import { ROOM_NAME } from "../../src/roomName.js";
 import { __PascalName__State } from "../../src/state.js";
 import { tick } from "../terminal/support.js";
 
@@ -127,7 +127,7 @@ describe("__camelName__Bot", () => {
 
   it("exposes a kit with the room name, state class and strategy", () => {
     const kit = __camelName__Kit();
-    expect(kit.roomName).toBe(ROOM_NAME);
+    expect(kit.roomName).toBe(META.roomName);
     expect(kit.stateClass).toBe(__PascalName__State);
     expect(kit.strategy).toBeInstanceOf(__PascalName__Bot);
   });

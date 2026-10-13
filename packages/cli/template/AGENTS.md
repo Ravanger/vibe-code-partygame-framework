@@ -11,7 +11,7 @@ The __DisplayName__ game: rules, UI screens and entry points, built only on the 
 
 ## May import
 
-- Runtime: `@partygame/bots`, `@partygame/core`, `@partygame/game-client`, `@partygame/game-ui`, `@partygame/launcher`, `@partygame/server`, `@partygame/shared`, `@partygame/terminal`
+- Runtime: `@partygame/bots`, `@partygame/core`, `@partygame/game-client`, `@partygame/game-kit`, `@partygame/game-ui`, `@partygame/shared`, `@partygame/terminal`
 - Dev: `@partygame/config`
 
 ## Public entry points

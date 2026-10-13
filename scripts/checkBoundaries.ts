@@ -58,6 +58,7 @@ const GAME_UI_SRC = [
   "actions",
   "actionNames",
   "phaseNames",
+  "meta",
   "roomName",
   "isGameOver",
 ];
