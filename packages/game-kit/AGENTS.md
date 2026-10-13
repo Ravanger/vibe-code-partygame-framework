@@ -2,7 +2,7 @@
 
 ## Responsibility
 
-The dev-side game declaration: `defineGamePackage` plus the entry functions (`serve`, `launch`) that turn one declaration into a game's runnable entry files.
+The dev-side game declaration: `defineGamePackage` plus the entry functions (`serve`, `launch`, `botsCli`, `play`, `demoCli`) that turn one declaration into a game's runnable entry files.
 
 ## Never put here
 
@@ -17,7 +17,7 @@ The dev-side game declaration: `defineGamePackage` plus the entry functions (`se
 
 ## Public entry points
 
-- `.`: `defineGamePackage`, `serve`, `launch`, `hostedGame`, the declaration and io types.
+- `.`: `defineGamePackage`, `serve`, `launch`, `botsCli`, `play`, `demoCli`, `buildLaunchConfig`, `demoTableOptions`, `hostedGame`, the declaration and io types.
 
 ## Tests
 

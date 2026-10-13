@@ -22,6 +22,12 @@ export interface GameDemoOptions<TState extends BaseGameState> {
   bot?: BotOptions;
   /** Name of the host bot. */
   hostName?: string;
+  /** Lines to print on each spectator state change (a commentator). */
+  narrate?(state: TState): readonly string[];
+  /** Game-specific problems in the final spectator state, e.g. scores that do not add up. */
+  problems?(state: TState): readonly string[];
+  /** The line printed when the demo passes; "PASS: no action was rejected" by default. */
+  passMessage?: string;
 }
 
 /** One game declared once: what to host, how to launch it and who plays it. */

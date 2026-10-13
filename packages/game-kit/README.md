@@ -20,6 +20,22 @@ Loads the content (`pkg.load` with `io.env`, or `undefined`), builds the hosted 
 
 Builds a `LaunchConfig` from the declaration — `name` from `displayName` (or `meta.roomName`), `bots` capped at `maxPlayers - 1`, a demo table between `minPlayers - 1` and `maxPlayers - 1` bots finished by `isFinished` — and runs it with `io.argv`.
 
+### `buildLaunchConfig(pkg, { gameDir })` / `demoTableOptions(pkg, connection)`
+
+The pure parts of `launch`: the `LaunchConfig`, and the per-connection `DemoTableOptions` its demo tables are built from — the declaration's `demo` extras (kit, room options, host name, bot pacing) merged under the connection's.
+
+### `botsCli(pkg, io?)`
+
+The `bots <CODE> [count]` entry: seats bots in a room made elsewhere (usage bounded by `meta.maxPlayers - 1`). The SIGINT handler removes them and exits 0; bad arguments or a failed join exit 1.
+
+### `play(pkg, io?)`
+
+The `play` entry: one human at a terminal driven by `pkg.terminal`, optionally with bots; starts a server when the endpoint defaults are used and no room is joined. Exit 2 on bad arguments, 1 on failure or when the game has no `terminal`.
+
+### `demoCli(pkg, io?)`
+
+The `demo` entry: one all-bot game on its own server with a PASS/FAIL verdict. `--bots=` defaults to 3 and must stay within `meta.minPlayers - 1 .. meta.maxPlayers - 1` (exit 2 otherwise); the declaration's `demo` extras feed the run; exit 0 on PASS, 1 on FAIL.
+
 ### `GameKitIo`
 
 The injectable process: `env`, `argv`, `exit`, `log`, `error`, `onSignal` and the `startServer`/`runLauncher` seams. Defaults to `process` via `defaultIo()`, so tests pass fakes and never touch a real process.

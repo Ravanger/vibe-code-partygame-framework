@@ -218,11 +218,14 @@
           "GameKitIo": {},
           "GameMeta": {},
           "ServeOptions": {},
+          "botsCli": {},
           "buildLaunchConfig": {},
           "defineGamePackage": {},
+          "demoCli": {},
           "demoTableOptions": {},
           "hostedGame": {},
           "launch": {},
+          "play": {},
           "serve": {}
         }
       }

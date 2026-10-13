@@ -37,6 +37,7 @@ export default defineConfig({
         "packages/game-kit/src/io.ts",
         "packages/game-kit/src/serve.ts",
         "packages/game-kit/src/launch.ts",
+        "packages/game-kit/src/play.ts",
         "games/*/launch.ts",
         "scripts/game.ts",
         "scripts/checkAgentsFilesCli.ts",
