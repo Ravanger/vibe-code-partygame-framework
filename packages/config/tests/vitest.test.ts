@@ -124,6 +124,7 @@ const EXPECTED_SOURCE_ALIASES: Record<string, string> = {
   "@partygame/game-client": "game-client/src/index.ts",
   "@partygame/game-client/test-setup": "game-client/test-setup.ts",
   "@partygame/game-client/testing": "game-client/src/testing.ts",
+  "@partygame/game-kit": "game-kit/src/index.ts",
   "@partygame/game-ui": "game-ui/src/index.ts",
   "@partygame/game-ui/components": "game-ui/src/components/index.ts",
   "@partygame/launcher": "launcher/src/index.ts",

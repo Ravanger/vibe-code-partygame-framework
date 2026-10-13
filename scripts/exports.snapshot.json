@@ -206,6 +206,27 @@
         }
       }
     },
+    "game-kit": {
+      ".": {
+        "target": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.js"
+        },
+        "symbols": {
+          "GameDeclaration": {},
+          "GameDemoOptions": {},
+          "GameKitIo": {},
+          "GameMeta": {},
+          "ServeOptions": {},
+          "buildLaunchConfig": {},
+          "defineGamePackage": {},
+          "demoTableOptions": {},
+          "hostedGame": {},
+          "launch": {},
+          "serve": {}
+        }
+      }
+    },
     "game-ui": {
       ".": {
         "target": {

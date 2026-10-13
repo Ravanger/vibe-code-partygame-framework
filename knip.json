@@ -24,6 +24,9 @@
       "project": ["src/**", "*.ts", "tests/**"],
       "svelte": false
     },
+    "packages/game-kit": {
+      "project": ["src/**", "tests/**"]
+    },
     "packages/game-ui": {
       "project": ["src/**", "tests/**"]
     },
