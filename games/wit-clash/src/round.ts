@@ -1,7 +1,7 @@
 import { required } from "@partygame/core";
 import { pickBestAnswers } from "./bestAnswers.js";
 import { eligibleVoterIds } from "./eligibility.js";
-import { MIN_PLAYERS } from "./playerLimits.js";
+import { META } from "./meta.js";
 import type { WitClashContext } from "./private.js";
 import { composeScoreboard } from "./scoreboard.js";
 import { BestAnswer, type Matchup, PlayerPrivate, ScoreEntry } from "./state.js";
@@ -115,8 +115,8 @@ export class Round {
 
   endIfTooFewPlayers(): boolean {
     const seated = this.ctx.players().filter((p) => p.isActive && p.isReady).length;
-    if (seated >= MIN_PLAYERS) return false;
-    this.ctx.state.notice = `Fewer than ${MIN_PLAYERS} players were left, so the game ended.`;
+    if (seated >= META.minPlayers) return false;
+    this.ctx.state.notice = `Fewer than ${META.minPlayers} players were left, so the game ended.`;
     this.ctx.returnToLobby();
     return true;
   }

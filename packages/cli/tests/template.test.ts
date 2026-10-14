@@ -91,7 +91,7 @@ describe("renderTemplate", () => {
     // A quote, a backslash and an embedded newline: each of these breaks a raw TS string literal.
     const names = { ...NAMES, displayName: 'Bob "The Builder" \\ \n test' };
     await renderTemplate({ templateDir: SHIPPED_TEMPLATE, outDir: dest, names });
-    for (const file of ["src/game.ts", "launch.ts", "tests/game/hostedGame.test.ts"]) {
+    for (const file of ["src/game.ts", "gamePackage.ts", "tests/game/gamePackage.test.ts"]) {
       const code = await readFile(join(dest, file), "utf8");
       expect(
         transpileModule(code, {

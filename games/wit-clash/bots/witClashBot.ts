@@ -1,7 +1,7 @@
 import type { BotKit, BotStrategy, BotTurn } from "@partygame/bots";
 import { ACTION } from "../src/actionNames.js";
+import { META } from "../src/meta.js";
 import { PHASE } from "../src/phaseNames.js";
-import { ROOM_NAME } from "../src/roomName.js";
 import { type Matchup, WitClashState } from "../src/state.js";
 
 export const BOT_ANSWERS: readonly string[] = [
@@ -147,7 +147,7 @@ export const witClashBot = (options: WitClashBotOptions = {}): BotStrategy<WitCl
 
 /** What the bot tables need to play WitClash. */
 export const witClashKit = (options: WitClashBotOptions = {}): BotKit<WitClashState> => ({
-  roomName: ROOM_NAME,
+  roomName: META.roomName,
   stateClass: WitClashState,
   strategy: witClashBot(options),
 });

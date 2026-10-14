@@ -9,7 +9,7 @@ import {
 export { addSeat, type FetchStub, type SeatConfig } from "@partygame/game-client/testing";
 
 import { vi } from "vitest";
-import { ROOM_NAME } from "../../src/roomName.js";
+import { META } from "../../src/meta.js";
 import { __PascalName__State } from "../../src/state.js";
 
 /** A manager attached to an in-memory room with this client seated (name "Me" by default). */
@@ -19,12 +19,12 @@ export const connectedClient = (
 ): ConnectedClient<__PascalName__State> =>
   connectedClientOf({
     stateClass: __PascalName__State,
-    roomName: ROOM_NAME,
+    roomName: META.roomName,
     seat,
     phase,
     setup: (state) => {
-      state.minPlayers = 2;
-      state.maxPlayers = 8;
+      state.minPlayers = META.minPlayers;
+      state.maxPlayers = META.maxPlayers;
       state.options = JSON.stringify({ waveGoal: 10 });
     },
   });

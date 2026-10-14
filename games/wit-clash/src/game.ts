@@ -1,5 +1,6 @@
 import { defineGame } from "@partygame/core";
 import type { CategoryRepository } from "./content/CategoryRepository.js";
+import { META } from "./meta.js";
 import { type WitClashOptions, WitClashOptionsSchema } from "./options.js";
 import { PHASE } from "./phaseNames.js";
 import { CategorySelection } from "./phases/CategorySelection.js";
@@ -10,7 +11,6 @@ import { Results } from "./phases/Results.js";
 import { TieBreakerPrompting } from "./phases/TieBreakerPrompting.js";
 import { TieBreakerReveal } from "./phases/TieBreakerReveal.js";
 import { TieBreakerVoting } from "./phases/TieBreakerVoting.js";
-import { MAX_PLAYERS, MIN_PLAYERS } from "./playerLimits.js";
 import { WitClashPrivate } from "./private.js";
 import { Round } from "./round.js";
 import type { WitClashState } from "./state.js";
@@ -24,8 +24,8 @@ export function createWitClashGame({ categories }: WitClashConfig) {
   return defineGame<WitClashState, WitClashPrivate, WitClashOptions>({
     name: "WitClash",
     version: "1",
-    minPlayers: MIN_PLAYERS,
-    maxPlayers: MAX_PLAYERS,
+    minPlayers: META.minPlayers,
+    maxPlayers: META.maxPlayers,
     startPhase: PHASE.CategorySelection,
     options: WitClashOptionsSchema,
     createPrivateState: () => new WitClashPrivate(categories),

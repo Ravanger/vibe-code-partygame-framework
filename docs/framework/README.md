@@ -19,8 +19,8 @@ bun run new <slug> --name "Word War"    # override the display name only
 ```
 
 This writes a complete, working, fully-tested game to `games/<slug>/` — package config, a small wave-based
-ruleset (two phases, `Waving` and `Results`), a Svelte client, a terminal client, bots and the launcher wiring —
-then runs `bun install` so it is ready to play. It targets this monorepo only: it finds the repo root by walking
+ruleset (two phases, `Waving` and `Results`), a Svelte client, a terminal client, bots and one game declaration
+(`gamePackage.ts`) whose entry files are one-line stubs over it — then runs `bun install` so it is ready to play. It targets this monorepo only: it finds the repo root by walking
 up to the nearest `package.json` whose `workspaces` include `games/*`, and fails with a clear error otherwise.
 Then run `bun run launch <slug>` to start the server and dev client; the build step happens automatically.
 
@@ -31,7 +31,7 @@ package `@partygame/<slug>`, room `<slug>` with dashes as underscores, plus Pasc
 display name (override the display name with `--name`).
 
 Once it runs, replace the wave ruleset in `games/<slug>/src/` with your own game; the phases, actions, state, UI,
-terminal and bots are small, self-contained files you can edit. The rest of this guide explains how each piece works.
+terminal, bots and the declaration are small, self-contained files you can edit. The rest of this guide explains how each piece works.
 
 ## Concepts
 
@@ -784,21 +784,18 @@ Overridable: `BotOptions` `thinkMs` (default `[2000, 6000]`), `reactMs` (`[500, 
 `timeoutMs` (`BotTable` and `DemoTable` also take `nameFor` and `timeoutMs`); `DemoTable` `hostName`, `roomOptions`, `isFinished`. Every failure leaves the seats it took.
 Example: `games/wit-clash/bots/witClashBot.ts`.
 
+A game declares its kit once as the `botKit` field of its declaration (`gamePackage.ts`) and never joins bots by hand:
+the `bun run bots <CODE> [count]` entry is a stub calling `botsCli(gamePackage)` from `@partygame/game-kit`, which seats
+the bots in a room made elsewhere (usage bounded by `meta.maxPlayers - 1`) and removes them on Ctrl+C.
+
 ## Terminal
 
-`@partygame/terminal` lets a human play at a prompt. You write a `TerminalStrategy` (what to ask in each stage); `TerminalPlayer`
-keeps the lobby, the countdown, action replies and quitting, and `PlaySession` finds or starts a server, creates or joins a room and
-seats bots. Players are `BotRoom`s, so the same kit that drives bots names the room and state class. The samples here and in Launcher reuse `buttonKit`, `ButtonState` and `ButtonGame` from Bots and Minimal game.
+`@partygame/terminal` lets a human play at a prompt. You write a `TerminalStrategy` (what to ask in each stage); the kit's `play`
+entry drives it through a `TerminalPlayer` that keeps the lobby, the countdown, action replies and quitting, and a `PlaySession` that
+finds or starts a server, creates or joins a room and seats bots. The samples here and in Launcher reuse `buttonKit`, `ButtonState` and `ButtonGame` from Bots and Minimal game.
 
 ```ts
-import { createInterface } from "node:readline/promises";
-import {
-  PlaySession,
-  ReadlinePrompter,
-  TerminalPlayer,
-  parsePlayArgs,
-  type TerminalStrategy,
-} from "@partygame/terminal";
+import { type TerminalStrategy } from "@partygame/terminal";
 
 const buttonTerminal = (): TerminalStrategy<ButtonState> => ({
   async play(turn) {
@@ -809,29 +806,28 @@ const buttonTerminal = (): TerminalStrategy<ButtonState> => ({
   },
   narrate: (state) => (state.phase === "Done" ? [`${state.winner} won`] : []),
 });
+```
 
-const USAGE = "Usage: bun run play [--bots=0..7] [--name=You] [--join=ABCD]";
-const parsed = parsePlayArgs(process.argv.slice(2), { maxBots: 7, usage: USAGE });
-if (!parsed.ok) {
-  console.error(parsed.error);
-  process.exit(2);
-}
-const lines = createInterface({ input: process.stdin, output: process.stdout });
-const { usesDefaults, join } = parsed.value;
-const session = new PlaySession(
-  {
-    ...parsed.value,
-    startServer: usesDefaults && join === undefined,
-    kit: buttonKit,
-    games: [{ roomName: "button", definition: ButtonGame, stateClass: ButtonState }],
-    player: (room, playerId, io) => new TerminalPlayer(room, playerId, io, buttonTerminal()),
-    clientUrl: "http://localhost:5173",
-  },
-  new ReadlinePrompter(lines),
-);
-process.on("SIGINT", () => session.stop());
-await session.run();
-lines.close();
+Pass it as the declaration's `terminal` field and make the entry a stub:
+
+```ts
+// gamePackage.ts — the one declaration every entry stubs over
+import { defineGamePackage } from "@partygame/game-kit";
+
+export const buttonPackage = defineGamePackage({
+  meta: { roomName: "button", minPlayers: 2, maxPlayers: 8 },
+  definition: () => ButtonGame,
+  stateClass: ButtonState,
+  isFinished: (state) => state.phase === "Done",
+  botKit: buttonKit,
+  terminal: buttonTerminal,
+});
+
+// terminal/play.ts
+import { play } from "@partygame/game-kit";
+import { buttonPackage } from "../gamePackage.js";
+
+await play(buttonPackage);   // bun run play [--bots=0..7] [--name=You] [--join=ABCD]
 ```
 
 `play(turn)` runs once per stage, a stage being `stageOf(state)` (default: the phase). When the stage changes, the previous turn's
@@ -851,68 +847,55 @@ lines.close();
 | `quit()` | leaves the game; `run()` resolves |
 
 Optional strategy members: `narrate(state)` returns lines to print on every state change, `lobby(turn)` replaces the built-in lobby
-(host: Enter starts, `q` quits). `TerminalPlayerOptions` takes `now` and `quitWord`. `parseBotsArgs`, `runBotsCommand` and
-`ReadlinePrompter` back a game's `bots/cli.ts`; `@partygame/terminal/testing` has test doubles. Example:
-`games/wit-clash/terminal/witClashTerminal.ts` and `play.ts`.
+(host: Enter starts, `q` quits). The `play` entry parses `--bots`, `--name`, `--join`, `--endpoint` and `--api-port`, starts a server when the endpoint defaults are used and no room is joined, and exits 2 on bad arguments. `@partygame/terminal/testing` has test doubles. Example:
+`games/wit-clash/terminal/witClashTerminal.ts`.
 
 ### All-bot demo run
 
-`DemoRun` plays one game by itself on its own server (free ports): a host bot, `bots` more bots and a narrating spectator, then prints
-`PASS` or `FAIL`. It is the regression check for a game's bot strategy: the run fails when the game does not finish in `timeoutMs`
+The `demo` entry plays one game by itself on its own server (free ports): a host bot, N more bots and a narrating spectator, then prints
+`PASS` or `FAIL`. It is the regression check for a game's bot strategy: the run fails when the game does not finish in the timeout
 (default 180 s), when any bot action is refused, or when `problems(state)` reports something about the final state.
 
-```ts
-import { DemoRun } from "@partygame/terminal";
+Declare what the demo needs on the declaration's `demo` field; `terminal/demo.ts` is a stub calling `demoCli(gamePackage)`:
 
-const passed = await new DemoRun({
-  games: [{ roomName: "button", definition: ButtonGame, stateClass: ButtonState }],
-  kit: buttonKit,
-  bots: 2,
-  finished: (state) => state.phase === "Done",
+```ts
+// gamePackage.ts — the `demo` field of the declaration
+demo: {
+  bot: { thinkMs: [200, 900], reactMs: [100, 500] },   // pacing; kit, roomOptions and hostName also go here
   narrate: (state) => (state.phase === "Done" ? [`${state.winner} won`] : []),
   problems: (state) => (state.winner === "" ? ["nobody won"] : []),
-  out: console.log,
-}).run();
-process.exit(passed ? 0 : 1);
+},
+
+// terminal/demo.ts
+import { demoCli } from "@partygame/game-kit";
+import { buttonPackage } from "../gamePackage.js";
+
+await demoCli(buttonPackage);   // bun run demo [--bots=1..7]
 ```
 
-Optional: `roomOptions`, `bot` (pacing and `onOutcome`), `hostName`, `passMessage`, `timeoutMs`. Example:
-`games/wit-clash/terminal/witClashDemo.ts`.
+`--bots=` sets the bot count (default 3, bounded by `meta`). The field's extras are all optional: `kit` (a demo-specific kit),
+`roomOptions`, `hostName`, `bot` (pacing and outcome logging), `narrate(state)`, `problems(state)` and `passMessage`. Under the hood
+`demoCli` drives a `DemoRun` from `@partygame/terminal`. Example: `games/wit-clash/gamePackage.ts` (the Narrator narrates and checks).
 
 ## Launcher
 
-`@partygame/launcher` starts a game's server, the code API and the client (Vite or the built `dist/`) and optionally a bot table.
-A game's `launch.ts` is only config:
+`@partygame/launcher` starts a game's server, the code API and the client (Vite or the built `dist/`) and optionally seats a bot table
+or opens a demo room. A game does not call it directly: the declaration carries what the launcher needs, and `launch.ts` is a stub:
 
 ```ts
 import { fileURLToPath } from "node:url";
-import { DemoTable } from "@partygame/bots";
-import { runLauncher } from "@partygame/launcher";
+import { launch } from "@partygame/game-kit";
+import { buttonPackage } from "./gamePackage.js";
 
-await runLauncher(
-  {
-    name: "FirstToPress",
-    gameDir: fileURLToPath(new URL(".", import.meta.url)),
-    bots: { kit: buttonKit, max: 7 },
-    demo: {
-      min: 2,
-      max: 7,
-      create: ({ bot, ...connection }) =>
-        new DemoTable({
-          ...buttonKit,
-          ...connection,
-          ...(bot ? { bot } : {}),
-          isFinished: (state) => state.phase === "Done",
-        }),
-    },
-  },
-  process.argv.slice(2),
-);
+await launch(buttonPackage, { gameDir: fileURLToPath(new URL(".", import.meta.url)) });
 ```
 
+`launch` builds the config from the declaration (`buildLaunchConfig`) and runs it with `runLauncher`: `name` is `displayName` (or
+`meta.roomName`), `bots` is the declaration's `botKit` capped at `maxPlayers - 1`, and the demo tables run `minPlayers - 1` to
+`maxPlayers - 1` bots plus a host bot, finished by `isFinished`, with the declaration's `demo` extras (kit, room options, host name,
+bot pacing) merged in.
+
 `gameDir` holds `server.ts` (run with env `PORT` and `API_PORT`), a `package.json` with `dev` and `build` scripts, and the built `dist/`.
-`bots` and `demo` are optional; a flag for a missing one prints the usage and exits 2. `create` receives the endpoint, API port, the
-launcher's logger inside `bot`, and `bots` (the count).
 
 | Argument | What |
 |---|---|
@@ -921,10 +904,9 @@ launcher's logger inside `bot`, and `bots` (the count).
 | `--bots[=N]` | open a room for you and seat N bots (1 to `bots.max`, default `bots.default` or 3) once you have entered your name |
 | `--demo[=N]` | a watch-only room that N bots plus a host bot play alone; the browser opens its TV view (`demo.min` to `demo.max`). Excludes `--bots` |
 
-Overridable in the config: `ports` (`game` 2567, `api` 3001, `clientDev` 5173, `production` 3000), `commands` (`server`, `dev`, `build`),
-`readyTimeoutMs` (30000), `openBrowser(url)`, `log(line)`. The launcher refuses to start when a port is taken, stops everything on
-Ctrl+C and exits 1 if a service dies. The pieces (`Launcher`, `parseLaunchArgs`, `ProcessGroup`, `StaticSite`, `lanUrls`, `openBrowser`) are exported
-for tests and custom launchers.
+The launcher refuses to start when a port is taken, stops everything on Ctrl+C and exits 1 if a service dies. Its full config
+(`ports`, `commands`, `readyTimeoutMs`, `openBrowser`, `log`) and pieces (`Launcher`, `parseLaunchArgs`, `ProcessGroup`, `StaticSite`,
+`lanUrls`, `openBrowser`) are documented in `packages/launcher/README.md` for tests and custom launchers.
 
 The repo root has no game code. `scripts/game.ts <command> [game] [...args]` runs `games/<game>/<entry>.ts` by convention:
 `launch` runs `launch.ts`, `play` runs `terminal/play.ts`, `bots` runs `bots/cli.ts`. A game is a folder under `games/` with a

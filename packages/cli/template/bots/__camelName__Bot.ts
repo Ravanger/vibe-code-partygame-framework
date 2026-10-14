@@ -1,7 +1,7 @@
 import type { BotKit, BotStrategy, BotTurn } from "@partygame/bots";
 import { ACTION } from "../src/actionNames.js";
+import { META } from "../src/meta.js";
 import { PHASE } from "../src/phaseNames.js";
-import { ROOM_NAME } from "../src/roomName.js";
 import { __PascalName__State } from "../src/state.js";
 
 type Turn = BotTurn<__PascalName__State>;
@@ -20,7 +20,7 @@ export const __camelName__Bot = (): BotStrategy<__PascalName__State> => new __Pa
 
 /** What the bot tables need to play the wave game. */
 export const __camelName__Kit = (): BotKit<__PascalName__State> => ({
-  roomName: ROOM_NAME,
+  roomName: META.roomName,
   stateClass: __PascalName__State,
   strategy: __camelName__Bot(),
 });

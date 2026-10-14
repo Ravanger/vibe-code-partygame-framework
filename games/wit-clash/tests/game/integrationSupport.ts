@@ -11,11 +11,11 @@ import {
   waitUntil,
 } from "@partygame/server/testing";
 import { createWitClashGame } from "../../src/game.js";
-import { ROOM_NAME } from "../../src/roomName.js";
+import { META } from "../../src/meta.js";
 import { WitClashState } from "../../src/state.js";
 import { makeCategories } from "./support.js";
 
-export const ROOM = ROOM_NAME;
+export const ROOM = META.roomName;
 export { testPlayerId as pid };
 
 export type Seated = TestPlayer<WitClashState>;

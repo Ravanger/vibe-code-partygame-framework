@@ -8,8 +8,8 @@ import {
   witClashKit,
 } from "../../bots/witClashBot.js";
 import { ACTION } from "../../src/actionNames.js";
+import { META } from "../../src/meta.js";
 import { PHASE } from "../../src/phaseNames.js";
-import { ROOM_NAME } from "../../src/roomName.js";
 import {
   Answer,
   CategoryOption,
@@ -347,7 +347,7 @@ describe("witClashBot as the host", () => {
 describe("witClashKit", () => {
   it("names the room and its state class", () => {
     const kit = witClashKit({ nextRoundDelayMs: 1 });
-    expect(kit.roomName).toBe(ROOM_NAME);
+    expect(kit.roomName).toBe(META.roomName);
     expect(new kit.stateClass()).toBeInstanceOf(WitClashState);
   });
 });

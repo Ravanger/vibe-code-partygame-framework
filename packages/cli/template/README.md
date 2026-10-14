@@ -22,10 +22,12 @@ bun run bots __slug__ CODE [count] # seat bots in a browser-created room
 
 ## Layout
 
+- `gamePackage.ts` — the game declared once: meta, definition, state class, is-finished, bot kit, terminal strategy
+  and demo extras; the entry files are one-line stubs over it.
 - `src/` — the rules: `state.ts` (synced state), `private.ts`, `phaseNames.ts`, `actionNames.ts`,
-  `actions.ts`, `phases/` (one file per phase), `game.ts` (`defineGame`).
+  `actions.ts`, `phases/` (one file per phase), `game.ts` (`defineGame`) and `meta.ts` (the browser-safe room name and player limits).
 - `ui/` — the Svelte client: `main.ts` (connection manager), `App.svelte` (screens).
-- `server.ts` — Bun server entry; `launch.ts` — launcher config.
+- `server.ts`, `launch.ts`, `bots/cli.ts`, `terminal/play.ts`, `terminal/demo.ts` — the entry stubs.
 - `bots/`, `terminal/` — bot strategy and terminal client.
 - `tests/` — rules (`tests/game/`), bots (`tests/bots/`), terminal (`tests/terminal/`) and UI
   (`tests/*.test.ts`).

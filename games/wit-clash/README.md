@@ -7,7 +7,7 @@ Everything here is game rules; the lobby, room codes, reconnection and timers co
 src/
   game.ts            createWitClashGame({ categories }) assembles the phases
   phaseNames.ts      PHASE constants, shared with the UI
-  playerLimits.ts    MIN_PLAYERS and MAX_PLAYERS: the game definition and the minimum-players rule read the same numbers
+  meta.ts            META: room name and player limits, browser-safe (the UI reads it); the game definition and the minimum-players rule read the same numbers
   actions.ts         ACTION constants, zod payloads, typed defineAction
   options.ts         zod options schema: the single source of defaults and limits
   state.ts           synced schema (the client contract) with the `.view()` private entries
@@ -18,12 +18,13 @@ src/
   matchups.ts  categoryVote.ts  eligibility.ts  tally.ts  drafts.ts  promptPool.ts  scoring.ts  scoreboard.ts  tieBreaker.ts  bestAnswers.ts
                      pure rules: plain data and the rng in, plain data out
   content/           category files (.jsonc) loader
-  loadContent.ts     loads and validates the content directory for server.ts
+  loadContent.ts     loads and validates the content directory (the declaration's `load`)
 ui/                  Svelte client, built on @partygame/game-client (see below)
-launch.ts            launcher config (`@partygame/launcher`); `bun run launch` reaches it through `scripts/game.ts`
-bots/                WitClash bot strategy (`witClashBot.ts`, on `@partygame/bots`) and the `bun run bots` CLI (see "Playtesting alone")
-terminal/            `play.ts` (a human at a readline prompt) and `demo.ts` + `witClashDemo.ts` (all-bot game, narrated and checked); see "Play in the terminal"
-server.ts            Bun entry: loads the content, then startServer from @partygame/server/bun
+gamePackage.ts       WitClash declared once (`defineGamePackage`): meta, definition, state class, is-finished, bot kit, terminal strategy and demo; the entry files stub over it
+launch.ts            one-line stub: `launch(gamePackage)` from `@partygame/game-kit`; `bun run launch` reaches it through `scripts/game.ts`
+bots/                WitClash bot strategy (`witClashBot.ts`, on `@partygame/bots`) and the `bun run bots` entry (see "Playtesting alone")
+terminal/            `play.ts` and `demo.ts` — one-line stubs over `gamePackage.ts`; `Narrator.ts` narrates the demo and checks its final scores; `witClashTerminal.ts` is the `TerminalStrategy`; see "Play in the terminal"
+server.ts            one-line stub: `serve(gamePackage)` loads the content, then starts the server
 content/categories/  host-editable .jsonc categories, at least 3 needed
 ```
 
@@ -173,9 +174,9 @@ Passed when the room is created or changed by the host in the lobby with `SET_OP
 
 ## Content and running
 
-Category files live in `content/categories/*.jsonc` (format: `content/categories/README.md`); drop a file in and restart. `server.ts` loads
-`WITCLASH_CONTENT_DIR` or `content/categories` next to it and refuses to start with fewer than 3 categories. Ports come from `PORT` (2567) and
-`API_PORT` (3001). Hosting and LAN play: `docs/HOSTING.md`.
+Category files live in `content/categories/*.jsonc` (format: `content/categories/README.md`); drop a file in and restart. The declaration's
+`load` reads `WITCLASH_CONTENT_DIR` or `content/categories` next to `gamePackage.ts`, and the server refuses to start with fewer than 3
+categories. Ports come from `PORT` (2567) and `API_PORT` (3001). Hosting and LAN play: `docs/HOSTING.md`.
 
 ```
 bun run launch         # repo root: game server, API and Vite, waits until all answer (config: launch.ts)
@@ -205,11 +206,11 @@ bun run launch:demo          # watch-only room: bots play one game, the browser 
 bun run play                      # host a room; 3 bots join; uses the server on 2567/3001 or starts its own
 bun run play --join=ABCD          # join a room as a normal player
 bun run demo                      # `demo` script of this package; from the root: bun run --cwd games/wit-clash demo
-                                   # all-bot game, narrated; prints PASS/FAIL (--bots=N total players, --rounds=R)
+                                   # all-bot game, narrated; prints PASS/FAIL (--bots=N bots, 2 to 7, default 3)
 ```
 
 You answer and vote by typing; `q` quits (`/q` while writing an answer). `play` takes `--bots=N` (0 to 7), `--name=You`, `--endpoint=ws://host:2567 --api-port=3001`.
-`demo` is `witClashDemo` (`terminal/witClashDemo.ts`) on the framework `DemoRun`: it checks that every final score equals the points shown in the reveals and that no bot action was refused.
+`demo` runs the declaration's `demo` field through `demoCli`: a host bot plus N bots play alone on their own server, narrated by `Narrator`, which checks that every final score equals the points shown in the reveals and that no bot action was refused.
 
 ## Client (`ui/`)
 

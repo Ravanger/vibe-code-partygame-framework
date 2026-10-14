@@ -206,6 +206,30 @@
         }
       }
     },
+    "game-kit": {
+      ".": {
+        "target": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.js"
+        },
+        "symbols": {
+          "GameDeclaration": {},
+          "GameDemoOptions": {},
+          "GameKitIo": {},
+          "GameMeta": {},
+          "ServeOptions": {},
+          "botsCli": {},
+          "buildLaunchConfig": {},
+          "defineGamePackage": {},
+          "demoCli": {},
+          "demoTableOptions": {},
+          "hostedGame": {},
+          "launch": {},
+          "play": {},
+          "serve": {}
+        }
+      }
+    },
     "game-ui": {
       ".": {
         "target": {

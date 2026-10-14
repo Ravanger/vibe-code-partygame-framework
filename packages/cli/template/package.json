@@ -7,9 +7,8 @@
     "@partygame/bots": "workspace:*",
     "@partygame/core": "workspace:*",
     "@partygame/game-client": "workspace:*",
+    "@partygame/game-kit": "workspace:*",
     "@partygame/game-ui": "workspace:*",
-    "@partygame/launcher": "workspace:*",
-    "@partygame/server": "workspace:*",
     "@partygame/shared": "workspace:*",
     "@partygame/terminal": "workspace:*",
     "zod": "^4.6.5"

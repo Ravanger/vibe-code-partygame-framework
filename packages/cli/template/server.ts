@@ -1,4 +1,4 @@
-import { startServer } from "@partygame/server/bun";
-import { __camelName__Game } from "./src/hostedGame.js";
+import { serve } from "@partygame/game-kit";
+import { gamePackage } from "./gamePackage.js";
 
-await startServer({ games: [__camelName__Game()] });
+await serve(gamePackage);
