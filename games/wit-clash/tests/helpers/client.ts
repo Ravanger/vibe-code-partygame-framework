@@ -9,7 +9,7 @@ import {
 export { addSeat, type FetchStub, type SeatConfig } from "@partygame/game-client/testing";
 
 import { vi } from "vitest";
-import { ROOM_NAME } from "../../src/roomName.js";
+import { META } from "../../src/meta.js";
 import {
   Answer,
   CategoryOption,
@@ -67,12 +67,12 @@ export type Client = ConnectedClient<WitClashState>;
 export const connectedClient = (seat: SeatConfig = {}, phase = "Lobby"): Client =>
   connectedClientOf({
     stateClass: WitClashState,
-    roomName: ROOM_NAME,
+    roomName: META.roomName,
     seat,
     phase,
     setup: (state) => {
-      state.minPlayers = 3;
-      state.maxPlayers = 8;
+      state.minPlayers = META.minPlayers;
+      state.maxPlayers = META.maxPlayers;
       state.options = JSON.stringify({ totalRounds: 3 });
     },
   });

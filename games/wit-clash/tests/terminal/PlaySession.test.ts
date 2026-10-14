@@ -3,8 +3,9 @@ import { PlaySession, type PlaySessionOptions, TerminalPlayer } from "@partygame
 import { ScriptedIo } from "@partygame/terminal/testing";
 import { afterEach, describe, expect, it } from "vitest";
 import { witClashKit } from "../../bots/witClashBot.js";
-import { witClashGame } from "../../src/hostedGame.js";
-import type { WitClashState } from "../../src/state.js";
+import { gamePackage } from "../../gamePackage.js";
+import { META } from "../../src/meta.js";
+import { WitClashState } from "../../src/state.js";
 import { witClashTerminal } from "../../terminal/witClashTerminal.js";
 import { makeCategories } from "../game/support.js";
 import { freePort } from "./support.js";
@@ -24,7 +25,13 @@ const options = async (): Promise<PlaySessionOptions<WitClashState>> => ({
   startServer: true,
   clientUrl: "http://localhost:5173",
   kit: witClashKit(),
-  games: [witClashGame(makeCategories(4, 8, 2))],
+  games: [
+    {
+      roomName: META.roomName,
+      definition: gamePackage.definition(makeCategories(4, 8, 2)),
+      stateClass: WitClashState,
+    },
+  ],
   player: (room, playerId, io) => new TerminalPlayer(room, playerId, io, witClashTerminal()),
   roomOptions: { totalRounds: 1, categoryVoteSeconds: 5, voteSeconds: 5, revealSeconds: 1 },
   bot: { thinkMs: [0, 30], reactMs: [0, 30] },

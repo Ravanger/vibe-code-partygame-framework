@@ -3,7 +3,7 @@ import "@fontsource/gochi-hand";
 import "./app.css";
 import { GameConnectionManager } from "@partygame/game-client";
 import { mount } from "svelte";
-import { ROOM_NAME } from "../src/roomName.js";
+import { META } from "../src/meta.js";
 import { WitClashState } from "../src/state.js";
 import App from "./App.svelte";
 import { resolveEndpoints } from "./config.js";
@@ -11,7 +11,7 @@ import { resolveEndpoints } from "./config.js";
 const { endpoint, apiPort } = resolveEndpoints();
 const manager = new GameConnectionManager<WitClashState>({
   endpoint,
-  roomName: ROOM_NAME,
+  roomName: META.roomName,
   apiPort,
   storagePrefix: "witclash",
   rootSchema: WitClashState,

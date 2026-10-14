@@ -3,7 +3,7 @@ import { bootTestServer, type TestServer, waitUntil } from "@partygame/server/te
 import { ErrorCode, KICK_PLAYER } from "@partygame/shared";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { createWitClashGame } from "../src/game.js";
-import { ROOM_NAME } from "../src/roomName.js";
+import { META } from "../src/meta.js";
 import { WitClashState } from "../src/state.js";
 import { AppViewModel } from "../ui/viewmodels/AppViewModel.js";
 import { CategoryVoteViewModel } from "../ui/viewmodels/CategoryVoteViewModel.js";
@@ -26,7 +26,7 @@ beforeAll(async () => {
   t = await bootTestServer({
     games: [
       {
-        roomName: ROOM_NAME,
+        roomName: META.roomName,
         definition: createWitClashGame({ categories: makeCategories() }),
         stateClass: WitClashState,
       },
@@ -45,7 +45,7 @@ afterAll(() => t.shutdown());
 function newManager(): Manager {
   const manager = new GameConnectionManager<WitClashState>({
     endpoint: t.endpoint,
-    roomName: ROOM_NAME,
+    roomName: META.roomName,
     apiPort,
     storagePrefix: `witclash-it-${++clients}`,
     rootSchema: WitClashState,
