@@ -8,10 +8,10 @@ const { vm }: { vm: LobbySettingsViewModel<TState> } = $props();
 
 <details class="settings card" open={vm.startsOpen}>
   <summary class="summary-with-marker">Game settings</summary>
-  <dl>
-    {#each vm.fields as field (field.key)}
-      <div class="setting">
-        {#if vm.canEdit}
+  {#if vm.canEdit}
+    <ul class="settings-list">
+      {#each vm.fields as field (field.key)}
+        <li class="setting">
           {#if field.options}
             <span class="setting-label">{field.label}</span>
             <fieldset class="choices" aria-label={field.label}>
@@ -39,13 +39,19 @@ const { vm }: { vm: LobbySettingsViewModel<TState> } = $props();
               onchange={() => vm.commit(field.key)}
             />
           {/if}
-        {:else}
+        </li>
+      {/each}
+    </ul>
+  {:else}
+    <dl>
+      {#each vm.fields as field (field.key)}
+        <div class="setting">
           <dt>{field.label}</dt>
           <dd>{vm.valueOf(field.key)}</dd>
-        {/if}
-      </div>
-    {/each}
-  </dl>
+        </div>
+      {/each}
+    </dl>
+  {/if}
 </details>
 
 <style>
@@ -80,10 +86,16 @@ const { vm }: { vm: LobbySettingsViewModel<TState> } = $props();
     }
   }
 
-  dl {
+  dl,
+  .settings-list {
     margin: 0.5rem 0 0;
     display: grid;
     gap: 0.5rem;
+  }
+
+  .settings-list {
+    padding: 0;
+    list-style: none;
   }
 
   .setting {
