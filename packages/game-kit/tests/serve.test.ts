@@ -41,11 +41,7 @@ describe("serve", () => {
       botKit: tapKit(),
     });
 
-    await serve(
-      game,
-      { gameDir: "/nonexistent" },
-      ioWith({ PORT: String(port), API_PORT: String(apiPort) }, started, seens),
-    );
+    await serve(game, ioWith({ PORT: String(port), API_PORT: String(apiPort) }, started, seens));
 
     expect(seen).toEqual([`loaded:${port}`]);
     expect(started).toHaveLength(1);
@@ -77,7 +73,7 @@ describe("serve", () => {
       botKit: tapKit(),
     });
 
-    await serve(game, { gameDir: "/nonexistent" }, ioWith({}, started, seens));
+    await serve(game, ioWith({}, started, seens));
 
     expect(seen).toEqual([undefined]);
     expect(started).toHaveLength(1);

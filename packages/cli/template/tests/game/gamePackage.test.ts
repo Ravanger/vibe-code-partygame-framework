@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, expect, it } from "vitest";
 import { gamePackage } from "../../gamePackage.js";
 import { META } from "../../src/meta.js";

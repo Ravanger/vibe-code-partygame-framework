@@ -7,7 +7,6 @@ import type { GameDeclaration, GameKitIo } from "./types.js";
 /** Starts the game server for `pkg` on the ports of `io.env`; a one-line `server.ts`. */
 export async function serve<TState extends BaseGameState, TContent>(
   pkg: GameDeclaration<TState, TContent>,
-  _options: { gameDir: string },
   io: GameKitIo = defaultIo(),
 ): Promise<unknown> {
   const content = await pkg.load?.(io.env);

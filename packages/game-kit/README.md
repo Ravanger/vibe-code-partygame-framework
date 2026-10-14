@@ -39,16 +39,16 @@ export const gamePackage = defineGamePackage({
 | `stateClass` | the synced state class (a `BaseGameState` subclass) |
 | `isFinished(state)` | true once the game is over; the demo tables and the demo run watch for it |
 | `botKit` | the game's `BotKit` (`roomName`, `stateClass`, `strategy`) |
-| `terminal?` | `() => TerminalStrategy`; without it `play` exits 2 with its usage |
+| `terminal?` | `() => TerminalStrategy`; without it `play` prints "This game has no terminal strategy." and exits 1 |
 | `demo?` | extras beyond the kit: `kit`, `roomOptions`, `hostName`, `bot` (pacing), `narrate(state)`, `problems(state)` and `passMessage` |
 
 ## Entry functions
 
-Each entry file is a stub; `gameDir` is the directory of the stub, needed by `serve` and `launch`:
+Each entry file is a stub; only `launch` takes `gameDir`, the directory of the stub:
 
 | Stub | Calls | What it does |
 |---|---|---|
-| `server.ts` | `serve(pkg, { gameDir })` | loads the content (`pkg.load` with `io.env`, or `undefined`), builds the hosted game and starts the Bun game server plus code API on `PORT`/`API_PORT` from `io.env` (defaults 2567/3001) |
+| `server.ts` | `serve(pkg)` | loads the content (`pkg.load` with `io.env`, or `undefined`), builds the hosted game and starts the Bun game server plus code API on `PORT`/`API_PORT` from `io.env` (defaults 2567/3001) |
 | `launch.ts` | `launch(pkg, { gameDir })` | builds a `LaunchConfig` from the declaration — `name` from `displayName` (or `meta.roomName`), bots capped at `maxPlayers - 1`, demo tables between `minPlayers - 1` and `maxPlayers - 1` bots finished by `isFinished` with the `demo` extras merged in — and runs it with `io.argv` |
 | `bots/cli.ts` | `botsCli(pkg)` | seats bots in a room made elsewhere, `<CODE> [count]` bounded by `meta.maxPlayers - 1`; the SIGINT handler removes them and exits 0; bad arguments or a failed join exit 1 |
 | `terminal/play.ts` | `play(pkg)` | one human at a terminal driven by `pkg.terminal`, optionally with bots; starts a server when the endpoint defaults are used and no room is joined; exit 2 on bad arguments, 1 on failure or when the game has no `terminal` |
