@@ -50,9 +50,9 @@ describe("before a room", () => {
     const result = await manager.sendAction("PRESS");
     expect(result).toEqual({
       ok: false,
-      error: { code: ErrorCode.INTERNAL, message: CLIENT_MESSAGES.INTERNAL },
+      error: { code: ErrorCode.NOT_CONNECTED, message: CLIENT_MESSAGES.NOT_CONNECTED },
     });
-    expect(manager.lastServerError?.message).toBe(CLIENT_MESSAGES.INTERNAL);
+    expect(manager.lastServerError?.message).toBe(CLIENT_MESSAGES.NOT_CONNECTED);
     await expect(manager.join("no1")).rejects.toThrow("4 letters");
     manager.setName("ignored");
   });
@@ -195,22 +195,41 @@ describe("sendAction", () => {
     expect(manager.lastServerError).toBeUndefined();
   });
 
-  it("turns a transport failure into a fixed INTERNAL result and never leaks its text", async () => {
-    const manager = newManager();
+  it("turns a request rejection into a fixed CONNECTION_LOST result and hands the exception to the logger only", async () => {
+    const logger = vi.fn();
+    const manager = new GameConnectionManager({
+      endpoint: "ws://localhost:2567",
+      roomName: "stub",
+      storagePrefix: `unit${++counter}`,
+      logger,
+    });
     const { room } = seated(manager);
-    room.request = () => Promise.reject(new Error('Zod: buzzMs must be "fast"'));
+    const cause = new Error('Zod: buzzMs must be "fast"');
+    room.request = () => Promise.reject(cause);
     manager.attach(room);
     const result = await manager.sendAction("PRESS");
     expect(result).toEqual({
       ok: false,
-      error: { code: ErrorCode.INTERNAL, message: CLIENT_MESSAGES.INTERNAL },
+      error: { code: ErrorCode.CONNECTION_LOST, message: CLIENT_MESSAGES.CONNECTION_LOST },
     });
+    expect(JSON.stringify(manager.lastServerError)).not.toContain("Zod");
+    expect(logger).toHaveBeenCalledWith(expect.any(String), cause);
     room.request = () => Promise.reject("odd");
     expect((await manager.sendAction("PRESS")).ok).toBe(false);
     expect(manager.lastServerError).toEqual({
-      code: ErrorCode.INTERNAL,
-      message: CLIENT_MESSAGES.INTERNAL,
+      code: ErrorCode.CONNECTION_LOST,
+      message: CLIENT_MESSAGES.CONNECTION_LOST,
     });
+  });
+
+  it("logs a request rejection with console.warn by default", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const manager = newManager();
+    const { room } = seated(manager);
+    room.request = () => Promise.reject(new Error("down"));
+    manager.attach(room);
+    await manager.sendAction("PRESS");
+    expect(warn).toHaveBeenCalledOnce();
   });
 
   it("does not trust a malformed reply", async () => {
@@ -221,8 +240,18 @@ describe("sendAction", () => {
     const result = await manager.sendAction("PRESS");
     expect(result).toEqual({
       ok: false,
-      error: { code: ErrorCode.INTERNAL, message: CLIENT_MESSAGES.INTERNAL },
+      error: { code: ErrorCode.BAD_REPLY, message: CLIENT_MESSAGES.BAD_REPLY },
     });
+  });
+
+  it("gives the three local failures three distinct messages", () => {
+    const messages = [
+      CLIENT_MESSAGES.NOT_CONNECTED,
+      CLIENT_MESSAGES.CONNECTION_LOST,
+      CLIENT_MESSAGES.BAD_REPLY,
+      CLIENT_MESSAGES.INTERNAL,
+    ];
+    expect(new Set(messages).size).toBe(4);
   });
 });
 

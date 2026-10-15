@@ -64,7 +64,7 @@ Do not `$derived` a schema instance itself (`state.items[i]`): Colyseus mutates 
 
 ## Send actions
 
-`sendAction` resolves with an `ActionResult` and never throws; transport failures come back as `{ ok: false, error: { code: "INTERNAL", ... } }`. Rejections also land in `lastServerError` for a toast, and so do refused joins or closes that carry a known close code (4400-4403); every message there is a fixed string from `CLIENT_MESSAGES`/`CLOSE_CODES` or the server's own payload — never raw exception text.
+`sendAction` resolves with an `ActionResult` and never throws; local failures come back as `{ ok: false, error }` with code `NOT_CONNECTED`, `CONNECTION_LOST` or `BAD_REPLY` (the exception goes to the `logger` option, default `console.warn`). Rejections also land in `lastServerError` for a toast, and so do refused joins or closes that carry a known close code (4400-4403); every message there is a fixed string from `CLIENT_MESSAGES`/`CLOSE_CODES` or the server's own payload — never raw exception text.
 
 ```ts
 const result = await manager.sendAction("PRESS");

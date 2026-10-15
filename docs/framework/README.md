@@ -60,6 +60,7 @@ Every rejection is sent only to the sender as `ERROR { code, message, action }`:
 | `NAME_TAKEN` | `SET_NAME` with a name another seat already has (compared trimmed and case-insensitively); the seat keeps its name |
 | `KICKED` | pushed to a player the host removed, just before the connection closes |
 | `INTERNAL` | only ever the answer to a request: a hook threw while handling the action |
+| `NOT_CONNECTED`, `CONNECTION_LOST`, `BAD_REPLY` | client-side only, never sent by the server: no room joined, the request failed in transit, the reply was not an `ActionResult` |
 
 #### Awaiting an action's outcome
 `room.send("ACTION", action)` is fire-and-forget; rejections arrive as `ERROR` pushes.
@@ -365,7 +366,8 @@ Client-visible error strings are fixed and table-driven; raw Zod or exception te
 - `ctx.reject(code, message)` is the one game-authored exception: your message is passed through to the client.
   Keep it short and player-facing; the code still comes from `ErrorCode`.
 - The client keeps one `lastServerError` (`GameConnectionManager.lastServerError`): server `ERROR` payloads,
-  failed action answers, refused joins (looked up by close code) and a fixed `INTERNAL` for local failures.
+  failed action answers, refused joins (looked up by close code) and a fixed `NOT_CONNECTED`, `CONNECTION_LOST` or `BAD_REPLY` message for local failures (the exception goes to the manager's `logger` option, default `console.warn`).
+  `ServerError.action` is set only by `ctx.reject` and invalid-payload rejections; framework rejections omit it.
   Clear it with `dismissError()`.
 
 `CLIENT_MESSAGES` holds the fixed string per `ErrorCode`; `closeCodeEntry(code)` looks up a close-code entry by
@@ -564,6 +566,7 @@ const manager = new GameConnectionManager<ButtonState>({
   storagePrefix: "button",             // browser storage namespace
   rootSchema: ButtonState,             // your state class (browser-safe: see below)
   syncTimeoutMs: 10000,                // optional: give up if the first state takes longer (default 10000)
+  logger: console.warn,                // optional: receives the exception behind a local action failure (default console.warn)
 });
 manager.onMessage("FIRST", (payload) => { /* register pushed messages before connecting */ });
 await manager.resume();                // page load: stored token, then stored room code
@@ -598,8 +601,9 @@ is deduplicated by identity and its readers never re-run. Expose plain getters, 
 
 ### sendAction results
 `sendAction` uses `room.request`, so it resolves with the server's verdict: `{ ok: true }` or `{ ok: false, error }` (`error` is a `ServerError`).
-Rejections are also kept in `lastServerError`. A transport failure (not connected, timeout, connection closed) resolves as
-`{ ok: false, error: { code: "INTERNAL", ... } }`; it never throws.
+Rejections are also kept in `lastServerError`. A local failure resolves as `{ ok: false, error }` and never throws: `NOT_CONNECTED` (no room), `CONNECTION_LOST`
+(the request rejected: timeout, connection closed) or `BAD_REPLY` (not an `ActionResult`). Each has its own fixed `CLIENT_MESSAGES` text;
+the exception goes to the `logger` option (default `console.warn`), never to `lastServerError`.
 
 ### Reconnects
 The Colyseus SDK reconnects by itself after a dropped connection and keeps the `Room`, `room.state` and every schema instance (views included).

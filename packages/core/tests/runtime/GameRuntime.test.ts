@@ -408,6 +408,16 @@ describe("dispatch rejections", () => {
     },
   );
 
+  it("framework rejections omit the action field", () => {
+    const { runtime, host } = inPlay();
+    runtime.dispatch("p1", { type: "NO_SUCH" });
+    runtime.dispatch("p1", { type: "GUESS", n: 1 });
+    runtime.dispatch("p1", { type: "GUESS", n: 1 });
+    const errors = host.errorsTo("p1");
+    expect(errors).toMatchObject([{ code: "UNKNOWN_ACTION" }, { code: "WRONG_PHASE" }]);
+    for (const error of errors) expect(error).not.toHaveProperty("action");
+  });
+
   it("unknown action", () => {
     const { runtime, host } = inPlay();
     runtime.dispatch("p1", { type: "NO_SUCH" });

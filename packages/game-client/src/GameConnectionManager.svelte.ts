@@ -38,6 +38,8 @@ export interface GameConnectionOptions<TState> {
   rootSchema?: new () => TState;
   /** How long to wait for the room's first state before giving up. Default 10000 ms. */
   syncTimeoutMs?: number;
+  /** Receives the exception behind a local action failure, never shown to the UI. Default `console.warn`. */
+  logger?: (message: string, error: unknown) => void;
 }
 
 interface Listener {
@@ -200,14 +202,18 @@ export class GameConnectionManager<TState extends BaseGameState = BaseGameState>
 
   /** Sends a game action and resolves with the server's verdict. Failures are also kept in `lastServerError`. */
   async sendAction(type: string, payload: object = {}): Promise<ActionResult> {
-    if (!this.room) return this.fail();
+    if (!this.room) return this.fail(ErrorCode.NOT_CONNECTED);
     try {
       const result = await this.room.request(ClientMessage.ACTION, { ...payload, type });
-      if (!isActionResult(result)) return this.fail();
+      if (!isActionResult(result)) return this.fail(ErrorCode.BAD_REPLY);
       if (!result.ok) this.setLastError(result.error);
       return result;
-    } catch {
-      return this.fail();
+    } catch (error) {
+      (this.options.logger ?? console.warn)(
+        `[GameConnectionManager] ${type} request failed`,
+        error,
+      );
+      return this.fail(ErrorCode.CONNECTION_LOST);
     }
   }
 
@@ -392,9 +398,9 @@ export class GameConnectionManager<TState extends BaseGameState = BaseGameState>
     if (typeof code === "number") this.recordClose(code);
   }
 
-  /** A client-side action failure: the fixed INTERNAL message, never the raw exception text. */
-  private fail(): ActionResult {
-    const error: ServerError = { code: ErrorCode.INTERNAL, message: CLIENT_MESSAGES.INTERNAL };
+  /** A client-side action failure: the fixed message for `code`, never the raw exception text. */
+  private fail(code: ErrorCode): ActionResult {
+    const error: ServerError = { code, message: CLIENT_MESSAGES[code] };
     this.setLastError(error);
     return { ok: false, error };
   }
