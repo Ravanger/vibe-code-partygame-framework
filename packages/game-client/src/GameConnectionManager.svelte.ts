@@ -1,9 +1,10 @@
 import { Client } from "@colyseus/sdk";
-import { resolveRoomCode } from "@partygame/client-utils";
+import { RoomCodeError, resolveRoomCode } from "@partygame/client-utils";
 import {
   type ActionResult,
   CLIENT_MESSAGES,
   ClientMessage,
+  type CloseCode,
   closeCodeEntry,
   ErrorCode,
   isActionResult,
@@ -300,7 +301,7 @@ export class GameConnectionManager<TState extends BaseGameState = BaseGameState>
       this.attach(room);
     } catch (error) {
       if (generation === this.generation) this.status = "disconnected";
-      this.recordRejection(error);
+      this.recordRejection(error, generation === this.generation);
       throw error;
     }
   }
@@ -391,11 +392,30 @@ export class GameConnectionManager<TState extends BaseGameState = BaseGameState>
     if (entry) this.setLastError({ code: entry.errorCode, message: entry.message });
   }
 
-  /** Reads the numeric close code off an SDK rejection with a type guard and records it; other rejections are ignored. */
-  private recordRejection(error: unknown): void {
-    if (typeof error !== "object" || error === null || !("code" in error)) return;
+  /**
+   * Records why a connect failed, as a fixed message: a known close code, an unknown room code, a bad
+   * resolve-code reply, else CONNECTION_LOST. The exception goes to the logger; a stale (cancelled) connect records nothing new.
+   */
+  private recordRejection(error: unknown, current: boolean): void {
+    if (error instanceof RoomCodeError) {
+      this.fail(error.reason === "not-found" ? ErrorCode.ROOM_NOT_FOUND : ErrorCode.BAD_REPLY);
+      return;
+    }
+    const entry = this.closeEntryOf(error);
+    if (entry) {
+      this.setLastError({ code: entry.errorCode, message: entry.message });
+      return;
+    }
+    if (!current) return;
+    (this.options.logger ?? console.warn)("[GameConnectionManager] connect failed", error);
+    this.fail(ErrorCode.CONNECTION_LOST);
+  }
+
+  /** Reads the numeric close code off an SDK rejection with a type guard. */
+  private closeEntryOf(error: unknown): CloseCode | undefined {
+    if (typeof error !== "object" || error === null || !("code" in error)) return undefined;
     const code = error.code;
-    if (typeof code === "number") this.recordClose(code);
+    return typeof code === "number" ? closeCodeEntry(code) : undefined;
   }
 
   /** A client-side action failure: the fixed message for `code`, never the raw exception text. */

@@ -4,14 +4,14 @@ Browser- and Node-safe client helpers: room-code resolution, share links, waitin
 
 | Import | What |
 |---|---|
-| `@partygame/client-utils` | `waitFor`, `resolveRoomCode`, `joinUrl`, `tvUrl`, `between`, type `Parsed`, `claimName`, type `SeatRoom`, `apiBaseOf` |
+| `@partygame/client-utils` | `waitFor`, `resolveRoomCode`, `RoomCodeError`, `joinUrl`, `tvUrl`, `between`, type `Parsed`, `claimName`, type `SeatRoom`, `apiBaseOf` |
 
 ## Resolve a room code
 
 ```ts
 import { resolveRoomCode } from "@partygame/client-utils";
 
-const roomId = await resolveRoomCode("http://192.168.1.5:3001", "ABCD"); // GET /api/resolve-code
+const roomId = await resolveRoomCode("http://192.168.1.5:3001", "ABCD"); // GET /api/resolve-code; rejects with a RoomCodeError (reason "not-found" | "bad-reply")
 ```
 
 `joinUrl(base, code)` and `tvUrl(base, code)` build the links a host shares; `waitFor(predicate, what, timeoutMs, stepMs?)` polls until the predicate holds; `between(value, min, max)` validates an integer argument.

@@ -81,6 +81,10 @@ describe("CLIENT_MESSAGES", () => {
     }
   });
 
+  it("keeps the ROOM_NOT_FOUND text of the resolve-code API", () => {
+    expect(CLIENT_MESSAGES.ROOM_NOT_FOUND).toBe("Game code not found");
+  });
+
   it("keeps the INTERNAL text clients see today", () => {
     expect(CLIENT_MESSAGES.INTERNAL).toBe("The action failed on the server");
   });

@@ -60,7 +60,7 @@ Every rejection is sent only to the sender as `ERROR { code, message, action }`:
 | `NAME_TAKEN` | `SET_NAME` with a name another seat already has (compared trimmed and case-insensitively); the seat keeps its name |
 | `KICKED` | pushed to a player the host removed, just before the connection closes |
 | `INTERNAL` | only ever the answer to a request: a hook threw while handling the action |
-| `NOT_CONNECTED`, `CONNECTION_LOST`, `BAD_REPLY` | client-side only, never sent by the server: no room joined, the request failed in transit, the reply was not an `ActionResult` |
+| `NOT_CONNECTED`, `CONNECTION_LOST`, `BAD_REPLY`, `ROOM_NOT_FOUND` | client-side only, never sent by the server: no room joined, the request or connect failed in transit, the reply was not an `ActionResult`, the typed room code is unknown ("Game code not found") |
 
 #### Awaiting an action's outcome
 `room.send("ACTION", action)` is fire-and-forget; rejections arrive as `ERROR` pushes.
@@ -370,7 +370,8 @@ Client-visible error strings are fixed and table-driven; raw Zod or exception te
 - `ctx.reject(code, message)` is the one game-authored exception: your message is passed through to the client.
   Keep it short and player-facing; the code still comes from `ErrorCode`.
 - The client keeps one `lastServerError` (`GameConnectionManager.lastServerError`): server `ERROR` payloads,
-  failed action answers, refused joins (looked up by close code; the welcome screen shows no second message for them) and a fixed `NOT_CONNECTED`, `CONNECTION_LOST` or `BAD_REPLY` message for local failures (the exception goes to the manager's `logger` option, default `console.warn`).
+  failed action answers, refused joins (looked up by close code), a failed `join`/`create` (`ROOM_NOT_FOUND`, `BAD_REPLY` or `CONNECTION_LOST`; the exception goes to the `logger` option and the promise still rejects) and a fixed `NOT_CONNECTED`, `CONNECTION_LOST` or `BAD_REPLY` message for local action failures (the exception goes to the manager's `logger` option, default `console.warn`).
+  The welcome screen moves a failed join's message into its own error line and clears the toast, so exactly one renders.
   `ServerError.action` is set only by `ctx.reject` and invalid-payload rejections; framework rejections omit it.
   Clear it with `dismissError()`.
 
@@ -971,7 +972,7 @@ export { svelteConfig as default } from "@partygame/config/svelte";
 | Import | What |
 |---|---|
 | `@partygame/shared` | `NAME_MAX_LENGTH`: the cap `SET_NAME` enforces on player names |
-| `@partygame/client-utils` | `Parsed<T>` (`{ ok: true, value } \| { ok: false, error }`) and `between(value, min, max)` for argument parsing; `waitFor(predicate, what, timeoutMs)` poll loop; `resolveRoomCode(apiBase, code)`; `joinUrl(base, code)` / `tvUrl(base, code)` share links; `claimName(room, playerId, name, timeoutMs?)` (type `SeatRoom`), `apiBaseOf(endpoint, apiPort)` |
+| `@partygame/client-utils` | `Parsed<T>` (`{ ok: true, value } \| { ok: false, error }`) and `between(value, min, max)` for argument parsing; `waitFor(predicate, what, timeoutMs)` poll loop; `resolveRoomCode(apiBase, code)` (rejects with `RoomCodeError`, `reason` `"not-found"` or `"bad-reply"`); `joinUrl(base, code)` / `tvUrl(base, code)` share links; `claimName(room, playerId, name, timeoutMs?)` (type `SeatRoom`), `apiBaseOf(endpoint, apiPort)` |
 | `@partygame/core` | `shuffle(items, rng)`, `required(value, what)` |
 | `@partygame/server/node` | `startNodeServer({ games, port?, apiPort? })` (a game server and its API in this process; `.stop()`), `serveApi(codes, { port, host? })`: the code API on Node's `http` (the Bun entry serves its own) |
 | `@partygame/server/probe` | `ServerProbe` (`isGameServer(port, apiPort)`, `canConnect(port)`, `answers(url)`), `freePort()`, `closeHttpServer(server)` (resolves when the server already stopped): port probing without Colyseus |

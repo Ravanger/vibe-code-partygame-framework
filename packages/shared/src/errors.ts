@@ -66,4 +66,5 @@ export const CLIENT_MESSAGES: Record<ErrorCode, string> = {
   NOT_CONNECTED: "You are not connected to a room",
   CONNECTION_LOST: "The connection to the server was lost",
   BAD_REPLY: "The server sent an unexpected reply",
+  ROOM_NOT_FOUND: "Game code not found",
 };

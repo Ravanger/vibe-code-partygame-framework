@@ -71,9 +71,8 @@ export class WelcomeViewModel<TState extends BaseGameState> {
     try {
       await connect();
     } catch {
-      if (this.manager.lastServerError === undefined) {
-        this.localError = CLIENT_MESSAGES.CONNECTION_LOST;
-      }
+      this.localError = this.manager.lastServerError?.message ?? CLIENT_MESSAGES.CONNECTION_LOST;
+      this.manager.dismissError();
     }
   }
 }

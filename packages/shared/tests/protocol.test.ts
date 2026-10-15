@@ -45,6 +45,7 @@ describe("protocol constants", () => {
         "NOT_ALLOWED",
         "NOT_CONNECTED",
         "NOT_ENOUGH_PLAYERS",
+        "ROOM_NOT_FOUND",
         "UNAUTHORIZED",
         "UNKNOWN_ACTION",
         "WRONG_PHASE",

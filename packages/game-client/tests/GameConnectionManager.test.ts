@@ -1,4 +1,5 @@
 import { Client } from "@colyseus/sdk";
+import { RoomCodeError } from "@partygame/client-utils";
 import { CLIENT_MESSAGES, CLOSE_CODES, ErrorCode } from "@partygame/shared";
 import { BaseGameState, PlayerSchema } from "@partygame/shared/schema";
 import { flushSync } from "svelte";
@@ -8,6 +9,11 @@ import { fakeFetch, StubRoom } from "../src/testing.js";
 import { observe } from "./observe.svelte.js";
 
 let counter = 0;
+const stubFetchReply = (reply: unknown) => {
+  const stub = fakeFetch(reply);
+  vi.stubGlobal("fetch", stub.fetch);
+  return stub;
+};
 const newManager = () =>
   new GameConnectionManager({
     endpoint: "ws://localhost:2567",
@@ -296,10 +302,59 @@ describe("refused joins", () => {
     },
   );
 
-  it("never records the text of a rejection without a close code", async () => {
+  it("records a rejection without a close code as CONNECTION_LOST, logs it and rethrows it", async () => {
+    const logger = vi.fn();
+    const manager = new GameConnectionManager({
+      endpoint: "ws://localhost:2567",
+      roomName: "stub",
+      storagePrefix: `unit${++counter}`,
+      logger,
+    });
+    const cause = new Error('Zod: buzzMs must be "fast"');
+    vi.spyOn(Client.prototype, "create").mockRejectedValue(cause);
+    await expect(manager.create()).rejects.toBe(cause);
+    expect(manager.lastServerError).toEqual({
+      code: ErrorCode.CONNECTION_LOST,
+      message: CLIENT_MESSAGES.CONNECTION_LOST,
+    });
+    expect(logger).toHaveBeenCalledWith(expect.any(String), cause);
+  });
+
+  it("records an unknown room code as ROOM_NOT_FOUND", async () => {
     const manager = newManager();
-    vi.spyOn(Client.prototype, "create").mockRejectedValue(new Error('Zod: buzzMs must be "fast"'));
-    await expect(manager.create()).rejects.toThrow();
+    const network = stubFetchReply({ error: "Game code not found" });
+    await expect(manager.join("WXYZ")).rejects.toBeInstanceOf(RoomCodeError);
+    expect(network.urls).toHaveLength(1);
+    expect(manager.lastServerError).toEqual({
+      code: ErrorCode.ROOM_NOT_FOUND,
+      message: CLIENT_MESSAGES.ROOM_NOT_FOUND,
+    });
+  });
+
+  it("records a malformed resolve-code reply as BAD_REPLY", async () => {
+    const manager = newManager();
+    stubFetchReply({ nope: true });
+    await expect(manager.join("WXYZ")).rejects.toBeInstanceOf(RoomCodeError);
+    expect(manager.lastServerError).toEqual({
+      code: ErrorCode.BAD_REPLY,
+      message: CLIENT_MESSAGES.BAD_REPLY,
+    });
+  });
+
+  it("records an unreachable API as CONNECTION_LOST", async () => {
+    const manager = newManager();
+    stubFetchReply(new Error("fetch failed"));
+    await expect(manager.join("WXYZ")).rejects.toThrow("fetch failed");
+    expect(manager.lastServerError?.code).toBe(ErrorCode.CONNECTION_LOST);
+  });
+
+  it("does not record a cancelled connect", async () => {
+    const manager = newManager();
+    stubFetchReply({ roomId: "room-1" });
+    vi.spyOn(Client.prototype, "joinById").mockRejectedValue(new Error("late failure"));
+    const stale = manager.join("WXYZ");
+    await manager.leave();
+    await expect(stale).rejects.toThrow();
     expect(manager.lastServerError).toBeUndefined();
   });
 });

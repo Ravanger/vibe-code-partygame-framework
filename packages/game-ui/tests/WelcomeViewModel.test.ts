@@ -48,7 +48,8 @@ describe("WelcomeViewModel", () => {
     vm.setCode("wxyz");
     await vm.join();
     expect(network.urls).toEqual([expect.stringContaining("code=WXYZ")]);
-    expect(vm.localError).toBe(CLIENT_MESSAGES.CONNECTION_LOST);
+    expect(vm.localError).toBe(CLIENT_MESSAGES.ROOM_NOT_FOUND);
+    expect(manager.lastServerError).toBeUndefined();
   });
 
   it("shows a fixed message for a failure that is not an Error", async () => {
@@ -72,7 +73,7 @@ describe("WelcomeViewModel", () => {
     expect(network.urls).toEqual([]);
   });
 
-  it("shows no local error when the manager recorded a refused join, so exactly one error renders", async () => {
+  it("shows the manager's refused-join message once, moving it out of the toast", async () => {
     const { manager } = client();
     vi.spyOn(manager, "join").mockImplementation(() => {
       manager.lastServerError = {
@@ -84,8 +85,8 @@ describe("WelcomeViewModel", () => {
     const vm = new WelcomeViewModel(manager);
     vm.setCode("wxyz");
     await vm.join();
-    expect(vm.localError).toBeUndefined();
-    expect(manager.lastServerError?.message).toBe(CLOSE_CODES.ROOM_FULL.message);
+    expect(vm.localError).toBe(CLOSE_CODES.ROOM_FULL.message);
+    expect(manager.lastServerError).toBeUndefined();
   });
 
   it("clears an earlier server error before a new attempt", async () => {

@@ -1,3 +1,4 @@
+import { CLIENT_MESSAGES } from "@partygame/shared";
 import { fireEvent, render, screen } from "@testing-library/svelte";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import Welcome from "../../ui/screens/Welcome.svelte";
@@ -15,7 +16,7 @@ describe("Welcome screen", () => {
     manager.dispose();
     render(Welcome, { manager });
     await fireEvent.click(screen.getByRole("button", { name: /host game/i }));
-    expect(await screen.findByRole("alert")).toHaveTextContent(/server down/i);
+    expect(await screen.findByRole("alert")).toHaveTextContent(CLIENT_MESSAGES.CONNECTION_LOST);
     expect(network.urls.some((url) => url.includes("/matchmake/create/"))).toBe(true);
   });
 
@@ -42,7 +43,7 @@ describe("Welcome screen", () => {
     render(Welcome, { manager });
     await fireEvent.input(screen.getByLabelText("Game code"), { target: { value: "wxyz" } });
     await fireEvent.click(screen.getByRole("button", { name: "Join" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Game code not found");
+    expect(await screen.findByRole("alert")).toHaveTextContent(CLIENT_MESSAGES.ROOM_NOT_FOUND);
     await fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
@@ -53,7 +54,7 @@ describe("Welcome screen", () => {
     const { manager } = connectedClient();
     manager.dispose();
     render(Welcome, { manager });
-    expect(await screen.findByRole("alert")).toHaveTextContent("Game code not found");
+    expect(await screen.findByRole("alert")).toHaveTextContent(CLIENT_MESSAGES.ROOM_NOT_FOUND);
     expect(network.urls).toEqual([expect.stringContaining("code=QRST")]);
   });
 
@@ -63,7 +64,7 @@ describe("Welcome screen", () => {
     const { manager } = connectedClient();
     manager.dispose();
     render(Welcome, { manager });
-    expect(await screen.findByRole("alert")).toHaveTextContent("Game code not found");
+    expect(await screen.findByRole("alert")).toHaveTextContent(CLIENT_MESSAGES.ROOM_NOT_FOUND);
     expect(network.urls).toEqual([expect.stringContaining("code=QRST")]);
   });
 });

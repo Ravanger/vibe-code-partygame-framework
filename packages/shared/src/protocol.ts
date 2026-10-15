@@ -31,6 +31,8 @@ export const ErrorCode = {
   NOT_CONNECTED: "NOT_CONNECTED",
   /** Client-side only: the request failed in transit (network drop, timeout). Never sent by the server. */
   CONNECTION_LOST: "CONNECTION_LOST",
+  /** Client-side only: the resolve-code API knows no room for the typed code. Never sent by the server. */
+  ROOM_NOT_FOUND: "ROOM_NOT_FOUND",
   /** Client-side only: the server's reply to a request was not an `ActionResult`. Never sent by the server. */
   BAD_REPLY: "BAD_REPLY",
 } as const;

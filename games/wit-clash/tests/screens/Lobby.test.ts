@@ -47,7 +47,7 @@ describe("Welcome screen", () => {
     render(Welcome, { manager });
     await fireEvent.input(screen.getByLabelText("Game code"), { target: { value: "wxyz" } });
     await fireEvent.click(screen.getByRole("button", { name: "Join" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent(CLIENT_MESSAGES.CONNECTION_LOST);
+    expect(await screen.findByRole("alert")).toHaveTextContent(CLIENT_MESSAGES.ROOM_NOT_FOUND);
     await fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
@@ -58,7 +58,7 @@ describe("Welcome screen", () => {
     const { manager } = connectedClient();
     manager.dispose();
     render(Welcome, { manager });
-    expect(await screen.findByRole("alert")).toHaveTextContent(CLIENT_MESSAGES.CONNECTION_LOST);
+    expect(await screen.findByRole("alert")).toHaveTextContent(CLIENT_MESSAGES.ROOM_NOT_FOUND);
     expect(network.urls).toEqual([expect.stringContaining("code=QRST")]);
   });
 });
