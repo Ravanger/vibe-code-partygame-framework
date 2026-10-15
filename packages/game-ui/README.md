@@ -44,7 +44,7 @@ The router also exposes `banner`, `phase`, `isSpectator`, `isReconnecting`, `roo
 
 ## Welcome and waiting room
 
-`WelcomeViewModel(manager, urlCode?, urlTvCode?)` hosts, joins by code, watches as a TV and auto-joins from a share link. `WaitingRoomViewModel(manager)` is the lobby: `players`, `readyCount`, `canStart`, `start()`, kick, `nameField`, `shareUrl`, `notice`.
+`WelcomeViewModel(manager, urlCode?, urlTvCode?)` hosts, joins by code, watches as a TV and auto-joins from a share link. `WaitingRoomViewModel(manager, browser?)` is the lobby: `players`, `readyCount`, `canStart`, `start()`, kick, `nameField`, `shareUrl`, `notice`. `browser` injects `location()` (for `shareUrl`) and `clipboard.writeText` (for the copy button); both default to the page's globals, read lazily.
 
 ```svelte
 <script lang="ts">

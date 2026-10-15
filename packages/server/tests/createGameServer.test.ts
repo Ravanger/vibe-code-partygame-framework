@@ -1,4 +1,5 @@
 import { WebSocketTransport } from "@colyseus/ws-transport";
+import { RoomCodeSchema } from "@partygame/shared";
 import { afterEach, describe, expect, it } from "vitest";
 import { createGameServer } from "../src/createGameServer.js";
 import { RoomCodeService } from "../src/services/RoomCodeService.js";
@@ -16,7 +17,7 @@ describe("createGameServer", () => {
     expect(createGameServer({ games: GAMES })).toBeDefined();
     t = await bootTestServer({ games: GAMES.map((game) => ({ ...game, roomName: "other" })) });
     const room = await t.createRoom("other");
-    expect(stateOf(room).roomCode).toMatch(/^[A-Z]{4}$/);
+    expect(RoomCodeSchema.safeParse(stateOf(room).roomCode).success).toBe(true);
   });
 
   it("accepts a transport, a shared code service and explicit timings", () => {

@@ -1,5 +1,5 @@
 import type { GameConnectionManager } from "@partygame/game-client";
-import { RoomCodeSchema } from "@partygame/shared";
+import { RoomCodeSchema, sanitizeRoomCode } from "@partygame/shared";
 import type { BaseGameState } from "@partygame/shared/schema";
 
 export class WelcomeViewModel<TState extends BaseGameState> {
@@ -22,10 +22,7 @@ export class WelcomeViewModel<TState extends BaseGameState> {
   }
 
   setCode(raw: string): void {
-    this.code = raw
-      .toUpperCase()
-      .replace(/[^A-Z]/g, "")
-      .slice(0, 4);
+    this.code = sanitizeRoomCode(raw);
   }
 
   async host(): Promise<void> {

@@ -1,4 +1,5 @@
 import { ServerProbe } from "@partygame/server/probe";
+import { ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH } from "@partygame/shared";
 import { PlaySession, type PlaySessionOptions, TerminalPlayer } from "@partygame/terminal";
 import { ScriptedIo } from "@partygame/terminal/testing";
 import { afterEach, describe, expect, it } from "vitest";
@@ -74,7 +75,9 @@ describe("PlaySession with WitClash", () => {
     await running;
 
     const said = io.printed.join("\n");
-    expect(said).toMatch(/Room [A-Z]{4} \(you are the host\)/);
+    expect(said).toMatch(
+      new RegExp(`Room [${ROOM_CODE_ALPHABET}]` + `{${ROOM_CODE_LENGTH}} \\(you are the host\\)`),
+    );
     expect(said).toContain("Bot 1 joined.");
     expect(said).toContain("=== Final scores ===");
     expect(said).toMatch(/Winners? ?(\(shared\))?: /);

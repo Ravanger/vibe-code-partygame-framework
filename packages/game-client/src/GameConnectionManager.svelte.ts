@@ -8,6 +8,7 @@ import {
   ErrorCode,
   isActionResult,
   isServerError,
+  ROOM_CODE_LENGTH,
   RoomCodeSchema,
   type ServerError,
   ServerMessage,
@@ -135,7 +136,7 @@ export class GameConnectionManager<
   async join(code: string, options: Record<string, unknown> = {}): Promise<void> {
     const clean = code.trim().toUpperCase();
     if (!RoomCodeSchema.safeParse(clean).success) {
-      throw new Error("Game code must be 4 letters (A-Z)");
+      throw new Error(`Game code must be ${ROOM_CODE_LENGTH} letters (A-Z)`);
     }
     const spectator = options.spectator === true;
     if (this.room && this.roomCode === clean && this.spectating === spectator) return;

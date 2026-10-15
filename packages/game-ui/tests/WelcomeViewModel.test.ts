@@ -1,4 +1,5 @@
 import { connectedClient, type FetchStub, fakeFetch } from "@partygame/game-client/testing";
+import { ROOM_CODE_LENGTH } from "@partygame/shared";
 import { BaseGameState } from "@partygame/shared/schema";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WelcomeViewModel } from "../src/WelcomeViewModel.svelte.js";
@@ -66,7 +67,7 @@ describe("WelcomeViewModel", () => {
     const vm = new WelcomeViewModel(manager);
     vm.setCode("ab");
     await vm.join();
-    expect(vm.localError).toBe("Game code must be 4 letters (A-Z)");
+    expect(vm.localError).toBe(`Game code must be ${ROOM_CODE_LENGTH} letters (A-Z)`);
     expect(network.urls).toEqual([]);
   });
 

@@ -1,5 +1,6 @@
 import type { BotOutcome, BotStrategy } from "@partygame/bots";
 import { ServerProbe } from "@partygame/server/probe";
+import { ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH } from "@partygame/shared";
 import { describe, expect, it } from "vitest";
 import { DemoRun, type DemoRunOptions } from "../src/DemoRun.js";
 import { TAP_ROOM, TapGame, TapState } from "./fixtures/tapGame.js";
@@ -51,7 +52,10 @@ describe("DemoRun", () => {
         /^Demo server on ws:\/\/127\.0\.0\.1:\d+, code API on port \d+$/.test(line),
       ),
     ).toBe(true);
-    expect(lines.some((line) => /^Room [A-Z]{4}: 3 players$/.test(line))).toBe(true);
+    const roomLine = new RegExp(
+      `^Room [${ROOM_CODE_ALPHABET}]` + `{${ROOM_CODE_LENGTH}}: 3 players$`,
+    );
+    expect(lines.some((line) => roomLine.test(line))).toBe(true);
     expect(lines.filter((line) => line.startsWith("taps="))).toEqual(taps);
     expect(taps.length).toBeGreaterThan(0);
     expect(lines.at(-2)).toBe("");
