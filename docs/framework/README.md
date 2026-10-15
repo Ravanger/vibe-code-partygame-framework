@@ -330,6 +330,11 @@ a short fixed message and returns the room to the Lobby — notice only when alr
 If `onError` queues its own way out with `ctx.transition()` or `ctx.returnToLobby()`, that runs instead of the default policy.
 The run still rethrows what it reported, so the server logs the failure and a failed action answers `INTERNAL`;
 a throwing hook never leaves the room mid-phase.
+That covers a phase loop (more than 100 chained transitions, including one queued by `onError`), a throwing
+`onReturnToLobby` (it runs once, not again by the policy), and a failure while the room is constructed: the initial
+Lobby enter is reported to `onError` at construction and does not throw out of it, so the next action is not charged for it.
+A `FrameworkError` is exempt only inside an action (below); from `onRosterChange`, `onPlayerSync` or `onTimeout` it is
+an ordinary hook failure.
 
 ### Error model
 Client-visible error strings are fixed and table-driven; raw Zod or exception text never reaches a client.
