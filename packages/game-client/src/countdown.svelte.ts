@@ -51,9 +51,12 @@ export class Countdown {
   get secondsLeft(): number {
     this.track();
     const ends = this.getEndsAt();
-    if (!ends || !this.lastServerNow) return 0;
-    const elapsedSinceServer = this.nowRef.value - this.lastServerNowClientTime;
-    const estimatedServerNow = this.lastServerNow + elapsedSinceServer;
+    const serverNow = this.getServerNowFn();
+    const isNewer = serverNow !== 0 && serverNow !== this.lastServerNow;
+    const anchor = isNewer ? serverNow : this.lastServerNow;
+    if (!ends || !anchor) return 0;
+    const elapsedSinceServer = isNewer ? 0 : this.nowRef.value - this.lastServerNowClientTime;
+    const estimatedServerNow = anchor + elapsedSinceServer;
     return Math.max(0, Math.ceil((ends - estimatedServerNow) / 1000));
   }
 

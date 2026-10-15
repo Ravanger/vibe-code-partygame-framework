@@ -141,4 +141,40 @@ describe("Countdown", () => {
     expect(countdown.secondsLeft).toBe(55);
     observed.stop();
   });
+
+  it("re-anchors to a newer server time seen when read", () => {
+    vi.setSystemTime(1_000_000);
+    let serverNow = 1_000_000;
+    const countdown = new Countdown(
+      () => 1_060_000,
+      () => serverNow,
+    );
+    const observed = observe(() => countdown.secondsLeft);
+    serverNow = 1_010_000;
+    expect(countdown.secondsLeft).toBe(50);
+    observed.stop();
+  });
+
+  it("re-anchors to a newer server time on a plain read with no subscriber", () => {
+    vi.setSystemTime(1_000_000);
+    let serverNow = 1_000_000;
+    const countdown = new Countdown(
+      () => 1_060_000,
+      () => serverNow,
+    );
+    serverNow = 1_010_000;
+    expect(countdown.secondsLeft).toBe(50);
+  });
+
+  it("reads the first server time when constructed before it arrived", () => {
+    vi.setSystemTime(1_000_000);
+    let serverNow = 0;
+    const countdown = new Countdown(
+      () => 1_060_000,
+      () => serverNow,
+    );
+    expect(countdown.secondsLeft).toBe(0);
+    serverNow = 1_000_000;
+    expect(countdown.secondsLeft).toBe(60);
+  });
 });
