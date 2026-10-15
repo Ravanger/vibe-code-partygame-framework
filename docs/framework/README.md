@@ -187,8 +187,9 @@ The log is created lazily on the first event and kept in a module-level store ke
 object (the same pattern as `timingMiddleware`, read back with `getPhaseTimings(priv)`), so framework data
 never collides with a game's own private fields and a frozen or sealed private state works unchanged. It
 never touches `ctx.state`; export it with `JSON.stringify(getActionLog(priv))`. Because the store is keyed
-by the object, `createPrivateState()` must return an object: the `GameRuntime` constructor throws
-`InvalidPrivateStateError` for a primitive or `null`.
+by the object, `createPrivateState()` must return a fresh object on every call: the `GameRuntime` constructor throws
+`InvalidPrivateStateError` for a primitive or `null`, but a shared object (`() => SHARED`) is not detected and makes
+every room and replay table append to one log and one timing store.
 
 **Header** — written on the first entry:
 
@@ -277,7 +278,10 @@ its own consequence run, so a tampered log throws naming the mismatch.
 entry. Lobby-phase roster changes are skipped — the recorded roster is pre-seated at construction — so a
 game whose `Lobby.onRosterChange` writes synced state may diverge in intermediate states for sessions with
 lobby joins/leaves (final states still match). A sender that is not in the recorded roster (for example a
-joiner of a second session after `returnToLobby`) makes the re-dispatch throw. No log cap; party sessions
+joiner of a second session after `returnToLobby`) makes the re-dispatch throw. A log that contains a failed run
+(a hook threw and the failure policy returned the room to the Lobby: a transition to the Lobby with no
+`returnToLobby` behind it) is not replayable: the re-dispatch fails the same way, and `replayLog` throws
+`replayLog: entry N re-ran into a failed run (...)`. No log cap; party sessions
 are minutes long.
 
 **Compatibility.** Replay re-runs the definition's handlers and hooks against the recorded events, so a log
@@ -327,9 +331,16 @@ one failed, an `AggregateError` in original order when several did. A throwing `
 rethrow below instead of recursing into `onError` again.
 By default (no `onError`, or one that queues no transition) the runtime applies a fixed policy: it sets `state.notice` to
 a short fixed message and returns the room to the Lobby — notice only when already there — so the host can start again.
+That return is an ordinary transition to middleware (one `transition` event, so the action log and `timingMiddleware`
+see it), and `START_GAME` clears `state.notice` when the next game starts.
 If `onError` queues its own way out with `ctx.transition()` or `ctx.returnToLobby()`, that runs instead of the default policy.
 The run still rethrows what it reported, so the server logs the failure and a failed action answers `INTERNAL`;
 a throwing hook never leaves the room mid-phase.
+That covers a phase loop (more than 100 chained transitions, including one queued by `onError`), a throwing
+`onReturnToLobby` (it runs once, not again by the policy), and a failure while the room is constructed: the initial
+Lobby enter is reported to `onError` at construction and does not throw out of it, so the next action is not charged for it.
+A `FrameworkError` is exempt only inside an action (below); from `onRosterChange`, `onPlayerSync` or `onTimeout` it is
+an ordinary hook failure.
 
 ### Error model
 Client-visible error strings are fixed and table-driven; raw Zod or exception text never reaches a client.
@@ -475,7 +486,7 @@ Scores live in a `Record<playerId, number>` mutated only through `awardPoints(sc
 ## Server
 
 `@partygame/server` hosts any game on Colyseus. Your state class extends `BaseGameState` (`phase`, `phaseEndsAt`, `roomCode`,
-`serverNow`, `spectatorCount`, `options` as JSON, `notice` (a message for the room, e.g. why it is back in the lobby; games write it in `onEndGame`/`onReturnToLobby`, and the runtime sets a fixed one when a hook throws — see "Errors at runtime"), `minPlayers`, `maxPlayers`, `players` keyed by `playerId`).
+`serverNow`, `spectatorCount`, `options` as JSON, `notice` (a message for the room, e.g. why it is back in the lobby; games write it in `onEndGame`/`onReturnToLobby`, and the runtime sets a fixed one when a hook throws and clears it when `START_GAME` begins the next game — see "Errors at runtime"), `minPlayers`, `maxPlayers`, `players` keyed by `playerId`).
 State uses `@colyseus/schema` 5's decorator-free `schema()`; no compiler flags are needed:
 
 ```ts
@@ -640,7 +651,7 @@ vitest `setupFiles`: it shims the storages and makes the SDK use `ws` under jsdo
 | `AppRouter` | Routes the connection status and room phase to a screen of your screen table (see below). `createAppRouter(manager, screens)` builds one. |
 | `WaitingRoomViewModel` | The lobby: seats (`LobbyPlayer`), ready count, host-only start and kick (with confirmation), name field, share URL, copy code, `notice`. |
 
-The waiting room reads `players`, `minPlayers`, `maxPlayers`, `canStart`, `spectatorCount` and `notice` from `BaseGameState`. A game sets `notice` (for example in `onEndGame` or `onReturnToLobby`) to say why the room is back in the lobby; the runtime also writes a fixed message when a hook throws (see "Errors at runtime"), and the waiting room shows whatever is there.
+The waiting room reads `players`, `minPlayers`, `maxPlayers`, `canStart`, `spectatorCount` and `notice` from `BaseGameState`. A game sets `notice` (for example in `onEndGame` or `onReturnToLobby`) to say why the room is back in the lobby; the runtime also writes a fixed message when a hook throws (see "Errors at runtime") and clears it when the next game starts, and the waiting room shows whatever is there.
 
 The game plugs its rules in through the constructor. `GameControlsViewModel` takes an `isGameOver` predicate (default: never over); the host cannot end a game that is over:
 

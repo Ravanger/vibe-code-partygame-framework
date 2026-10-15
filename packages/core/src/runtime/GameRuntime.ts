@@ -13,7 +13,7 @@ import { newId } from "../utils.js";
 import { DispatchPipeline } from "./DispatchPipeline.js";
 import { Lobby } from "./lobby.js";
 import { buildPhaseMachine } from "./machineFactory.js";
-import { type Pending, TransitionQueue } from "./TransitionQueue.js";
+import { type Pending, PhaseLoopError, TransitionQueue } from "./TransitionQueue.js";
 import type {
   ActionDefinition,
   GameContext,
@@ -81,6 +81,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   private duration = 0;
   private stopped = false;
   private hasStarted = false;
+  private lobbyReturnFailed = false;
 
   constructor(config: GameRuntimeConfig<TState, TPrivate, TOptions>) {
     this.spec = config.definition;
@@ -137,8 +138,11 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
         },
       },
     );
-    this.actor.start();
-    this.refreshCanStart();
+    try {
+      this.run(() => this.actor.start());
+    } catch {
+      // Already reported to onError and the failure policy; a broken initial enter must not kill construction.
+    }
   }
 
   /** Name of the current phase. */
@@ -157,7 +161,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     if (this.stopped) return STOPPED_ERROR;
     this.rejections.length = 0;
     try {
-      this.run(() => this.handle(playerId, rawAction));
+      this.run(() => this.handle(playerId, rawAction), true);
     } catch (error) {
       if (!(error instanceof FrameworkError)) throw error;
       const serverError: ServerError = { code: error.code, message: CLIENT_MESSAGES[error.code] };
@@ -305,7 +309,10 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   private defaultFailurePolicy(): void {
     this.state.notice = FAILURE_NOTICE;
     if (this.phaseName === LOBBY_PHASE) return;
-    this.guarded(() => this.spec.onReturnToLobby?.(this.context()));
+    if (!this.lobbyReturnFailed) {
+      this.guarded(() => this.observeTransition(this.phaseName, LOBBY_PHASE));
+      this.guarded(() => this.spec.onReturnToLobby?.(this.context()));
+    }
     this.guarded(() => this.host.activateWaitingPlayers());
     this.guarded(() => this.actor.send({ type: "GO", phase: LOBBY_PHASE }));
   }
@@ -322,38 +329,55 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       failed.length === 1 ? failed[0] : new AggregateError(failed, "Game hook failed");
     this.queue.clear();
     this.guarded(() => this.spec.onError?.(this.context(), reported));
-    if (this.queue.isEmpty()) {
-      this.defaultFailurePolicy();
-    } else {
-      this.queue.drain(
-        (next) => this.applyGuarded(next),
-        () => {},
-      );
-    }
+    if (this.queue.isEmpty() || !this.drainFailureTransitions()) this.defaultFailurePolicy();
+    this.lobbyReturnFailed = false;
     const extra = this.failures.splice(0);
     if (extra.length > 0) reported = new AggregateError([...failed, ...extra], "Game hook failed");
     throw reported;
   }
 
-  private run(fn: () => void): void {
+  /** Applies what `onError` queued; false when it looped, so the caller falls back to the default policy. */
+  private drainFailureTransitions(): boolean {
     try {
-      try {
-        fn();
-      } catch (error) {
-        // A typed client-visible outcome, not a hook failure: skip the failure policy and let dispatch map it.
-        if (error instanceof FrameworkError) {
-          this.queue.clear();
-          throw error;
-        }
-        this.failures.push(error);
-      }
-      if (this.failures.length > 0) this.failRun();
+      this.queue.drain(
+        (next) => this.applyGuarded(next),
+        () => {},
+      );
+      return true;
+    } catch (error) {
+      this.failures.push(error);
+      return false;
+    }
+  }
+
+  private drainRun(): void {
+    try {
       this.queue.drain(
         (next) => this.applyGuarded(next),
         () => {
           if (this.failures.length > 0) this.failRun();
         },
       );
+    } catch (error) {
+      if (!(error instanceof PhaseLoopError)) throw error;
+      this.failures.push(error);
+      this.failRun();
+    }
+  }
+
+  private run(fn: () => void, typedOutcome = false): void {
+    try {
+      try {
+        fn();
+      } catch (error) {
+        if (typedOutcome && error instanceof FrameworkError) {
+          this.queue.clear();
+          throw error;
+        }
+        this.failures.push(error);
+      }
+      if (this.failures.length > 0) this.failRun();
+      this.drainRun();
     } finally {
       this.refreshCanStart();
     }
@@ -374,9 +398,11 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       this.observeTransition(this.phaseName, next.kind === "lobby" ? LOBBY_PHASE : next.phase),
     );
     if (next.kind === "lobby") {
+      this.lobbyReturnFailed = true;
       this.spec.onReturnToLobby?.(this.context());
       this.host.activateWaitingPlayers();
       this.actor.send({ type: "GO", phase: LOBBY_PHASE });
+      this.lobbyReturnFailed = false;
     } else {
       if (this.phaseName === LOBBY_PHASE) this.host.benchUnreadyPlayers();
       this.actor.send({ type: "GO", phase: next.phase });

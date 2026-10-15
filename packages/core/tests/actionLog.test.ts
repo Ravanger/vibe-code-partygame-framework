@@ -12,6 +12,7 @@ import {
   type PhaseState,
   timingMiddleware,
 } from "../src/index.js";
+import { replayLog } from "../src/testing/index.js";
 import { TestTable } from "../src/testing/TestTable.js";
 
 interface S extends PhaseState {
@@ -320,5 +321,73 @@ describe("action log roster", () => {
     const log = table.log();
     expect(log?.roster).toEqual([defaultSeat("p1"), defaultSeat("p2")]);
     expect(log?.entries.filter((e) => e.actionType === "START_GAME")).toHaveLength(2);
+  });
+});
+
+describe("a failed run", () => {
+  const definition = defineGame<S, P, O>({
+    name: "Failing",
+    version: "1",
+    minPlayers: 1,
+    maxPlayers: 4,
+    startPhase: "Play",
+    createPrivateState: () => ({ secret: "s" }),
+    phases: {
+      Play: {
+        duration: 1000,
+        onTimeout: () => {
+          throw new Error("timeout boom");
+        },
+        actions: {
+          BOOM: action({
+            from: "player",
+            payload: z.object({}),
+            handler: () => {
+              throw new Error("boom");
+            },
+          }),
+        },
+      },
+    },
+    middleware: [actionLogMiddleware()],
+  });
+  const newState = (): S => ({ phase: "", phaseEndsAt: 0, canStart: false, log: [] });
+  const failing = () =>
+    new TestTable<S, P, O>({ definition, state: newState(), options: { rounds: 2 }, players: 2 });
+
+  const attempt = (fn: () => void): void => {
+    try {
+      fn();
+    } catch {
+      // the run's failure is rethrown to the caller; only the log matters here
+    }
+  };
+
+  it("logs a transition to the Lobby before the Lobby enter", () => {
+    const table = failing();
+    table.start();
+    attempt(() => table.act("p2", "BOOM"));
+    const kinds = (getActionLog(table.priv)?.entries ?? []).map(
+      (e) => `${e.kind}:${e.to ?? e.phase}`,
+    );
+    expect(kinds.slice(-3)).toEqual(["action:Play", "transition:Lobby", "enter:Lobby"]);
+  });
+
+  it("is refused by replayLog with one named error", () => {
+    const table = failing();
+    table.start();
+    attempt(() => table.act("p2", "BOOM"));
+    const log = JSON.parse(JSON.stringify(getActionLog(table.priv))) as ActionLog;
+    const replay = () => replayLog(definition, log, { state: newState(), options: { rounds: 2 } });
+    expect(replay).toThrow(/replayLog: entry \d+ .*failed run.*boom/);
+  });
+
+  it("is refused by replayLog when the failure came from a timeout", () => {
+    const table = failing();
+    table.start();
+    attempt(() => table.tick(1000));
+    const log = JSON.parse(JSON.stringify(getActionLog(table.priv))) as ActionLog;
+    const replay = () => replayLog(definition, log, { state: newState(), options: { rounds: 2 } });
+    expect(replay).toThrow(/replayLog: entry \d+ .*failed run.*timeout boom/);
   });
 });

@@ -652,7 +652,7 @@ describe("QA probe R.10 — clock scripting", () => {
 describe("QA probe R.11 — middleware interplay with a throwing observer", () => {
   // Repo convention (PR #2): an observing middleware delegates inward first, then does its own work.
   const throwingObserver = (): PhaseMiddleware<S, P, O> => (ctx, next) => {
-    if (ctx.event.kind === "transition") {
+    if (ctx.event.kind === "transition" && ctx.event.to === "Play") {
       next();
       throw new Error("observer boom");
     }
