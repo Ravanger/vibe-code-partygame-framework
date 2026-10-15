@@ -84,12 +84,11 @@ manager.onMessage("TURN", (turn) => turn.id); // typed; other names are a compil
 
 ## Show the phase clock
 
-`countdown()` counts down to `state.phaseEndsAt`, corrected for client clock skew. Call `destroy()` when done.
+`countdown()` counts down to `state.phaseEndsAt`, corrected for client clock skew. It ticks only while something reads it inside a Svelte effect and stops when the last reader goes away — no cleanup needed. `destroy()` is a deprecated no-op kept for existing callers.
 
 ```ts
 const clock = manager.countdown();
 clock.secondsLeft; clock.isUrgent; clock.isExpired; // reactive
-clock.destroy();
 ```
 
 ## Test UI without a server

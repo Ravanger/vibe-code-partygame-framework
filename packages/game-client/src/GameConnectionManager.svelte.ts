@@ -261,7 +261,7 @@ export class GameConnectionManager<
     const room = this.room;
     this.detach("disconnected");
     this.bus.clear();
-    void room?.leave(false);
+    if (room) this.leaveQuietly(room, false);
   }
 
   private async open(
@@ -276,7 +276,7 @@ export class GameConnectionManager<
       const room = await openRoom();
       if (!cancelled()) await this.untilSynced(room);
       if (cancelled()) {
-        void room.leave();
+        this.leaveQuietly(room);
         throw new Error(CANCELLED);
       }
       this.spectating = spectator;
@@ -295,25 +295,32 @@ export class GameConnectionManager<
         settled = true;
         clearTimeout(timer);
         room.onStateChange.remove(check);
+        room.onLeave.remove(onLeave);
       };
       const check = (): void => {
         if (settled || !room.state?.roomCode) return;
         settle();
         resolve();
       };
+      // `settle` removes this listener, so it can only fire while the wait is still open.
+      const onLeave = (): void => {
+        settle();
+        reject(new Error("Disconnected before the game state arrived"));
+      };
       const timer = setTimeout(() => {
         settle();
-        void room.leave();
+        this.leaveQuietly(room);
         reject(new Error("Timed out waiting for the game state"));
       }, this.options.syncTimeoutMs ?? DEFAULT_SYNC_TIMEOUT_MS);
       room.onStateChange(check);
-      room.onLeave(() => {
-        if (settled) return;
-        settle();
-        reject(new Error("Disconnected before the game state arrived"));
-      });
+      room.onLeave(onLeave);
       check();
     });
+  }
+
+  /** Leaves a room without letting a failing `leave()` escape as an unhandled rejection. */
+  private leaveQuietly(room: RoomLike<TState>, consented = true): void {
+    void room.leave(consented).catch(() => undefined);
   }
 
   private async closeRoom(): Promise<void> {

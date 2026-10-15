@@ -572,7 +572,7 @@ const result = await manager.sendAction("PRESS", { power: 3 });
 | `sendAction(type, payload?)` | `Promise<ActionResult>`, see below |
 | `lastServerError`, `dismissError()` | last rejected action or pushed `ERROR` (`$state`), for a toast. A kick arrives as `KICKED`, after which `status` is `"disconnected"` |
 | `onMessage(type, cb)` | returns an unsubscribe function; survives room changes |
-| `countdown()` | a `Countdown` (`secondsLeft`, `isUrgent`, `isExpired`, `destroy()`) to `phaseEndsAt`, corrected for client clock skew |
+| `countdown()` | a `Countdown` (`secondsLeft`, `isUrgent`, `isExpired`) to `phaseEndsAt`, corrected for client clock skew; ticks only while read in a Svelte effect. `destroy()` is a deprecated no-op |
 | `dispose()` | stop listening and close without forgetting the session |
 
 ### Browser-safe state classes

@@ -8,6 +8,7 @@ type Signal<TArgs extends unknown[]> = ((callback: (...args: TArgs) => void) => 
 function signal<TArgs extends unknown[]>(): {
   subscribe: Signal<TArgs>;
   fire(...args: TArgs): void;
+  size(): number;
 } {
   const callbacks = new Set<(...args: TArgs) => void>();
   const subscribe = Object.assign(
@@ -25,6 +26,7 @@ function signal<TArgs extends unknown[]>(): {
     fire: (...args) => {
       for (const callback of [...callbacks]) callback(...args);
     },
+    size: () => callbacks.size,
   };
 }
 
@@ -98,6 +100,11 @@ export class StubRoom<TState extends BaseGameState> implements RoomLike<TState> 
 
   messageListeners(type: string): number {
     return this.handlersOf(type).size;
+  }
+
+  /** How many `onLeave` callbacks are registered (the manager's own plus any temporary ones). */
+  leaveListenerCount(): number {
+    return this.leaveSignal.size();
   }
 
   private handlersOf(type: string): Set<(payload: unknown) => void> {
