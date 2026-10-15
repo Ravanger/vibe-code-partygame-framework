@@ -469,6 +469,7 @@
           "TerminalStrategy": {},
           "TerminalTurn": {},
           "parseBotsArgs": {},
+          "parseDemoArgs": {},
           "parsePlayArgs": {},
           "runBotsCommand": {}
         }

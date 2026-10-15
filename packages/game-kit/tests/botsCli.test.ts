@@ -57,7 +57,7 @@ describe("botsCli", () => {
     await host.leave(true);
   }, 30_000);
 
-  it("prints the usage and exits 1 on bad arguments", async () => {
+  it("prints the usage and exits 2 on bad arguments", async () => {
     const { io, log, err, exits } = fakeIo([]);
     await botsCli(pkg, io);
     expect(log).toEqual([]);
@@ -65,7 +65,7 @@ describe("botsCli", () => {
       "Usage: bun run bots <CODE> [count=3] [--endpoint ws://localhost:2567] [--api-port 3001]\n" +
         "CODE is 4 letters; count is 1 to 5.",
     ]);
-    expect(exits).toEqual([1]);
+    expect(exits).toEqual([2]);
   });
 
   it("reports a missing room and exits 1", async () => {
@@ -95,6 +95,6 @@ describe("botsCli", () => {
       "Usage: bun run bots <CODE> [count=3] [--endpoint ws://localhost:2567] [--api-port 3001]\n" +
         "CODE is 4 letters; count is 1 to 5.",
     ]);
-    expect(exits).toEqual([1]);
+    expect(exits).toEqual([2]);
   });
 });

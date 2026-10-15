@@ -1,5 +1,5 @@
 import type { BaseGameState } from "@partygame/shared/schema";
-import { DemoRun } from "@partygame/terminal";
+import { DemoRun, parseDemoArgs } from "@partygame/terminal";
 import { failWith } from "./fail.js";
 import { hostedGame } from "./hostedGame.js";
 import { defaultIo } from "./io.js";
@@ -15,13 +15,17 @@ export async function demoCli<TState extends BaseGameState, TContent>(
   io: GameKitIo = defaultIo(),
 ): Promise<void> {
   const meta = pkg.meta;
-  const flag = io.argv.find((arg) => arg.startsWith("--bots="));
-  const bots = flag === undefined ? 3 : Number(flag.split("=")[1]);
-  if (!Number.isInteger(bots) || bots < meta.minPlayers - 1 || bots > meta.maxPlayers - 1) {
-    io.error(demoUsage(meta));
+  const parsed = parseDemoArgs(io.argv, {
+    minBots: meta.minPlayers - 1,
+    maxBots: meta.maxPlayers - 1,
+    usage: demoUsage(meta),
+  });
+  if (!parsed.ok) {
+    io.error(parsed.error);
     io.exit(2);
     return;
   }
+  const { bots } = parsed.value;
   const demo = pkg.demo;
   try {
     const passed = await new DemoRun<TState>({

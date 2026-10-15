@@ -8,6 +8,7 @@ import {
 import { failWith } from "./fail.js";
 import { hostedGame } from "./hostedGame.js";
 import { defaultIo } from "./io.js";
+import { startsServer } from "./startsServer.js";
 import type { GameDeclaration, GameKitIo } from "./types.js";
 
 /** The `play` entry: one human at a terminal, optionally with bots; exit 2 on bad args, 1 on failure. */
@@ -33,7 +34,7 @@ export async function play<TState extends BaseGameState, TContent>(
   try {
     const options: PlaySessionOptions<TState> = {
       ...parsed.value,
-      startServer: parsed.value.usesDefaults && parsed.value.join === undefined,
+      startServer: startsServer(parsed.value),
       kit: pkg.botKit,
       games: [hostedGame(pkg, await pkg.load?.(io.env))],
       player: (room, playerId, prompter) =>

@@ -11,8 +11,15 @@ const base = {
 };
 
 describe("demoCli", () => {
-  it("prints the usage and exits 2 when --bots is out of range or not a number", async () => {
-    for (const argv of [["--bots=0"], ["--bots=9"], ["--bots=x"]]) {
+  it("prints the usage and exits 2 on a bad --bots, a space-separated value or an unknown flag", async () => {
+    for (const argv of [
+      ["--bots=0"],
+      ["--bots=9"],
+      ["--bots=x"],
+      ["--bots="],
+      ["--bots", "4"],
+      ["--foo"],
+    ]) {
       const { io, err, exits } = fakeIo(argv);
       await demoCli({ ...base, botKit: tapKit() }, io);
       expect(err).toEqual(["Usage: bun run demo [--bots=1..5]"]);

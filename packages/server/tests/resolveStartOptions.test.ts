@@ -25,4 +25,31 @@ describe("resolveStartOptions", () => {
     );
     expect(resolved).toEqual({ port: 1, apiPort: 2, roomCodeService });
   });
+
+  it.each([
+    ["PORT", "abc"],
+    ["PORT", "70000"],
+    ["PORT", "0"],
+    ["PORT", ""],
+    ["PORT", "2.5"],
+    ["API_PORT", "-1"],
+    ["API_PORT", "x"],
+  ])("rejects %s=%j with one clear message", (name, value) => {
+    expect(() => resolveStartOptions({}, { [name]: value })).toThrow(
+      `${name} must be a whole number from 1 to 65535`,
+    );
+  });
+
+  it("accepts the port bounds", () => {
+    expect(resolveStartOptions({}, { PORT: "1", API_PORT: "65535" })).toMatchObject({
+      port: 1,
+      apiPort: 65535,
+    });
+  });
+
+  it("does not read an environment port that explicit options override", () => {
+    expect(
+      resolveStartOptions({ port: 5, apiPort: 6 }, { PORT: "abc", API_PORT: "x" }),
+    ).toMatchObject({ port: 5, apiPort: 6 });
+  });
 });
