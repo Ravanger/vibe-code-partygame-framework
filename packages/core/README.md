@@ -4,7 +4,7 @@ Pure game runtime (no Colyseus, no I/O): define phases and rules, dispatch actio
 
 | Import | What |
 |---|---|
-| `@partygame/core` | `defineGame`, `actionFactory`, `GameRuntime`; `leaderboard`, `composeLeaderboard`, `awardPoints`; `shuffle`, `required` |
+| `@partygame/core` | `defineGame`, `actionFactory`, `GameRuntime`; `leaderboard`, `composeLeaderboard`, `awardPoints`; `shuffle`, `required`; seeded RNG `sfc32`, `Seed`, `randomSeed`, `seedFromNumber`, `mulberry32`, `newId` |
 | `@partygame/core/testing` | `FakeHost` (manual clock, in-memory seats), `TestTable` (scenario boilerplate) |
 
 ## Define a game

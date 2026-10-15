@@ -10,6 +10,7 @@ import {
   InvalidPrivateStateError,
   type MiddlewareContext,
   type PhaseState,
+  seedFromNumber,
   timingMiddleware,
 } from "../src/index.js";
 import { replayLog } from "../src/testing/index.js";
@@ -97,7 +98,7 @@ const rawContext = (priv: unknown): MiddlewareContext<PhaseState, unknown, unkno
   now: () => 0,
   gameName: "G",
   gameVersion: "1",
-  seed: 1,
+  seed: [0, 0, 0, 0],
   event: { kind: "enter" },
   rejectionCount: 0,
 });
@@ -132,7 +133,12 @@ describe("actionLogMiddleware", () => {
     const table = new ATable();
     const log = table.log();
     expect(log).toBeDefined();
-    expect(log?.header).toEqual({ seed: 0, game: "Logged", version: "1", startedAt: 1_000_000 });
+    expect(log?.header).toEqual({
+      seed: seedFromNumber(0),
+      game: "Logged",
+      version: "1",
+      startedAt: 1_000_000,
+    });
     expect(log?.entries[0]).toEqual({ seq: 1, t: 1_000_000, phase: "Lobby", kind: "enter" });
   });
 

@@ -1,5 +1,11 @@
 import { isServerError, type ServerError } from "@partygame/shared";
-import { type GameDefinition, GameRuntime, type PhaseState, type PlayerInfo } from "../index.js";
+import {
+  type GameDefinition,
+  GameRuntime,
+  type PhaseState,
+  type PlayerInfo,
+  type Seed,
+} from "../index.js";
 import { FakeHost } from "./FakeHost.js";
 
 /** Constructor argument of {@link TestTable}. */
@@ -13,8 +19,8 @@ export interface TestTableConfig<TState extends PhaseState, TPrivate, TOptions> 
   players?: number;
   /** Per-seat overrides for the pre-seated p1..pN, in seat order; omit an entry to keep the defaults. */
   seats?: Partial<PlayerInfo>[];
-  /** Seed for the room RNG (mulberry32). Omit for seed 0 — a deterministic, replayable stream. */
-  seed?: number;
+  /** Seed for the room RNG (sfc32). A number is expanded by `seedFromNumber`; omit for `seedFromNumber(0)`. */
+  seed?: Seed | number;
   /** Initial fake clock value (epoch ms); defaults to FakeHost's 1_000_000. */
   startTime?: number;
 }

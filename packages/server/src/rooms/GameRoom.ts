@@ -3,10 +3,11 @@ import { type Schema, StateView } from "@colyseus/schema";
 import {
   type GameDefinition,
   GameRuntime,
-  mulberry32,
   type PlayerInfo,
   type RuntimeHost,
   randomSeed,
+  type Seed,
+  sfc32,
 } from "@partygame/core";
 import {
   type ActionResult,
@@ -57,9 +58,9 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
   private readonly views = new Map<string, StateView>();
   private readonly viewRefs = new Map<string, Set<Schema>>();
   /** Per-room RNG seed drawn from the platform CSPRNG at room creation; recorded in action logs. */
-  private readonly seed = randomSeed();
+  private readonly seed: Seed = randomSeed();
   /** Seeded PRNG so a room's randomness is reproducible from its log header. */
-  private readonly rngFn = mulberry32(this.seed);
+  private readonly rngFn = sfc32(this.seed);
   /** Builds the Colyseus close `ServerError` for a {@link CLOSE_CODES} entry; the only place one is made. */
   private readonly closeWith = (entry: CloseCode): ServerError =>
     new ServerError(entry.code, entry.message);

@@ -134,6 +134,7 @@
           "PlayerRole": {},
           "RosterSeat": {},
           "RuntimeHost": {},
+          "Seed": {},
           "actionFactory": {},
           "actionLogMiddleware": {},
           "awardPoints": {},
@@ -147,6 +148,8 @@
           "newId": {},
           "randomSeed": {},
           "required": {},
+          "seedFromNumber": {},
+          "sfc32": {},
           "shuffle": {},
           "timingMiddleware": {}
         }

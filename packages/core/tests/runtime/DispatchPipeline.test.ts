@@ -33,7 +33,7 @@ const fakeContext = (): GameContext<PhaseState, unknown, unknown> => ({
   now: () => 0,
   gameName: "Test",
   gameVersion: "1",
-  seed: 1,
+  seed: [0, 0, 0, 0],
 });
 
 const player = (over: Partial<PlayerInfo> = {}): PlayerInfo => ({

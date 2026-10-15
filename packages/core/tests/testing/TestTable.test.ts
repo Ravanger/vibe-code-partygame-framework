@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { actionFactory, defineGame, mulberry32, type PhaseState } from "../../src/index.js";
+import {
+  actionFactory,
+  defineGame,
+  type PhaseState,
+  seedFromNumber,
+  sfc32,
+} from "../../src/index.js";
 import { TestTable } from "../../src/testing/index.js";
 
 interface TapState extends PhaseState {
@@ -131,8 +137,9 @@ describe("TestTable", () => {
       seed: 42,
       startTime: 5_000_000,
     });
-    expect(t.host.seed).toBe(42);
-    const expected = mulberry32(42);
+    const expectedSeed = seedFromNumber(42);
+    expect(t.host.seed).toEqual(expectedSeed);
+    const expected = sfc32(expectedSeed);
     for (let i = 0; i < 5; ++i) expect(t.host.rng()).toBe(expected());
     expect(t.host.now()).toBe(5_000_000);
   });

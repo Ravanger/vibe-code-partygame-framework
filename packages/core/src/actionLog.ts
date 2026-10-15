@@ -4,6 +4,7 @@ import {
   type PhaseMiddleware,
   type PhaseState,
 } from "./runtime/index.js";
+import type { Seed } from "./utils.js";
 
 /** One log per `ctx.priv` object; the priv itself never gains a framework key. */
 const logs = new WeakMap<object, ActionLog>();
@@ -48,8 +49,8 @@ export interface ActionLogEntry {
 
 /** Written on the first recorded event. */
 export interface ActionLogHeader {
-  /** Room RNG seed (mulberry32); replay uses it to reseed the runtime. */
-  seed: number;
+  /** Room RNG seed (sfc32); replay uses it to reseed the runtime. */
+  seed: Seed;
   /** Definition name; `replayLog` refuses a log recorded for another game. */
   game: string;
   /**

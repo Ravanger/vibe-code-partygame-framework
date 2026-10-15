@@ -1,7 +1,7 @@
 import { LOBBY_PHASE, type ServerError } from "@partygame/shared";
 import type { ActionLog, ActionLogEntry } from "../actionLog.js";
 import type { GameDefinition, PhaseDefinition, PhaseState, PlayerInfo } from "../runtime/index.js";
-import { required } from "../utils.js";
+import { required, type Seed } from "../utils.js";
 import { TestTable } from "./TestTable.js";
 
 /** Starting values for {@link replayLog}. */
@@ -15,8 +15,8 @@ export interface ReplayInit<TState extends PhaseState, TOptions> {
    * (lobby-only sessions); a recorded roster wins and this value is ignored.
    */
   players?: number;
-  /** Overrides the seed in the log header; defaults to the recorded seed. */
-  seed?: number;
+  /** Overrides the seed in the log header; defaults to the recorded seed. A number is expanded by `seedFromNumber`. */
+  seed?: Seed | number;
 }
 
 /** The outcome of {@link replayLog}. */
@@ -105,8 +105,12 @@ function assertLogShape(log: ActionLog): void {
   if (typeof h.game !== "string") {
     throw new Error("replayLog: log.header.game must be a string");
   }
-  if (typeof h.seed !== "number") {
-    throw new Error("replayLog: log.header.seed must be a number");
+  if (
+    !Array.isArray(h.seed) ||
+    h.seed.length !== 4 ||
+    !h.seed.every((v) => typeof v === "number")
+  ) {
+    throw new Error("replayLog: log.header.seed must be an array of 4 numbers");
   }
   if (typeof h.startedAt !== "number") {
     throw new Error("replayLog: log.header.startedAt must be a number");
