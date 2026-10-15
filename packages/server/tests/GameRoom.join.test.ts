@@ -138,6 +138,44 @@ describe("GameRoom spectators", () => {
   });
 });
 
+describe("GameRoom join name validation", () => {
+  it("rejects join with oversized name", async () => {
+    const room = await t.createRoom("buzzer");
+    await expect(t.join(room, { playerId: pid(1), name: "x".repeat(21) })).rejects.toMatchObject({
+      code: CLOSE_CODES.INVALID_OPTIONS.code,
+      message: CLOSE_CODES.INVALID_OPTIONS.message,
+    });
+    expect(stateOf(room).players.size).toBe(0);
+  });
+
+  it("rejects join with control character in name", async () => {
+    const room = await t.createRoom("buzzer");
+    await expect(t.join(room, { playerId: pid(1), name: "Ada\x00Bob" })).rejects.toMatchObject({
+      code: CLOSE_CODES.INVALID_OPTIONS.code,
+      message: CLOSE_CODES.INVALID_OPTIONS.message,
+    });
+    expect(stateOf(room).players.size).toBe(0);
+  });
+
+  it("accepts join with 20 character name", async () => {
+    const room = await t.createRoom("buzzer");
+    const client = await t.join(room, { playerId: pid(1), name: "x".repeat(20) });
+    expect(stateOf(room).players.get(pid(1))?.name).toBe("x".repeat(20));
+    await client.leave(true);
+  });
+});
+
+describe("GameRoom options validation", () => {
+  it("rejects create with seats longer than definition.maxPlayers", async () => {
+    await expect(
+      t.createRoom("buzzer", { seats: [pid(1), pid(2), pid(3), pid(4)] }),
+    ).rejects.toMatchObject({
+      code: CLOSE_CODES.INVALID_OPTIONS.code,
+      message: CLOSE_CODES.INVALID_OPTIONS.message,
+    });
+  });
+});
+
 describe("GameRoom SET_NAME", () => {
   it("trims the name, marks the seat ready and rejects invalid names", async () => {
     const room = await t.createRoom("buzzer");

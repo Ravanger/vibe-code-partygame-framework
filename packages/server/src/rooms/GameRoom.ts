@@ -101,7 +101,12 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     const { definition, stateClass, roomCodeService } = this.config;
     const roomOptions = RoomOptionsSchema.safeParse(options);
     if (!roomOptions.success) throw this.invalidOptions("create", roomOptions.error);
-    if (roomOptions.data.seats) this.seatList = new Set(roomOptions.data.seats);
+    if (roomOptions.data.seats) {
+      if (roomOptions.data.seats.length > definition.maxPlayers) {
+        throw this.closeWith(CLOSE_CODES.INVALID_OPTIONS);
+      }
+      this.seatList = new Set(roomOptions.data.seats);
+    }
     this.autoDispose = false;
     this.maxClients = definition.maxPlayers + SPECTATOR_SLOTS;
     const rawOptions = Object.fromEntries(

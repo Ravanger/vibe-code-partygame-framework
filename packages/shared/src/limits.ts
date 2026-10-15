@@ -1,6 +1,9 @@
 /** Longest player name `SET_NAME` accepts, after trimming. */
 export const NAME_MAX_LENGTH = 20;
 
+/** Most playerIds the `seats` room option may list; a room also rejects more than its game's `maxPlayers`. */
+export const MAX_SEATS = 64;
+
 /** How many letters a room code has. */
 export const ROOM_CODE_LENGTH = 4;
 

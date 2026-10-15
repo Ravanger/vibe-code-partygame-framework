@@ -423,6 +423,7 @@
           "JoinOptionsSchema": {},
           "KICK_PLAYER": {},
           "LOBBY_PHASE": {},
+          "MAX_SEATS": {},
           "NAME_MAX_LENGTH": {},
           "PlayerIdSchema": {},
           "ROOM_CODE_ALPHABET": {},
