@@ -1,3 +1,6 @@
+import { createInterface } from "node:readline/promises";
+import { runLauncher } from "@partygame/launcher";
+import { ReadlinePrompter } from "@partygame/terminal";
 import type { GameKitIo } from "./types.js";
 
 /** The real process behind a one-line entry stub; tests pass their own `GameKitIo`. */
@@ -10,4 +13,12 @@ export const defaultIo = (): GameKitIo => ({
   onSignal: (signal, handler) => {
     process.on(signal, handler);
   },
+  prompter: (stop) => {
+    const lines = createInterface({ input: process.stdin, output: process.stdout });
+    lines.on("SIGINT", stop);
+    lines.on("close", stop);
+    return new ReadlinePrompter(lines);
+  },
+  startServer: async (options) => (await import("@partygame/server/bun")).startServer(options),
+  runLauncher,
 });

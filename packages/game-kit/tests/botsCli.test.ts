@@ -1,7 +1,8 @@
 import { type NodeServerHandle, startNodeServer } from "@partygame/server/node";
 import { GameClient } from "@partygame/terminal";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { botsCli, defineGamePackage, type GameKitIo, hostedGame } from "../src/index.js";
+import { botsCli, defineGamePackage, hostedGame } from "../src/index.js";
+import { fakeIo } from "./fixtures/fakeIo.js";
 import { TAP_ROOM, TapGame, TapState, tapKit } from "./fixtures/tapGame.js";
 
 const pkg = defineGamePackage({
@@ -17,21 +18,6 @@ beforeAll(async () => {
   handle = await startNodeServer({ games: [hostedGame(pkg, undefined)] });
 });
 afterAll(() => handle.stop());
-
-const fakeIo = (argv: string[], over: Partial<GameKitIo> = {}) => {
-  const log: string[] = [];
-  const err: string[] = [];
-  const exits: number[] = [];
-  const io: GameKitIo = {
-    env: {},
-    argv,
-    exit: (code) => void exits.push(code),
-    log: (line) => void log.push(line),
-    error: (line) => void err.push(line),
-    ...over,
-  };
-  return { io, log, err, exits };
-};
 
 describe("botsCli", () => {
   it("seats the bots for a valid code and leaves them on SIGINT with exit 0", async () => {

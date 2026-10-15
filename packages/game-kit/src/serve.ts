@@ -1,4 +1,5 @@
 import type { BaseGameState } from "@partygame/shared/schema";
+import { failWith } from "./fail.js";
 import { hostedGame } from "./hostedGame.js";
 import { defaultIo } from "./io.js";
 import { servePorts } from "./ports.js";
@@ -9,8 +10,11 @@ export async function serve<TState extends BaseGameState, TContent>(
   pkg: GameDeclaration<TState, TContent>,
   io: GameKitIo = defaultIo(),
 ): Promise<unknown> {
-  const content = await pkg.load?.(io.env);
-  const hosted = hostedGame(pkg, content);
-  const start = io.startServer ?? (await import("@partygame/server/bun")).startServer;
-  return start({ games: [hosted], ...servePorts(io.env) });
+  try {
+    const hosted = hostedGame(pkg, await pkg.load?.(io.env));
+    return await io.startServer({ games: [hosted], ...servePorts(io.env) });
+  } catch (error) {
+    failWith(io, error);
+    return undefined;
+  }
 }

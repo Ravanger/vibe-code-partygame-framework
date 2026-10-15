@@ -21,7 +21,7 @@ export async function botsCli<TState extends BaseGameState, TContent>(
       err: io.error,
       usage: botsUsage(pkg.meta),
       bot: { log: io.log },
-      onInterrupt: (stop) => io.onSignal?.("SIGINT", () => void stop().finally(() => io.exit(0))),
+      onInterrupt: (stop) => io.onSignal("SIGINT", () => void stop().finally(() => io.exit(0))),
     });
   } catch {
     io.exit(1);

@@ -1,12 +1,11 @@
-import { createInterface } from "node:readline/promises";
 import type { BaseGameState } from "@partygame/shared/schema";
 import {
   PlaySession,
   type PlaySessionOptions,
   parsePlayArgs,
-  ReadlinePrompter,
   TerminalPlayer,
 } from "@partygame/terminal";
+import { failWith } from "./fail.js";
 import { hostedGame } from "./hostedGame.js";
 import { defaultIo } from "./io.js";
 import type { GameDeclaration, GameKitIo } from "./types.js";
@@ -30,31 +29,24 @@ export async function play<TState extends BaseGameState, TContent>(
     io.exit(1);
     return;
   }
-  const content = await pkg.load?.(io.env);
-  const options: PlaySessionOptions<TState> = {
-    ...parsed.value,
-    startServer: parsed.value.usesDefaults && parsed.value.join === undefined,
-    kit: pkg.botKit,
-    games: [hostedGame(pkg, content)],
-    player: (room, playerId, prompter) => new TerminalPlayer(room, playerId, prompter, terminal()),
-    clientUrl: "http://localhost:5173",
-  };
-  let session: PlaySession<TState>;
-  if (io.prompter !== undefined) {
-    session = new PlaySession(options, io.prompter);
-  } else {
-    const lines = createInterface({ input: process.stdin, output: process.stdout });
-    session = new PlaySession(options, new ReadlinePrompter(lines));
-    lines.on("SIGINT", () => session.stop());
-    lines.on("close", () => session.stop());
-  }
-  io.onSignal?.("SIGINT", () => session.stop());
-  let code = 0;
+  let session: PlaySession<TState> | undefined;
   try {
+    const options: PlaySessionOptions<TState> = {
+      ...parsed.value,
+      startServer: parsed.value.usesDefaults && parsed.value.join === undefined,
+      kit: pkg.botKit,
+      games: [hostedGame(pkg, await pkg.load?.(io.env))],
+      player: (room, playerId, prompter) =>
+        new TerminalPlayer(room, playerId, prompter, terminal()),
+      clientUrl: "http://localhost:5173",
+    };
+    const stop = () => session?.stop();
+    session = new PlaySession(options, io.prompter(stop));
+    io.onSignal("SIGINT", stop);
     await session.run();
   } catch (error) {
-    io.error(error instanceof Error ? error.message : String(error));
-    code = 1;
+    failWith(io, error);
+    return;
   }
-  io.exit(code);
+  io.exit(0);
 }
