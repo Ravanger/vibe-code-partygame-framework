@@ -21,7 +21,7 @@ const ioWith = (
   }).io;
 
 describe("serve", () => {
-  it("loads content and starts a server on the env ports", async () => {
+  it("loads content and leaves the ports to the server starter", async () => {
     const port = await freePort();
     const apiPort = await freePort();
     const started: NodeServerHandle[] = [];
@@ -51,8 +51,8 @@ describe("serve", () => {
     expect(seens).toHaveLength(1);
     const [options] = seens;
     if (options === undefined) throw new Error("the server starter never ran");
-    expect(options.port).toBe(port);
-    expect(options.apiPort).toBe(apiPort);
+    expect(options.port).toBeUndefined();
+    expect(options.apiPort).toBeUndefined();
     expect(options.games.map((each) => each.roomName)).toEqual([TAP_ROOM]);
   });
 

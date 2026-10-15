@@ -13,15 +13,39 @@ export interface LobbyPlayer {
   isMe: boolean;
 }
 
+const defaultLocation = (): { origin: string; pathname: string } => ({
+  origin: window.location.origin,
+  pathname: window.location.pathname,
+});
+
+const defaultClipboard = {
+  writeText: (text: string) => navigator.clipboard.writeText(text),
+};
+
 export class WaitingRoomViewModel<TState extends BaseGameState> {
   kickCandidate = $state<string | undefined>(undefined);
   readonly nameField: NameField<TState>;
   /** Decided once, so the name card does not jump away while its owner is typing. */
   readonly nameFirst: boolean;
+  private readonly location: () => { origin: string; pathname: string };
+  private readonly clipboard: { writeText(text: string): Promise<void> };
 
-  constructor(private readonly manager: GameConnectionManager<TState>) {
+  /**
+   * @param manager The connection this lobby belongs to.
+   * @param browser Browser access for the share link and copy button; defaults to the page's
+   * `window.location` and `navigator.clipboard`, read lazily, so non-browser hosts can inject their own.
+   */
+  constructor(
+    private readonly manager: GameConnectionManager<TState>,
+    browser: {
+      location?: () => { origin: string; pathname: string };
+      clipboard?: { writeText(text: string): Promise<void> };
+    } = {},
+  ) {
     this.nameField = new NameField(manager);
     this.nameFirst = this.needsName;
+    this.location = browser.location ?? defaultLocation;
+    this.clipboard = browser.clipboard ?? defaultClipboard;
   }
 
   get needsName(): boolean {
@@ -88,7 +112,8 @@ export class WaitingRoomViewModel<TState extends BaseGameState> {
   }
 
   get shareUrl(): string {
-    return joinUrl(`${window.location.origin}${window.location.pathname}`, this.roomCode);
+    const { origin, pathname } = this.location();
+    return joinUrl(`${origin}${pathname}`, this.roomCode);
   }
 
   canKick(player: LobbyPlayer): boolean {
@@ -123,7 +148,7 @@ export class WaitingRoomViewModel<TState extends BaseGameState> {
 
   async copyCode(): Promise<void> {
     try {
-      await navigator.clipboard.writeText(this.roomCode);
+      await this.clipboard.writeText(this.roomCode);
     } catch {
       // Clipboard access can be denied; the code is on screen anyway.
     }

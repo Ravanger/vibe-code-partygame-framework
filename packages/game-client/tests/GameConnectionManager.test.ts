@@ -33,6 +33,18 @@ function seated(manager: GameConnectionManager, role: "host" | "player" = "playe
 
 const settle = () => new Promise((resolve) => setTimeout(resolve));
 
+function watchUnhandled(): { seen: unknown[]; stop: () => void } {
+  const seen: unknown[] = [];
+  const handler = (reason: unknown): void => {
+    seen.push(reason);
+  };
+  process.on("unhandledRejection", handler);
+  return {
+    seen,
+    stop: () => process.off("unhandledRejection", handler),
+  };
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
@@ -726,6 +738,27 @@ describe("waiting for state, bounded", () => {
     vi.useRealTimers();
   });
 
+  it("removes its temporary leave listener once synced", async () => {
+    const manager = impatient();
+    const { room } = seated(manager);
+    vi.spyOn(Client.prototype, "create").mockResolvedValue(room as never);
+    await manager.create();
+    expect(room.leaveListenerCount()).toBe(1);
+  });
+
+  it("swallows a rejecting leave on the timeout", async () => {
+    const manager = impatient();
+    const { state, room } = seated(manager);
+    state.roomCode = "";
+    vi.spyOn(Client.prototype, "create").mockResolvedValue(room as never);
+    room.leave = () => Promise.reject(new Error("boom"));
+    const unhandled = watchUnhandled();
+    await expect(manager.create()).rejects.toThrow("Timed out");
+    await settle();
+    unhandled.stop();
+    expect(unhandled.seen).toEqual([]);
+  });
+
   it("a settled wait ignores a later leave from the same room", async () => {
     const manager = impatient();
     const { state, room } = seated(manager);
@@ -739,6 +772,40 @@ describe("waiting for state, bounded", () => {
     room.patch();
     room.closed();
     expect(manager.status).toBe("disconnected");
+  });
+});
+
+describe("a rejecting room.leave()", () => {
+  it("dispose() swallows the rejection", async () => {
+    const manager = newManager();
+    const { room } = seated(manager);
+    room.leave = () => Promise.reject(new Error("boom"));
+    manager.attach(room);
+    const unhandled = watchUnhandled();
+    manager.dispose();
+    await settle();
+    unhandled.stop();
+    expect(unhandled.seen).toEqual([]);
+  });
+
+  it("a cancelled join swallows the rejection", async () => {
+    const manager = newManager();
+    const state = new BaseGameState();
+    state.roomCode = "";
+    const room = new StubRoom(state);
+    room.leave = () => Promise.reject(new Error("boom"));
+    vi.stubGlobal("fetch", fakeFetch({ roomId: room.roomId }).fetch);
+    vi.spyOn(Client.prototype, "joinById").mockResolvedValue(room as never);
+    const unhandled = watchUnhandled();
+    const joining = manager.join("ABCD");
+    await settle();
+    await manager.leave();
+    state.roomCode = "ABCD";
+    room.patch();
+    await expect(joining).rejects.toThrow("Connection cancelled");
+    await settle();
+    unhandled.stop();
+    expect(unhandled.seen).toEqual([]);
   });
 });
 

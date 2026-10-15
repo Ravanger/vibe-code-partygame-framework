@@ -3,7 +3,7 @@ import type { BotKit } from "@partygame/bots";
 import { waitFor } from "@partygame/client-utils";
 import { startNodeServer } from "@partygame/server/node";
 import { freePort, ServerProbe } from "@partygame/server/probe";
-import { CLOSE_CODES } from "@partygame/shared";
+import { CLOSE_CODES, ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH } from "@partygame/shared";
 import { afterEach, describe, expect, it } from "vitest";
 import { GameClient } from "../src/GameClient.js";
 import { PlaySession, type PlaySessionOptions, type SessionPlayer } from "../src/PlaySession.js";
@@ -84,9 +84,12 @@ describe("PlaySession", () => {
 
     const said = io.printed.join("\n");
     expect(said).toMatch(/Started a game server on ports \d+ and \d+/);
-    expect(said).toMatch(/Room [A-Z]{4} \(you are the host\)/);
-    expect(said).toMatch(/Browser players can join at http:\/\/localhost:5173\/\?code=[A-Z]{4}/);
-    expect(said).toMatch(/TV view: http:\/\/localhost:5173\/\?tv=[A-Z]{4}/);
+    const code = `[${ROOM_CODE_ALPHABET}]` + `{${ROOM_CODE_LENGTH}}`;
+    expect(said).toMatch(new RegExp(`Room ${code} \\(you are the host\\)`));
+    expect(said).toMatch(
+      new RegExp(`Browser players can join at http://localhost:5173/\\?code=${code}`),
+    );
+    expect(said).toMatch(new RegExp(`TV view: http://localhost:5173/\\?tv=${code}`));
     expect(said).toContain("Bot 1 joined.");
   });
 

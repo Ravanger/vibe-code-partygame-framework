@@ -1,7 +1,11 @@
+import { ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH } from "@partygame/shared";
 import { describe, expect, it } from "vitest";
 import { demoCli } from "../src/index.js";
 import { fakeIo } from "./fixtures/fakeIo.js";
 import { TAP_ROOM, TapGame, TapState, tapKit } from "./fixtures/tapGame.js";
+
+const roomLine = (players: number) =>
+  new RegExp(`^Room [${ROOM_CODE_ALPHABET}]` + `{${ROOM_CODE_LENGTH}}: ${players} players$`);
 
 const base = {
   meta: { roomName: TAP_ROOM, minPlayers: 2, maxPlayers: 6 },
@@ -11,8 +15,15 @@ const base = {
 };
 
 describe("demoCli", () => {
-  it("prints the usage and exits 2 when --bots is out of range or not a number", async () => {
-    for (const argv of [["--bots=0"], ["--bots=9"], ["--bots=x"]]) {
+  it("prints the usage and exits 2 on a bad --bots, a space-separated value or an unknown flag", async () => {
+    for (const argv of [
+      ["--bots=0"],
+      ["--bots=9"],
+      ["--bots=x"],
+      ["--bots="],
+      ["--bots", "4"],
+      ["--foo"],
+    ]) {
       const { io, err, exits } = fakeIo(argv);
       await demoCli({ ...base, botKit: tapKit() }, io);
       expect(err).toEqual(["Usage: bun run demo [--bots=1..5]"]);
@@ -24,7 +35,7 @@ describe("demoCli", () => {
     const { io, log, exits } = fakeIo([]);
     await demoCli({ ...base, botKit: tapKit() }, io);
     expect(exits).toEqual([0]);
-    expect(log.some((line) => /^Room [A-Z]{4}: 4 players$/.test(line))).toBe(true);
+    expect(log.some((line) => roomLine(4).test(line))).toBe(true);
     expect(log.at(-1)).toBe("PASS: no action was rejected");
   }, 30_000);
 
@@ -50,7 +61,7 @@ describe("demoCli", () => {
       io,
     );
     expect(exits).toEqual([0]);
-    expect(log.some((line) => /^Room [A-Z]{4}: 3 players$/.test(line))).toBe(true);
+    expect(log.some((line) => roomLine(3).test(line))).toBe(true);
     expect(log.some((line) => line === "done!")).toBe(true);
     expect(names).toContain("Hoster");
     expect(log.at(-1)).toBe("PASS: all tapped");
@@ -63,7 +74,7 @@ describe("demoCli", () => {
       io,
     );
     expect(exits).toEqual([0]);
-    expect(log.some((line) => /^Room [A-Z]{4}: 6 players$/.test(line))).toBe(true);
+    expect(log.some((line) => roomLine(6).test(line))).toBe(true);
     expect(log.at(-1)).toBe("PASS: no action was rejected");
   }, 30_000);
 

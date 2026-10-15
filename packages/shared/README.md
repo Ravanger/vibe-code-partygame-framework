@@ -4,7 +4,7 @@ Wire protocol (message names, error codes, zod schemas), limits and browser-safe
 
 | Import | What |
 |---|---|
-| `@partygame/shared` | `ClientMessage`, `ServerMessage`, `ErrorCode`, `ActionResult`, `ServerError`, `isActionResult`, `isServerError`, `LOBBY_PHASE`, zod schemas (`RoomCodeSchema`, `JoinOptionsSchema`, ...), `NAME_MAX_LENGTH`, error model (`FrameworkError`, `CLOSE_CODES`, `closeCodeEntry`, `CLIENT_MESSAGES`) |
+| `@partygame/shared` | `ClientMessage`, `ServerMessage`, `ErrorCode`, `ActionResult`, `ServerError`, `isActionResult`, `isServerError`, `LOBBY_PHASE`, zod schemas (`RoomCodeSchema`, `JoinOptionsSchema`, ...), `NAME_MAX_LENGTH`, `ROOM_CODE_LENGTH`, `ROOM_CODE_ALPHABET`, `sanitizeRoomCode`, error model (`FrameworkError`, `CLOSE_CODES`, `closeCodeEntry`, `CLIENT_MESSAGES`) |
 | `@partygame/shared/schema` | `BaseGameState`, `PlayerSchema`: extend these in your game state |
 
 Client helpers (polling, room-code resolution, share links, argument parsing) live in [`@partygame/client-utils`](../client-utils/README.md).
@@ -45,7 +45,7 @@ room.onMessage(ServerMessage.ERROR, (payload: unknown) => {
 
 Other codes: `INVALID_ACTION`, `UNKNOWN_ACTION`, `WRONG_PHASE`, `UNAUTHORIZED`, `NOT_ENOUGH_PLAYERS`, `NOT_ACTIVE`, `NAME_TAKEN`, `KICKED`, `INTERNAL`, and the client-only `NOT_CONNECTED`, `CONNECTION_LOST`, `BAD_REPLY`, `ROOM_NOT_FOUND`.
 
-`LOBBY_PHASE`, `START_GAME`, `KICK_PLAYER`, `END_GAME` and `SET_OPTIONS` name the built-ins. `NAME_MAX_LENGTH` caps player names.
+`LOBBY_PHASE`, `START_GAME`, `KICK_PLAYER`, `END_GAME` and `SET_OPTIONS` name the built-ins. `NAME_MAX_LENGTH` caps player names. `ROOM_CODE_LENGTH` and `ROOM_CODE_ALPHABET` define the room-code format that `RoomCodeSchema` enforces; `sanitizeRoomCode` cleans user input to it.
 
 Depends on: `@colyseus/schema`, `zod`
 

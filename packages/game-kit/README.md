@@ -48,11 +48,11 @@ Each entry file is a stub; only `launch` takes `gameDir`, the directory of the s
 
 | Stub | Calls | What it does |
 |---|---|---|
-| `server.ts` | `serve(pkg)` | loads the content (`pkg.load` with `io.env`, or `undefined`), builds the hosted game and starts the Bun game server plus code API on `PORT`/`API_PORT` from `io.env` (defaults 2567/3001) |
+| `server.ts` | `serve(pkg)` | loads the content (`pkg.load` with `io.env`, or `undefined`), builds the hosted game and starts the Bun game server plus code API on `PORT`/`API_PORT` (defaults 2567/3001; `startServer` validates them as whole numbers 1-65535); a failure prints one line and exits 1 |
 | `launch.ts` | `launch(pkg, { gameDir })` | builds a `LaunchConfig` from the declaration — `name` from `displayName` (or `meta.roomName`), bots capped at `maxPlayers - 1`, demo tables between `minPlayers - 1` and `maxPlayers - 1` bots finished by `isFinished` with the `demo` extras merged in — and runs it with `io.argv` |
-| `bots/cli.ts` | `botsCli(pkg)` | seats bots in a room made elsewhere, `<CODE> [count]` bounded by `meta.maxPlayers - 1`; the SIGINT handler removes them and exits 0; bad arguments or a failed join exit 1 |
+| `bots/cli.ts` | `botsCli(pkg)` | seats bots in a room made elsewhere, `<CODE> [count]` bounded by `meta.maxPlayers - 1`; the SIGINT handler removes them and exits 0; bad arguments exit 2, a failed join exits 1 |
 | `terminal/play.ts` | `play(pkg)` | one human at a terminal driven by `pkg.terminal`, optionally with bots; starts a server when the endpoint defaults are used and no room is joined; exit 2 on bad arguments, 1 on failure or when the game has no `terminal` |
-| `terminal/demo.ts` | `demoCli(pkg)` | one all-bot game on its own server with a PASS/FAIL verdict; `--bots=` defaults to 3 and must stay within `meta.minPlayers - 1 .. meta.maxPlayers - 1` (exit 2 otherwise); exit 0 on PASS, 1 on FAIL |
+| `terminal/demo.ts` | `demoCli(pkg)` | one all-bot game on its own server with a PASS/FAIL verdict; `--bots=` defaults to 3 and must stay within `meta.minPlayers - 1 .. meta.maxPlayers - 1` and is parsed by `parseDemoArgs` (only the `=` form; anything else exits 2); exit 0 on PASS, 1 on FAIL or when loading fails |
 
 ## Helpers
 
@@ -66,7 +66,7 @@ The pure parts of `launch`: the `LaunchConfig`, and the per-connection `DemoTabl
 
 ### `GameKitIo`
 
-The injectable process: `env`, `argv`, `exit`, `log`, `error`, `onSignal` and the `startServer`/`runLauncher` seams. Defaults to `process` via `defaultIo()`, so tests pass fakes and never touch a real process.
+The injectable process: `env`, `argv`, `exit`, `log`, `error`, `onSignal` and the `prompter`/`startServer`/`runLauncher` seams, all required. `defaultIo()` binds the real process (readline prompter, Bun server starter, `runLauncher`), so entries have no process-bound branch and tests pass fakes. `serve`, `play` and `demoCli` print one line and exit 1 when loading content or running fails.
 
 ## Types
 

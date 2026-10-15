@@ -1,4 +1,5 @@
 import { startNodeServer } from "@partygame/server/node";
+import { freePort } from "@partygame/server/probe";
 import type { TerminalStrategy } from "@partygame/terminal";
 import { ScriptedIo } from "@partygame/terminal/testing";
 import { describe, expect, it, vi } from "vitest";
@@ -57,8 +58,12 @@ describe("play", () => {
     expect(exits).toEqual([2]);
   });
 
-  it("does not start a server for --join and reports the failed connection with exit 1", async () => {
-    const { io, err, exits } = fakeIo(["--join=ABCD"], { prompter: () => new ScriptedIo() });
+  it("reports a failed connection with exit 1 when joining a room nobody serves", async () => {
+    const port = await freePort();
+    const { io, err, exits } = fakeIo(
+      ["--join=ABCD", "--endpoint", `ws://127.0.0.1:${port}`, `--api-port=${await freePort()}`],
+      { prompter: () => new ScriptedIo() },
+    );
     await play(pkg, io);
     expect(err).toHaveLength(1);
     expect(exits).toEqual([1]);

@@ -15,7 +15,7 @@ export class RoomCodeError extends Error {
 }
 
 /**
- * Turns a four-letter code into a room id through `GET {apiBase}/api/resolve-code`.
+ * Turns a room code into a room id through `GET {apiBase}/api/resolve-code`.
  * Rejects with a {@link RoomCodeError} when the API answers "not found" or something else than a resolve-code reply.
  */
 export async function resolveRoomCode(apiBase: string, code: string): Promise<string> {

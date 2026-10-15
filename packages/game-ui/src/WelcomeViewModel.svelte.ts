@@ -1,8 +1,13 @@
 import type { GameConnectionManager } from "@partygame/game-client";
-import { CLIENT_MESSAGES, RoomCodeSchema } from "@partygame/shared";
+import {
+  CLIENT_MESSAGES,
+  ROOM_CODE_LENGTH,
+  RoomCodeSchema,
+  sanitizeRoomCode,
+} from "@partygame/shared";
 import type { BaseGameState } from "@partygame/shared/schema";
 
-const CODE_INVALID = "Game code must be 4 letters (A-Z)";
+const CODE_INVALID = `Game code must be ${ROOM_CODE_LENGTH} letters (A-Z)`;
 
 export class WelcomeViewModel<TState extends BaseGameState> {
   code = $state("");
@@ -24,10 +29,7 @@ export class WelcomeViewModel<TState extends BaseGameState> {
   }
 
   setCode(raw: string): void {
-    this.code = raw
-      .toUpperCase()
-      .replace(/[^A-Z]/g, "")
-      .slice(0, 4);
+    this.code = sanitizeRoomCode(raw);
   }
 
   async host(): Promise<void> {

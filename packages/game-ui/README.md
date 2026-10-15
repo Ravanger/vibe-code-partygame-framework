@@ -4,7 +4,7 @@ Svelte 5 viewmodels (no UI code) and reusable components for game screens.
 
 | Import | What |
 |---|---|
-| `@partygame/game-ui` | `createAppRouter`, `AppRouter`, `WelcomeViewModel`, `WaitingRoomViewModel`, `LobbySettingsViewModel`, `GameControlsViewModel`, `NameField`; `OptionFields`, `qrCode`, `playerSticker`, `rankRows`, `podiumSteps` |
+| `@partygame/game-ui` | `createAppRouter`, `AppRouter`, `WelcomeViewModel`, `WaitingRoomViewModel`, `LobbySettingsViewModel`, `OptionsReader`, `PhaseClock`, `TypingReporter`, `GameControlsViewModel`, `NameField`; `OptionFields`, `qrCode`, `playerSticker`, `rankRows`, `podiumSteps` |
 | `@partygame/game-ui/components` | Svelte 5 source: `StatusPanel`, `Timer`, `PlayerSticker`, `QrCode`, `ActionBar`, `NameInput`, `LobbySettings`, `GameControls`, `Podium` |
 
 Viewmodels are typed on `GameConnectionManager<TState>` and read its state reactively. Import through the `svelte` export condition (Vite with the Svelte plugin). Build one in a component with `untrack(() => new Vm(manager))`.
@@ -44,7 +44,7 @@ The router also exposes `banner`, `phase`, `isSpectator`, `isReconnecting`, `roo
 
 ## Welcome and waiting room
 
-`WelcomeViewModel(manager, urlCode?, urlTvCode?)` hosts, joins by code, watches as a TV and auto-joins from a share link. `WaitingRoomViewModel(manager)` is the lobby: `players`, `readyCount`, `canStart`, `start()`, kick, `nameField`, `shareUrl`, `notice`.
+`WelcomeViewModel(manager, urlCode?, urlTvCode?)` hosts, joins by code, watches as a TV and auto-joins from a share link. `WaitingRoomViewModel(manager, browser?)` is the lobby: `players`, `readyCount`, `canStart`, `start()`, kick, `nameField`, `shareUrl`, `notice`. `browser` injects `location()` (for `shareUrl`) and `clipboard.writeText` (for the copy button); both default to the page's globals, read lazily.
 
 ```svelte
 <script lang="ts">
@@ -80,7 +80,15 @@ export class LobbySettingsViewModel extends Base<ButtonState> {
 }
 ```
 
+Any viewmodel that needs the published options reads them through `OptionsReader`: `new OptionsReader(manager, schema, defaults?)` parses `state.options` once per change and exposes `current` (reactive), falling back to `defaults` or the schema's own `.default()`s when nothing valid is published.
+
 `GameControlsViewModel(manager, isGameOver?)` is leave plus a host-only end-game menu outside the lobby; subclass it with `super(manager, (state) => state.phase === "Done")`.
+
+## Phase clock and typing
+
+`PhaseClock(manager, totalSeconds, announceAt?)` wraps `manager.countdown()`: `secondsLeft`, `isUrgent` (the last ten seconds), `announcement` ("N seconds remaining" at 30/10/5 by default) and your `totalSeconds` getter — e.g. `() => options.current.promptSeconds` from an `OptionsReader`.
+
+`TypingReporter(send, idleMs = 2500)` calls `send(true)` on the first keystroke and `send(false)` after `idleMs` of quiet or on `stop()` — one message per change. Call `keystroke()` per key and `stop()` on submit or teardown.
 
 ## Components
 

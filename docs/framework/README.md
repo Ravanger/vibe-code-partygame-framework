@@ -573,7 +573,7 @@ const manager = new GameConnectionManager<ButtonState>({
   syncTimeoutMs: 10000,                // optional: give up if the first state takes longer (default 10000)
   logger: console.warn,                // optional: receives the exception behind a local action failure (default console.warn)
 });
-manager.onMessage("FIRST", (payload) => { /* register pushed messages before connecting */ });
+manager.onMessage("FIRST", (payload) => { /* register pushed messages before connecting */ }); // payload: unknown by default
 await manager.resume();                // page load: stored token, then stored room code
 await manager.create();                // or: await manager.join("ABCD") / joinAsSpectator("ABCD")
 manager.setName("Ada");
@@ -590,8 +590,8 @@ const result = await manager.sendAction("PRESS", { power: 3 });
 | `setName(name)` | `SET_NAME`; readies the seat |
 | `sendAction(type, payload?)` | `Promise<ActionResult>`, see below |
 | `lastServerError`, `dismissError()` | last rejected action or pushed `ERROR` (`$state`), for a toast. A kick arrives as `KICKED`, after which `status` is `"disconnected"` |
-| `onMessage(type, cb)` | returns an unsubscribe function; survives room changes |
-| `countdown()` | a `Countdown` (`secondsLeft`, `isUrgent`, `isExpired`, `destroy()`) to `phaseEndsAt`, corrected for client clock skew |
+| `onMessage(type, cb)` | returns an unsubscribe function; survives room changes. Pass a second generic, `GameConnectionManager<State, Events>`, with `Events` mapping message names to payload types, and `type` is limited to those names and `cb` gets the matching payload; the default accepts any name with an `unknown` payload |
+| `countdown()` | a `Countdown` (`secondsLeft`, `isUrgent`, `isExpired`) to `phaseEndsAt`, corrected for client clock skew; ticks only while read in a Svelte effect. `destroy()` is a deprecated no-op |
 | `dispose()` | stop listening and close without forgetting the session |
 
 ### Browser-safe state classes
@@ -655,10 +655,13 @@ vitest `setupFiles`: it shims the storages and makes the SDK use `ws` under jsdo
 |---|---|
 | `NameField` | A text draft that sends `setName` after a pause in typing (`new NameField(manager, debounceMs = 250)`). |
 | `GameControlsViewModel` | Leave and host-only end-game menu, visible in every phase except the lobby. |
-| `WelcomeViewModel` | The join screen: host, join by 4-letter code, watch as a TV, and auto-join from a `?code=` or `?tv=` link (`new WelcomeViewModel(manager, urlCode?, urlTvCode?)`). |
+| `WelcomeViewModel` | The join screen: host, join by room code, watch as a TV, and auto-join from a `?code=` or `?tv=` link (`new WelcomeViewModel(manager, urlCode?, urlTvCode?)`). |
 | `LobbySettingsViewModel` | The host's options form, generated from the game's options schema (`OptionFields` builds the fields). |
+| `OptionsReader` | The published options, parsed once per state change: `new OptionsReader(manager, schema, defaults?)` exposes reactive `current`, falling back to `defaults` or the schema's `.default()`s. |
+| `PhaseClock` | A phase's server countdown plus its configured length: `new PhaseClock(manager, totalSeconds, announceAt?)` exposes `secondsLeft`, `isUrgent`, `announcement` (30/10/5 by default) and your `totalSeconds` getter. |
+| `TypingReporter` | One typing message per change: `new TypingReporter(send, idleMs = 2500)`; call `keystroke()` per key and `stop()` on submit or teardown. |
 | `AppRouter` | Routes the connection status and room phase to a screen of your screen table (see below). `createAppRouter(manager, screens)` builds one. |
-| `WaitingRoomViewModel` | The lobby: seats (`LobbyPlayer`), ready count, host-only start and kick (with confirmation), name field, share URL, copy code, `notice`. |
+| `WaitingRoomViewModel` | The lobby: seats (`LobbyPlayer`), ready count, host-only start and kick (with confirmation), name field, share URL, copy code, `notice`. An optional second argument `{ location?, clipboard? }` replaces the defaults (`window.location`, `navigator.clipboard`, read lazily) for non-browser hosts and tests. |
 
 The waiting room reads `players`, `minPlayers`, `maxPlayers`, `canStart`, `spectatorCount` and `notice` from `BaseGameState`. A game sets `notice` (for example in `onEndGame` or `onReturnToLobby`) to say why the room is back in the lobby; the runtime also writes a fixed message when a hook throws (see "Errors at runtime") and clears it when the next game starts, and the waiting room shows whatever is there.
 
@@ -867,7 +870,7 @@ await play(buttonPackage);   // bun run play [--bots=0..7] [--name=You] [--join=
 | `quit()` | leaves the game; `run()` resolves |
 
 Optional strategy members: `narrate(state)` returns lines to print on every state change, `lobby(turn)` replaces the built-in lobby
-(host: Enter starts, `q` quits). The `play` entry parses `--bots`, `--name`, `--join`, `--endpoint` and `--api-port`, starts a server when the endpoint defaults are used and no room is joined, and exits 2 on bad arguments. `@partygame/terminal/testing` has test doubles. Example:
+(host: Enter starts, `q` quits). The `play` entry parses `--bots`, `--name`, `--join`, `--endpoint` and `--api-port`, starts a server when the endpoint defaults are used and no room is joined, and exits 2 on bad arguments (as do `demo` and `bots`). `@partygame/terminal/testing` has test doubles. Example:
 `games/wit-clash/terminal/witClashTerminal.ts`.
 
 ### All-bot demo run
@@ -893,7 +896,7 @@ import { buttonPackage } from "../gamePackage.js";
 await demoCli(buttonPackage);   // bun run demo [--bots=1..7]
 ```
 
-`--bots=` sets the bot count (default 3, bounded by `meta`). The field's extras are all optional: `kit` (a demo-specific kit),
+`--bots=N` sets the bot count (default 3, bounded by `meta`; parsed by `parseDemoArgs`, so `--bots 4`, `--bots=` and unknown flags print the usage and exit 2). The field's extras are all optional: `kit` (a demo-specific kit),
 `roomOptions`, `hostName`, `bot` (pacing and outcome logging), `narrate(state)`, `problems(state)` and `passMessage`. Under the hood
 `demoCli` drives a `DemoRun` from `@partygame/terminal`. Example: `games/wit-clash/gamePackage.ts` (the Narrator narrates and checks).
 
@@ -971,7 +974,7 @@ export { svelteConfig as default } from "@partygame/config/svelte";
 
 | Import | What |
 |---|---|
-| `@partygame/shared` | `NAME_MAX_LENGTH`: the cap `SET_NAME` enforces on player names |
+| `@partygame/shared` | `NAME_MAX_LENGTH`: the cap `SET_NAME` enforces on player names; `ROOM_CODE_LENGTH` and `ROOM_CODE_ALPHABET`: the shape of a room code; `sanitizeRoomCode(raw)`: uppercases, drops other characters and cuts to the code length (for a code input) |
 | `@partygame/client-utils` | `Parsed<T>` (`{ ok: true, value } \| { ok: false, error }`) and `between(value, min, max)` for argument parsing; `waitFor(predicate, what, timeoutMs)` poll loop; `resolveRoomCode(apiBase, code)` (rejects with `RoomCodeError`, `reason` `"not-found"` or `"bad-reply"`); `joinUrl(base, code)` / `tvUrl(base, code)` share links; `claimName(room, playerId, name, timeoutMs?)` (type `SeatRoom`), `apiBaseOf(endpoint, apiPort)` |
 | `@partygame/core` | `shuffle(items, rng)`, `required(value, what)` |
 | `@partygame/server/node` | `startNodeServer({ games, port?, apiPort? })` (a game server and its API in this process; `.stop()`), `serveApi(codes, { port, host? })`: the code API on Node's `http` (the Bun entry serves its own) |

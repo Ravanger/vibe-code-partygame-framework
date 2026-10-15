@@ -5,6 +5,7 @@ export {
   DEFAULT_ENDPOINT,
   type PlayArgs,
   parseBotsArgs,
+  parseDemoArgs,
   parsePlayArgs,
 } from "./args.js";
 export { DemoRun, type DemoRunOptions } from "./DemoRun.js";

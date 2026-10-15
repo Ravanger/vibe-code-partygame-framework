@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseBotsArgs, parsePlayArgs } from "../src/args.js";
+import { parseBotsArgs, parseDemoArgs, parsePlayArgs } from "../src/args.js";
 
 const play = { maxBots: 7, usage: "Usage: play" };
 const bots = { maxBots: 7, usage: "Usage: bots CODE" };
@@ -95,5 +95,36 @@ describe("parseBotsArgs", () => {
     [["abcd", "--nope"]],
   ])("refuses %j with the usage", (argv) => {
     expect(parseBotsArgs(argv, bots)).toEqual({ ok: false, error: "Usage: bots CODE" });
+  });
+});
+
+describe("parseDemoArgs", () => {
+  const demo = { minBots: 1, maxBots: 5, usage: "Usage: demo" };
+
+  it("defaults to three bots", () => {
+    expect(parseDemoArgs([], demo)).toEqual({ ok: true, value: { bots: 3 } });
+  });
+
+  it("clamps the default into the range", () => {
+    expect(parseDemoArgs([], { ...demo, maxBots: 2 })).toEqual({ ok: true, value: { bots: 2 } });
+    expect(parseDemoArgs([], { ...demo, minBots: 4 })).toEqual({ ok: true, value: { bots: 4 } });
+  });
+
+  it("reads --bots=N within the range", () => {
+    expect(parseDemoArgs(["--bots=1"], demo)).toEqual({ ok: true, value: { bots: 1 } });
+    expect(parseDemoArgs(["--bots=5"], demo)).toEqual({ ok: true, value: { bots: 5 } });
+  });
+
+  it.each([
+    ["an empty value", ["--bots="]],
+    ["the space form", ["--bots", "4"]],
+    ["an unknown flag", ["--foo"]],
+    ["a repeated flag", ["--bots=2", "--bots=3"]],
+    ["below the range", ["--bots=0"]],
+    ["above the range", ["--bots=6"]],
+    ["a non-number", ["--bots=x"]],
+    ["a fraction", ["--bots=2.5"]],
+  ])("rejects %s with the usage", (_name, argv) => {
+    expect(parseDemoArgs(argv, demo)).toEqual({ ok: false, error: "Usage: demo" });
   });
 });

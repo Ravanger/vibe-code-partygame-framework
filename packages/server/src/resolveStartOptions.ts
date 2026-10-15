@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { RoomCodeService } from "./services/RoomCodeService.js";
 
 export interface StartPorts {
@@ -8,14 +9,26 @@ export interface StartPorts {
   roomCodeService?: RoomCodeService;
 }
 
+const portFrom = (name: string, raw: string | undefined, fallback: number): number => {
+  if (raw === undefined) return fallback;
+  const parsed = z
+    .string()
+    .regex(/^\d+$/)
+    .transform(Number)
+    .pipe(z.number().int().min(1).max(65535))
+    .safeParse(raw);
+  if (!parsed.success) throw new Error(`${name} must be a whole number from 1 to 65535`);
+  return parsed.data;
+};
+
 /** Fills in the ports and the shared room-code service for `startServer`. */
 export function resolveStartOptions(
   options: StartPorts,
   env: Record<string, string | undefined>,
 ): { port: number; apiPort: number; roomCodeService: RoomCodeService } {
   return {
-    port: options.port ?? Number(env.PORT ?? 2567),
-    apiPort: options.apiPort ?? Number(env.API_PORT ?? 3001),
+    port: options.port ?? portFrom("PORT", env.PORT, 2567),
+    apiPort: options.apiPort ?? portFrom("API_PORT", env.API_PORT, 3001),
     roomCodeService: options.roomCodeService ?? new RoomCodeService(),
   };
 }

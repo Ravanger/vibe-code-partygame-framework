@@ -1,6 +1,6 @@
-const CODE_LENGTH = 4;
+import { ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH } from "@partygame/shared";
+
 const MAX_ATTEMPTS = 10;
-const CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 export class RoomCodeService {
   private codeToRoomId: Map<string, string> = new Map();
@@ -9,8 +9,8 @@ export class RoomCodeService {
   generateCode(): string {
     for (let attempt = 0; attempt < MAX_ATTEMPTS; ++attempt) {
       let code = "";
-      for (let i = 0; i < CODE_LENGTH; ++i) {
-        code += CHARSET[Math.floor(Math.random() * CHARSET.length)];
+      for (let i = 0; i < ROOM_CODE_LENGTH; ++i) {
+        code += ROOM_CODE_ALPHABET[Math.floor(Math.random() * ROOM_CODE_ALPHABET.length)];
       }
       if (!this.codeToRoomId.has(code)) return code;
     }
