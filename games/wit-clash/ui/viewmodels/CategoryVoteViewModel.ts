@@ -1,6 +1,7 @@
+import { OptionsReader, PhaseClock } from "@partygame/game-ui";
 import { ACTION } from "../../src/actionNames.js";
+import { DEFAULT_OPTIONS, type WitClashOptions, WitClashOptionsSchema } from "../../src/options.js";
 import type { WitClashManager } from "../manager.js";
-import { PhaseClock } from "./PhaseClock.js";
 
 export interface CategoryChoice {
   id: string;
@@ -13,7 +14,12 @@ export class CategoryVoteViewModel {
   private readonly clock: PhaseClock;
 
   constructor(private readonly manager: WitClashManager) {
-    this.clock = new PhaseClock(manager, "categoryVoteSeconds");
+    const options = new OptionsReader<WitClashOptions>(
+      manager,
+      WitClashOptionsSchema,
+      DEFAULT_OPTIONS,
+    );
+    this.clock = new PhaseClock(manager, () => options.current.categoryVoteSeconds);
   }
 
   get isSpectator(): boolean {

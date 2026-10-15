@@ -62,7 +62,7 @@ Each package's README has its API. Each package also has an `AGENTS.md` (respons
 | [`packages/core`](packages/core/README.md) | pure runtime, no Colyseus: `defineGame`, `actionFactory`, `GameRuntime`, built-in lobby actions, action log, scoring helpers; `/testing` (`FakeHost`, `TestTable`, `replayLog`) |
 | [`packages/server`](packages/server/README.md) | Colyseus host: `createGameServer`, `GameRoom`, `RoomCodeService`, `createApiHandler`; `/bun`, `/node`, `/content`, `/testing` |
 | [`packages/game-client`](packages/game-client/README.md) | Svelte 5 SDK: `GameConnectionManager`, `Countdown`, `resolveEndpoints`; `/testing`, `/test-setup` |
-| [`packages/game-ui`](packages/game-ui/README.md) | viewmodels (welcome, waiting room, settings, controls), `AppRouter`, rank helpers; `/components` |
+| [`packages/game-ui`](packages/game-ui/README.md) | viewmodels (welcome, waiting room, settings, controls, phase clock, typing), `AppRouter`, rank helpers; `/components` |
 | [`packages/bots`](packages/bots/README.md) | `BotPlayer`, `joinBots`, `BotTable`, `DemoTable`; a game supplies a `BotStrategy` |
 | [`packages/terminal`](packages/terminal/README.md) | `TerminalPlayer`, `PlaySession`, arg parsers, `runBotsCommand`; a game supplies a `TerminalStrategy` |
 | [`packages/launcher`](packages/launcher/README.md) | `runLauncher(config, argv)`: server, API, client and bot tables |

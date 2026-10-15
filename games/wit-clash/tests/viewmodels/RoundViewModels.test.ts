@@ -57,6 +57,7 @@ describe("CategoryVoteViewModel", () => {
   it("counts down and announces only at 30, 10 and 5 seconds", () => {
     const { c, vm } = voting();
     expect(vm.secondsLeft).toBe(30);
+    expect(vm.totalSeconds).toBe(60);
     expect(vm.announcement).toBe("30 seconds remaining");
     expect(vm.isUrgent).toBe(false);
     c.state.phaseEndsAt = 1_000_000 + 7000;
