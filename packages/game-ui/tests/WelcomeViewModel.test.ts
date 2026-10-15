@@ -1,4 +1,5 @@
 import { connectedClient, type FetchStub, fakeFetch } from "@partygame/game-client/testing";
+import { CLIENT_MESSAGES, CLOSE_CODES } from "@partygame/shared";
 import { BaseGameState } from "@partygame/shared/schema";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WelcomeViewModel } from "../src/WelcomeViewModel.svelte.js";
@@ -32,7 +33,8 @@ describe("WelcomeViewModel", () => {
     manager.dispose();
     const vm = new WelcomeViewModel(manager);
     await vm.host();
-    expect(vm.localError).toBe("Server down");
+    expect(vm.localError).toBe(CLIENT_MESSAGES.CONNECTION_LOST);
+    expect(vm.localError).not.toContain("Server down");
     expect(network.urls.some((url) => url.includes("/matchmake/create/"))).toBe(true);
     vm.dismissError();
     expect(vm.localError).toBeUndefined();
@@ -46,17 +48,17 @@ describe("WelcomeViewModel", () => {
     vm.setCode("wxyz");
     await vm.join();
     expect(network.urls).toEqual([expect.stringContaining("code=WXYZ")]);
-    expect(vm.localError).toBe("Game code not found");
+    expect(vm.localError).toBe(CLIENT_MESSAGES.CONNECTION_LOST);
   });
 
-  it("shows a failure that is not an Error as text", async () => {
+  it("shows a fixed message for a failure that is not an Error", async () => {
     stubFetch("plain failure");
     const { manager } = client();
     manager.dispose();
     const vm = new WelcomeViewModel(manager);
     vm.setCode("wxyz");
     await vm.join();
-    expect(vm.localError).toBe("plain failure");
+    expect(vm.localError).toBe(CLIENT_MESSAGES.CONNECTION_LOST);
   });
 
   it("explains a code that is too short without asking the network", async () => {
@@ -68,6 +70,42 @@ describe("WelcomeViewModel", () => {
     await vm.join();
     expect(vm.localError).toBe("Game code must be 4 letters (A-Z)");
     expect(network.urls).toEqual([]);
+  });
+
+  it("shows no local error when the manager recorded a refused join, so exactly one error renders", async () => {
+    const { manager } = client();
+    vi.spyOn(manager, "join").mockImplementation(() => {
+      manager.lastServerError = {
+        code: CLOSE_CODES.ROOM_FULL.errorCode,
+        message: CLOSE_CODES.ROOM_FULL.message,
+      };
+      return Promise.reject(new Error("Room is full: internal detail"));
+    });
+    const vm = new WelcomeViewModel(manager);
+    vm.setCode("wxyz");
+    await vm.join();
+    expect(vm.localError).toBeUndefined();
+    expect(manager.lastServerError?.message).toBe(CLOSE_CODES.ROOM_FULL.message);
+  });
+
+  it("clears an earlier server error before a new attempt", async () => {
+    const { manager } = client();
+    manager.lastServerError = { code: "KICKED", message: "old" };
+    vi.spyOn(manager, "join").mockRejectedValue(new Error("x"));
+    const vm = new WelcomeViewModel(manager);
+    vm.setCode("wxyz");
+    await vm.join();
+    expect(vm.localError).toBe(CLIENT_MESSAGES.CONNECTION_LOST);
+  });
+
+  it("explains a short code on watch without connecting", async () => {
+    const { manager } = client();
+    const watch = vi.spyOn(manager, "joinAsSpectator").mockResolvedValue();
+    const vm = new WelcomeViewModel(manager);
+    vm.setCode("ab");
+    await vm.watch();
+    expect(vm.localError).toBe("Game code must be 4 letters (A-Z)");
+    expect(watch).not.toHaveBeenCalled();
   });
 
   it("is busy only while connecting", () => {
@@ -106,7 +144,7 @@ describe("WelcomeViewModel", () => {
     vm.setCode("wxyz");
     await vm.watch();
     expect(watch).toHaveBeenCalledWith("WXYZ");
-    expect(vm.localError).toBe("No such room");
+    expect(vm.localError).toBe(CLIENT_MESSAGES.CONNECTION_LOST);
     watch.mockResolvedValueOnce();
     await vm.watch();
     expect(vm.localError).toBeUndefined();

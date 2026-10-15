@@ -24,7 +24,7 @@ export interface CloseCode {
   message: string;
 }
 
-/** Join/create close codes (4400-4404), each mapped to an {@link ErrorCode} and a fixed message. */
+/** Join/create close codes (4400-4404, 4500), each mapped to an {@link ErrorCode} and a fixed message. */
 export const CLOSE_CODES = {
   INVALID_OPTIONS: {
     code: 4400,
@@ -38,6 +38,11 @@ export const CLOSE_CODES = {
     code: 4404,
     errorCode: ErrorCode.NOT_ALLOWED,
     message: "This room is watch-only",
+  },
+  INTERNAL: {
+    code: 4500,
+    errorCode: ErrorCode.INTERNAL,
+    message: "The server could not handle the request",
   },
 } satisfies Record<string, CloseCode>;
 

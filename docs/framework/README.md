@@ -361,13 +361,16 @@ Client-visible error strings are fixed and table-driven; raw Zod or exception te
   | 4402 | `SEAT_REMOVED` | `KICKED` | Your seat was removed |
   | 4403 | `KICKED_REJOIN` | `KICKED` | Removed by the host |
   | 4404 | `WATCH_ONLY` | `NOT_ALLOWED` | This room is watch-only |
+  | 4500 | `INTERNAL` | `INTERNAL` | The server could not handle the request |
 
 - Invalid create or join options are `safeParse`d and refused with the close code above, so a bad option never
-  surfaces Zod text. Hook failures reach clients only as `INTERNAL` plus the fixed failure notice.
+  surfaces Zod text; the issues are logged server-side with `logger.warn`. An unexpected throw while creating a room
+  or joining one (a failing room code service, state constructor or other bug) is logged with `logger.error` and
+  closes with `4500`, never with the exception text. Hook failures reach clients only as `INTERNAL` plus the fixed failure notice.
 - `ctx.reject(code, message)` is the one game-authored exception: your message is passed through to the client.
   Keep it short and player-facing; the code still comes from `ErrorCode`.
 - The client keeps one `lastServerError` (`GameConnectionManager.lastServerError`): server `ERROR` payloads,
-  failed action answers, refused joins (looked up by close code) and a fixed `NOT_CONNECTED`, `CONNECTION_LOST` or `BAD_REPLY` message for local failures (the exception goes to the manager's `logger` option, default `console.warn`).
+  failed action answers, refused joins (looked up by close code; the welcome screen shows no second message for them) and a fixed `NOT_CONNECTED`, `CONNECTION_LOST` or `BAD_REPLY` message for local failures (the exception goes to the manager's `logger` option, default `console.warn`).
   `ServerError.action` is set only by `ctx.reject` and invalid-payload rejections; framework rejections omit it.
   Clear it with `dismissError()`.
 
