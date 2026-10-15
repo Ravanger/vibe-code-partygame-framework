@@ -1,6 +1,6 @@
 import { ResolveCodeResponseSchema } from "@partygame/shared";
 
-/** Turns a room code into a room id through `GET {apiBase}/api/resolve-code`. */
+/** Turns a four-letter code into a room id through `GET {apiBase}/api/resolve-code`. */
 export async function resolveRoomCode(apiBase: string, code: string): Promise<string> {
   const response = await fetch(`${apiBase}/api/resolve-code?code=${code}`);
   const body = ResolveCodeResponseSchema.safeParse(await response.json());
