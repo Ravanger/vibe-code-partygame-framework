@@ -19,17 +19,19 @@ describe("FrameworkError", () => {
 });
 
 describe("CLOSE_CODES", () => {
-  it("maps the four join/create close codes to error codes and fixed messages", () => {
+  it("maps the five join/create close codes to error codes and fixed messages", () => {
     expect(Object.keys(CLOSE_CODES).sort()).toEqual([
       "INVALID_OPTIONS",
-      "JOIN_REFUSED",
+      "KICKED_REJOIN",
       "ROOM_FULL",
       "SEAT_REMOVED",
+      "WATCH_ONLY",
     ]);
     expect(CLOSE_CODES.INVALID_OPTIONS.code).toBe(4400);
     expect(CLOSE_CODES.ROOM_FULL.code).toBe(4401);
     expect(CLOSE_CODES.SEAT_REMOVED.code).toBe(4402);
-    expect(CLOSE_CODES.JOIN_REFUSED.code).toBe(4403);
+    expect(CLOSE_CODES.KICKED_REJOIN.code).toBe(4403);
+    expect(CLOSE_CODES.WATCH_ONLY.code).toBe(4404);
   });
 
   it("has a well-formed entry for every close code", () => {
@@ -45,7 +47,10 @@ describe("CLOSE_CODES", () => {
     expect(CLOSE_CODES.INVALID_OPTIONS.message).toBe("Invalid room options");
     expect(CLOSE_CODES.ROOM_FULL.message).toBe("Room is full");
     expect(CLOSE_CODES.SEAT_REMOVED.message).toBe("Your seat was removed");
-    expect(CLOSE_CODES.JOIN_REFUSED.message).toBe("You cannot join this room");
+    expect(CLOSE_CODES.KICKED_REJOIN.message).toBe(CLIENT_MESSAGES.KICKED);
+    expect(CLOSE_CODES.WATCH_ONLY.message).toBe("This room is watch-only");
+    expect(CLOSE_CODES.KICKED_REJOIN.errorCode).toBe(ErrorCode.KICKED);
+    expect(CLOSE_CODES.WATCH_ONLY.errorCode).toBe(ErrorCode.NOT_ALLOWED);
   });
 });
 
@@ -59,7 +64,7 @@ describe("closeCodeEntry", () => {
 
   it("returns undefined for unknown numbers", () => {
     expect(closeCodeEntry(2000)).toBeUndefined();
-    expect(closeCodeEntry(4404)).toBeUndefined();
+    expect(closeCodeEntry(4405)).toBeUndefined();
     expect(closeCodeEntry(-1)).toBeUndefined();
   });
 });

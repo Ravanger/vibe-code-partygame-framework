@@ -104,9 +104,9 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     const parsed = JoinOptionsSchema.safeParse(options);
     if (!parsed.success) throw this.closeWith(CLOSE_CODES.INVALID_OPTIONS);
     const { playerId, name, spectator } = parsed.data;
-    if (this.kicked.has(playerId)) throw this.closeWith(CLOSE_CODES.JOIN_REFUSED);
+    if (this.kicked.has(playerId)) throw this.closeWith(CLOSE_CODES.KICKED_REJOIN);
     if (!spectator && this.seatList && !this.seatList.has(playerId)) {
-      throw this.closeWith(CLOSE_CODES.JOIN_REFUSED);
+      throw this.closeWith(CLOSE_CODES.WATCH_ONLY);
     }
     const view = new StateView();
     client.view = view;

@@ -188,12 +188,12 @@ describe("GameRoom host controls", () => {
     await waitUntil(() => p2.errors.length === 1, "kicked");
     await waitUntil(() => !stateOf(room).players.has(pid(2)), "seat removed");
     await expect(t.join(room, { playerId: pid(2) })).rejects.toMatchObject({
-      code: CLOSE_CODES.JOIN_REFUSED.code,
-      message: CLOSE_CODES.JOIN_REFUSED.message,
+      code: CLOSE_CODES.KICKED_REJOIN.code,
+      message: CLOSE_CODES.KICKED_REJOIN.message,
     });
     await expect(t.join(room, { playerId: pid(2), spectator: true })).rejects.toMatchObject({
-      code: CLOSE_CODES.JOIN_REFUSED.code,
-      message: CLOSE_CODES.JOIN_REFUSED.message,
+      code: CLOSE_CODES.KICKED_REJOIN.code,
+      message: CLOSE_CODES.KICKED_REJOIN.message,
     });
     expect(stateOf(room).players.has(pid(2))).toBe(false);
     const other = await t.join(room, { playerId: pid(3) });

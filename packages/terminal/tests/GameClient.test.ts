@@ -38,7 +38,7 @@ describe("GameClient", () => {
     const hostId = crypto.randomUUID();
     const host = await client.create(hostId, "Ann", { seats: [hostId] });
     await expect(client.join(host.state.roomCode, crypto.randomUUID(), "Zed")).rejects.toThrow(
-      CLOSE_CODES.JOIN_REFUSED.message,
+      CLOSE_CODES.WATCH_ONLY.message,
     );
     await host.leave(true);
   });

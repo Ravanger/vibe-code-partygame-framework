@@ -24,7 +24,7 @@ export interface CloseCode {
   message: string;
 }
 
-/** Join/create close codes (4400-4403), each mapped to an {@link ErrorCode} and a fixed message. */
+/** Join/create close codes (4400-4404), each mapped to an {@link ErrorCode} and a fixed message. */
 export const CLOSE_CODES = {
   INVALID_OPTIONS: {
     code: 4400,
@@ -33,10 +33,11 @@ export const CLOSE_CODES = {
   },
   ROOM_FULL: { code: 4401, errorCode: ErrorCode.NOT_ALLOWED, message: "Room is full" },
   SEAT_REMOVED: { code: 4402, errorCode: ErrorCode.KICKED, message: "Your seat was removed" },
-  JOIN_REFUSED: {
-    code: 4403,
+  KICKED_REJOIN: { code: 4403, errorCode: ErrorCode.KICKED, message: "Removed by the host" },
+  WATCH_ONLY: {
+    code: 4404,
     errorCode: ErrorCode.NOT_ALLOWED,
-    message: "You cannot join this room",
+    message: "This room is watch-only",
   },
 } satisfies Record<string, CloseCode>;
 

@@ -283,6 +283,19 @@ describe("refused joins", () => {
     });
   });
 
+  it.each([CLOSE_CODES.KICKED_REJOIN, CLOSE_CODES.WATCH_ONLY])(
+    "records a refused join closed with $code as its own fixed message",
+    async (entry) => {
+      const manager = newManager();
+      vi.stubGlobal("fetch", fakeFetch({ roomId: "room-1" }).fetch);
+      vi.spyOn(Client.prototype, "joinById").mockRejectedValue(
+        Object.assign(new Error("internal detail"), { code: entry.code }),
+      );
+      await expect(manager.join("ABCD")).rejects.toThrow();
+      expect(manager.lastServerError).toEqual({ code: entry.errorCode, message: entry.message });
+    },
+  );
+
   it("never records the text of a rejection without a close code", async () => {
     const manager = newManager();
     vi.spyOn(Client.prototype, "create").mockRejectedValue(new Error('Zod: buzzMs must be "fast"'));

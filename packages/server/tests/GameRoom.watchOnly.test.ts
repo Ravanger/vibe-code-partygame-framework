@@ -16,8 +16,8 @@ describe("GameRoom with a seats list", () => {
     await t.join(room, { playerId: pid(1) });
     await t.join(room, { playerId: pid(2) });
     await expect(t.join(room, { playerId: pid(3) })).rejects.toMatchObject({
-      code: CLOSE_CODES.JOIN_REFUSED.code,
-      message: CLOSE_CODES.JOIN_REFUSED.message,
+      code: CLOSE_CODES.WATCH_ONLY.code,
+      message: CLOSE_CODES.WATCH_ONLY.message,
     });
     await t.join(room, { playerId: pid(3), spectator: true });
     expect(stateOf(room).players.size).toBe(2);
@@ -34,8 +34,8 @@ describe("GameRoom with a seats list", () => {
   it("refuses everyone who wants a seat when the list is empty", async () => {
     const room = await t.createRoom("buzzer", { seats: [] });
     await expect(t.join(room, { playerId: pid(1) })).rejects.toMatchObject({
-      code: CLOSE_CODES.JOIN_REFUSED.code,
-      message: CLOSE_CODES.JOIN_REFUSED.message,
+      code: CLOSE_CODES.WATCH_ONLY.code,
+      message: CLOSE_CODES.WATCH_ONLY.message,
     });
   });
 

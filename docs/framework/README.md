@@ -359,7 +359,8 @@ Client-visible error strings are fixed and table-driven; raw Zod or exception te
   | 4400 | `INVALID_OPTIONS` | `INVALID_ACTION` | Invalid room options |
   | 4401 | `ROOM_FULL` | `NOT_ALLOWED` | Room is full |
   | 4402 | `SEAT_REMOVED` | `KICKED` | Your seat was removed |
-  | 4403 | `JOIN_REFUSED` | `NOT_ALLOWED` | You cannot join this room |
+  | 4403 | `KICKED_REJOIN` | `KICKED` | Removed by the host |
+  | 4404 | `WATCH_ONLY` | `NOT_ALLOWED` | This room is watch-only |
 
 - Invalid create or join options are `safeParse`d and refused with the close code above, so a bad option never
   surfaces Zod text. Hook failures reach clients only as `INTERNAL` plus the fixed failure notice.
@@ -516,7 +517,7 @@ Elsewhere: `createGameServer({ games, roomCodeService?, transport?, reconnectMs?
 and `createApiHandler(roomCodeService)` is the pure `(Request) => Response` behind `/api/resolve-code`.
 
 Clients join with `{ playerId, name? }` (`spectator: true` for a TV display: no seat, counted in `spectatorCount`).
-Create a watch-only room with the framework option `seats: string[]` (the playerIds allowed to take a seat): any other non-spectator join is refused with `4403 "This room is watch-only"`, spectators still join. It is not a game option and is not published in `state.options`.
+Create a watch-only room with the framework option `seats: string[]` (the playerIds allowed to take a seat): any other non-spectator join is refused with `4404 "This room is watch-only"`, spectators still join. It is not a game option and is not published in `state.options`.
 `SET_NAME` readies a seat (a name another seat has is refused with `NAME_TAKEN`; a join-time `name` that is taken is ignored and the seat joins unnamed). A room is kept alive only by connected seats: once the last one is gone for `emptyRoomGraceMs`, the room is disposed and any spectators are disconnected. `ACTION` carries your actions (`room.send` or `room.request`, see Actions). A dropped connection holds the seat for `reconnectMs`
 (token reconnect or a new session with the same `playerId`); a mid-game joiner is seated inactive.
 When the host leaves or drops, the role moves to a connected seat that is active and ready, else one that is ready, else any connected seat.
