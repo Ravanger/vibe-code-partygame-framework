@@ -22,7 +22,7 @@ describe("leaderboard properties", () => {
           if (prev === undefined || cur === undefined) throw new Error("index out of range");
           expect(prev.score >= cur.score).toBe(true);
           if (prev.score === cur.score) {
-            expect(prev.playerId.localeCompare(cur.playerId)).toBeLessThan(0);
+            expect(prev.playerId < cur.playerId).toBe(true);
           }
         }
         const reversed = Object.fromEntries(Object.entries(scores).reverse());
@@ -56,7 +56,11 @@ describe("composeLeaderboard properties", () => {
         if (firstLeaver >= 0) expect(board.slice(firstLeaver).every((e) => e.hasLeft)).toBe(true);
         for (const group of [board.filter((e) => !e.hasLeft), board.filter((e) => e.hasLeft)]) {
           expect(group).toEqual(
-            [...group].sort((a, b) => b.score - a.score || a.playerId.localeCompare(b.playerId)),
+            [...group].sort(
+              (a, b) =>
+                b.score - a.score ||
+                (a.playerId < b.playerId ? -1 : a.playerId > b.playerId ? 1 : 0),
+            ),
           );
         }
       }),

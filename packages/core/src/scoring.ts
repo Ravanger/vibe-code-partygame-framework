@@ -7,13 +7,13 @@ export function awardPoints(
   scores[playerId] = (scores[playerId] ?? 0) + points;
 }
 
-/** Scores as a list, highest first; ties break by playerId. */
+/** Scores as a list, highest first; ties break by playerId in code-point order. */
 export function leaderboard(
   scores: Record<string, number>,
 ): Array<{ playerId: string; score: number }> {
   return Object.entries(scores)
     .map(([playerId, score]) => ({ playerId, score }))
-    .sort((a, b) => b.score - a.score || a.playerId.localeCompare(b.playerId));
+    .sort((a, b) => b.score - a.score || (a.playerId < b.playerId ? -1 : 1));
 }
 
 export interface LeaderboardEntry {

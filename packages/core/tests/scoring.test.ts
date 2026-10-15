@@ -23,6 +23,14 @@ describe("leaderboard", () => {
   it("breaks equal scores deterministically", () => {
     expect(leaderboard({ b: 100, a: 100 })).toEqual(leaderboard({ a: 100, b: 100 }));
   });
+  it("breaks ties by code-point order, not locale", () => {
+    const sorted = leaderboard({ aaaaaaaa: 100, Baaaaaaa: 100 });
+    expect(sorted.map((e) => e.playerId)).toEqual(["Baaaaaaa", "aaaaaaaa"]);
+  });
+  it("handles three-way ties in code-point order", () => {
+    const sorted = leaderboard({ ccc: 50, aaa: 50, bbb: 50 });
+    expect(sorted.map((e) => e.playerId)).toEqual(["aaa", "bbb", "ccc"]);
+  });
   it("handles an empty map", () => {
     expect(leaderboard({})).toEqual([]);
   });
