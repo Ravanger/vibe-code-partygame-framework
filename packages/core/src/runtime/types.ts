@@ -158,7 +158,7 @@ export interface GameDefinition<
   startPhase: string;
   /** Start as soon as everyone is ready and `minPlayers` is met, without the host pressing Start. Default false. */
   autoStart?: boolean;
-  /** Parses the room-create options. Omit to pass them through. */
+  /** Parses the room-create options. Omit for a game without options. */
   options?: z.ZodType<TOptions>;
   /** Called once per room (and per replay table); must return a fresh object each call, never a shared one: the action log and phase timings are keyed by it. */
   createPrivateState(): TPrivate;

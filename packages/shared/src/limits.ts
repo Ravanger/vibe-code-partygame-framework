@@ -4,6 +4,9 @@ export const NAME_MAX_LENGTH = 20;
 /** Most playerIds the `seats` room option may list; a room also rejects more than its game's `maxPlayers`. */
 export const MAX_SEATS = 64;
 
+/** Longest `JSON.stringify` of a room's options, checked at room creation and in `SET_OPTIONS`. */
+export const MAX_OPTIONS_JSON_LENGTH = 4096;
+
 /** How many letters a room code has. */
 export const ROOM_CODE_LENGTH = 4;
 

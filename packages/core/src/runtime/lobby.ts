@@ -4,6 +4,7 @@ import {
   ErrorCode,
   FrameworkError,
   LOBBY_PHASE,
+  MAX_OPTIONS_JSON_LENGTH,
   SET_OPTIONS,
   START_GAME,
 } from "@partygame/shared";
@@ -110,6 +111,10 @@ export class Lobby<TState extends PhaseState, TPrivate, TOptions> {
       payload: z.looseObject({}),
       handler: (ctx) => {
         const { type: _type, ...partial } = ctx.payload;
+        if (!definition.options && Object.keys(partial).length > 0) {
+          ctx.reject(ErrorCode.INVALID_ACTION, CLIENT_MESSAGES.INVALID_ACTION);
+          return;
+        }
         const merged = { ...options.get(), ...partial };
         const parsed = definition.options ? definition.options.safeParse(merged) : undefined;
         if (parsed && !parsed.success) {
@@ -117,6 +122,10 @@ export class Lobby<TState extends PhaseState, TPrivate, TOptions> {
           return;
         }
         const next = (parsed ? parsed.data : merged) as TOptions;
+        if (JSON.stringify(next).length > MAX_OPTIONS_JSON_LENGTH) {
+          ctx.reject(ErrorCode.INVALID_ACTION, CLIENT_MESSAGES.INVALID_ACTION);
+          return;
+        }
         options.set(next);
         host.publishOptions(next);
       },

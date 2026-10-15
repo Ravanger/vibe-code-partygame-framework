@@ -1,4 +1,9 @@
-import { CLIENT_MESSAGES, ErrorCode, FrameworkError } from "@partygame/shared";
+import {
+  CLIENT_MESSAGES,
+  ErrorCode,
+  FrameworkError,
+  MAX_OPTIONS_JSON_LENGTH,
+} from "@partygame/shared";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
@@ -1478,13 +1483,24 @@ describe("SET_OPTIONS", () => {
     expect(host.published).toEqual([]);
   });
 
-  it("merges unvalidated when the game declares no options schema", () => {
+  it("rejects any non-type keys when the game declares no options schema", () => {
     const { runtime, host } = setup2({ options: undefined });
     runtime.dispatch("p1", { type: "SET_OPTIONS", a: 1 });
-    runtime.dispatch("p1", { type: "SET_OPTIONS", b: 2 });
-    expect(host.published).toEqual([
-      { rounds: 3, a: 1 },
-      { rounds: 3, a: 1, b: 2 },
-    ]);
+    expect(host.errorsTo("p1")[0]).toMatchObject({ code: "INVALID_ACTION", action: "SET_OPTIONS" });
+    expect(host.published).toEqual([]);
+  });
+
+  it("accepts empty SET_OPTIONS when the game declares no options schema and publishes the unchanged options", () => {
+    const { runtime, host } = setup2({ options: undefined });
+    runtime.dispatch("p1", { type: "SET_OPTIONS" });
+    expect(host.errorsTo("p1")).toEqual([]);
+    expect(host.published).toEqual([{ rounds: 3 }]);
+  });
+
+  it("rejects options whose JSON exceeds MAX_OPTIONS_JSON_LENGTH", () => {
+    const { runtime, host } = setup2({ options: z.looseObject({ rounds: z.number() }) });
+    runtime.dispatch("p1", { type: "SET_OPTIONS", data: "x".repeat(MAX_OPTIONS_JSON_LENGTH) });
+    expect(host.errorsTo("p1")[0]).toMatchObject({ code: "INVALID_ACTION", action: "SET_OPTIONS" });
+    expect(host.published).toEqual([]);
   });
 });

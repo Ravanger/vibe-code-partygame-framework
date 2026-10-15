@@ -18,6 +18,7 @@ import {
   ErrorCode,
   JoinOptionsSchema,
   LOBBY_PHASE,
+  MAX_OPTIONS_JSON_LENGTH,
   type ServerError as ProtocolError,
   RoomOptionsSchema,
   ServerMessage,
@@ -112,11 +113,17 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     const rawOptions = Object.fromEntries(
       Object.entries(options).filter(([key]) => !FRAMEWORK_KEYS.includes(key)),
     );
+    if (!definition.options && Object.keys(rawOptions).length > 0) {
+      throw this.closeWith(CLOSE_CODES.INVALID_OPTIONS);
+    }
     const optionsResult = definition.options?.safeParse(rawOptions);
     if (optionsResult && !optionsResult.success) {
       throw this.invalidOptions("create", optionsResult.error);
     }
     const parsedOptions = optionsResult ? optionsResult.data : rawOptions;
+    if (JSON.stringify(parsedOptions).length > MAX_OPTIONS_JSON_LENGTH) {
+      throw this.closeWith(CLOSE_CODES.INVALID_OPTIONS);
+    }
     const state = new stateClass();
     state.minPlayers = definition.minPlayers;
     state.maxPlayers = definition.maxPlayers;
