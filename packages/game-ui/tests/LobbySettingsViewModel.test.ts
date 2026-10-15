@@ -43,13 +43,9 @@ describe("LobbySettingsViewModel", () => {
     ).toBe("20");
   });
 
-  it("shows nothing for a schema that does not publish an object and has no defaults", () => {
+  it("throws when the schema has no field defaults and none are given", () => {
     const c = client();
-    c.state.options = "5";
-    const vm = new LobbySettingsViewModel(c.manager, { schema: z.number() });
-    expect(vm.valueOf("turnSeconds")).toBe("");
-    c.state.options = "{}";
-    expect(vm.valueOf("turnSeconds")).toBe("");
+    expect(() => new LobbySettingsViewModel(c.manager, { schema: z.number() })).toThrow();
   });
 
   it("lets only the host edit", async () => {
@@ -78,6 +74,38 @@ describe("LobbySettingsViewModel", () => {
     const host = client({ role: "host" });
     await model(host).commit("turnSeconds");
     expect(host.room.requests).toEqual([]);
+  });
+
+  it("clearing a field sends nothing and restores the published value", async () => {
+    const host = client({ role: "host" });
+    host.state.options = JSON.stringify({ turnSeconds: 30 });
+    const vm = model(host);
+    expect(vm.valueOf("turnSeconds")).toBe("30");
+    vm.setDraft("turnSeconds", "");
+    await vm.commit("turnSeconds");
+    expect(host.room.requests).toEqual([]);
+    expect(vm.valueOf("turnSeconds")).toBe("30");
+  });
+
+  it("drops a non-numeric draft without sending", async () => {
+    const host = client({ role: "host" });
+    const vm = model(host);
+    vm.setDraft("turnSeconds", "abc");
+    await vm.commit("turnSeconds");
+    expect(host.room.requests).toEqual([]);
+    expect(vm.valueOf("turnSeconds")).toBe("20");
+  });
+
+  it("still sends a value the schema would reject; the server validates", async () => {
+    const host = client({ role: "host" });
+    const vm = new LobbySettingsViewModel(host.manager, {
+      schema: z.object({ n: z.number().int().min(1).default(2) }),
+    });
+    vm.setDraft("n", "0");
+    await vm.commit("n");
+    expect(host.room.requests).toEqual([
+      { type: "ACTION", payload: { n: 0, type: "SET_OPTIONS" } },
+    ]);
   });
 
   it("puts the published value back when the server rejects", async () => {

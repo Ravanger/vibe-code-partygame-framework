@@ -6,6 +6,7 @@ export {
 } from "./LobbySettingsViewModel.svelte.js";
 export { NameField } from "./NameField.svelte.js";
 export { type OptionField, OptionFields } from "./OptionFields.js";
+export { OptionsReader } from "./OptionsReader.svelte.js";
 export {
   playerSticker,
   STICKER_SHAPES,
