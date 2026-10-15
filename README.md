@@ -26,7 +26,7 @@ Bots answer and vote by themselves; you host and press Start. Ctrl+C stops them.
 | `launch --bots=N` | dev + N bots (1-7) |
 | `launch:demo` | dev + a watch-only room that bots play alone; opens its TV view (`--demo=N` bots, 2-7) |
 | `play` | play in the terminal (`--bots=N`) |
-| `bun run --cwd games/wit-clash demo` | watch an all-bot WitClash game (`--bots=N`, `--rounds=R`) |
+| `bun run --cwd games/wit-clash demo` | watch an all-bot WitClash game (`--bots=N`) |
 | `test:coverage` | tests, 100% coverage enforced |
 | `typecheck` / `lint` / `verify` | tsc + svelte-check / Biome / all |
 
