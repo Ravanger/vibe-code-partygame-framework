@@ -4,7 +4,7 @@ Wire protocol (message names, error codes, zod schemas), limits and browser-safe
 
 | Import | What |
 |---|---|
-| `@partygame/shared` | `ClientMessage`, `ServerMessage`, `ErrorCode`, `ActionResult`, `ServerError`, `isActionResult`, `isServerError`, `LOBBY_PHASE`, zod schemas (`RoomCodeSchema`, `JoinOptionsSchema`, ...), `NAME_MAX_LENGTH`, `ROOM_CODE_LENGTH`, `ROOM_CODE_ALPHABET`, `sanitizeRoomCode`, error model (`FrameworkError`, `CLOSE_CODES`, `closeCodeEntry`, `CLIENT_MESSAGES`) |
+| `@partygame/shared` | `ClientMessage`, `ServerMessage`, `ErrorCode`, `ActionResult`, `ServerError`, `isActionResult`, `isServerError`, `LOBBY_PHASE`, zod schemas (`PlayerIdSchema`, `RoomCodeSchema`, `JoinOptionsSchema`, ...), `NAME_MAX_LENGTH`, `ROOM_CODE_LENGTH`, `ROOM_CODE_ALPHABET`, `sanitizeRoomCode`, error model (`FrameworkError`, `CLOSE_CODES`, `closeCodeEntry`, `CLIENT_MESSAGES`) |
 | `@partygame/shared/schema` | `BaseGameState`, `PlayerSchema`: extend these in your game state |
 
 Client helpers (polling, room-code resolution, share links, argument parsing) live in [`@partygame/client-utils`](../client-utils/README.md).

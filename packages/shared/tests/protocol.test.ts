@@ -102,6 +102,29 @@ describe("PlayerIdSchema", () => {
     expect(PlayerIdSchema.safeParse("a".repeat(7)).success).toBe(false);
     expect(PlayerIdSchema.safeParse("a".repeat(65)).success).toBe(false);
   });
+  it("rejects reserved prototype property names", () => {
+    const reserved = Object.getOwnPropertyNames(Object.prototype).filter(
+      (name) => name.length >= 8 && name.length <= 64,
+    );
+    for (const name of reserved) {
+      const result = PlayerIdSchema.safeParse(name);
+      expect(result.success).toBe(false);
+    }
+  });
+  it("rejects ids with characters outside [A-Za-z0-9_-]", () => {
+    const invalid = ["abcdefg!", "abc defgh", "abc@defgh", "abc/defgh", "abc.defgh", "abcdefg#"];
+    for (const id of invalid) {
+      const result = PlayerIdSchema.safeParse(id);
+      expect(result.success).toBe(false);
+    }
+  });
+  it("accepts valid ids with A-Za-z0-9_-", () => {
+    expect(PlayerIdSchema.safeParse("validID01").success).toBe(true);
+    expect(PlayerIdSchema.safeParse("valid_id_01").success).toBe(true);
+    expect(PlayerIdSchema.safeParse("valid-id-01").success).toBe(true);
+    expect(PlayerIdSchema.safeParse("VALID_ID_01").success).toBe(true);
+    expect(PlayerIdSchema.safeParse("12345678").success).toBe(true);
+  });
 });
 
 describe("RoomOptionsSchema", () => {

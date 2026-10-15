@@ -4,7 +4,13 @@ export function awardPoints(
   playerId: string,
   points: number,
 ): void {
-  scores[playerId] = (scores[playerId] ?? 0) + points;
+  const current = Object.hasOwn(scores, playerId) ? (scores[playerId] as number) : 0;
+  Object.defineProperty(scores, playerId, {
+    value: current + points,
+    enumerable: true,
+    writable: true,
+    configurable: true,
+  });
 }
 
 /** Scores as a list, highest first; ties break by playerId in code-point order. */
@@ -34,12 +40,16 @@ export interface LeaderboardInput {
 /** Everyone in `ids` and `scores` (missing scores are 0), seated players first then leavers, each group best first; names from seatedNames, else rememberedNames, else "". */
 export function composeLeaderboard(input: LeaderboardInput): LeaderboardEntry[] {
   const totals: Record<string, number> = {};
-  for (const id of [...(input.ids ?? []), ...Object.keys(input.scores)]) {
-    totals[id] = input.scores[id] ?? 0;
-  }
+  for (const id of input.ids ?? []) awardPoints(totals, id, 0);
+  for (const [id, score] of Object.entries(input.scores)) awardPoints(totals, id, score);
   const ranked = leaderboard(totals).map(({ playerId, score }) => ({
     playerId,
-    name: input.seatedNames.get(playerId) ?? input.rememberedNames[playerId] ?? "",
+    name:
+      input.seatedNames.get(playerId) ??
+      (Object.hasOwn(input.rememberedNames, playerId)
+        ? input.rememberedNames[playerId]
+        : undefined) ??
+      "",
     score,
     hasLeft: !input.seatedNames.has(playerId),
   }));

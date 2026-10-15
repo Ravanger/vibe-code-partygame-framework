@@ -105,8 +105,13 @@ const ROOM_CODE_PATTERN = new RegExp(`^[${ROOM_CODE_ALPHABET}]` + `{${ROOM_CODE_
 /** A room code: {@link ROOM_CODE_LENGTH} letters from {@link ROOM_CODE_ALPHABET}. */
 export const RoomCodeSchema = z.string().regex(ROOM_CODE_PATTERN);
 
-/** Stable client-generated player identifier. */
-export const PlayerIdSchema = z.string().min(8).max(64);
+/** Stable client-generated player identifier: 8-64 of `A-Z a-z 0-9 _ -`, never an `Object.prototype` key such as `__proto__`. */
+export const PlayerIdSchema = z
+  .string()
+  .min(8)
+  .max(64)
+  .regex(/^[A-Za-z0-9_-]+$/)
+  .refine((id) => !Object.hasOwn(Object.prototype, id));
 
 /** Options a client passes when joining a room. `spectator` joins without taking a seat. */
 export const JoinOptionsSchema = z.object({
