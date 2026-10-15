@@ -1,9 +1,9 @@
+import { OptionsReader, PhaseClock, TypingReporter } from "@partygame/game-ui";
 import { ACTION, ANSWER_MAX_LENGTH } from "../../src/actionNames.js";
 import type { SubmitAnswerPayload } from "../../src/actions.js";
+import { DEFAULT_OPTIONS, type WitClashOptions, WitClashOptionsSchema } from "../../src/options.js";
 import type { WitClashManager } from "../manager.js";
 import { AnswerProgress } from "./AnswerProgress.js";
-import { PhaseClock } from "./PhaseClock.js";
-import { TypingReporter } from "./TypingReporter.js";
 
 export interface PromptView {
   matchupId: string;
@@ -20,8 +20,15 @@ export class PromptingViewModel {
   readonly progress: AnswerProgress;
 
   constructor(private readonly manager: WitClashManager) {
-    this.clock = new PhaseClock(manager, "promptSeconds");
-    this.typing = new TypingReporter(manager);
+    const options = new OptionsReader<WitClashOptions>(
+      manager,
+      WitClashOptionsSchema,
+      DEFAULT_OPTIONS,
+    );
+    this.clock = new PhaseClock(manager, () => options.current.promptSeconds);
+    this.typing = new TypingReporter((typing) => {
+      void this.manager.sendAction(ACTION.SET_TYPING, { typing });
+    });
     this.progress = new AnswerProgress(manager);
   }
 

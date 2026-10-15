@@ -32,7 +32,7 @@ void manager.resume();       // page load: stored token, then stored room code
 
 ```ts
 await manager.create();                  // new room, you are the host; optional create options
-await manager.join("ABCD");              // by 4-letter code; throws with the server's reason
+await manager.join("ABCD");              // by room code; throws with the server's reason
 await manager.joinAsSpectator("ABCD");   // TV display, no seat
 manager.setName("Ada");                  // readies the seat
 await manager.leave();                   // forgets the room
@@ -75,14 +75,20 @@ manager.dismissError();
 manager.onMessage("FIRST", (payload) => { /* pushed by ctx.send; returns an unsubscribe */ });
 ```
 
+`GameConnectionManager` takes an optional second type argument, `TEvents`: a map of message names to payload types. With it, `onMessage` only accepts declared names and hands the callback a typed payload; without it (the default), any name is accepted with an `unknown` payload.
+
+```ts
+const manager = new GameConnectionManager<MyState, { TURN: { id: string } }>();
+manager.onMessage("TURN", (turn) => turn.id); // typed; other names are a compile error
+```
+
 ## Show the phase clock
 
-`countdown()` counts down to `state.phaseEndsAt`, corrected for client clock skew. Call `destroy()` when done.
+`countdown()` counts down to `state.phaseEndsAt`, corrected for client clock skew. It ticks only while something reads it inside a Svelte effect and stops when the last reader goes away — no cleanup needed. `destroy()` is a deprecated no-op kept for existing callers.
 
 ```ts
 const clock = manager.countdown();
 clock.secondsLeft; clock.isUrgent; clock.isExpired; // reactive
-clock.destroy();
 ```
 
 ## Test UI without a server

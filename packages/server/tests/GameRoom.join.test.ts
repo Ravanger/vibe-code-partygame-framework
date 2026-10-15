@@ -1,4 +1,4 @@
-import { CLIENT_MESSAGES, CLOSE_CODES } from "@partygame/shared";
+import { CLIENT_MESSAGES, CLOSE_CODES, RoomCodeSchema } from "@partygame/shared";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { collectMessages, type TestServer, waitUntil } from "../src/testing/index.js";
 import { bootBuzzer, clientState, pid, seat, stateOf } from "./support.js";
@@ -25,7 +25,7 @@ describe("GameRoom joining", () => {
       isConnected: true,
       isActive: true,
     });
-    expect(state.roomCode).toMatch(/^[A-Z]{4}$/);
+    expect(RoomCodeSchema.safeParse(state.roomCode).success).toBe(true);
     expect(t.roomCodeService.resolve(state.roomCode)).toBe(room.roomId);
     expect([state.minPlayers, state.maxPlayers]).toEqual([2, 3]);
     expect(JSON.parse(state.options)).toEqual({ buzzMs: 5000, explodeOnTimeout: false });

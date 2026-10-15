@@ -1,5 +1,7 @@
+import { tick } from "svelte";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Countdown } from "../src/countdown.svelte.js";
+import { observe } from "./observe.svelte.js";
 
 describe("Countdown", () => {
   beforeEach(() => vi.useFakeTimers());
@@ -31,15 +33,29 @@ describe("Countdown", () => {
     countdown.destroy();
   });
 
+  it("runs its interval only while an effect reads it", async () => {
+    const countdown = new Countdown(
+      () => 1_060_000,
+      () => 1_000_000,
+    );
+    expect(vi.getTimerCount()).toBe(0);
+    const observed = observe(() => countdown.secondsLeft);
+    expect(vi.getTimerCount()).toBe(1);
+    observed.stop();
+    await tick();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it("ticks down as time passes", () => {
     vi.setSystemTime(1_000_000);
     const countdown = new Countdown(
       () => 1_060_000,
       () => 1_000_000,
     );
+    const observed = observe(() => countdown.secondsLeft);
     vi.advanceTimersByTime(5_000);
     expect(countdown.secondsLeft).toBe(55);
-    countdown.destroy();
+    observed.stop();
   });
 
   it("never goes below zero", () => {
@@ -48,9 +64,10 @@ describe("Countdown", () => {
       () => 1_030_000,
       () => 1_000_000,
     );
+    const observed = observe(() => countdown.secondsLeft);
     vi.advanceTimersByTime(100_000);
     expect(countdown.secondsLeft).toBe(0);
-    countdown.destroy();
+    observed.stop();
   });
 
   it("reports zero when no timer is set", () => {
@@ -118,10 +135,11 @@ describe("Countdown", () => {
       () => 1_060_000,
       () => serverNow,
     );
+    const observed = observe(() => countdown.secondsLeft);
     serverNow = 1_005_000;
     vi.advanceTimersByTime(250);
     expect(countdown.secondsLeft).toBe(55);
-    countdown.destroy();
+    observed.stop();
   });
 
   it("re-anchors to a newer server time seen when read", () => {
@@ -131,8 +149,32 @@ describe("Countdown", () => {
       () => 1_060_000,
       () => serverNow,
     );
+    const observed = observe(() => countdown.secondsLeft);
     serverNow = 1_010_000;
     expect(countdown.secondsLeft).toBe(50);
-    countdown.destroy();
+    observed.stop();
+  });
+
+  it("re-anchors to a newer server time on a plain read with no subscriber", () => {
+    vi.setSystemTime(1_000_000);
+    let serverNow = 1_000_000;
+    const countdown = new Countdown(
+      () => 1_060_000,
+      () => serverNow,
+    );
+    serverNow = 1_010_000;
+    expect(countdown.secondsLeft).toBe(50);
+  });
+
+  it("reads the first server time when constructed before it arrived", () => {
+    vi.setSystemTime(1_000_000);
+    let serverNow = 0;
+    const countdown = new Countdown(
+      () => 1_060_000,
+      () => serverNow,
+    );
+    expect(countdown.secondsLeft).toBe(0);
+    serverNow = 1_000_000;
+    expect(countdown.secondsLeft).toBe(60);
   });
 });

@@ -8,7 +8,9 @@ export interface RoomLike<TState> {
   };
   readonly onDrop: (callback: () => void) => unknown;
   readonly onReconnect: (callback: () => void) => unknown;
-  readonly onLeave: (callback: (code: number, message?: string) => void) => unknown;
+  readonly onLeave: ((callback: (code: number, message?: string) => void) => unknown) & {
+    remove(callback: (code: number, message?: string) => void): void;
+  };
   onMessage(type: string, callback: (payload: unknown) => void): () => void;
   send(type: string, payload?: unknown): void;
   request(type: string, payload?: unknown): Promise<unknown>;

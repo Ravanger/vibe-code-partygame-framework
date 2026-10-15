@@ -3,7 +3,7 @@ import { claimName, resolveRoomCode } from "@partygame/client-utils";
 import { defineGame } from "@partygame/core";
 import { RoomCodeService } from "@partygame/server";
 import { bootTestServer, type TestServer, waitUntil } from "@partygame/server/testing";
-import { LOBBY_PHASE, NAME_MAX_LENGTH } from "@partygame/shared";
+import { LOBBY_PHASE, NAME_MAX_LENGTH, RoomCodeSchema } from "@partygame/shared";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import type { BotPlayer } from "../src/BotPlayer.js";
 import { BotTable } from "../src/BotTable.js";
@@ -349,7 +349,7 @@ describe("DemoTable", () => {
     });
     leavers.push(table);
     const code = await table.open();
-    expect(code).toMatch(/^[A-Z]{4}$/);
+    expect(RoomCodeSchema.safeParse(code).success).toBe(true);
     await table.seatBots();
     await table.finished(5000);
     await table.leave();

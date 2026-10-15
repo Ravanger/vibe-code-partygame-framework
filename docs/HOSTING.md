@@ -8,7 +8,7 @@ bun run launch
 ```
 
 `bun run launch` starts the game server, the code-lookup API and the Vite client, waits until each answers, and opens
-`http://localhost:5173`. Click **Host Game**: you get a four-letter room code and a share link
+`http://localhost:5173`. Click **Host Game**: you get a room code and a share link
 (`http://<host>:5173/?code=ABCD`) that joins a guest straight into your room. Each player enters a name. The game takes 3 to 8 players: the host presses **Start Game** once at least 3
 players are in and every one of them has entered a name.
 

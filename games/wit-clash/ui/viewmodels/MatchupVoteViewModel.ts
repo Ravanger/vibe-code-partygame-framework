@@ -1,8 +1,9 @@
+import { OptionsReader, PhaseClock } from "@partygame/game-ui";
 import { ACTION } from "../../src/actionNames.js";
 import type { CastVotePayload } from "../../src/actions.js";
+import { DEFAULT_OPTIONS, type WitClashOptions, WitClashOptionsSchema } from "../../src/options.js";
 import type { Matchup } from "../../src/state.js";
 import type { WitClashManager } from "../manager.js";
-import { PhaseClock } from "./PhaseClock.js";
 
 export interface VoteChoice {
   id: string;
@@ -15,7 +16,12 @@ export class MatchupVoteViewModel {
   private readonly clock: PhaseClock;
 
   constructor(private readonly manager: WitClashManager) {
-    this.clock = new PhaseClock(manager, "voteSeconds");
+    const options = new OptionsReader<WitClashOptions>(
+      manager,
+      WitClashOptionsSchema,
+      DEFAULT_OPTIONS,
+    );
+    this.clock = new PhaseClock(manager, () => options.current.voteSeconds);
   }
 
   private get matchup(): Matchup | undefined {

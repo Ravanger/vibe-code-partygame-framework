@@ -21,4 +21,3 @@ export const NoPayloadSchema = z.object({});
 
 export type SubmitAnswerPayload = z.infer<typeof SubmitAnswerSchema>;
 export type CastVotePayload = z.infer<typeof CastVoteSchema>;
-export type SetTypingPayload = z.infer<typeof SetTypingSchema>;

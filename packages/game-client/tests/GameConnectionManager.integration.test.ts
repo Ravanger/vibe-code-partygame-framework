@@ -1,6 +1,6 @@
 import { CloseCode } from "@colyseus/sdk";
 import { bootTestServer, type TestServer, waitUntil } from "@partygame/server/testing";
-import { ErrorCode } from "@partygame/shared";
+import { ErrorCode, RoomCodeSchema } from "@partygame/shared";
 import { flushSync } from "svelte";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { GameConnectionManager } from "../src/GameConnectionManager.svelte.js";
@@ -55,7 +55,7 @@ describe("creating and joining", () => {
     await host.create();
     expect(host.status).toBe("connected");
     await waitUntil(() => host.roomCode !== undefined, "state with a room code");
-    expect(host.roomCode).toMatch(/^[A-Z]{4}$/);
+    expect(RoomCodeSchema.safeParse(host.roomCode).success).toBe(true);
     expect(host.isHost).toBe(true);
     expect(host.me()?.id).toBe(host.playerId);
     flushSync();

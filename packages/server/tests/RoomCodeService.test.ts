@@ -1,3 +1,4 @@
+import { RoomCodeSchema } from "@partygame/shared";
 import { beforeEach, describe, expect, it } from "vitest";
 import { RoomCodeService } from "../src/services/RoomCodeService.js";
 
@@ -10,7 +11,7 @@ describe("RoomCodeService", () => {
 
   it("should generate a 4-letter uppercase code", () => {
     const code = service.generateCode();
-    expect(code).toMatch(/^[A-Z]{4}$/);
+    expect(RoomCodeSchema.safeParse(code).success).toBe(true);
   });
 
   it("should generate unique codes", () => {

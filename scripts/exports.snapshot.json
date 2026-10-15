@@ -246,6 +246,8 @@
           "NameField": {},
           "OptionField": {},
           "OptionFields": {},
+          "OptionsReader": {},
+          "PhaseClock": {},
           "PodiumRow": {},
           "PodiumStep": {},
           "QrCode": {},
@@ -253,6 +255,7 @@
           "RouterScreen": {},
           "STICKER_SHAPES": {},
           "StickerShape": {},
+          "TypingReporter": {},
           "WaitingRoomViewModel": {},
           "WelcomeViewModel": {},
           "createAppRouter": {},
@@ -417,6 +420,8 @@
           "LOBBY_PHASE": {},
           "NAME_MAX_LENGTH": {},
           "PlayerIdSchema": {},
+          "ROOM_CODE_ALPHABET": {},
+          "ROOM_CODE_LENGTH": {},
           "ResolveCodeResponseSchema": {},
           "RoomCodeSchema": {},
           "RoomOptionsSchema": {},
@@ -427,7 +432,8 @@
           "SetNameSchema": {},
           "closeCodeEntry": {},
           "isActionResult": {},
-          "isServerError": {}
+          "isServerError": {},
+          "sanitizeRoomCode": {}
         }
       },
       "./schema": {

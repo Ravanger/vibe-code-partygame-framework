@@ -8,6 +8,7 @@ import {
   ErrorCode,
   isActionResult,
   isServerError,
+  ROOM_CODE_LENGTH,
   RoomCodeSchema,
   type ServerError,
   ServerMessage,
@@ -15,6 +16,8 @@ import {
 import type { BaseGameState, PlayerSchema } from "@partygame/shared/schema";
 import { createSubscriber } from "svelte/reactivity";
 import { Countdown } from "./countdown.svelte.js";
+import { CANCELLED, JoinCoordinator } from "./JoinCoordinator.js";
+import { MessageBus } from "./MessageBus.js";
 import { PersistedSession } from "./PersistedSession.js";
 import type { RoomLike } from "./RoomLike.js";
 
@@ -40,18 +43,17 @@ export interface GameConnectionOptions<TState> {
   syncTimeoutMs?: number;
 }
 
-interface Listener {
-  type: string;
-  callback: (payload: unknown) => void;
-  off: (() => void) | undefined;
-}
-
 const DEFAULT_API_PORT = 3001;
 const DEFAULT_SYNC_TIMEOUT_MS = 10_000;
-const CANCELLED = "Connection cancelled";
 
-/** Connection to one game room: lifecycle, the reactive state, and the player's actions. */
-export class GameConnectionManager<TState extends BaseGameState = BaseGameState> {
+/**
+ * Connection to one game room: lifecycle, the reactive state, and the player's actions.
+ * `TEvents` maps message names to payload types for typed `onMessage`; by default any name is accepted with an `unknown` payload.
+ */
+export class GameConnectionManager<
+  TState extends BaseGameState = BaseGameState,
+  TEvents extends Record<string, unknown> = Record<string, unknown>,
+> {
   status: ConnectionStatus = $state("idle");
   lastServerError: ServerError | undefined = $state.raw(undefined);
   readonly playerId: string;
@@ -60,10 +62,9 @@ export class GameConnectionManager<TState extends BaseGameState = BaseGameState>
   private readonly client: Client;
   private readonly session: PersistedSession;
   private readonly apiBase: string;
-  private readonly listeners = new Set<Listener>();
-  private pending: { key: string; promise: Promise<void> } | undefined;
+  private readonly bus = new MessageBus<TState>();
+  private readonly coordinator = new JoinCoordinator();
   private spectating = false;
-  private generation = 0;
   private notify: (() => void) | undefined;
   private bound: { room: RoomLike<TState>; callback: () => void } | undefined;
   private readonly track = createSubscriber((update) => {
@@ -118,34 +119,38 @@ export class GameConnectionManager<TState extends BaseGameState = BaseGameState>
   }
 
   async create(options: Record<string, unknown> = {}): Promise<void> {
-    await this.connect(
-      "create",
-      () =>
-        this.client.create<TState>(
-          this.options.roomName,
-          { ...options, playerId: this.playerId },
-          this.options.rootSchema,
-        ),
-      false,
+    await this.coordinator.run("create", (cancelled) =>
+      this.open(
+        () =>
+          this.client.create<TState>(
+            this.options.roomName,
+            { ...options, playerId: this.playerId },
+            this.options.rootSchema,
+          ),
+        false,
+        cancelled,
+      ),
     );
   }
 
   async join(code: string, options: Record<string, unknown> = {}): Promise<void> {
     const clean = code.trim().toUpperCase();
     if (!RoomCodeSchema.safeParse(clean).success) {
-      throw new Error("Game code must be 4 letters (A-Z)");
+      throw new Error(`Game code must be ${ROOM_CODE_LENGTH} letters (A-Z)`);
     }
     const spectator = options.spectator === true;
     if (this.room && this.roomCode === clean && this.spectating === spectator) return;
-    await this.connect(
-      `${clean}:${spectator ? "tv" : "player"}`,
-      async () =>
-        this.client.joinById<TState>(
-          await resolveRoomCode(this.apiBase, clean),
-          { ...options, playerId: this.playerId },
-          this.options.rootSchema,
-        ),
-      spectator,
+    await this.coordinator.run(`${clean}:${spectator ? "tv" : "player"}`, (cancelled) =>
+      this.open(
+        async () =>
+          this.client.joinById<TState>(
+            await resolveRoomCode(this.apiBase, clean),
+            { ...options, playerId: this.playerId },
+            this.options.rootSchema,
+          ),
+        spectator,
+        cancelled,
+      ),
     );
   }
 
@@ -161,10 +166,12 @@ export class GameConnectionManager<TState extends BaseGameState = BaseGameState>
       token &&
       !spectator &&
       (await this.succeeds(() =>
-        this.connect(
-          "resume",
-          () => this.client.reconnect<TState>(token, this.options.rootSchema),
-          false,
+        this.coordinator.run("resume", (cancelled) =>
+          this.open(
+            () => this.client.reconnect<TState>(token, this.options.rootSchema),
+            false,
+            cancelled,
+          ),
         ),
       ))
     ) {
@@ -189,8 +196,7 @@ export class GameConnectionManager<TState extends BaseGameState = BaseGameState>
 
   /** Leaves the room and cancels any connect still in flight. */
   async leave(): Promise<void> {
-    ++this.generation;
-    this.pending = undefined;
+    this.coordinator.cancel();
     await this.closeRoom();
   }
 
@@ -212,13 +218,12 @@ export class GameConnectionManager<TState extends BaseGameState = BaseGameState>
   }
 
   /** Listens for a pushed message type; survives room changes. Register before connecting so the SDK does not warn. */
-  onMessage(type: string, callback: (payload: unknown) => void): () => void {
-    const listener: Listener = { type, callback, off: this.room?.onMessage(type, callback) };
-    this.listeners.add(listener);
-    return () => {
-      listener.off?.();
-      this.listeners.delete(listener);
-    };
+  onMessage<K extends keyof TEvents & string>(
+    type: K,
+    callback: (payload: TEvents[K]) => void,
+  ): () => void {
+    // The bus stores untyped callbacks; the typed contract lives at this public boundary.
+    return this.bus.on(type, callback as (payload: unknown) => void);
   }
 
   dismissError(): void {
@@ -230,9 +235,7 @@ export class GameConnectionManager<TState extends BaseGameState = BaseGameState>
     this.detach();
     this.room = room;
     this.bindState();
-    for (const listener of this.listeners) {
-      listener.off = room.onMessage(listener.type, listener.callback);
-    }
+    this.bus.bind(room);
     room.onDrop(() => this.whileAttached(room, () => (this.status = "reconnecting")));
     room.onReconnect(() =>
       this.whileAttached(room, () => {
@@ -255,45 +258,32 @@ export class GameConnectionManager<TState extends BaseGameState = BaseGameState>
 
   /** Leaves the room without forgetting the session and stops all listeners. */
   dispose(): void {
-    ++this.generation;
-    this.pending = undefined;
+    this.coordinator.cancel();
     const room = this.room;
     this.detach("disconnected");
-    this.listeners.clear();
-    void room?.leave(false);
+    this.bus.clear();
+    if (room) this.leaveQuietly(room, false);
   }
 
-  private async connect(
-    key: string,
-    open: () => Promise<RoomLike<TState>>,
+  private async open(
+    openRoom: () => Promise<RoomLike<TState>>,
     spectator: boolean,
+    cancelled: () => boolean,
   ): Promise<void> {
-    if (this.pending?.key === key) return this.pending.promise;
-    const entry = { key, promise: this.open(open, spectator) };
-    this.pending = entry;
-    try {
-      await entry.promise;
-    } finally {
-      if (this.pending === entry) this.pending = undefined;
-    }
-  }
-
-  private async open(open: () => Promise<RoomLike<TState>>, spectator: boolean): Promise<void> {
-    const generation = ++this.generation;
     if (this.room) await this.closeRoom();
-    if (generation !== this.generation) throw new Error(CANCELLED);
+    if (cancelled()) throw new Error(CANCELLED);
     this.status = "connecting";
     try {
-      const room = await open();
-      if (generation === this.generation) await this.untilSynced(room);
-      if (generation !== this.generation) {
-        void room.leave();
+      const room = await openRoom();
+      if (!cancelled()) await this.untilSynced(room);
+      if (cancelled()) {
+        this.leaveQuietly(room);
         throw new Error(CANCELLED);
       }
       this.spectating = spectator;
       this.attach(room);
     } catch (error) {
-      if (generation === this.generation) this.status = "disconnected";
+      if (!cancelled()) this.status = "disconnected";
       this.recordRejection(error);
       throw error;
     }
@@ -306,25 +296,32 @@ export class GameConnectionManager<TState extends BaseGameState = BaseGameState>
         settled = true;
         clearTimeout(timer);
         room.onStateChange.remove(check);
+        room.onLeave.remove(onLeave);
       };
       const check = (): void => {
         if (settled || !room.state?.roomCode) return;
         settle();
         resolve();
       };
+      // `settle` removes this listener, so it can only fire while the wait is still open.
+      const onLeave = (): void => {
+        settle();
+        reject(new Error("Disconnected before the game state arrived"));
+      };
       const timer = setTimeout(() => {
         settle();
-        void room.leave();
+        this.leaveQuietly(room);
         reject(new Error("Timed out waiting for the game state"));
       }, this.options.syncTimeoutMs ?? DEFAULT_SYNC_TIMEOUT_MS);
       room.onStateChange(check);
-      room.onLeave(() => {
-        if (settled) return;
-        settle();
-        reject(new Error("Disconnected before the game state arrived"));
-      });
+      room.onLeave(onLeave);
       check();
     });
+  }
+
+  /** Leaves a room without letting a failing `leave()` escape as an unhandled rejection. */
+  private leaveQuietly(room: RoomLike<TState>, consented = true): void {
+    void room.leave(consented).catch(() => undefined);
   }
 
   private async closeRoom(): Promise<void> {
@@ -337,10 +334,7 @@ export class GameConnectionManager<TState extends BaseGameState = BaseGameState>
 
   private detach(status?: ConnectionStatus): void {
     this.unbindState();
-    for (const listener of this.listeners) {
-      listener.off?.();
-      listener.off = undefined;
-    }
+    this.bus.unbind();
     this.room = undefined;
     if (status) this.status = status;
   }

@@ -10,7 +10,6 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
-  vi.unstubAllGlobals();
 });
 
 const client = (seat: SeatConfig = {}) =>
@@ -111,6 +110,13 @@ describe("WaitingRoomViewModel", () => {
     expect(vm.shareUrl).toBe(`${window.location.origin}${window.location.pathname}?code=ABCD`);
   });
 
+  it("builds the share link from an injected location", () => {
+    const vm = new WaitingRoomViewModel(client().manager, {
+      location: () => ({ origin: "https://x.test", pathname: "/play" }),
+    });
+    expect(vm.shareUrl).toBe("https://x.test/play?code=ABCD");
+  });
+
   it("sends the name once typing pauses, trimmed and capped", () => {
     const c = client();
     const vm = new WaitingRoomViewModel(c.manager);
@@ -132,13 +138,19 @@ describe("WaitingRoomViewModel", () => {
     expect(c.room.sent).toEqual([]);
   });
 
-  it("copies the room code and survives a denied clipboard", async () => {
+  it("copies through the injected clipboard and swallows its rejection", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal("navigator", { clipboard: { writeText } });
-    const vm = new WaitingRoomViewModel(client().manager);
+    const vm = new WaitingRoomViewModel(client().manager, {
+      clipboard: { writeText },
+    });
     await vm.copyCode();
     expect(writeText).toHaveBeenCalledWith("ABCD");
     writeText.mockRejectedValueOnce(new Error("denied"));
+    await expect(vm.copyCode()).resolves.toBeUndefined();
+  });
+
+  it("swallows a failing browser clipboard", async () => {
+    const vm = new WaitingRoomViewModel(client().manager);
     await expect(vm.copyCode()).resolves.toBeUndefined();
   });
 
