@@ -1,4 +1,3 @@
-import { runLauncher } from "@partygame/launcher";
 import type { BaseGameState } from "@partygame/shared/schema";
 import { defaultIo } from "./io.js";
 import { buildLaunchConfig } from "./launchConfig.js";
@@ -11,6 +10,5 @@ export async function launch<TState extends BaseGameState, TContent>(
   io: GameKitIo = defaultIo(),
 ): Promise<void> {
   const config = buildLaunchConfig(pkg, options);
-  const runner = io.runLauncher ?? runLauncher;
-  await runner(config, io.argv);
+  await io.runLauncher(config, io.argv);
 }

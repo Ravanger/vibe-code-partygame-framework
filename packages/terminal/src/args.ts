@@ -25,6 +25,17 @@ export interface ArgsLimits {
   usage: string;
 }
 
+export interface DemoArgs {
+  bots: number;
+}
+
+export interface DemoArgsLimits {
+  minBots: number;
+  maxBots: number;
+  /** Returned as the error for any bad argument. */
+  usage: string;
+}
+
 export const DEFAULT_ENDPOINT = "ws://localhost:2567";
 export const DEFAULT_API_PORT = 3001;
 
@@ -75,6 +86,17 @@ export const parsePlayArgs = (argv: string[], limits: ArgsLimits): Parsed<PlayAr
   if (!valid) return fail;
   const usesDefaults = values.endpoint === undefined && values["api-port"] === undefined;
   return { ok: true, value: { name, bots, join, endpoint, apiPort, usesDefaults } };
+};
+
+/** Parses `[--bots=N]` for an all-bot demo command; only the `=` form is accepted. */
+export const parseDemoArgs = (argv: string[], limits: DemoArgsLimits): Parsed<DemoArgs> => {
+  const fail = { ok: false, error: limits.usage } as const;
+  if (argv.length === 0) {
+    return { ok: true, value: { bots: Math.min(Math.max(3, limits.minBots), limits.maxBots) } };
+  }
+  const bots = Number(/^--bots=(\d+)$/.exec(argv.join(" "))?.[1]);
+  if (argv.length !== 1 || !between(bots, limits.minBots, limits.maxBots)) return fail;
+  return { ok: true, value: { bots } };
 };
 
 /** Parses `CODE [count] --endpoint --api-port` for a command that seats bots in an existing room. */

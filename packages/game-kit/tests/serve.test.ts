@@ -2,28 +2,26 @@ import { type NodeServerHandle, startNodeServer } from "@partygame/server/node";
 import { freePort, ServerProbe } from "@partygame/server/probe";
 import { describe, expect, it } from "vitest";
 import { defineGamePackage, type GameKitIo, type ServeOptions, serve } from "../src/index.js";
+import { fakeIo } from "./fixtures/fakeIo.js";
 import { TAP_ROOM, TapGame, TapState, tapKit } from "./fixtures/tapGame.js";
 
 const ioWith = (
   env: NodeJS.ProcessEnv,
   started: NodeServerHandle[],
   seens: ServeOptions[],
-): GameKitIo => ({
-  env,
-  argv: [],
-  exit: () => {},
-  log: () => {},
-  error: () => {},
-  startServer: async (options) => {
-    seens.push(options);
-    const handle = await startNodeServer(options);
-    started.push(handle);
-    return handle;
-  },
-});
+): GameKitIo =>
+  fakeIo([], {
+    env,
+    startServer: async (options) => {
+      seens.push(options);
+      const handle = await startNodeServer(options);
+      started.push(handle);
+      return handle;
+    },
+  }).io;
 
 describe("serve", () => {
-  it("loads content and starts a server on the env ports", async () => {
+  it("loads content and leaves the ports to the server starter", async () => {
     const port = await freePort();
     const apiPort = await freePort();
     const started: NodeServerHandle[] = [];
@@ -53,8 +51,8 @@ describe("serve", () => {
     expect(seens).toHaveLength(1);
     const [options] = seens;
     if (options === undefined) throw new Error("the server starter never ran");
-    expect(options.port).toBe(port);
-    expect(options.apiPort).toBe(apiPort);
+    expect(options.port).toBeUndefined();
+    expect(options.apiPort).toBeUndefined();
     expect(options.games.map((each) => each.roomName)).toEqual([TAP_ROOM]);
   });
 
@@ -88,5 +86,51 @@ describe("serve", () => {
     expect(options.port).toBeUndefined();
     expect(options.apiPort).toBeUndefined();
     expect(options.games.map((each) => each.roomName)).toEqual([TAP_ROOM]);
+  });
+
+  it("prints one line and exits 1 when load rejects", async () => {
+    const game = defineGamePackage({
+      meta: { roomName: TAP_ROOM, minPlayers: 2, maxPlayers: 6 },
+      load: async () => {
+        throw new Error("bad content");
+      },
+      definition: () => TapGame,
+      stateClass: TapState,
+      isFinished: () => true,
+      botKit: tapKit(),
+    });
+    const { io, err, exits } = fakeIo([]);
+    await serve(game, io);
+    expect(err).toEqual(["bad content"]);
+    expect(exits).toEqual([1]);
+  });
+
+  it("prints one line and exits 1 when the server cannot start", async () => {
+    const game = defineGamePackage({
+      meta: { roomName: TAP_ROOM, minPlayers: 2, maxPlayers: 6 },
+      definition: () => TapGame,
+      stateClass: TapState,
+      isFinished: () => true,
+      botKit: tapKit(),
+    });
+    const { io, err, exits } = fakeIo([], {
+      startServer: () => Promise.reject(new Error("port taken")),
+    });
+    await serve(game, io);
+    expect(err).toEqual(["port taken"]);
+    expect(exits).toEqual([1]);
+  });
+
+  it("prints a thrown non-Error as text", async () => {
+    const game = defineGamePackage({
+      meta: { roomName: TAP_ROOM, minPlayers: 2, maxPlayers: 6 },
+      definition: () => TapGame,
+      stateClass: TapState,
+      isFinished: () => true,
+      botKit: tapKit(),
+    });
+    const { io, err } = fakeIo([], { startServer: () => Promise.reject("nope") });
+    await serve(game, io);
+    expect(err).toEqual(["nope"]);
   });
 });

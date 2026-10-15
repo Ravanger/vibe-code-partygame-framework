@@ -1,5 +1,6 @@
 import type { BaseGameState } from "@partygame/shared/schema";
-import { DemoRun } from "@partygame/terminal";
+import { DemoRun, parseDemoArgs } from "@partygame/terminal";
+import { failWith } from "./fail.js";
 import { hostedGame } from "./hostedGame.js";
 import { defaultIo } from "./io.js";
 import type { GameDeclaration, GameKitIo, GameMeta } from "./types.js";
@@ -14,26 +15,34 @@ export async function demoCli<TState extends BaseGameState, TContent>(
   io: GameKitIo = defaultIo(),
 ): Promise<void> {
   const meta = pkg.meta;
-  const flag = io.argv.find((arg) => arg.startsWith("--bots="));
-  const bots = flag === undefined ? 3 : Number(flag.split("=")[1]);
-  if (!Number.isInteger(bots) || bots < meta.minPlayers - 1 || bots > meta.maxPlayers - 1) {
-    io.error(demoUsage(meta));
+  const parsed = parseDemoArgs(io.argv, {
+    minBots: meta.minPlayers - 1,
+    maxBots: meta.maxPlayers - 1,
+    usage: demoUsage(meta),
+  });
+  if (!parsed.ok) {
+    io.error(parsed.error);
     io.exit(2);
     return;
   }
+  const { bots } = parsed.value;
   const demo = pkg.demo;
-  const passed = await new DemoRun<TState>({
-    games: [hostedGame(pkg, await pkg.load?.(io.env))],
-    kit: demo?.kit ?? pkg.botKit,
-    bots,
-    ...(demo?.roomOptions !== undefined ? { roomOptions: demo.roomOptions } : {}),
-    ...(demo?.hostName !== undefined ? { hostName: demo.hostName } : {}),
-    bot: { log: io.log, ...demo?.bot },
-    finished: pkg.isFinished,
-    ...(demo?.narrate !== undefined ? { narrate: demo.narrate } : {}),
-    ...(demo?.problems !== undefined ? { problems: demo.problems } : {}),
-    ...(demo?.passMessage !== undefined ? { passMessage: demo.passMessage } : {}),
-    out: io.log,
-  }).run();
-  io.exit(passed ? 0 : 1);
+  try {
+    const passed = await new DemoRun<TState>({
+      games: [hostedGame(pkg, await pkg.load?.(io.env))],
+      kit: demo?.kit ?? pkg.botKit,
+      bots,
+      ...(demo?.roomOptions !== undefined ? { roomOptions: demo.roomOptions } : {}),
+      ...(demo?.hostName !== undefined ? { hostName: demo.hostName } : {}),
+      bot: { log: io.log, ...demo?.bot },
+      finished: pkg.isFinished,
+      ...(demo?.narrate !== undefined ? { narrate: demo.narrate } : {}),
+      ...(demo?.problems !== undefined ? { problems: demo.problems } : {}),
+      ...(demo?.passMessage !== undefined ? { passMessage: demo.passMessage } : {}),
+      out: io.log,
+    }).run();
+    io.exit(passed ? 0 : 1);
+  } catch (error) {
+    failWith(io, error);
+  }
 }

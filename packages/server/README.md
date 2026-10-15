@@ -13,7 +13,7 @@ Generic Colyseus server: host any game defined with `@partygame/core`.
 
 ## Host a game
 
-A hosted game is a room name, your `defineGame` definition and your state class (extending `BaseGameState`). `startServer` is the Bun entry point; it serves the game on `port` (env `PORT`, default 2567) and `/api/resolve-code` on `apiPort` (env `API_PORT`, default 3001).
+A hosted game is a room name, your `defineGame` definition and your state class (extending `BaseGameState`). `startServer` is the Bun entry point; it serves the game on `port` (env `PORT`, default 2567; a non-integer or out-of-range value throws `PORT must be a whole number from 1 to 65535`) and `/api/resolve-code` on `apiPort` (env `API_PORT`, default 3001).
 
 ```ts
 // server.ts

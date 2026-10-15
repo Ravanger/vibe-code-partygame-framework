@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { demoCli, type GameKitIo } from "../src/index.js";
+import { demoCli } from "../src/index.js";
+import { fakeIo } from "./fixtures/fakeIo.js";
 import { TAP_ROOM, TapGame, TapState, tapKit } from "./fixtures/tapGame.js";
 
 const base = {
@@ -9,23 +10,16 @@ const base = {
   isFinished: (state: TapState): boolean => state.done,
 };
 
-const fakeIo = (argv: string[]) => {
-  const log: string[] = [];
-  const err: string[] = [];
-  const exits: number[] = [];
-  const io: GameKitIo = {
-    env: {},
-    argv,
-    exit: (code) => void exits.push(code),
-    log: (line) => void log.push(line),
-    error: (line) => void err.push(line),
-  };
-  return { io, log, err, exits };
-};
-
 describe("demoCli", () => {
-  it("prints the usage and exits 2 when --bots is out of range or not a number", async () => {
-    for (const argv of [["--bots=0"], ["--bots=9"], ["--bots=x"]]) {
+  it("prints the usage and exits 2 on a bad --bots, a space-separated value or an unknown flag", async () => {
+    for (const argv of [
+      ["--bots=0"],
+      ["--bots=9"],
+      ["--bots=x"],
+      ["--bots="],
+      ["--bots", "4"],
+      ["--foo"],
+    ]) {
       const { io, err, exits } = fakeIo(argv);
       await demoCli({ ...base, botKit: tapKit() }, io);
       expect(err).toEqual(["Usage: bun run demo [--bots=1..5]"]);
@@ -103,4 +97,20 @@ describe("demoCli", () => {
     expect(exits).toEqual([1]);
     expect(log.slice(-3)).toEqual(["", "  - taps are off", "FAIL"]);
   }, 30_000);
+
+  it("prints one line and exits 1 when load rejects", async () => {
+    const { io, err, exits } = fakeIo([]);
+    await demoCli(
+      {
+        ...base,
+        botKit: tapKit(),
+        load: async () => {
+          throw new Error("bad content");
+        },
+      },
+      io,
+    );
+    expect(err).toEqual(["bad content"]);
+    expect(exits).toEqual([1]);
+  });
 });

@@ -858,7 +858,7 @@ await play(buttonPackage);   // bun run play [--bots=0..7] [--name=You] [--join=
 | `quit()` | leaves the game; `run()` resolves |
 
 Optional strategy members: `narrate(state)` returns lines to print on every state change, `lobby(turn)` replaces the built-in lobby
-(host: Enter starts, `q` quits). The `play` entry parses `--bots`, `--name`, `--join`, `--endpoint` and `--api-port`, starts a server when the endpoint defaults are used and no room is joined, and exits 2 on bad arguments. `@partygame/terminal/testing` has test doubles. Example:
+(host: Enter starts, `q` quits). The `play` entry parses `--bots`, `--name`, `--join`, `--endpoint` and `--api-port`, starts a server when the endpoint defaults are used and no room is joined, and exits 2 on bad arguments (as do `demo` and `bots`). `@partygame/terminal/testing` has test doubles. Example:
 `games/wit-clash/terminal/witClashTerminal.ts`.
 
 ### All-bot demo run
@@ -884,7 +884,7 @@ import { buttonPackage } from "../gamePackage.js";
 await demoCli(buttonPackage);   // bun run demo [--bots=1..7]
 ```
 
-`--bots=` sets the bot count (default 3, bounded by `meta`). The field's extras are all optional: `kit` (a demo-specific kit),
+`--bots=N` sets the bot count (default 3, bounded by `meta`; parsed by `parseDemoArgs`, so `--bots 4`, `--bots=` and unknown flags print the usage and exit 2). The field's extras are all optional: `kit` (a demo-specific kit),
 `roomOptions`, `hostName`, `bot` (pacing and outcome logging), `narrate(state)`, `problems(state)` and `passMessage`. Under the hood
 `demoCli` drives a `DemoRun` from `@partygame/terminal`. Example: `games/wit-clash/gamePackage.ts` (the Narrator narrates and checks).
 

@@ -1,5 +1,5 @@
 import type { BaseGameState } from "@partygame/shared/schema";
-import { runBotsCommand } from "@partygame/terminal";
+import { parseBotsArgs, runBotsCommand } from "@partygame/terminal";
 import { defaultIo } from "./io.js";
 import type { GameDeclaration, GameKitIo, GameMeta } from "./types.js";
 
@@ -12,6 +12,13 @@ export async function botsCli<TState extends BaseGameState, TContent>(
   pkg: GameDeclaration<TState, TContent>,
   io: GameKitIo = defaultIo(),
 ): Promise<void> {
+  const usage = botsUsage(pkg.meta);
+  const parsed = parseBotsArgs(io.argv, { maxBots: pkg.meta.maxPlayers - 1, usage });
+  if (!parsed.ok) {
+    io.error(parsed.error);
+    io.exit(2);
+    return;
+  }
   try {
     await runBotsCommand({
       kit: pkg.botKit,
@@ -19,9 +26,9 @@ export async function botsCli<TState extends BaseGameState, TContent>(
       argv: io.argv,
       out: io.log,
       err: io.error,
-      usage: botsUsage(pkg.meta),
+      usage,
       bot: { log: io.log },
-      onInterrupt: (stop) => io.onSignal?.("SIGINT", () => void stop().finally(() => io.exit(0))),
+      onInterrupt: (stop) => io.onSignal("SIGINT", () => void stop().finally(() => io.exit(0))),
     });
   } catch {
     io.exit(1);
