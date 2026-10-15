@@ -8,6 +8,14 @@ import {
 /** One log per `ctx.priv` object; the priv itself never gains a framework key. */
 const logs = new WeakMap<object, ActionLog>();
 
+const deepFreeze = (value: unknown): unknown => {
+  if (value !== null && typeof value === "object") {
+    for (const child of Object.values(value)) deepFreeze(child);
+    Object.freeze(value);
+  }
+  return value;
+};
+
 /** The kind of event an {@link ActionLogEntry} records. */
 export type ActionLogEntryKind = "action" | "transition" | "enter" | "timeout" | "roster-change";
 
@@ -24,7 +32,7 @@ export interface ActionLogEntry {
   actionType?: string;
   /** `kind === "action"`: the sender's playerId. */
   senderId?: string;
-  /** `kind === "action"`: the zod-parsed action object (JSON-serializable). */
+  /** `kind === "action"`: the zod-parsed action object (JSON-serializable), stored as a frozen deep copy. */
   payload?: unknown;
   /**
    * `kind === "action"`: true when the handler called `ctx.reject()` or threw a `FrameworkError` — the action ran but changed
@@ -130,7 +138,7 @@ export function actionLogMiddleware(): PhaseMiddleware<PhaseState, unknown, unkn
     if (event.kind === "action") {
       entry.actionType = event.actionType;
       entry.senderId = event.senderId;
-      entry.payload = event.payload;
+      entry.payload = deepFreeze(structuredClone(event.payload));
       if (event.actionType === "START_GAME" && log.roster === undefined) {
         // The seats when the game starts, in seat order — what replay pre-seats. The flags are
         // recorded too: replay restores them so its bench-on-start matches live's exactly.

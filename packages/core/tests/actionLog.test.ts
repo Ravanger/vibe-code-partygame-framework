@@ -324,6 +324,82 @@ describe("action log roster", () => {
   });
 });
 
+describe("payload immutability", () => {
+  interface Payload {
+    x: number;
+    items: number[];
+    data: { value: string };
+  }
+  let handled: Payload | undefined;
+
+  class MutatingTable extends TestTable<S, P, O> {
+    constructor() {
+      super({
+        definition: defineGame<S, P, O>({
+          name: "Mutating",
+          version: "1",
+          minPlayers: 1,
+          maxPlayers: 2,
+          startPhase: "Play",
+          createPrivateState: () => ({ secret: "s" }),
+          phases: {
+            Play: {
+              actions: {
+                MUTATE: action({
+                  from: "player",
+                  payload: z.object({
+                    x: z.number(),
+                    items: z.array(z.number()),
+                    data: z.object({ value: z.string() }),
+                  }),
+                  handler: (ctx) => {
+                    handled = ctx.payload;
+                    ctx.payload.x = 99;
+                    ctx.payload.items.push(999);
+                    ctx.payload.data.value = "changed";
+                  },
+                }),
+              },
+            },
+          },
+          middleware: [actionLogMiddleware()],
+        }),
+        state: { phase: "", phaseEndsAt: 0, canStart: false, log: [] },
+        options: { rounds: 1 },
+        players: 1,
+      });
+    }
+
+    logged(): Payload {
+      const entry = getActionLog(this.priv)?.entries.find((e) => e.actionType === "MUTATE");
+      return entry?.payload as Payload;
+    }
+  }
+
+  const original = { x: 1, items: [1, 2], data: { value: "kept" } };
+
+  it("keeps the payload as sent when the handler mutates it", () => {
+    const table = new MutatingTable();
+    table.start();
+    table.act("p1", "MUTATE", structuredClone(original));
+    expect(table.logged()).toEqual(original);
+    expect(table.logged()).not.toBe(handled);
+  });
+
+  it("freezes the logged payload deeply", () => {
+    const table = new MutatingTable();
+    table.start();
+    table.act("p1", "MUTATE", structuredClone(original));
+    const logged = table.logged();
+    expect(Object.isFrozen(logged)).toBe(true);
+    expect(Object.isFrozen(logged.items)).toBe(true);
+    expect(Object.isFrozen(logged.data)).toBe(true);
+    expect(() => {
+      logged.data.value = "rewritten";
+    }).toThrow(TypeError);
+  });
+});
+
 describe("a failed run", () => {
   const definition = defineGame<S, P, O>({
     name: "Failing",
