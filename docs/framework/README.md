@@ -209,12 +209,12 @@ every room and replay table append to one log and one timing store.
 | `phase` | Current phase; for `enter`, the phase being entered |
 | `kind` | `"action" \| "transition" \| "enter" \| "timeout" \| "roster-change"` |
 | `actionType`, `senderId`, `payload` | `kind === "action"` only; `payload` is the zod-parsed action object |
-| `rejected` | `kind === "action"` only; `true` when the handler called `ctx.reject()` (the action ran but changed nothing). Absent on accepted actions |
+| `rejected` | `kind === "action"` only; `true` when the handler called `ctx.reject()` or threw a `FrameworkError` (the action ran but changed nothing). Absent on accepted actions |
 | `from`, `to` | `kind === "transition"` only |
 
 Actions rejected **before the handler chain** — malformed envelope, unknown action, unauthorized sender,
 inactive player, invalid payload — are **not** logged: they never reach the middleware and change no state.
-An action whose *handler* calls `ctx.reject()` has reached the chain and **is** logged, marked
+An action whose *handler* calls `ctx.reject()` or throws a `FrameworkError` (as the built-in `START_GAME` does with too few players) has reached the chain and **is** logged, marked
 `rejected: true`; it changes no state either, and such logs replay — the re-dispatch re-runs the handler
 (RNG draws included) and must reject again (a mismatch in either direction throws). Roster changes are
 recorded for observability (see the replay limitation below).
@@ -316,7 +316,7 @@ table above marks "yes".
 `ctx.gameName` (definition name), `ctx.gameVersion` (definition version, recorded in the log header),
 `ctx.seed` (room RNG seed, recorded in the log header) and `ctx.newId()` (deterministic ids — see the
 Determinism contract above). Middleware contexts additionally expose `ctx.rejectionCount` — the live count
-of `ctx.reject()` calls for the current dispatch, so a middleware can tell after `next()` whether an action's
+of rejections (`ctx.reject()` calls and a handler-thrown `FrameworkError`) for the current dispatch, so a middleware can tell after `next()` whether an action's
 handler rejected.
 
 ### Errors at definition time

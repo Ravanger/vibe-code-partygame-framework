@@ -27,7 +27,7 @@ export interface ActionLogEntry {
   /** `kind === "action"`: the zod-parsed action object (JSON-serializable). */
   payload?: unknown;
   /**
-   * `kind === "action"`: true when the handler called `ctx.reject()` — the action ran but changed
+   * `kind === "action"`: true when the handler called `ctx.reject()` or threw a `FrameworkError` — the action ran but changed
    * nothing. Absent on accepted actions. `replayLog` expects a marked entry's re-dispatch to reject
    * as well, and throws on a mismatch in either direction.
    */
@@ -113,8 +113,8 @@ function logOf(ctx: MiddlewareContext<PhaseState, unknown, unknown>): ActionLog 
  * is written on the first entry.
  * Never touches `ctx.state`; the log stays server-side. Actions rejected before the handler chain
  * (malformed envelope, unknown action, unauthorized sender, inactive player, invalid payload) are not
- * logged; an action whose handler calls `ctx.reject()` has reached the chain and is logged with
- * `rejected: true`, so such logs replay — the re-dispatch re-runs the handler (RNG draws included)
+ * logged; an action whose handler calls `ctx.reject()` or throws a `FrameworkError` has reached the
+ * chain and is logged with `rejected: true`, so such logs replay — the re-dispatch re-runs the handler (RNG draws included)
  * and must reject again. See "Action log and replay" in the framework guide.
  */
 export function actionLogMiddleware(): PhaseMiddleware<PhaseState, unknown, unknown> {
@@ -148,8 +148,6 @@ export function actionLogMiddleware(): PhaseMiddleware<PhaseState, unknown, unkn
     log.entries.push(entry);
     next();
     if (event.kind === "action" && ctx.rejectionCount > 0) {
-      // The handler called ctx.reject(): the action ran but changed nothing. Replay expects the
-      // re-dispatch to reject as well.
       entry.rejected = true;
     }
   };
