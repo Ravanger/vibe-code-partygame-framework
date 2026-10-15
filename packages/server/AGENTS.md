@@ -20,7 +20,8 @@ The generic Colyseus host that runs any `defineGame` definition: rooms, seats, r
 
 - `.`: `createGameServer`, `GameRoom`, `createApiHandler`, `RoomCodeService`.
 - `./bun`: `startServer`.
-- `./node`: `serveApi`, `startNodeServer`, port helpers.
+- `./node`: `serveApi`, `startNodeServer`.
+- `./probe`: `ServerProbe`, `freePort`, `closeHttpServer`.
 - `./content`: `loadJsoncDir`.
 - `./testing`: `bootTestServer`, `seatPlayers`, `joinPlayer`, `stateOf`.
 

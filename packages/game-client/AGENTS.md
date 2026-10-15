@@ -28,4 +28,4 @@ The Svelte 5 SDK a game client uses to connect, join, send actions and read stat
 
 ## Before you add a file
 
-Is it connection or session logic with no markup? If it renders -> `game-ui`; shared with non-browser clients -> `client-utils` (#130).
+Is it connection or session logic with no markup? If it renders -> `game-ui`; shared with non-browser clients -> `client-utils`.

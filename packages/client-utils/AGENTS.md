@@ -2,7 +2,7 @@
 
 ## Responsibility
 
-Browser- and Node-safe client helpers: `waitFor`, `resolveRoomCode`, `joinUrl`, `tvUrl`, `between`. No `node:` imports, no Colyseus.
+Browser- and Node-safe client helpers: `waitFor`, `resolveRoomCode`, `joinUrl`, `tvUrl`, `between`, `claimName`, `apiBaseOf`. No `node:` imports, no Colyseus.
 
 ## Never put here
 
@@ -16,7 +16,7 @@ Browser- and Node-safe client helpers: `waitFor`, `resolveRoomCode`, `joinUrl`, 
 
 ## Public entry points
 
-- `.`: `waitFor`, `resolveRoomCode`, `joinUrl`, `tvUrl`, `between`, type `Parsed`.
+- `.`: `waitFor`, `resolveRoomCode`, `joinUrl`, `tvUrl`, `between`, `claimName`, `apiBaseOf`, type `Parsed`, type `SeatRoom`.
 
 ## Tests
 

@@ -67,3 +67,9 @@ The pure parts of `launch`: the `LaunchConfig`, and the per-connection `DemoTabl
 ### `GameKitIo`
 
 The injectable process: `env`, `argv`, `exit`, `log`, `error`, `onSignal` and the `startServer`/`runLauncher` seams. Defaults to `process` via `defaultIo()`, so tests pass fakes and never touch a real process.
+
+## Types
+
+- `GameMeta`: room name and player bounds (`roomName: string`, `minPlayers: number`, `maxPlayers: number`).
+- `ServeOptions`: config for `serve()` (`games: HostedGame[]`, `port?: number`, `apiPort?: number`).
+- `GameDemoOptions`: the declaration's `demo` field (`kit?`, `roomOptions?`, `bot?`, `hostName?`, `narrate?`, `problems?`, `passMessage?`).
