@@ -1,9 +1,10 @@
 import { Client } from "@colyseus/sdk";
-import { resolveRoomCode } from "@partygame/client-utils";
+import { RoomCodeError, resolveRoomCode } from "@partygame/client-utils";
 import {
   type ActionResult,
   CLIENT_MESSAGES,
   ClientMessage,
+  type CloseCode,
   closeCodeEntry,
   ErrorCode,
   isActionResult,
@@ -41,6 +42,8 @@ export interface GameConnectionOptions<TState> {
   rootSchema?: new () => TState;
   /** How long to wait for the room's first state before giving up. Default 10000 ms. */
   syncTimeoutMs?: number;
+  /** Receives the exception behind a local action failure, never shown to the UI. Default `console.warn`. */
+  logger?: (message: string, error: unknown) => void;
 }
 
 const DEFAULT_API_PORT = 3001;
@@ -206,14 +209,18 @@ export class GameConnectionManager<
 
   /** Sends a game action and resolves with the server's verdict. Failures are also kept in `lastServerError`. */
   async sendAction(type: string, payload: object = {}): Promise<ActionResult> {
-    if (!this.room) return this.fail();
+    if (!this.room) return this.fail(ErrorCode.NOT_CONNECTED);
     try {
       const result = await this.room.request(ClientMessage.ACTION, { ...payload, type });
-      if (!isActionResult(result)) return this.fail();
+      if (!isActionResult(result)) return this.fail(ErrorCode.BAD_REPLY);
       if (!result.ok) this.setLastError(result.error);
       return result;
-    } catch {
-      return this.fail();
+    } catch (error) {
+      (this.options.logger ?? console.warn)(
+        `[GameConnectionManager] ${type} request failed`,
+        error,
+      );
+      return this.fail(ErrorCode.CONNECTION_LOST);
     }
   }
 
@@ -284,7 +291,7 @@ export class GameConnectionManager<
       this.attach(room);
     } catch (error) {
       if (!cancelled()) this.status = "disconnected";
-      this.recordRejection(error);
+      this.recordRejection(error, !cancelled());
       throw error;
     }
   }
@@ -379,16 +386,35 @@ export class GameConnectionManager<
     if (entry) this.setLastError({ code: entry.errorCode, message: entry.message });
   }
 
-  /** Reads the numeric close code off an SDK rejection with a type guard and records it; other rejections are ignored. */
-  private recordRejection(error: unknown): void {
-    if (typeof error !== "object" || error === null || !("code" in error)) return;
-    const code = error.code;
-    if (typeof code === "number") this.recordClose(code);
+  /**
+   * Records why a connect failed, as a fixed message: a known close code, an unknown room code, a bad
+   * resolve-code reply, else CONNECTION_LOST. The exception goes to the logger; a stale (cancelled) connect records nothing new.
+   */
+  private recordRejection(error: unknown, current: boolean): void {
+    if (error instanceof RoomCodeError) {
+      this.fail(error.reason === "not-found" ? ErrorCode.ROOM_NOT_FOUND : ErrorCode.BAD_REPLY);
+      return;
+    }
+    const entry = this.closeEntryOf(error);
+    if (entry) {
+      this.setLastError({ code: entry.errorCode, message: entry.message });
+      return;
+    }
+    if (!current) return;
+    (this.options.logger ?? console.warn)("[GameConnectionManager] connect failed", error);
+    this.fail(ErrorCode.CONNECTION_LOST);
   }
 
-  /** A client-side action failure: the fixed INTERNAL message, never the raw exception text. */
-  private fail(): ActionResult {
-    const error: ServerError = { code: ErrorCode.INTERNAL, message: CLIENT_MESSAGES.INTERNAL };
+  /** Reads the numeric close code off an SDK rejection with a type guard. */
+  private closeEntryOf(error: unknown): CloseCode | undefined {
+    if (typeof error !== "object" || error === null || !("code" in error)) return undefined;
+    const code = error.code;
+    return typeof code === "number" ? closeCodeEntry(code) : undefined;
+  }
+
+  /** A client-side action failure: the fixed message for `code`, never the raw exception text. */
+  private fail(code: ErrorCode): ActionResult {
+    const error: ServerError = { code, message: CLIENT_MESSAGES[code] };
     this.setLastError(error);
     return { ok: false, error };
   }

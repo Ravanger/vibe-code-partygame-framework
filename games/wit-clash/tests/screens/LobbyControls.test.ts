@@ -1,3 +1,4 @@
+import { CLIENT_MESSAGES } from "@partygame/shared";
 import { fireEvent, render, screen, within } from "@testing-library/svelte";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import CategoryVote from "../../ui/screens/CategoryVote.svelte";
@@ -37,7 +38,7 @@ describe("Welcome screen TV mode", () => {
     manager.dispose();
     const watch = vi.spyOn(manager, "joinAsSpectator").mockRejectedValue(new Error("No such room"));
     render(Welcome, { manager });
-    expect(await screen.findByRole("alert")).toHaveTextContent("No such room");
+    expect(await screen.findByRole("alert")).toHaveTextContent(CLIENT_MESSAGES.CONNECTION_LOST);
     expect(watch).toHaveBeenCalledExactlyOnceWith("QRST");
   });
 });

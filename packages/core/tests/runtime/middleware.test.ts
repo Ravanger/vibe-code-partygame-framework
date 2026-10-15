@@ -196,6 +196,21 @@ describe("middleware chain around action handlers", () => {
   });
 });
 
+describe("rejectionCount after a handler-thrown FrameworkError", () => {
+  it("sees the rejection inside the chain, with one ERROR message", () => {
+    const counts: number[] = [];
+    const mw: PhaseMiddleware<S, P, O> = (ctx, next) => {
+      next();
+      if (ctx.event.kind === "action") counts.push(ctx.rejectionCount);
+    };
+    const table = new MTable([mw]);
+    const result = table.act("p1", "END_GAME");
+    expect(result).toMatchObject({ code: ErrorCode.WRONG_PHASE });
+    expect(counts).toEqual([1]);
+    expect(table.errors("p1")).toHaveLength(1);
+  });
+});
+
 describe("middleware chain around onTimeout and onRosterChange", () => {
   const record =
     (kind: string, seen: string[]): PhaseMiddleware<S, P, O> =>

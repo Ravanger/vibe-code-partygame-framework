@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { joinUrl, resolveRoomCode, tvUrl, waitFor } from "../src/index.js";
+import { joinUrl, RoomCodeError, resolveRoomCode, tvUrl, waitFor } from "../src/index.js";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -26,6 +26,18 @@ describe("resolveRoomCode", () => {
   it("throws the API's error", async () => {
     reply({ error: "No such room" });
     await expect(resolveRoomCode("http://h:3001", "ABCD")).rejects.toThrow("No such room");
+  });
+
+  it("tells a missing room from a malformed reply by a typed reason", async () => {
+    reply({ error: "No such room" });
+    await expect(resolveRoomCode("http://h:3001", "ABCD")).rejects.toMatchObject({
+      name: "RoomCodeError",
+      reason: "not-found",
+    });
+    reply({ nope: true });
+    const error = await resolveRoomCode("http://h:3001", "ABCD").catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(RoomCodeError);
+    expect(error).toMatchObject({ reason: "bad-reply" });
   });
 
   it("throws on a reply of the wrong shape", async () => {

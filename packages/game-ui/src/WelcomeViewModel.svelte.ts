@@ -1,6 +1,13 @@
 import type { GameConnectionManager } from "@partygame/game-client";
-import { RoomCodeSchema, sanitizeRoomCode } from "@partygame/shared";
+import {
+  CLIENT_MESSAGES,
+  ROOM_CODE_LENGTH,
+  RoomCodeSchema,
+  sanitizeRoomCode,
+} from "@partygame/shared";
 import type { BaseGameState } from "@partygame/shared/schema";
+
+const CODE_INVALID = `Game code must be ${ROOM_CODE_LENGTH} letters (A-Z)`;
 
 export class WelcomeViewModel<TState extends BaseGameState> {
   code = $state("");
@@ -32,11 +39,19 @@ export class WelcomeViewModel<TState extends BaseGameState> {
 
   async join(): Promise<void> {
     this.localError = undefined;
+    if (!this.codeIsValid) {
+      this.localError = CODE_INVALID;
+      return;
+    }
     await this.attempt(() => this.manager.join(this.code));
   }
 
   async watch(): Promise<void> {
     this.localError = undefined;
+    if (!this.codeIsValid) {
+      this.localError = CODE_INVALID;
+      return;
+    }
     await this.attempt(() => this.manager.joinAsSpectator(this.code));
   }
 
@@ -54,10 +69,12 @@ export class WelcomeViewModel<TState extends BaseGameState> {
   }
 
   private async attempt(connect: () => Promise<void>): Promise<void> {
+    this.manager.dismissError();
     try {
       await connect();
-    } catch (error) {
-      this.localError = error instanceof Error ? error.message : String(error);
+    } catch {
+      this.localError = this.manager.lastServerError?.message ?? CLIENT_MESSAGES.CONNECTION_LOST;
+      this.manager.dismissError();
     }
   }
 }

@@ -231,6 +231,29 @@ describe("QA probe R.4 — rejection exclusion", () => {
     expect(result.states.at(-1)?.pings).toEqual([]); // the rejected action changed nothing
   });
 
+  it("marks a handler-thrown FrameworkError (START_GAME with too few players) rejected and replays the log", () => {
+    const definition = { ...fullDefinition, minPlayers: 3, middleware: [actionLogMiddleware()] };
+    const table = new TestTable<S, P, O>({
+      definition,
+      state: newState(),
+      options: { rounds: 2 },
+      players: 2,
+    });
+    expect(table.start()).toMatchObject({ code: ErrorCode.NOT_ENOUGH_PLAYERS });
+    const log = getActionLog(table.priv) as ActionLog;
+    expect(log.entries.at(-1)).toMatchObject({ actionType: "START_GAME", rejected: true });
+    table.joinLate("p3");
+    table.start();
+    table.act("p2", "PING", { n: 1 });
+    const replayed = () =>
+      replayLog(definition, getActionLog(table.priv) as ActionLog, {
+        state: newState(),
+        options: { rounds: 2 },
+        players: 2,
+      });
+    expect(replayed).not.toThrow();
+  });
+
   it("throws when a log marks an accepted action as rejected (tampered log)", () => {
     const table = new FTable();
     table.start();

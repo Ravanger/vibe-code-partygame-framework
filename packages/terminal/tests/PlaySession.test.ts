@@ -177,7 +177,7 @@ describe("PlaySession", () => {
       new ScriptedIo(),
       new ViteUp(),
     );
-    await expect(session.run()).rejects.toThrow(CLOSE_CODES.JOIN_REFUSED.message);
+    await expect(session.run()).rejects.toThrow(CLOSE_CODES.WATCH_ONLY.message);
   });
 
   it("prints no links when the client is not running", async () => {

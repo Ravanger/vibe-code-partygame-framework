@@ -1,4 +1,4 @@
-import { matchMaker, type Room } from "@colyseus/core";
+import { logger, matchMaker, type Room } from "@colyseus/core";
 import { CLOSE_CODES } from "@partygame/shared";
 import { BaseGameState } from "@partygame/shared/schema";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -28,6 +28,19 @@ describe("GameRoom with invalid create options", () => {
     expect(unregister).not.toHaveBeenCalled();
     register.mockRestore();
     unregister.mockRestore();
+  });
+
+  it("logs the invalid-option detail server-side only", async () => {
+    const warn = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    await expect(t.createRoom("buzzer", { buzzMs: "x" })).rejects.toMatchObject({
+      message: CLOSE_CODES.INVALID_OPTIONS.message,
+    });
+    await expect(t.createRoom("buzzer", { seats: ["short"] })).rejects.toMatchObject({
+      message: CLOSE_CODES.INVALID_OPTIONS.message,
+    });
+    expect(warn).toHaveBeenCalledTimes(2);
+    expect(JSON.stringify(warn.mock.calls[0])).toContain("buzzMs");
+    warn.mockRestore();
   });
 });
 

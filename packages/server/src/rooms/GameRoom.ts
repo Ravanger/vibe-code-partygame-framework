@@ -24,6 +24,7 @@ import {
 } from "@partygame/shared";
 import type { BaseGameState } from "@partygame/shared/schema";
 import { PlayerSchema } from "@partygame/shared/schema";
+import type { ZodError } from "zod";
 import type { RoomCodeService } from "../services/RoomCodeService.js";
 
 const SPECTATOR_SLOTS = 32;
@@ -68,9 +69,37 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
   }
 
   onCreate(options: Record<string, unknown>): void {
+    try {
+      this.create(options);
+    } catch (error) {
+      throw this.unexpected("create", error);
+    }
+  }
+
+  onJoin(client: Client, options?: unknown): void {
+    try {
+      this.join(client, options);
+    } catch (error) {
+      throw this.unexpected("join", error);
+    }
+  }
+
+  /** Close codes thrown by `closeWith` pass through; anything else is logged and becomes the fixed INTERNAL close. */
+  private unexpected(phase: string, error: unknown): ServerError {
+    if (error instanceof ServerError) return error;
+    logger.error(`[GameRoom] ${phase} failed`, error);
+    return this.closeWith(CLOSE_CODES.INTERNAL);
+  }
+
+  private invalidOptions(where: string, error: ZodError): ServerError {
+    logger.warn(`[GameRoom] invalid ${where} options`, error.issues);
+    return this.closeWith(CLOSE_CODES.INVALID_OPTIONS);
+  }
+
+  private create(options: Record<string, unknown>): void {
     const { definition, stateClass, roomCodeService } = this.config;
     const roomOptions = RoomOptionsSchema.safeParse(options);
-    if (!roomOptions.success) throw this.closeWith(CLOSE_CODES.INVALID_OPTIONS);
+    if (!roomOptions.success) throw this.invalidOptions("create", roomOptions.error);
     if (roomOptions.data.seats) this.seatList = new Set(roomOptions.data.seats);
     this.autoDispose = false;
     this.maxClients = definition.maxPlayers + SPECTATOR_SLOTS;
@@ -78,7 +107,9 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
       Object.entries(options).filter(([key]) => !FRAMEWORK_KEYS.includes(key)),
     );
     const optionsResult = definition.options?.safeParse(rawOptions);
-    if (optionsResult && !optionsResult.success) throw this.closeWith(CLOSE_CODES.INVALID_OPTIONS);
+    if (optionsResult && !optionsResult.success) {
+      throw this.invalidOptions("create", optionsResult.error);
+    }
     const parsedOptions = optionsResult ? optionsResult.data : rawOptions;
     const state = new stateClass();
     state.minPlayers = definition.minPlayers;
@@ -100,13 +131,13 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     state.roomCode = roomCodeService.generateAndRegister(this.roomId);
   }
 
-  onJoin(client: Client, options?: unknown): void {
+  private join(client: Client, options?: unknown): void {
     const parsed = JoinOptionsSchema.safeParse(options);
-    if (!parsed.success) throw this.closeWith(CLOSE_CODES.INVALID_OPTIONS);
+    if (!parsed.success) throw this.invalidOptions("join", parsed.error);
     const { playerId, name, spectator } = parsed.data;
-    if (this.kicked.has(playerId)) throw this.closeWith(CLOSE_CODES.JOIN_REFUSED);
+    if (this.kicked.has(playerId)) throw this.closeWith(CLOSE_CODES.KICKED_REJOIN);
     if (!spectator && this.seatList && !this.seatList.has(playerId)) {
-      throw this.closeWith(CLOSE_CODES.JOIN_REFUSED);
+      throw this.closeWith(CLOSE_CODES.WATCH_ONLY);
     }
     const view = new StateView();
     client.view = view;

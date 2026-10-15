@@ -118,7 +118,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       players: () => this.host.players(),
       contextFactory: () => this.context(),
       reject: (playerId, action, code, message) => this.reject(playerId, action, code, message),
-      chain: (event, inner) => this.chain(event, inner),
+      chain: (event, inner) => this.chain(event, () => this.rejectThrown(event, inner)),
     });
     this.current = this.phases[LOBBY_PHASE] as PhaseDefinition<TState, TPrivate, TOptions>;
     this.actor = createActor(
@@ -164,10 +164,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       this.run(() => this.handle(playerId, rawAction), true);
     } catch (error) {
       if (!(error instanceof FrameworkError)) throw error;
-      const serverError: ServerError = { code: error.code, message: CLIENT_MESSAGES[error.code] };
-      this.rejections.push(serverError);
-      this.host.send(playerId, ServerMessage.ERROR, serverError);
-      return serverError;
+      return this.recordFrameworkError(playerId, error);
     }
     return this.rejections[0];
   }
@@ -411,6 +408,24 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
 
   private handle(playerId: string, rawAction: unknown): void {
     this.pipeline.run(playerId, rawAction);
+  }
+
+  /** Inside the chain, so middleware sees a handler-thrown FrameworkError as a rejection. */
+  private rejectThrown(event: MiddlewareEvent, inner: () => void): void {
+    try {
+      inner();
+    } catch (error) {
+      if (!(error instanceof FrameworkError) || event.kind !== "action") throw error;
+      this.queue.clear();
+      this.recordFrameworkError(event.senderId, error);
+    }
+  }
+
+  private recordFrameworkError(playerId: string, error: FrameworkError): ServerError {
+    const serverError: ServerError = { code: error.code, message: CLIENT_MESSAGES[error.code] };
+    this.rejections.push(serverError);
+    this.host.send(playerId, ServerMessage.ERROR, serverError);
+    return serverError;
   }
 
   private reject(

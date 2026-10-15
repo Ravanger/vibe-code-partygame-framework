@@ -35,13 +35,17 @@ describe("protocol constants", () => {
     for (const [key, value] of Object.entries(ErrorCode)) expect(value).toBe(key);
     expect(Object.keys(ErrorCode).sort()).toEqual(
       [
+        "BAD_REPLY",
+        "CONNECTION_LOST",
         "INTERNAL",
         "INVALID_ACTION",
         "KICKED",
         "NAME_TAKEN",
         "NOT_ACTIVE",
         "NOT_ALLOWED",
+        "NOT_CONNECTED",
         "NOT_ENOUGH_PLAYERS",
+        "ROOM_NOT_FOUND",
         "UNAUTHORIZED",
         "UNKNOWN_ACTION",
         "WRONG_PHASE",

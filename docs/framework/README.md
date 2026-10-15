@@ -60,6 +60,7 @@ Every rejection is sent only to the sender as `ERROR { code, message, action }`:
 | `NAME_TAKEN` | `SET_NAME` with a name another seat already has (compared trimmed and case-insensitively); the seat keeps its name |
 | `KICKED` | pushed to a player the host removed, just before the connection closes |
 | `INTERNAL` | only ever the answer to a request: a hook threw while handling the action |
+| `NOT_CONNECTED`, `CONNECTION_LOST`, `BAD_REPLY`, `ROOM_NOT_FOUND` | client-side only, never sent by the server: no room joined, the request or connect failed in transit, the reply was not an `ActionResult`, the typed room code is unknown ("Game code not found") |
 
 #### Awaiting an action's outcome
 `room.send("ACTION", action)` is fire-and-forget; rejections arrive as `ERROR` pushes.
@@ -209,12 +210,12 @@ every room and replay table append to one log and one timing store.
 | `phase` | Current phase; for `enter`, the phase being entered |
 | `kind` | `"action" \| "transition" \| "enter" \| "timeout" \| "roster-change"` |
 | `actionType`, `senderId`, `payload` | `kind === "action"` only; `payload` is the zod-parsed action object |
-| `rejected` | `kind === "action"` only; `true` when the handler called `ctx.reject()` (the action ran but changed nothing). Absent on accepted actions |
+| `rejected` | `kind === "action"` only; `true` when the handler called `ctx.reject()` or threw a `FrameworkError` (the action ran but changed nothing). Absent on accepted actions |
 | `from`, `to` | `kind === "transition"` only |
 
 Actions rejected **before the handler chain** — malformed envelope, unknown action, unauthorized sender,
 inactive player, invalid payload — are **not** logged: they never reach the middleware and change no state.
-An action whose *handler* calls `ctx.reject()` has reached the chain and **is** logged, marked
+An action whose *handler* calls `ctx.reject()` or throws a `FrameworkError` (as the built-in `START_GAME` does with too few players) has reached the chain and **is** logged, marked
 `rejected: true`; it changes no state either, and such logs replay — the re-dispatch re-runs the handler
 (RNG draws included) and must reject again (a mismatch in either direction throws). Roster changes are
 recorded for observability (see the replay limitation below).
@@ -316,7 +317,7 @@ table above marks "yes".
 `ctx.gameName` (definition name), `ctx.gameVersion` (definition version, recorded in the log header),
 `ctx.seed` (room RNG seed, recorded in the log header) and `ctx.newId()` (deterministic ids — see the
 Determinism contract above). Middleware contexts additionally expose `ctx.rejectionCount` — the live count
-of `ctx.reject()` calls for the current dispatch, so a middleware can tell after `next()` whether an action's
+of rejections (`ctx.reject()` calls and a handler-thrown `FrameworkError`) for the current dispatch, so a middleware can tell after `next()` whether an action's
 handler rejected.
 
 ### Errors at definition time
@@ -358,14 +359,20 @@ Client-visible error strings are fixed and table-driven; raw Zod or exception te
   | 4400 | `INVALID_OPTIONS` | `INVALID_ACTION` | Invalid room options |
   | 4401 | `ROOM_FULL` | `NOT_ALLOWED` | Room is full |
   | 4402 | `SEAT_REMOVED` | `KICKED` | Your seat was removed |
-  | 4403 | `JOIN_REFUSED` | `NOT_ALLOWED` | You cannot join this room |
+  | 4403 | `KICKED_REJOIN` | `KICKED` | Removed by the host |
+  | 4404 | `WATCH_ONLY` | `NOT_ALLOWED` | This room is watch-only |
+  | 4500 | `INTERNAL` | `INTERNAL` | The server could not handle the request |
 
 - Invalid create or join options are `safeParse`d and refused with the close code above, so a bad option never
-  surfaces Zod text. Hook failures reach clients only as `INTERNAL` plus the fixed failure notice.
+  surfaces Zod text; the issues are logged server-side with `logger.warn`. An unexpected throw while creating a room
+  or joining one (a failing room code service, state constructor or other bug) is logged with `logger.error` and
+  closes with `4500`, never with the exception text. Hook failures reach clients only as `INTERNAL` plus the fixed failure notice.
 - `ctx.reject(code, message)` is the one game-authored exception: your message is passed through to the client.
   Keep it short and player-facing; the code still comes from `ErrorCode`.
 - The client keeps one `lastServerError` (`GameConnectionManager.lastServerError`): server `ERROR` payloads,
-  failed action answers, refused joins (looked up by close code) and a fixed `INTERNAL` for local failures.
+  failed action answers, refused joins (looked up by close code), a failed `join`/`create` (`ROOM_NOT_FOUND`, `BAD_REPLY` or `CONNECTION_LOST`; the exception goes to the `logger` option and the promise still rejects) and a fixed `NOT_CONNECTED`, `CONNECTION_LOST` or `BAD_REPLY` message for local action failures (the exception goes to the manager's `logger` option, default `console.warn`).
+  The welcome screen moves a failed join's message into its own error line and clears the toast, so exactly one renders.
+  `ServerError.action` is set only by `ctx.reject` and invalid-payload rejections; framework rejections omit it.
   Clear it with `dismissError()`.
 
 `CLIENT_MESSAGES` holds the fixed string per `ErrorCode`; `closeCodeEntry(code)` looks up a close-code entry by
@@ -514,7 +521,7 @@ Elsewhere: `createGameServer({ games, roomCodeService?, transport?, reconnectMs?
 and `createApiHandler(roomCodeService)` is the pure `(Request) => Response` behind `/api/resolve-code`.
 
 Clients join with `{ playerId, name? }` (`spectator: true` for a TV display: no seat, counted in `spectatorCount`).
-Create a watch-only room with the framework option `seats: string[]` (the playerIds allowed to take a seat): any other non-spectator join is refused with `4403 "This room is watch-only"`, spectators still join. It is not a game option and is not published in `state.options`.
+Create a watch-only room with the framework option `seats: string[]` (the playerIds allowed to take a seat): any other non-spectator join is refused with `4404 "This room is watch-only"`, spectators still join. It is not a game option and is not published in `state.options`.
 `SET_NAME` readies a seat (a name another seat has is refused with `NAME_TAKEN`; a join-time `name` that is taken is ignored and the seat joins unnamed). A room is kept alive only by connected seats: once the last one is gone for `emptyRoomGraceMs`, the room is disposed and any spectators are disconnected. `ACTION` carries your actions (`room.send` or `room.request`, see Actions). A dropped connection holds the seat for `reconnectMs`
 (token reconnect or a new session with the same `playerId`); a mid-game joiner is seated inactive.
 When the host leaves or drops, the role moves to a connected seat that is active and ready, else one that is ready, else any connected seat.
@@ -564,6 +571,7 @@ const manager = new GameConnectionManager<ButtonState>({
   storagePrefix: "button",             // browser storage namespace
   rootSchema: ButtonState,             // your state class (browser-safe: see below)
   syncTimeoutMs: 10000,                // optional: give up if the first state takes longer (default 10000)
+  logger: console.warn,                // optional: receives the exception behind a local action failure (default console.warn)
 });
 manager.onMessage("FIRST", (payload) => { /* register pushed messages before connecting */ }); // payload: unknown by default
 await manager.resume();                // page load: stored token, then stored room code
@@ -598,8 +606,9 @@ is deduplicated by identity and its readers never re-run. Expose plain getters, 
 
 ### sendAction results
 `sendAction` uses `room.request`, so it resolves with the server's verdict: `{ ok: true }` or `{ ok: false, error }` (`error` is a `ServerError`).
-Rejections are also kept in `lastServerError`. A transport failure (not connected, timeout, connection closed) resolves as
-`{ ok: false, error: { code: "INTERNAL", ... } }`; it never throws.
+Rejections are also kept in `lastServerError`. A local failure resolves as `{ ok: false, error }` and never throws: `NOT_CONNECTED` (no room), `CONNECTION_LOST`
+(the request rejected: timeout, connection closed) or `BAD_REPLY` (not an `ActionResult`). Each has its own fixed `CLIENT_MESSAGES` text;
+the exception goes to the `logger` option (default `console.warn`), never to `lastServerError`.
 
 ### Reconnects
 The Colyseus SDK reconnects by itself after a dropped connection and keeps the `Room`, `room.state` and every schema instance (views included).
@@ -966,7 +975,7 @@ export { svelteConfig as default } from "@partygame/config/svelte";
 | Import | What |
 |---|---|
 | `@partygame/shared` | `NAME_MAX_LENGTH`: the cap `SET_NAME` enforces on player names; `ROOM_CODE_LENGTH` and `ROOM_CODE_ALPHABET`: the shape of a room code; `sanitizeRoomCode(raw)`: uppercases, drops other characters and cuts to the code length (for a code input) |
-| `@partygame/client-utils` | `Parsed<T>` (`{ ok: true, value } \| { ok: false, error }`) and `between(value, min, max)` for argument parsing; `waitFor(predicate, what, timeoutMs)` poll loop; `resolveRoomCode(apiBase, code)`; `joinUrl(base, code)` / `tvUrl(base, code)` share links; `claimName(room, playerId, name, timeoutMs?)` (type `SeatRoom`), `apiBaseOf(endpoint, apiPort)` |
+| `@partygame/client-utils` | `Parsed<T>` (`{ ok: true, value } \| { ok: false, error }`) and `between(value, min, max)` for argument parsing; `waitFor(predicate, what, timeoutMs)` poll loop; `resolveRoomCode(apiBase, code)` (rejects with `RoomCodeError`, `reason` `"not-found"` or `"bad-reply"`); `joinUrl(base, code)` / `tvUrl(base, code)` share links; `claimName(room, playerId, name, timeoutMs?)` (type `SeatRoom`), `apiBaseOf(endpoint, apiPort)` |
 | `@partygame/core` | `shuffle(items, rng)`, `required(value, what)` |
 | `@partygame/server/node` | `startNodeServer({ games, port?, apiPort? })` (a game server and its API in this process; `.stop()`), `serveApi(codes, { port, host? })`: the code API on Node's `http` (the Bun entry serves its own) |
 | `@partygame/server/probe` | `ServerProbe` (`isGameServer(port, apiPort)`, `canConnect(port)`, `answers(url)`), `freePort()`, `closeHttpServer(server)` (resolves when the server already stopped): port probing without Colyseus |

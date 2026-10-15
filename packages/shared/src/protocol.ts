@@ -27,11 +27,23 @@ export const ErrorCode = {
   KICKED: "KICKED",
   /** The server failed while handling the action. Only ever a request's answer, never pushed. */
   INTERNAL: "INTERNAL",
+  /** Client-side only: an action was sent with no room joined. Never sent by the server. */
+  NOT_CONNECTED: "NOT_CONNECTED",
+  /** Client-side only: the request failed in transit (network drop, timeout). Never sent by the server. */
+  CONNECTION_LOST: "CONNECTION_LOST",
+  /** Client-side only: the resolve-code API knows no room for the typed code. Never sent by the server. */
+  ROOM_NOT_FOUND: "ROOM_NOT_FOUND",
+  /** Client-side only: the server's reply to a request was not an `ActionResult`. Never sent by the server. */
+  BAD_REPLY: "BAD_REPLY",
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
 
-/** Payload of an `ERROR` server message. `action` is the rejected action type, when known. */
+/**
+ * Payload of an `ERROR` server message. `action` is the rejected action type; only `ctx.reject` and
+ * invalid-payload rejections carry it, framework rejections (unknown action, wrong phase, unauthorized,
+ * not active, built-in refusals) omit it.
+ */
 export interface ServerError {
   code: ErrorCode;
   message: string;

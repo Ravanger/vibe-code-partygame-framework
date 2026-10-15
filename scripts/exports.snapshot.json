@@ -44,6 +44,8 @@
         },
         "symbols": {
           "Parsed": {},
+          "RoomCodeError": {},
+          "RoomCodeFailure": {},
           "SeatRoom": {},
           "apiBaseOf": {},
           "between": {},
