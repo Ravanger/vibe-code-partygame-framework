@@ -75,6 +75,13 @@ manager.dismissError();
 manager.onMessage("FIRST", (payload) => { /* pushed by ctx.send; returns an unsubscribe */ });
 ```
 
+`GameConnectionManager` takes an optional second type argument, `TEvents`: a map of message names to payload types. With it, `onMessage` only accepts declared names and hands the callback a typed payload; without it (the default), any name is accepted with an `unknown` payload.
+
+```ts
+const manager = new GameConnectionManager<MyState, { TURN: { id: string } }>();
+manager.onMessage("TURN", (turn) => turn.id); // typed; other names are a compile error
+```
+
 ## Show the phase clock
 
 `countdown()` counts down to `state.phaseEndsAt`, corrected for client clock skew. Call `destroy()` when done.

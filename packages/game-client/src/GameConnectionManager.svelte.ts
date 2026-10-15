@@ -15,6 +15,7 @@ import {
 import type { BaseGameState, PlayerSchema } from "@partygame/shared/schema";
 import { createSubscriber } from "svelte/reactivity";
 import { Countdown } from "./countdown.svelte.js";
+import { MessageBus } from "./MessageBus.js";
 import { PersistedSession } from "./PersistedSession.js";
 import type { RoomLike } from "./RoomLike.js";
 
@@ -40,18 +41,18 @@ export interface GameConnectionOptions<TState> {
   syncTimeoutMs?: number;
 }
 
-interface Listener {
-  type: string;
-  callback: (payload: unknown) => void;
-  off: (() => void) | undefined;
-}
-
 const DEFAULT_API_PORT = 3001;
 const DEFAULT_SYNC_TIMEOUT_MS = 10_000;
 const CANCELLED = "Connection cancelled";
 
-/** Connection to one game room: lifecycle, the reactive state, and the player's actions. */
-export class GameConnectionManager<TState extends BaseGameState = BaseGameState> {
+/**
+ * Connection to one game room: lifecycle, the reactive state, and the player's actions.
+ * `TEvents` maps message names to payload types for typed `onMessage`; by default any name is accepted with an `unknown` payload.
+ */
+export class GameConnectionManager<
+  TState extends BaseGameState = BaseGameState,
+  TEvents extends Record<string, unknown> = Record<string, unknown>,
+> {
   status: ConnectionStatus = $state("idle");
   lastServerError: ServerError | undefined = $state.raw(undefined);
   readonly playerId: string;
@@ -60,7 +61,7 @@ export class GameConnectionManager<TState extends BaseGameState = BaseGameState>
   private readonly client: Client;
   private readonly session: PersistedSession;
   private readonly apiBase: string;
-  private readonly listeners = new Set<Listener>();
+  private readonly bus = new MessageBus<TState>();
   private pending: { key: string; promise: Promise<void> } | undefined;
   private spectating = false;
   private generation = 0;
@@ -212,13 +213,12 @@ export class GameConnectionManager<TState extends BaseGameState = BaseGameState>
   }
 
   /** Listens for a pushed message type; survives room changes. Register before connecting so the SDK does not warn. */
-  onMessage(type: string, callback: (payload: unknown) => void): () => void {
-    const listener: Listener = { type, callback, off: this.room?.onMessage(type, callback) };
-    this.listeners.add(listener);
-    return () => {
-      listener.off?.();
-      this.listeners.delete(listener);
-    };
+  onMessage<K extends keyof TEvents & string>(
+    type: K,
+    callback: (payload: TEvents[K]) => void,
+  ): () => void {
+    // The bus stores untyped callbacks; the typed contract lives at this public boundary.
+    return this.bus.on(type, callback as (payload: unknown) => void);
   }
 
   dismissError(): void {
@@ -230,9 +230,7 @@ export class GameConnectionManager<TState extends BaseGameState = BaseGameState>
     this.detach();
     this.room = room;
     this.bindState();
-    for (const listener of this.listeners) {
-      listener.off = room.onMessage(listener.type, listener.callback);
-    }
+    this.bus.bind(room);
     room.onDrop(() => this.whileAttached(room, () => (this.status = "reconnecting")));
     room.onReconnect(() =>
       this.whileAttached(room, () => {
@@ -259,7 +257,7 @@ export class GameConnectionManager<TState extends BaseGameState = BaseGameState>
     this.pending = undefined;
     const room = this.room;
     this.detach("disconnected");
-    this.listeners.clear();
+    this.bus.clear();
     void room?.leave(false);
   }
 
@@ -337,10 +335,7 @@ export class GameConnectionManager<TState extends BaseGameState = BaseGameState>
 
   private detach(status?: ConnectionStatus): void {
     this.unbindState();
-    for (const listener of this.listeners) {
-      listener.off?.();
-      listener.off = undefined;
-    }
+    this.bus.unbind();
     this.room = undefined;
     if (status) this.status = status;
   }
