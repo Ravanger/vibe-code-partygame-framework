@@ -1,5 +1,9 @@
 import { matchMaker } from "@colyseus/core";
-import { afterEach, describe, expect, it } from "vitest";
+import { defineGame } from "@partygame/core";
+import { CLOSE_CODES } from "@partygame/shared";
+import { BaseGameState } from "@partygame/shared/schema";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { RoomCodeService } from "../src/services/RoomCodeService.js";
 import type { TestServer } from "../src/testing/index.js";
 import { sleep, waitUntil } from "../src/testing/index.js";
 import { bootBuzzer, pid, stateOf } from "./support.js";
@@ -83,5 +87,44 @@ describe("GameRoom disposal", () => {
     await client.leave(false);
     await waitUntil(() => !alive(room.roomId), "disposed");
     expect(t.roomCodeService.resolve(stateOf(room).roomCode)).toBeUndefined();
+  });
+});
+
+describe("GameRoom creation failure", () => {
+  const internal = { code: CLOSE_CODES.INTERNAL.code, message: CLOSE_CODES.INTERNAL.message };
+
+  it("closes with INTERNAL and unregisters nothing when no code can be generated", async () => {
+    class FullCodeService extends RoomCodeService {
+      override generateCode(): string {
+        throw new Error("no free code");
+      }
+    }
+    const service = new FullCodeService();
+    const unregister = vi.spyOn(service, "unregister");
+    t = await bootBuzzer({ roomCodeService: service });
+    await expect(t.createRoom("buzzer")).rejects.toMatchObject(internal);
+    expect(unregister).not.toHaveBeenCalled();
+  });
+
+  it("releases the code when a later step fails", async () => {
+    const ThrowingGame = defineGame<BaseGameState, Record<string, never>, Record<string, never>>({
+      name: "Throwing",
+      version: "1",
+      minPlayers: 1,
+      maxPlayers: 2,
+      startPhase: "Play",
+      createPrivateState: () => {
+        throw new Error("boom");
+      },
+      phases: { Play: {} },
+    });
+    t = await bootBuzzer({
+      games: [{ roomName: "throwing", definition: ThrowingGame, stateClass: BaseGameState }],
+    });
+    const register = vi.spyOn(t.roomCodeService, "generateAndRegister");
+    await expect(t.createRoom("throwing")).rejects.toMatchObject(internal);
+    const code = register.mock.results[0]?.value;
+    expect(code).toMatch(/^[A-Z]{4}$/);
+    expect(t.roomCodeService.resolve(code)).toBeUndefined();
   });
 });

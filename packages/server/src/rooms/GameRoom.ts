@@ -124,24 +124,37 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     if (JSON.stringify(parsedOptions).length > MAX_OPTIONS_JSON_LENGTH) {
       throw this.closeWith(CLOSE_CODES.INVALID_OPTIONS);
     }
-    const state = new stateClass();
-    state.minPlayers = definition.minPlayers;
-    state.maxPlayers = definition.maxPlayers;
-    state.serverNow = Date.now();
-    this.setState(state);
-    this.host.publishOptions(parsedOptions);
-    this.runtime = new GameRuntime({ definition, state, options: parsedOptions, host: this.host });
-    this.clock.setInterval(() => {
-      state.serverNow = Date.now();
-    }, 1000);
-    this.scheduleDisposeIfEmpty();
 
-    this.onMessage(ClientMessage.SET_NAME, (client, raw: unknown) => this.setName(client, raw));
-    this.onMessage(ClientMessage.ACTION, (client, raw: unknown): ActionResult => {
-      const seat = this.seatOf(client);
-      return seat ? this.act(seat.id, raw) : { ok: false, error: SPECTATOR_ERROR };
-    });
-    state.roomCode = roomCodeService.generateAndRegister(this.roomId);
+    const code = roomCodeService.generateAndRegister(this.roomId);
+
+    try {
+      const state = new stateClass();
+      state.minPlayers = definition.minPlayers;
+      state.maxPlayers = definition.maxPlayers;
+      state.serverNow = Date.now();
+      state.roomCode = code;
+      this.setState(state);
+      this.host.publishOptions(parsedOptions);
+      this.runtime = new GameRuntime({
+        definition,
+        state,
+        options: parsedOptions,
+        host: this.host,
+      });
+      this.clock.setInterval(() => {
+        state.serverNow = Date.now();
+      }, 1000);
+      this.scheduleDisposeIfEmpty();
+
+      this.onMessage(ClientMessage.SET_NAME, (client, raw: unknown) => this.setName(client, raw));
+      this.onMessage(ClientMessage.ACTION, (client, raw: unknown): ActionResult => {
+        const seat = this.seatOf(client);
+        return seat ? this.act(seat.id, raw) : { ok: false, error: SPECTATOR_ERROR };
+      });
+    } catch (error) {
+      roomCodeService.unregister(code);
+      throw error;
+    }
   }
 
   private join(client: Client, options?: unknown): void {
@@ -207,7 +220,7 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
 
   onDispose(): void {
     this.runtime?.stop();
-    if (this.state) this.config.roomCodeService.unregister(this.state.roomCode);
+    if (this.state?.roomCode) this.config.roomCodeService.unregister(this.state.roomCode);
   }
 
   private readonly host: RuntimeHost = {
