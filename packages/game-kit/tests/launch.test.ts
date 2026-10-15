@@ -2,6 +2,7 @@ import type { LaunchConfig } from "@partygame/launcher";
 import type { BaseGameState } from "@partygame/shared/schema";
 import { describe, expect, it } from "vitest";
 import { defineGamePackage, launch } from "../src/index.js";
+import { fakeIo } from "./fixtures/fakeIo.js";
 import { TAP_ROOM, TapGame, TapState, tapKit } from "./fixtures/tapGame.js";
 
 describe("launch", () => {
@@ -20,16 +21,11 @@ describe("launch", () => {
     await launch(
       game,
       { gameDir: "/game" },
-      {
-        env: {},
-        argv: ["dev", "--demo"],
-        exit: () => {},
-        log: () => {},
-        error: () => {},
+      fakeIo(["dev", "--demo"], {
         runLauncher: async (config, argv) => {
           calls.push([config, argv]);
         },
-      },
+      }).io,
     );
 
     expect(calls).toHaveLength(1);

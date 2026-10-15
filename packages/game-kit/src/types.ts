@@ -63,13 +63,13 @@ export interface GameKitIo {
   log: (line: string) => void;
   error: (line: string) => void;
   /** Registers a process signal handler. */
-  onSignal?: (signal: "SIGINT", handler: () => void) => void;
-  /** The prompter `play` asks questions through; a readline one by default. */
-  prompter?: Prompter;
-  /** The server starter for `serve`; the Bun server by default. */
-  startServer?: (options: ServeOptions) => Promise<unknown>;
-  /** The launcher for `launch`; `runLauncher` from `@partygame/launcher` by default. */
-  runLauncher?: <TState extends BaseGameState>(
+  onSignal: (signal: "SIGINT", handler: () => void) => void;
+  /** Builds the prompter `play` asks questions through; `stop` ends the session when the input closes or is interrupted. */
+  prompter: (stop: () => void) => Prompter;
+  /** The server starter for `serve`. */
+  startServer: (options: ServeOptions) => Promise<unknown>;
+  /** The launcher for `launch`. */
+  runLauncher: <TState extends BaseGameState>(
     config: LaunchConfig<TState>,
     argv: string[],
   ) => Promise<void>;

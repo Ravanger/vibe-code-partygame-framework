@@ -1,8 +1,10 @@
 import { startNodeServer } from "@partygame/server/node";
+import { freePort } from "@partygame/server/probe";
 import type { TerminalStrategy } from "@partygame/terminal";
 import { ScriptedIo } from "@partygame/terminal/testing";
 import { describe, expect, it, vi } from "vitest";
-import { defineGamePackage, type GameKitIo, hostedGame, play } from "../src/index.js";
+import { defineGamePackage, hostedGame, play } from "../src/index.js";
+import { fakeIo } from "./fixtures/fakeIo.js";
 import { TAP_ROOM, TapGame, TapState, tapKit } from "./fixtures/tapGame.js";
 
 const tapTerminal = (): TerminalStrategy<TapState> => ({
@@ -30,24 +32,9 @@ const bare = defineGamePackage({
   botKit: tapKit(),
 });
 
-const fakeIo = (argv: string[], over: Partial<GameKitIo> = {}) => {
-  const log: string[] = [];
-  const err: string[] = [];
-  const exits: number[] = [];
-  const io: GameKitIo = {
-    env: {},
-    argv,
-    exit: (code) => void exits.push(code),
-    log: (line) => void log.push(line),
-    error: (line) => void err.push(line),
-    ...over,
-  };
-  return { io, log, err, exits };
-};
-
 describe("play", () => {
   it("prints the usage and exits 2 on bad arguments", async () => {
-    const { io, err, exits } = fakeIo(["--bots=9"], { prompter: new ScriptedIo() });
+    const { io, err, exits } = fakeIo(["--bots=9"], { prompter: () => new ScriptedIo() });
     await play(pkg, io);
     expect(err).toEqual([
       "Usage: bun run play [--bots=0..5] [--name=You] [--join=ABCD] [--endpoint=ws://host:2567 --api-port=3001]",
@@ -56,19 +43,74 @@ describe("play", () => {
   });
 
   it("reports a game without a terminal strategy and exits 1", async () => {
-    const { io, err, exits } = fakeIo(["--name=Ann"], { prompter: new ScriptedIo() });
+    const { io, err, exits } = fakeIo(["--name=Ann"], { prompter: () => new ScriptedIo() });
     await play(bare, io);
     expect(err).toEqual(["This game has no terminal strategy."]);
     expect(exits).toEqual([1]);
   });
 
   it("refuses a bot count above the game's seats", async () => {
-    const { io, err, exits } = fakeIo(["--bots=6"], { prompter: new ScriptedIo() });
+    const { io, err, exits } = fakeIo(["--bots=6"], { prompter: () => new ScriptedIo() });
     await play(bare, io);
     expect(err).toEqual([
       "Usage: bun run play [--bots=0..5] [--name=You] [--join=ABCD] [--endpoint=ws://host:2567 --api-port=3001]",
     ]);
     expect(exits).toEqual([2]);
+  });
+
+  it("reports a failed connection with exit 1 when joining a room nobody serves", async () => {
+    const port = await freePort();
+    const { io, err, exits } = fakeIo(
+      ["--join=ABCD", "--endpoint", `ws://127.0.0.1:${port}`, `--api-port=${await freePort()}`],
+      { prompter: () => new ScriptedIo() },
+    );
+    await play(pkg, io);
+    expect(err).toHaveLength(1);
+    expect(exits).toEqual([1]);
+  }, 30_000);
+
+  it("stops the session when the prompter closes", async () => {
+    const handle = await startNodeServer({ games: [hostedGame(pkg, undefined)] });
+    try {
+      const prompter = new ScriptedIo();
+      let close: (() => void) | undefined;
+      const { io, exits } = fakeIo(
+        ["--name=Ann", "--bots=1", "--endpoint", handle.endpoint, `--api-port=${handle.apiPort}`],
+        {
+          prompter: (stop) => {
+            close = stop;
+            return prompter;
+          },
+        },
+      );
+      const playing = play(pkg, io);
+      await vi.waitFor(() => expect(prompter.printed).toContain("Bot 1 joined."), {
+        timeout: 15_000,
+      });
+      close?.();
+      await playing;
+      expect(exits).toEqual([0]);
+    } finally {
+      await handle.stop();
+    }
+  }, 30_000);
+
+  it("reports a failing load and exits 1", async () => {
+    const failing = defineGamePackage({
+      meta: { roomName: TAP_ROOM, minPlayers: 2, maxPlayers: 6 },
+      load: async () => {
+        throw new Error("bad content");
+      },
+      definition: () => TapGame,
+      stateClass: TapState,
+      isFinished: (state) => state.done,
+      botKit: tapKit(),
+      terminal: tapTerminal,
+    });
+    const { io, err, exits } = fakeIo([], { prompter: () => new ScriptedIo() });
+    await play(failing, io);
+    expect(err).toEqual(["bad content"]);
+    expect(exits).toEqual([1]);
   });
 
   it("plays a session against a started server and exits 0", async () => {
@@ -84,7 +126,7 @@ describe("play", () => {
             signalName = name;
             signal = handler;
           },
-          prompter,
+          prompter: () => prompter,
         },
       );
       const playing = play(pkg, io);

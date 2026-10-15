@@ -382,7 +382,7 @@ describe("middleware throws behave like hook throws", () => {
     // like any hook failure instead of dropping the transition it is observing.
     let explode = true;
     const mw: PhaseMiddleware<S, P, O> = (ctx, next) => {
-      if (ctx.event.kind === "transition" && explode) {
+      if (ctx.event.kind === "transition" && ctx.event.to === "Play" && explode) {
         next();
         throw new Error("mw transition boom");
       }
@@ -457,16 +457,15 @@ describe("middleware must be synchronous", () => {
       next();
     };
     const table = new MTable([smuggle(slow)]);
-    // The initial Lobby enter happens at construction; its failure is deferred like any hook failure,
-    // and joins this run's action failure in the rethrown AggregateError.
+    // The initial Lobby enter fails at construction and is reported there, so start() sees only its own failure.
     let thrown: unknown;
     try {
       table.start();
     } catch (error) {
       thrown = error;
     }
-    const errors = thrown instanceof AggregateError ? thrown.errors : [thrown];
-    expect(errors.some((e) => String(e).includes("middleware[0] returned a Promise"))).toBe(true);
+    expect(thrown).not.toBeInstanceOf(AggregateError);
+    expect(String(thrown)).toContain("middleware[0] returned a Promise");
   });
 
   it("ignores non-promise return values", () => {

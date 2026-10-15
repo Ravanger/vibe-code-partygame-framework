@@ -25,4 +25,4 @@ Bot players for any game: `BotPlayer`, `joinBots`, `BotTable`, `DemoTable`, driv
 
 ## Before you add a file
 
-Does it decide or pace a bot move? A generic client helper -> `client-utils` (#130); terminal-only -> `terminal`.
+Does it decide or pace a bot move? A generic client helper -> `client-utils`; terminal-only -> `terminal`.

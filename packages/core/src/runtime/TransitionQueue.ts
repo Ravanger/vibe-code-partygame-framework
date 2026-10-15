@@ -1,5 +1,13 @@
 const MAX_CHAINED_TRANSITIONS = 100;
 
+/** Thrown by {@link TransitionQueue.drain} when a drain exceeds the chained-transition limit. */
+export class PhaseLoopError extends Error {
+  constructor() {
+    super(`More than ${MAX_CHAINED_TRANSITIONS} chained transitions; phase loop?`);
+    this.name = "PhaseLoopError";
+  }
+}
+
 /** A phase transition requested from inside a hook or handler, applied once that call returns. */
 export type Pending = { kind: "phase"; phase: string } | { kind: "lobby" };
 
@@ -35,7 +43,7 @@ export class TransitionQueue {
     try {
       for (let next = this.items.shift(); next; next = this.items.shift()) {
         if (++steps > MAX_CHAINED_TRANSITIONS) {
-          throw new Error(`More than ${MAX_CHAINED_TRANSITIONS} chained transitions; phase loop?`);
+          throw new PhaseLoopError();
         }
         apply(next);
         afterEach();

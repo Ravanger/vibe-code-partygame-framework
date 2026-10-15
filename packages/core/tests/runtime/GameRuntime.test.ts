@@ -955,6 +955,248 @@ describe("onError and the default failure policy", () => {
   });
 });
 
+const catching = (fn: () => void): unknown => {
+  try {
+    fn();
+  } catch (error) {
+    return error;
+  }
+  return undefined;
+};
+
+describe("every hook failure ends under the failure policy", () => {
+  const NOTICE = "The game stopped because of an unexpected error.";
+  const loopPhases = {
+    Ping: { onEnter: (ctx: GameContext<S, P, O>) => ctx.transition("Pong") },
+    Pong: { onEnter: (ctx: GameContext<S, P, O>) => ctx.transition("Ping") },
+  };
+  const errorsOf = (thrown: unknown): string[] =>
+    thrown instanceof AggregateError ? thrown.errors.map((e) => String(e)) : [String(thrown)];
+
+  it("routes a two-phase onEnter loop through onError and back to the Lobby", () => {
+    const seen: unknown[] = [];
+    const { runtime, state } = setup2({
+      startPhase: "Ping",
+      phases: loopPhases,
+      onError: (_ctx, error) => seen.push(error),
+    });
+    const thrown = catching(() => runtime.dispatch("p1", { type: "START_GAME" }));
+    expect(seen).toHaveLength(1);
+    expect(String(seen[0])).toContain("chained transitions");
+    expect(String(thrown)).toContain("chained transitions");
+    expect(runtime.phase).toBe("Lobby");
+    expect(state.notice).toBe(NOTICE);
+  });
+
+  it("still ends in the Lobby, rethrowing the original failure, when onError queues a loop", () => {
+    const { runtime, state } = setup2({
+      startPhase: "Play",
+      phases: {
+        ...loopPhases,
+        Play: {
+          actions: {
+            BOOM: action({
+              from: "player",
+              payload: z.object({}),
+              handler: () => {
+                throw new Error("boom");
+              },
+            }),
+          },
+        },
+      },
+      onError: (ctx) => ctx.transition("Ping"),
+    });
+    runtime.dispatch("p1", { type: "START_GAME" });
+    const errors = errorsOf(catching(() => runtime.dispatch("p2", { type: "BOOM" })));
+    expect(errors[0]).toBe("Error: boom");
+    expect(errors.some((e) => e.includes("chained transitions"))).toBe(true);
+    expect(runtime.phase).toBe("Lobby");
+    expect(state.notice).toBe(NOTICE);
+  });
+
+  it("calls onReturnToLobby once when it throws on a queued returnToLobby", () => {
+    let calls = 0;
+    const { runtime } = setup2({
+      onReturnToLobby: () => {
+        ++calls;
+        throw new Error("lobby boom");
+      },
+    });
+    runtime.dispatch("p1", { type: "START_GAME" });
+    const errors = errorsOf(catching(() => runtime.dispatch("p1", { type: "HOME" })));
+    expect(errors).toEqual(["Error: lobby boom"]);
+    expect(calls).toBe(1);
+    expect(runtime.phase).toBe("Lobby");
+  });
+
+  it("reports a construction-time failure at construction, not on the next action", () => {
+    const seen: unknown[] = [];
+    let armed = true;
+    const host = new FakeHost();
+    host.seat("p1");
+    host.seat("p2");
+    const state = newState();
+    const runtime = new GameRuntime({
+      definition: makeSpec({
+        onError: (_ctx, error) => seen.push(error),
+        middleware: [
+          (ctx, next) => {
+            if (armed && ctx.event.kind === "enter") {
+              armed = false;
+              throw new Error("enter boom");
+            }
+            next();
+          },
+        ],
+      }),
+      state,
+      host,
+      options: { rounds: 3 },
+    });
+    expect(seen.map((e) => String(e))).toEqual(["Error: enter boom"]);
+    expect(state.notice).toBe(NOTICE);
+    expect(runtime.dispatch("p1", { type: "START_GAME" })).toBeUndefined();
+    expect(seen).toHaveLength(1);
+    expect(runtime.phase).toBe("Play");
+  });
+
+  it("gives a FrameworkError from onRosterChange the same policy as a plain Error", () => {
+    const seen: unknown[] = [];
+    const { runtime, state } = setup2({
+      phases: {
+        Play: {
+          onRosterChange: () => {
+            throw new FrameworkError(ErrorCode.NOT_ALLOWED, "roster detail");
+          },
+        },
+      },
+      onError: (_ctx, error) => seen.push(error),
+    });
+    runtime.dispatch("p1", { type: "START_GAME" });
+    const thrown = catching(() => runtime.rosterChanged());
+    expect(thrown).toBeInstanceOf(FrameworkError);
+    expect(seen).toEqual([thrown]);
+    expect(runtime.phase).toBe("Lobby");
+    expect(state.notice).toBe(NOTICE);
+  });
+
+  it("gives a FrameworkError from onTimeout the same policy as a plain Error", () => {
+    const seen: unknown[] = [];
+    const { runtime, host } = setup2({
+      phases: {
+        Play: {
+          duration: 1000,
+          onTimeout: () => {
+            throw new FrameworkError(ErrorCode.NOT_ALLOWED, "timeout detail");
+          },
+        },
+      },
+      onError: (_ctx, error) => seen.push(error),
+    });
+    runtime.dispatch("p1", { type: "START_GAME" });
+    expect(catching(() => host.advance(1000))).toBeInstanceOf(FrameworkError);
+    expect(seen).toHaveLength(1);
+    expect(runtime.phase).toBe("Lobby");
+  });
+});
+
+describe("the failure policy's Lobby return is observable", () => {
+  const BOOM_PHASES = {
+    Play: {
+      actions: {
+        BOOM: action({
+          from: "player",
+          payload: z.object({}),
+          handler: () => {
+            throw new Error("boom");
+          },
+        }),
+        HOME: action({
+          from: "player",
+          payload: z.object({}),
+          handler: (ctx) => ctx.returnToLobby(),
+        }),
+      },
+    },
+  } satisfies Spec["phases"];
+
+  const observed = (overrides: Overrides = {}) => {
+    const transitions: string[] = [];
+    const ctx = setup2({
+      phases: BOOM_PHASES,
+      middleware: [
+        (mctx, next) => {
+          if (mctx.event.kind === "transition") {
+            transitions.push(`${mctx.event.from}->${mctx.event.to}`);
+          }
+          next();
+        },
+      ],
+      ...overrides,
+    });
+    ctx.runtime.dispatch("p1", { type: "START_GAME" });
+    transitions.length = 0;
+    return { ...ctx, transitions };
+  };
+
+  it("emits exactly one transition to middleware when a hook failure returns the room to the Lobby", () => {
+    const { runtime, transitions } = observed();
+    expect(() => runtime.dispatch("p2", { type: "BOOM" })).toThrow("boom");
+    expect(runtime.phase).toBe("Lobby");
+    expect(transitions).toEqual(["Play->Lobby"]);
+  });
+
+  it("emits one transition, not two, when a throwing onReturnToLobby hands over to the policy", () => {
+    const { runtime, transitions } = observed({
+      onReturnToLobby: () => {
+        throw new Error("lobby boom");
+      },
+    });
+    expect(() => runtime.dispatch("p2", { type: "HOME" })).toThrow("lobby boom");
+    expect(runtime.phase).toBe("Lobby");
+    expect(transitions).toEqual(["Play->Lobby"]);
+  });
+
+  it("does not let a throwing observer stop the return to the Lobby", () => {
+    const { runtime } = setup2({
+      phases: BOOM_PHASES,
+      middleware: [
+        (mctx, next) => {
+          if (mctx.event.kind === "transition" && mctx.event.to === "Lobby") {
+            throw new Error("observe boom");
+          }
+          next();
+        },
+      ],
+    });
+    runtime.dispatch("p1", { type: "START_GAME" });
+    const thrown = catching(() => runtime.dispatch("p2", { type: "BOOM" }));
+    expect((thrown as AggregateError).errors.map((e) => String(e))).toEqual([
+      "Error: boom",
+      "Error: observe boom",
+    ]);
+    expect(runtime.phase).toBe("Lobby");
+  });
+});
+
+describe("the failure notice", () => {
+  it("is cleared when the next game starts", () => {
+    const { runtime, state } = setup2();
+    state.notice = "The game stopped because of an unexpected error.";
+    runtime.dispatch("p1", { type: "START_GAME" });
+    expect(state.notice).toBe("");
+  });
+
+  it("survives a START_GAME that is refused", () => {
+    const { runtime, state } = setup2({}, false);
+    state.notice = "old";
+    runtime.dispatch("p1", { type: "START_GAME" });
+    expect(runtime.phase).toBe("Lobby");
+    expect(state.notice).toBe("old");
+  });
+});
+
 describe("timers", () => {
   it("sets phaseEndsAt from a numeric duration and fires onTimeout once", () => {
     const { runtime, host, state } = setup2();

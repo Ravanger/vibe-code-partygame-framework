@@ -76,7 +76,7 @@ bun run launch:demo          # watch-only room: bots play one game, the browser 
 ```bash
 bun run play                      # host a room; 3 bots join; uses the server on 2567/3001 or starts its own
 bun run play --join=ABCD          # join a room as a normal player
-bun run --cwd games/wit-clash demo  # all-bot game, narrated; prints PASS/FAIL (--bots=N total players, --rounds=R)
+bun run --cwd games/wit-clash demo  # all-bot game, narrated; prints PASS/FAIL (--bots=N bots, 2 to 7, default 3)
 ```
 
 You are the host in `play`; browser players can join the same room with the printed code while Vite runs.
