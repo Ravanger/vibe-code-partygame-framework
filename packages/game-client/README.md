@@ -32,7 +32,7 @@ void manager.resume();       // page load: stored token, then stored room code
 
 ```ts
 await manager.create();                  // new room, you are the host; optional create options
-await manager.join("ABCD");              // by 4-letter code; throws with the server's reason
+await manager.join("ABCD");              // by room code; throws with the server's reason
 await manager.joinAsSpectator("ABCD");   // TV display, no seat
 manager.setName("Ada");                  // readies the seat
 await manager.leave();                   // forgets the room
