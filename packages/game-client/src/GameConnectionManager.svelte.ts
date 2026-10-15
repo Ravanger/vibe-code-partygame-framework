@@ -15,6 +15,7 @@ import {
 import type { BaseGameState, PlayerSchema } from "@partygame/shared/schema";
 import { createSubscriber } from "svelte/reactivity";
 import { Countdown } from "./countdown.svelte.js";
+import { CANCELLED, JoinCoordinator } from "./JoinCoordinator.js";
 import { MessageBus } from "./MessageBus.js";
 import { PersistedSession } from "./PersistedSession.js";
 import type { RoomLike } from "./RoomLike.js";
@@ -43,7 +44,6 @@ export interface GameConnectionOptions<TState> {
 
 const DEFAULT_API_PORT = 3001;
 const DEFAULT_SYNC_TIMEOUT_MS = 10_000;
-const CANCELLED = "Connection cancelled";
 
 /**
  * Connection to one game room: lifecycle, the reactive state, and the player's actions.
@@ -62,9 +62,8 @@ export class GameConnectionManager<
   private readonly session: PersistedSession;
   private readonly apiBase: string;
   private readonly bus = new MessageBus<TState>();
-  private pending: { key: string; promise: Promise<void> } | undefined;
+  private readonly coordinator = new JoinCoordinator();
   private spectating = false;
-  private generation = 0;
   private notify: (() => void) | undefined;
   private bound: { room: RoomLike<TState>; callback: () => void } | undefined;
   private readonly track = createSubscriber((update) => {
@@ -119,15 +118,17 @@ export class GameConnectionManager<
   }
 
   async create(options: Record<string, unknown> = {}): Promise<void> {
-    await this.connect(
-      "create",
-      () =>
-        this.client.create<TState>(
-          this.options.roomName,
-          { ...options, playerId: this.playerId },
-          this.options.rootSchema,
-        ),
-      false,
+    await this.coordinator.run("create", (cancelled) =>
+      this.open(
+        () =>
+          this.client.create<TState>(
+            this.options.roomName,
+            { ...options, playerId: this.playerId },
+            this.options.rootSchema,
+          ),
+        false,
+        cancelled,
+      ),
     );
   }
 
@@ -138,15 +139,17 @@ export class GameConnectionManager<
     }
     const spectator = options.spectator === true;
     if (this.room && this.roomCode === clean && this.spectating === spectator) return;
-    await this.connect(
-      `${clean}:${spectator ? "tv" : "player"}`,
-      async () =>
-        this.client.joinById<TState>(
-          await resolveRoomCode(this.apiBase, clean),
-          { ...options, playerId: this.playerId },
-          this.options.rootSchema,
-        ),
-      spectator,
+    await this.coordinator.run(`${clean}:${spectator ? "tv" : "player"}`, (cancelled) =>
+      this.open(
+        async () =>
+          this.client.joinById<TState>(
+            await resolveRoomCode(this.apiBase, clean),
+            { ...options, playerId: this.playerId },
+            this.options.rootSchema,
+          ),
+        spectator,
+        cancelled,
+      ),
     );
   }
 
@@ -162,10 +165,12 @@ export class GameConnectionManager<
       token &&
       !spectator &&
       (await this.succeeds(() =>
-        this.connect(
-          "resume",
-          () => this.client.reconnect<TState>(token, this.options.rootSchema),
-          false,
+        this.coordinator.run("resume", (cancelled) =>
+          this.open(
+            () => this.client.reconnect<TState>(token, this.options.rootSchema),
+            false,
+            cancelled,
+          ),
         ),
       ))
     ) {
@@ -190,8 +195,7 @@ export class GameConnectionManager<
 
   /** Leaves the room and cancels any connect still in flight. */
   async leave(): Promise<void> {
-    ++this.generation;
-    this.pending = undefined;
+    this.coordinator.cancel();
     await this.closeRoom();
   }
 
@@ -253,45 +257,32 @@ export class GameConnectionManager<
 
   /** Leaves the room without forgetting the session and stops all listeners. */
   dispose(): void {
-    ++this.generation;
-    this.pending = undefined;
+    this.coordinator.cancel();
     const room = this.room;
     this.detach("disconnected");
     this.bus.clear();
     void room?.leave(false);
   }
 
-  private async connect(
-    key: string,
-    open: () => Promise<RoomLike<TState>>,
+  private async open(
+    openRoom: () => Promise<RoomLike<TState>>,
     spectator: boolean,
+    cancelled: () => boolean,
   ): Promise<void> {
-    if (this.pending?.key === key) return this.pending.promise;
-    const entry = { key, promise: this.open(open, spectator) };
-    this.pending = entry;
-    try {
-      await entry.promise;
-    } finally {
-      if (this.pending === entry) this.pending = undefined;
-    }
-  }
-
-  private async open(open: () => Promise<RoomLike<TState>>, spectator: boolean): Promise<void> {
-    const generation = ++this.generation;
     if (this.room) await this.closeRoom();
-    if (generation !== this.generation) throw new Error(CANCELLED);
+    if (cancelled()) throw new Error(CANCELLED);
     this.status = "connecting";
     try {
-      const room = await open();
-      if (generation === this.generation) await this.untilSynced(room);
-      if (generation !== this.generation) {
+      const room = await openRoom();
+      if (!cancelled()) await this.untilSynced(room);
+      if (cancelled()) {
         void room.leave();
         throw new Error(CANCELLED);
       }
       this.spectating = spectator;
       this.attach(room);
     } catch (error) {
-      if (generation === this.generation) this.status = "disconnected";
+      if (!cancelled()) this.status = "disconnected";
       this.recordRejection(error);
       throw error;
     }
