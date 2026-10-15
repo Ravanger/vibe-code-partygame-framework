@@ -382,7 +382,7 @@ describe("middleware throws behave like hook throws", () => {
     // like any hook failure instead of dropping the transition it is observing.
     let explode = true;
     const mw: PhaseMiddleware<S, P, O> = (ctx, next) => {
-      if (ctx.event.kind === "transition" && explode) {
+      if (ctx.event.kind === "transition" && ctx.event.to === "Play" && explode) {
         next();
         throw new Error("mw transition boom");
       }

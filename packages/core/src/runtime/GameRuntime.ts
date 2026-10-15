@@ -81,7 +81,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   private duration = 0;
   private stopped = false;
   private hasStarted = false;
-  private returnToLobbyThrew = false;
+  private lobbyReturnFailed = false;
 
   constructor(config: GameRuntimeConfig<TState, TPrivate, TOptions>) {
     this.spec = config.definition;
@@ -309,7 +309,10 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   private defaultFailurePolicy(): void {
     this.state.notice = FAILURE_NOTICE;
     if (this.phaseName === LOBBY_PHASE) return;
-    if (!this.returnToLobbyThrew) this.guarded(() => this.spec.onReturnToLobby?.(this.context()));
+    if (!this.lobbyReturnFailed) {
+      this.guarded(() => this.observeTransition(this.phaseName, LOBBY_PHASE));
+      this.guarded(() => this.spec.onReturnToLobby?.(this.context()));
+    }
     this.guarded(() => this.host.activateWaitingPlayers());
     this.guarded(() => this.actor.send({ type: "GO", phase: LOBBY_PHASE }));
   }
@@ -327,7 +330,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     this.queue.clear();
     this.guarded(() => this.spec.onError?.(this.context(), reported));
     if (this.queue.isEmpty() || !this.drainFailureTransitions()) this.defaultFailurePolicy();
-    this.returnToLobbyThrew = false;
+    this.lobbyReturnFailed = false;
     const extra = this.failures.splice(0);
     if (extra.length > 0) reported = new AggregateError([...failed, ...extra], "Game hook failed");
     throw reported;
@@ -395,11 +398,11 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       this.observeTransition(this.phaseName, next.kind === "lobby" ? LOBBY_PHASE : next.phase),
     );
     if (next.kind === "lobby") {
-      this.returnToLobbyThrew = true;
+      this.lobbyReturnFailed = true;
       this.spec.onReturnToLobby?.(this.context());
-      this.returnToLobbyThrew = false;
       this.host.activateWaitingPlayers();
       this.actor.send({ type: "GO", phase: LOBBY_PHASE });
+      this.lobbyReturnFailed = false;
     } else {
       if (this.phaseName === LOBBY_PHASE) this.host.benchUnreadyPlayers();
       this.actor.send({ type: "GO", phase: next.phase });

@@ -24,7 +24,7 @@ export interface PhaseState {
   phaseEndsAt: number;
   /** True while in the Lobby with enough active players for `START_GAME`; written by the runtime. */
   canStart: boolean;
-  /** Set to a fixed message by the runtime's default failure policy when a hook throws (see `GameDefinition.onError`); games may display and clear it. */
+  /** Set to a fixed message by the runtime's default failure policy when a hook throws (see `GameDefinition.onError`); the runtime clears it when `START_GAME` begins the next game. */
   notice?: string;
 }
 
@@ -159,6 +159,7 @@ export interface GameDefinition<
   autoStart?: boolean;
   /** Parses the room-create options. Omit to pass them through. */
   options?: z.ZodType<TOptions>;
+  /** Called once per room (and per replay table); must return a fresh object each call, never a shared one: the action log and phase timings are keyed by it. */
   createPrivateState(): TPrivate;
   /** `"Lobby"` is reserved and built in. */
   phases: Record<string, PhaseDefinition<TState, TPrivate, TOptions>>;

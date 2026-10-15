@@ -955,6 +955,15 @@ describe("onError and the default failure policy", () => {
   });
 });
 
+const catching = (fn: () => void): unknown => {
+  try {
+    fn();
+  } catch (error) {
+    return error;
+  }
+  return undefined;
+};
+
 describe("every hook failure ends under the failure policy", () => {
   const NOTICE = "The game stopped because of an unexpected error.";
   const loopPhases = {
@@ -963,14 +972,6 @@ describe("every hook failure ends under the failure policy", () => {
   };
   const errorsOf = (thrown: unknown): string[] =>
     thrown instanceof AggregateError ? thrown.errors.map((e) => String(e)) : [String(thrown)];
-  const catching = (fn: () => void): unknown => {
-    try {
-      fn();
-    } catch (error) {
-      return error;
-    }
-    return undefined;
-  };
 
   it("routes a two-phase onEnter loop through onError and back to the Lobby", () => {
     const seen: unknown[] = [];
@@ -1097,6 +1098,102 @@ describe("every hook failure ends under the failure policy", () => {
     expect(catching(() => host.advance(1000))).toBeInstanceOf(FrameworkError);
     expect(seen).toHaveLength(1);
     expect(runtime.phase).toBe("Lobby");
+  });
+});
+
+describe("the failure policy's Lobby return is observable", () => {
+  const BOOM_PHASES = {
+    Play: {
+      actions: {
+        BOOM: action({
+          from: "player",
+          payload: z.object({}),
+          handler: () => {
+            throw new Error("boom");
+          },
+        }),
+        HOME: action({
+          from: "player",
+          payload: z.object({}),
+          handler: (ctx) => ctx.returnToLobby(),
+        }),
+      },
+    },
+  } satisfies Spec["phases"];
+
+  const observed = (overrides: Overrides = {}) => {
+    const transitions: string[] = [];
+    const ctx = setup2({
+      phases: BOOM_PHASES,
+      middleware: [
+        (mctx, next) => {
+          if (mctx.event.kind === "transition") {
+            transitions.push(`${mctx.event.from}->${mctx.event.to}`);
+          }
+          next();
+        },
+      ],
+      ...overrides,
+    });
+    ctx.runtime.dispatch("p1", { type: "START_GAME" });
+    transitions.length = 0;
+    return { ...ctx, transitions };
+  };
+
+  it("emits exactly one transition to middleware when a hook failure returns the room to the Lobby", () => {
+    const { runtime, transitions } = observed();
+    expect(() => runtime.dispatch("p2", { type: "BOOM" })).toThrow("boom");
+    expect(runtime.phase).toBe("Lobby");
+    expect(transitions).toEqual(["Play->Lobby"]);
+  });
+
+  it("emits one transition, not two, when a throwing onReturnToLobby hands over to the policy", () => {
+    const { runtime, transitions } = observed({
+      onReturnToLobby: () => {
+        throw new Error("lobby boom");
+      },
+    });
+    expect(() => runtime.dispatch("p2", { type: "HOME" })).toThrow("lobby boom");
+    expect(runtime.phase).toBe("Lobby");
+    expect(transitions).toEqual(["Play->Lobby"]);
+  });
+
+  it("does not let a throwing observer stop the return to the Lobby", () => {
+    const { runtime } = setup2({
+      phases: BOOM_PHASES,
+      middleware: [
+        (mctx, next) => {
+          if (mctx.event.kind === "transition" && mctx.event.to === "Lobby") {
+            throw new Error("observe boom");
+          }
+          next();
+        },
+      ],
+    });
+    runtime.dispatch("p1", { type: "START_GAME" });
+    const thrown = catching(() => runtime.dispatch("p2", { type: "BOOM" }));
+    expect((thrown as AggregateError).errors.map((e) => String(e))).toEqual([
+      "Error: boom",
+      "Error: observe boom",
+    ]);
+    expect(runtime.phase).toBe("Lobby");
+  });
+});
+
+describe("the failure notice", () => {
+  it("is cleared when the next game starts", () => {
+    const { runtime, state } = setup2();
+    state.notice = "The game stopped because of an unexpected error.";
+    runtime.dispatch("p1", { type: "START_GAME" });
+    expect(state.notice).toBe("");
+  });
+
+  it("survives a START_GAME that is refused", () => {
+    const { runtime, state } = setup2({}, false);
+    state.notice = "old";
+    runtime.dispatch("p1", { type: "START_GAME" });
+    expect(runtime.phase).toBe("Lobby");
+    expect(state.notice).toBe("old");
   });
 });
 

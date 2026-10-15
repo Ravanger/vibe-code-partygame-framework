@@ -97,6 +97,7 @@ export class Lobby<TState extends PhaseState, TPrivate, TOptions> {
             `Need at least ${definition.minPlayers} players to start`,
           );
         }
+        if (ctx.state.notice) ctx.state.notice = "";
         ctx.transition(definition.startPhase);
       },
     };

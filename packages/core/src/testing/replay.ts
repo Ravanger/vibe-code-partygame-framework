@@ -1,4 +1,4 @@
-import { LOBBY_PHASE } from "@partygame/shared";
+import { LOBBY_PHASE, type ServerError } from "@partygame/shared";
 import type { ActionLog, ActionLogEntry } from "../actionLog.js";
 import type { GameDefinition, PhaseDefinition, PhaseState, PlayerInfo } from "../runtime/index.js";
 import { required } from "../utils.js";
@@ -27,6 +27,21 @@ export interface ReplayResult<TState extends PhaseState> {
    * roster change starts a step; the transitions and enters that follow belong to the same step.
    */
   states: TState[];
+}
+
+/** Runs one replay step; a throw means the live run failed here too, which v1 cannot replay. */
+function failedRunGuard(
+  entry: ActionLogEntry,
+  step: () => ServerError | undefined,
+): ServerError | undefined {
+  try {
+    return step();
+  } catch (cause) {
+    throw new Error(
+      `replayLog: entry ${entry.seq} re-ran into a failed run (${String(cause)}); logs containing a failed run are not replayable in v1`,
+      { cause },
+    );
+  }
 }
 
 function clone<T>(value: T): T {
@@ -194,6 +209,8 @@ function authoritativeDurations<TState extends PhaseState, TPrivate, TOptions>(
  * its ids are mapped positionally to p1..pN so actions re-dispatch against the matching seats; a log
  * without a roster requires `init.players` instead. Roster changes during the Lobby are skipped —
  * the table is already seated; a mid-game roster change throws, because v1 does not replay it.
+ * A step whose re-run throws (the live run failed and the failure policy returned the room to the Lobby)
+ * throws a `replayLog:` error saying logs with a failed run are not replayable in v1.
  * Entries must be time-ordered; a backwards clock throws. A re-dispatch that rejects where the log
  * says the action was accepted throws, and one that accepts where the log marks the entry
  * `rejected: true` throws as well — both directions of mismatch mean the log is not what this
@@ -279,14 +296,17 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
       );
     }
     const prePhase = table.phase;
-    table.tick(entry.t - table.host.time);
-    if (entry.kind === "action") {
+    const error = failedRunGuard(entry, () => {
+      table.tick(entry.t - table.host.time);
+      if (entry.kind !== "action") return undefined;
       const senderId = entry.senderId ?? "";
-      const error = table.act(
+      return table.act(
         toSeat?.get(senderId) ?? senderId,
         entry.actionType ?? "",
         (entry.payload ?? {}) as Record<string, unknown>,
       );
+    });
+    if (entry.kind === "action") {
       if (entry.rejected === true) {
         // The live handler rejected: the re-dispatch must reject again. Re-running it also consumes
         // any RNG draws the handler made before rejecting, keeping the stream in step with live.
