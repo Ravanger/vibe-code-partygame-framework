@@ -17,6 +17,9 @@ runs `bun install` at the repo root so it is ready to play.
 
 - The slug must be kebab-case starting with a letter (`[a-z][a-z0-9]*(-[a-z0-9]+)*`), not a reserved name, and
   there must be no existing `games/<slug>/`.
+- The slug must not collide with the rest of the workspace: `@partygame/<slug>` may not be an existing package
+  name, `<slug>`/`<slug>-game` may not be an existing game folder or its vitest project names (`<folder>`,
+  `<folder>-game`), and `cli`/`scripts` are taken by fixed projects.
 - Every name is derived from the slug: package `@partygame/<slug>`, room `<slug>` with dashes as underscores,
   PascalCase/camelCase identifiers and a spaced display name. `--name` overrides only the display name; it is
   trimmed and must not be empty. The display name may contain any characters (quotes, backslashes, newlines):

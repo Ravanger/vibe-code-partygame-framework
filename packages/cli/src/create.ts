@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
+import { findCollision } from "./collisions.js";
 import { findRepoRoot } from "./repoRoot.js";
 import { deriveNames, parseSlug } from "./slug.js";
 import { renderTemplate } from "./template.js";
@@ -77,6 +78,11 @@ export async function runCreate(options: RunCreateOptions): Promise<number> {
   const gameDir = join(root, "games", slug.slug);
   if (existsSync(gameDir)) {
     console.error(`games/${slug.slug}/ already exists`);
+    return 1;
+  }
+  const collision = await findCollision(root, slug.slug);
+  if (collision !== undefined) {
+    console.error(collision);
     return 1;
   }
   const names = deriveNames(slug.slug);

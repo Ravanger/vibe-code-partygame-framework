@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -119,6 +120,46 @@ describe("runCreate", () => {
     });
     expect(code).toBe(1);
     expect(spy).toHaveBeenCalledWith(expect.stringMatching(/already exists/));
+  });
+
+  it("returns 1 when the slug collides with an existing workspace package, creating nothing", async () => {
+    const spy = quiet();
+    const root = await makeRoot();
+    await mkdir(join(root, "packages", "core"), { recursive: true });
+    await writeFile(
+      join(root, "packages", "core", "package.json"),
+      JSON.stringify({ name: "@partygame/core" }),
+    );
+    const code = await runCreate({
+      slug: "core",
+      cwd: root,
+      templateDir: TEMPLATE,
+      format: () => 0,
+      install: () => 0,
+    });
+    expect(code).toBe(1);
+    expect(spy).toHaveBeenCalledWith(expect.stringMatching(/@partygame\/core/));
+    expect(existsSync(join(root, "games", "core"))).toBe(false);
+  });
+
+  it("returns 1 when the slug is an existing game's vitest project name, creating nothing", async () => {
+    const spy = quiet();
+    const root = await makeRoot();
+    await mkdir(join(root, "games", "foo"), { recursive: true });
+    await writeFile(
+      join(root, "games", "foo", "package.json"),
+      JSON.stringify({ name: "@partygame/foo" }),
+    );
+    const code = await runCreate({
+      slug: "foo-game",
+      cwd: root,
+      templateDir: TEMPLATE,
+      format: () => 0,
+      install: () => 0,
+    });
+    expect(code).toBe(1);
+    expect(spy).toHaveBeenCalledWith(expect.stringMatching(/foo/));
+    expect(existsSync(join(root, "games", "foo-game"))).toBe(false);
   });
 
   it("returns 1 when the template cannot be rendered", async () => {
