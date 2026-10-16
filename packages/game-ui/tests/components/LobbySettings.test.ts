@@ -29,6 +29,13 @@ describe("LobbySettings", () => {
     ]);
   });
 
+  it("renders editable settings as list items rather than invalid dl children", () => {
+    const { vm } = setup({ role: "host" });
+    const { container } = render(LobbySettings, { vm });
+    expect(container.querySelector("dl > div")).toBeNull();
+    expect(container.querySelector("ul > li.setting label")).toHaveTextContent("Turn seconds");
+  });
+
   it("shows everyone else read-only lines, collapsed", () => {
     const { vm } = setup();
     const { container } = render(LobbySettings, { vm });
