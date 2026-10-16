@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { NAME_MAX_LENGTH, ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH } from "./limits.js";
+import { MAX_SEATS, NAME_MAX_LENGTH, ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH } from "./limits.js";
 
 /** Message names a client may send to the room. */
 export const ClientMessage = {
@@ -97,21 +97,31 @@ export const ActionEnvelopeSchema = z
   .object({ type: z.string().regex(ACTION_NAME_PATTERN) })
   .passthrough();
 
-/** Payload of `SET_NAME`: trimmed, 1 to {@link NAME_MAX_LENGTH} characters. */
-export const SetNameSchema = z.string().trim().min(1).max(NAME_MAX_LENGTH);
+/** Payload of `SET_NAME`: trimmed, 1 to {@link NAME_MAX_LENGTH} characters, no control characters. */
+export const SetNameSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(NAME_MAX_LENGTH)
+  .refine((name) => /^[^\p{Cc}]+$/u.test(name));
 
 const ROOM_CODE_PATTERN = new RegExp(`^[${ROOM_CODE_ALPHABET}]` + `{${ROOM_CODE_LENGTH}}$`);
 
 /** A room code: {@link ROOM_CODE_LENGTH} letters from {@link ROOM_CODE_ALPHABET}. */
 export const RoomCodeSchema = z.string().regex(ROOM_CODE_PATTERN);
 
-/** Stable client-generated player identifier. */
-export const PlayerIdSchema = z.string().min(8).max(64);
+/** Stable client-generated player identifier: 8-64 of `A-Z a-z 0-9 _ -`, never an `Object.prototype` key such as `__proto__`. */
+export const PlayerIdSchema = z
+  .string()
+  .min(8)
+  .max(64)
+  .regex(/^[A-Za-z0-9_-]+$/)
+  .refine((id) => !Object.hasOwn(Object.prototype, id));
 
 /** Options a client passes when joining a room. `spectator` joins without taking a seat. */
 export const JoinOptionsSchema = z.object({
   playerId: PlayerIdSchema,
-  name: z.string().optional(),
+  name: SetNameSchema.optional(),
   spectator: z.boolean().optional(),
 });
 
@@ -120,7 +130,7 @@ export const JoinOptionsSchema = z.object({
  * everyone else: only the listed playerIds can take a seat, spectators still join.
  */
 export const RoomOptionsSchema = z.object({
-  seats: z.array(PlayerIdSchema).optional(),
+  seats: z.array(PlayerIdSchema).max(MAX_SEATS).optional(),
 });
 
 /** Body of `GET /api/resolve-code`: the room id, or why the code did not resolve. */

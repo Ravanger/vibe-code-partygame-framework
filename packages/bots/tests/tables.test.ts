@@ -75,7 +75,7 @@ afterEach(async () => {
 afterAll(() => t.shutdown());
 
 async function humanRoom(name: string) {
-  const playerId = `human-${name}-0001`;
+  const playerId = `human-${name.replace(/\s+/g, "-")}-0001`;
   const room = await t.sdk.create<TapState>(TAP_ROOM, { playerId }, TapState);
   leavers.push({ leave: () => room.leave(true) });
   await claimName(room, playerId, name);

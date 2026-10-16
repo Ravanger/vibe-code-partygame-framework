@@ -134,6 +134,7 @@
           "PlayerRole": {},
           "RosterSeat": {},
           "RuntimeHost": {},
+          "Seed": {},
           "actionFactory": {},
           "actionLogMiddleware": {},
           "awardPoints": {},
@@ -147,6 +148,8 @@
           "newId": {},
           "randomSeed": {},
           "required": {},
+          "seedFromNumber": {},
+          "sfc32": {},
           "shuffle": {},
           "timingMiddleware": {}
         }
@@ -420,6 +423,8 @@
           "JoinOptionsSchema": {},
           "KICK_PLAYER": {},
           "LOBBY_PHASE": {},
+          "MAX_OPTIONS_JSON_LENGTH": {},
+          "MAX_SEATS": {},
           "NAME_MAX_LENGTH": {},
           "PlayerIdSchema": {},
           "ROOM_CODE_ALPHABET": {},

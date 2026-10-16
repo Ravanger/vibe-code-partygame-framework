@@ -7,9 +7,10 @@ import {
   actionLogMiddleware,
   defineGame,
   getActionLog,
-  mulberry32,
   type PhaseState,
   required,
+  seedFromNumber,
+  sfc32,
   shuffle,
 } from "../src/index.js";
 import { replayLog } from "../src/testing/index.js";
@@ -430,8 +431,10 @@ describe("replayLog", () => {
       players: 1,
       seed: 8,
     });
-    expect(fromHeader.states.at(-1)?.roll).toBe(Math.floor(mulberry32(7)() * 100));
-    expect(fromInit.states.at(-1)?.roll).toBe(Math.floor(mulberry32(8)() * 100));
+    const seed7 = seedFromNumber(7);
+    const seed8 = seedFromNumber(8);
+    expect(fromHeader.states.at(-1)?.roll).toBe(Math.floor(sfc32(seed7)() * 100));
+    expect(fromInit.states.at(-1)?.roll).toBe(Math.floor(sfc32(seed8)() * 100));
   });
 
   it("re-dispatches recorded sender ids through the positional roster map", () => {
@@ -555,7 +558,7 @@ describe("replayLog log-shape validation", () => {
     ).toThrow("replayLog: log.header.game must be a string");
   });
 
-  it("throws a named error when header.seed is not a number", () => {
+  it("throws a named error when header.seed is not a 4-tuple of numbers", () => {
     const log = liveLog();
     expect(() =>
       replayLog(
@@ -563,7 +566,7 @@ describe("replayLog log-shape validation", () => {
         { ...log, header: { ...log.header, seed: "x" } } as unknown as ActionLog,
         init,
       ),
-    ).toThrow("replayLog: log.header.seed must be a number");
+    ).toThrow("replayLog: log.header.seed must be an array of 4 numbers");
   });
 
   it("throws a named error when header.startedAt is not a number", () => {
@@ -821,7 +824,7 @@ describe("replay round-trip", () => {
 
     // the seeded stream must be visible in state: 3 draws per Spin enter (roll + 2 shuffle), so
     // the REENTRY snapshot holds the 4th draw — proof the self-transition re-entered the phase
-    const stream = mulberry32(1234);
+    const stream = sfc32(seedFromNumber(1234));
     const rollOf = (): number => Math.floor(stream() * 100);
     const skipShuffleDraws = (): void => {
       stream();

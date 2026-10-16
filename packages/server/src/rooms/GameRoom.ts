@@ -3,10 +3,11 @@ import { type Schema, StateView } from "@colyseus/schema";
 import {
   type GameDefinition,
   GameRuntime,
-  mulberry32,
   type PlayerInfo,
   type RuntimeHost,
   randomSeed,
+  type Seed,
+  sfc32,
 } from "@partygame/core";
 import {
   type ActionResult,
@@ -17,6 +18,7 @@ import {
   ErrorCode,
   JoinOptionsSchema,
   LOBBY_PHASE,
+  MAX_OPTIONS_JSON_LENGTH,
   type ServerError as ProtocolError,
   RoomOptionsSchema,
   ServerMessage,
@@ -57,9 +59,9 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
   private readonly views = new Map<string, StateView>();
   private readonly viewRefs = new Map<string, Set<Schema>>();
   /** Per-room RNG seed drawn from the platform CSPRNG at room creation; recorded in action logs. */
-  private readonly seed = randomSeed();
+  private readonly seed: Seed = randomSeed();
   /** Seeded PRNG so a room's randomness is reproducible from its log header. */
-  private readonly rngFn = mulberry32(this.seed);
+  private readonly rngFn = sfc32(this.seed);
   /** Builds the Colyseus close `ServerError` for a {@link CLOSE_CODES} entry; the only place one is made. */
   private readonly closeWith = (entry: CloseCode): ServerError =>
     new ServerError(entry.code, entry.message);
@@ -100,35 +102,59 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     const { definition, stateClass, roomCodeService } = this.config;
     const roomOptions = RoomOptionsSchema.safeParse(options);
     if (!roomOptions.success) throw this.invalidOptions("create", roomOptions.error);
-    if (roomOptions.data.seats) this.seatList = new Set(roomOptions.data.seats);
+    if (roomOptions.data.seats) {
+      if (roomOptions.data.seats.length > definition.maxPlayers) {
+        throw this.closeWith(CLOSE_CODES.INVALID_OPTIONS);
+      }
+      this.seatList = new Set(roomOptions.data.seats);
+    }
     this.autoDispose = false;
     this.maxClients = definition.maxPlayers + SPECTATOR_SLOTS;
     const rawOptions = Object.fromEntries(
       Object.entries(options).filter(([key]) => !FRAMEWORK_KEYS.includes(key)),
     );
+    if (!definition.options && Object.keys(rawOptions).length > 0) {
+      throw this.closeWith(CLOSE_CODES.INVALID_OPTIONS);
+    }
     const optionsResult = definition.options?.safeParse(rawOptions);
     if (optionsResult && !optionsResult.success) {
       throw this.invalidOptions("create", optionsResult.error);
     }
     const parsedOptions = optionsResult ? optionsResult.data : rawOptions;
-    const state = new stateClass();
-    state.minPlayers = definition.minPlayers;
-    state.maxPlayers = definition.maxPlayers;
-    state.serverNow = Date.now();
-    this.setState(state);
-    this.host.publishOptions(parsedOptions);
-    this.runtime = new GameRuntime({ definition, state, options: parsedOptions, host: this.host });
-    this.clock.setInterval(() => {
-      state.serverNow = Date.now();
-    }, 1000);
-    this.scheduleDisposeIfEmpty();
+    if (JSON.stringify(parsedOptions).length > MAX_OPTIONS_JSON_LENGTH) {
+      throw this.closeWith(CLOSE_CODES.INVALID_OPTIONS);
+    }
 
-    this.onMessage(ClientMessage.SET_NAME, (client, raw: unknown) => this.setName(client, raw));
-    this.onMessage(ClientMessage.ACTION, (client, raw: unknown): ActionResult => {
-      const seat = this.seatOf(client);
-      return seat ? this.act(seat.id, raw) : { ok: false, error: SPECTATOR_ERROR };
-    });
-    state.roomCode = roomCodeService.generateAndRegister(this.roomId);
+    const code = roomCodeService.generateAndRegister(this.roomId);
+
+    try {
+      const state = new stateClass();
+      state.minPlayers = definition.minPlayers;
+      state.maxPlayers = definition.maxPlayers;
+      state.serverNow = Date.now();
+      state.roomCode = code;
+      this.setState(state);
+      this.host.publishOptions(parsedOptions);
+      this.runtime = new GameRuntime({
+        definition,
+        state,
+        options: parsedOptions,
+        host: this.host,
+      });
+      this.clock.setInterval(() => {
+        state.serverNow = Date.now();
+      }, 1000);
+      this.scheduleDisposeIfEmpty();
+
+      this.onMessage(ClientMessage.SET_NAME, (client, raw: unknown) => this.setName(client, raw));
+      this.onMessage(ClientMessage.ACTION, (client, raw: unknown): ActionResult => {
+        const seat = this.seatOf(client);
+        return seat ? this.act(seat.id, raw) : { ok: false, error: SPECTATOR_ERROR };
+      });
+    } catch (error) {
+      roomCodeService.unregister(code);
+      throw error;
+    }
   }
 
   private join(client: Client, options?: unknown): void {
@@ -194,7 +220,7 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
 
   onDispose(): void {
     this.runtime?.stop();
-    if (this.state) this.config.roomCodeService.unregister(this.state.roomCode);
+    if (this.state?.roomCode) this.config.roomCodeService.unregister(this.state.roomCode);
   }
 
   private readonly host: RuntimeHost = {

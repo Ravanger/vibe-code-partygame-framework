@@ -1,7 +1,29 @@
+/** A 128-bit PRNG seed: four unsigned 32-bit integers. */
+export type Seed = readonly [number, number, number, number];
+
 /** Narrows a lookup the caller knows succeeds; throws a named error when that assumption breaks. */
 export function required<T>(value: T | undefined, what: string): T {
   if (value === undefined) throw new Error(`Missing ${what}`);
   return value;
+}
+
+/**
+ * sfc32: a seedable PRNG with 128 bits of state, returning floats in [0, 1). The same seed produces the
+ * same sequence on every platform, which is what makes action logs replayable.
+ */
+export function sfc32(seed: Seed): () => number {
+  let [a, b, c, d] = seed;
+  const next = (): number => {
+    const t = (((a + b) | 0) + d) | 0;
+    d = (d + 1) | 0;
+    a = b ^ (b >>> 9);
+    b = (c + (c << 3)) | 0;
+    c = (c << 21) | (c >>> 11);
+    c = (c + t) | 0;
+    return (t >>> 0) / 4294967296;
+  };
+  for (let i = 0; i < 12; ++i) next();
+  return next;
 }
 
 /**
@@ -18,12 +40,18 @@ export function mulberry32(seed: number): () => number {
   };
 }
 
-/** A random 32-bit seed for a seeded PRNG, drawn from the platform CSPRNG. */
-export function randomSeed(): number {
-  const buffer = new Uint32Array(1);
-  globalThis.crypto.getRandomValues(buffer);
-  // Read through DataView so the result is a plain `number` (no undefined fallback branch).
-  return new DataView(buffer.buffer).getUint32(0);
+/** A random 128-bit seed for {@link sfc32}, drawn from the platform CSPRNG. */
+export function randomSeed(): Seed {
+  const view = new DataView(globalThis.crypto.getRandomValues(new Uint32Array(4)).buffer);
+  const word = (i: number): number => view.getUint32(i * 4, true);
+  return [word(0), word(1), word(2), word(3)];
+}
+
+/** A deterministic 128-bit seed expanded from a number, for tests. */
+export function seedFromNumber(n: number): Seed {
+  const rng = mulberry32(n);
+  const word = (): number => Math.floor(rng() * 0x100000000);
+  return [word(), word(), word(), word()];
 }
 
 /** Fisher-Yates over a copy; pass a seeded `rng` in tests. */

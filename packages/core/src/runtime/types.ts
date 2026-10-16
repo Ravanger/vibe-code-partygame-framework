@@ -1,5 +1,6 @@
 import type { ErrorCode } from "@partygame/shared";
 import type { z } from "zod";
+import type { Seed } from "../utils.js";
 
 /** `"host"` is the room owner; everyone else is a `"player"`. */
 export type PlayerRole = "host" | "player";
@@ -67,8 +68,8 @@ export interface GameContext<TState extends PhaseState, TPrivate, TOptions> {
   readonly gameName: string;
   /** The definition's version; recorded in the action log header for replay sanity checks. */
   readonly gameVersion: string;
-  /** The room RNG seed; see `mulberry32`. Recorded in the action log header. */
-  readonly seed: number;
+  /** The room RNG seed; see `sfc32`. Recorded in the action log header. */
+  readonly seed: Seed;
 }
 
 /** Context of an action handler. */
@@ -157,7 +158,7 @@ export interface GameDefinition<
   startPhase: string;
   /** Start as soon as everyone is ready and `minPlayers` is met, without the host pressing Start. Default false. */
   autoStart?: boolean;
-  /** Parses the room-create options. Omit to pass them through. */
+  /** Parses the room-create options. Omit for a game without options. */
   options?: z.ZodType<TOptions>;
   /** Called once per room (and per replay table); must return a fresh object each call, never a shared one: the action log and phase timings are keyed by it. */
   createPrivateState(): TPrivate;
@@ -195,8 +196,8 @@ export interface RuntimeHost {
   publishOptions(options: unknown): void;
   now(): number;
   rng(): number;
-  /** The room RNG seed (see `mulberry32`); recorded in the action log header. */
-  readonly seed: number;
+  /** The room RNG seed (see `sfc32`); recorded in the action log header. */
+  readonly seed: Seed;
   setTimeout(callback: () => void, ms: number): unknown;
   clearTimeout(handle: unknown): void;
 }

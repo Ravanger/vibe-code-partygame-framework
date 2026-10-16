@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mulberry32 } from "../../src/index.js";
+import { seedFromNumber, sfc32 } from "../../src/index.js";
 import { FakeHost } from "../../src/testing/index.js";
 
 describe("FakeHost", () => {
@@ -57,17 +57,18 @@ describe("FakeHost", () => {
     expect(host.players().map((p) => p.id)).toEqual(["a"]);
   });
 
-  it("draws rng from mulberry32 when constructed with a seed", () => {
+  it("draws rng from sfc32 when constructed with a seed", () => {
     const host = new FakeHost(42);
-    expect(host.seed).toBe(42);
-    const expected = mulberry32(42);
+    const expectedSeed = seedFromNumber(42);
+    expect(host.seed).toEqual(expectedSeed);
+    const expected = sfc32(expectedSeed);
     for (let i = 0; i < 10; ++i) expect(host.rng()).toBe(expected());
   });
 
-  it("unseeded draws from mulberry32(0) — deterministic, and replayable by seed 0", () => {
+  it("unseeded is seed 0: deterministic, and replayable by that seed", () => {
     const host = new FakeHost();
-    expect(host.seed).toBe(0);
-    const expected = mulberry32(0);
+    expect(host.seed).toEqual(seedFromNumber(0));
+    const expected = sfc32(seedFromNumber(0));
     for (let i = 0; i < 10; ++i) expect(host.rng()).toBe(expected());
   });
 

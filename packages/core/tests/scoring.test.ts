@@ -23,8 +23,32 @@ describe("leaderboard", () => {
   it("breaks equal scores deterministically", () => {
     expect(leaderboard({ b: 100, a: 100 })).toEqual(leaderboard({ a: 100, b: 100 }));
   });
+  it("breaks ties by code-point order, not locale", () => {
+    const sorted = leaderboard({ aaaaaaaa: 100, Baaaaaaa: 100 });
+    expect(sorted.map((e) => e.playerId)).toEqual(["Baaaaaaa", "aaaaaaaa"]);
+  });
+  it("handles three-way ties in code-point order", () => {
+    const sorted = leaderboard({ ccc: 50, aaa: 50, bbb: 50 });
+    expect(sorted.map((e) => e.playerId)).toEqual(["aaa", "bbb", "ccc"]);
+  });
   it("handles an empty map", () => {
     expect(leaderboard({})).toEqual([]);
+  });
+});
+
+describe("reserved ids", () => {
+  it("are scored as own keys without touching the prototype", () => {
+    const s: Record<string, number> = {};
+    for (const id of ["__proto__", "constructor", "toString"]) {
+      awardPoints(s, id, 2);
+      awardPoints(s, id, 3);
+    }
+    expect(Object.getPrototypeOf(s)).toBe(Object.prototype);
+    expect(leaderboard(s)).toEqual([
+      { playerId: "__proto__", score: 5 },
+      { playerId: "constructor", score: 5 },
+      { playerId: "toString", score: 5 },
+    ]);
   });
 });
 
@@ -64,5 +88,19 @@ describe("composeLeaderboard", () => {
       rememberedNames: { a: "Old" },
     });
     expect(row?.name).toBe("New");
+  });
+  it("handles reserved ids and ignores inherited names", () => {
+    const scores: Record<string, number> = {};
+    awardPoints(scores, "__proto__", 1);
+    const rows = composeLeaderboard({
+      scores,
+      seatedNames: new Map(),
+      rememberedNames: {},
+      ids: ["constructor"],
+    });
+    expect(rows).toEqual([
+      { playerId: "__proto__", name: "", score: 1, hasLeft: true },
+      { playerId: "constructor", name: "", score: 0, hasLeft: true },
+    ]);
   });
 });

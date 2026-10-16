@@ -7,9 +7,10 @@ import {
   actionLogMiddleware,
   defineGame,
   getActionLog,
-  mulberry32,
   type PhaseMiddleware,
   type PhaseState,
+  seedFromNumber,
+  sfc32,
 } from "../src/index.js";
 import { FakeHost } from "../src/testing/FakeHost.js";
 import { replayLog } from "../src/testing/index.js";
@@ -291,10 +292,10 @@ describe("QA probe R.5 — RNG determinism", () => {
     expect(Array.from({ length: 16 }, () => c.rng())).not.toEqual(seqA);
   });
 
-  it("an unseeded FakeHost is seed 0: deterministic mulberry32(0) stream, replayable by seed", () => {
+  it("an unseeded FakeHost is seedFromNumber(0): a deterministic stream, replayable by seed", () => {
     const host = new FakeHost();
-    expect(host.seed).toBe(0);
-    const expected = mulberry32(0);
+    expect(host.seed).toEqual(seedFromNumber(0));
+    const expected = sfc32(seedFromNumber(0));
     for (let i = 0; i < 16; ++i) expect(host.rng()).toBe(expected());
   });
 
@@ -359,7 +360,7 @@ describe("QA probe R.6 — header correctness", () => {
       seed: 987,
     });
     const log = getActionLog(table.priv);
-    expect(log?.header.seed).toBe(987);
+    expect(log?.header.seed).toEqual(seedFromNumber(987));
     expect(log?.header.game).toBe("QAFull");
     expect(log?.header.startedAt).toBe(log?.entries[0]?.t);
   });

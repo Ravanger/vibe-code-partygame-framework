@@ -147,7 +147,7 @@ const rawContext = (priv: unknown): MiddlewareContext<PhaseState, unknown, unkno
   now: () => 0,
   gameName: "G",
   gameVersion: "1",
-  seed: 1,
+  seed: [0, 0, 0, 0],
   event: { kind: "enter" },
   rejectionCount: 0,
 });

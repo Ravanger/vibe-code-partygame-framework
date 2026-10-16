@@ -95,8 +95,7 @@ The runtime handles these host-only actions for you; do not declare them (`defin
 
 - `START_GAME` (Lobby), see Lobby below.
 - `KICK_PLAYER { playerId }`: any phase, not yourself. The host implementation removes the seat, then `onRosterChange` runs. The ban is per `playerId`: a client that regenerates its id can rejoin.
-- `SET_OPTIONS { ...partial }`: Lobby only. The partial is merged into the current options and validated with `definition.options`
-  (`INVALID_ACTION` on failure), then published. `ctx.options` reflects the new value.
+- `SET_OPTIONS { ...partial }`: Lobby only. If the game declares no `definition.options` schema, it rejects any key but `type` (`INVALID_ACTION`); a room for such a game also refuses create options. Otherwise the partial is merged into the current options and validated, then published; a failed parse or a result whose JSON is longer than `MAX_OPTIONS_JSON_LENGTH` is `INVALID_ACTION` and keeps the previous options. `ctx.options` reflects the new value.
 - `END_GAME`: any phase but the Lobby (`WRONG_PHASE` there). It runs `onEndGame(ctx)`, where a game can set a notice for the players, and then returns everyone to the Lobby as `ctx.returnToLobby()` does (`onReturnToLobby` runs, waiting joiners are let in). The hook cannot veto it.
 
 ### Roster changes and mid-game joiners
@@ -196,7 +195,7 @@ every room and replay table append to one log and one timing store.
 
 | Field | Meaning |
 |---|---|
-| `seed` | Room RNG seed (see Determinism contract) |
+| `seed` | Room RNG `Seed`, four unsigned 32-bit numbers (see Determinism contract) |
 | `game` | Definition name; `replayLog` refuses a log recorded for another game |
 | `version` | Definition version; `replayLog` refuses a log recorded for another version, or one without it (recorded before versioning) |
 | `startedAt` | `ctx.now()` at the first entry (the construction-time Lobby enter) |
@@ -230,10 +229,11 @@ positionally to `p1..pN`, so every recorded sender re-dispatches against the mat
 
 **Determinism contract.** A log replays exactly when its three non-determinism sources are controlled:
 
-- **RNG.** Rooms draw their randomness from a seeded PRNG (`mulberry32`); each room gets a seed from
-  `crypto.getRandomValues` at creation, recorded in the header. `FakeHost`/`TestTable` accept an explicit
-  seed; an unseeded host is seed 0 — its `rng()` is the deterministic `mulberry32(0)` stream, so even
-  unseeded test rooms are replayable by seed (and their ids from `ctx.newId()` stay unique).
+- **RNG.** Rooms draw their randomness from `sfc32`, a PRNG with 128 bits of state; each room gets a
+  `Seed` (four unsigned 32-bit numbers) from `crypto.getRandomValues` at creation, recorded in the header,
+  so published ids do not reveal the stream. `FakeHost`/`TestTable` accept a `Seed` or a number (expanded
+  by `seedFromNumber`); an unseeded host is `seedFromNumber(0)`, so even unseeded test rooms are
+  replayable by seed (and their ids from `ctx.newId()` stay unique).
 - **Clock.** Replay scripts the fake clock: it advances to each entry's `t` before applying the entry, and
   logged timeouts are authoritative — when replay enters a timed phase, its timer is made to expire at the
   time recorded in the log. A live room's phase timers run on Colyseus's tick-quantized clock (a ~17 ms
@@ -265,7 +265,7 @@ one deep-cloned snapshot per step — every logged `action`, `timeout` or (skipp
 starts a step, and the transitions and enters that follow from it belong to the same step. It throws when
 the log's shape is malformed — validated up front with named errors: `entries` not an array, an entry
 that is not an object or lacks a known `kind`, numeric `t` and `seq` and a string `phase`, `header`
-missing or lacking a string `game`, number `seed` and number `startedAt`, or a roster entry missing its
+missing or lacking a string `game`, a four-number `seed` and number `startedAt`, or a roster entry missing its
 `id`/flags — when the first entry is not the construction-time Lobby enter (every recorded session starts
 with it), when the log's `game` does not match the definition, when its `version` differs from the
 definition's or is absent (a log predating versioning), on a mid-game roster change, on out-of-order
@@ -304,8 +304,7 @@ outcomes, never state contents.
 
 **What is recorded to detect it.** `header.game` (the definition name) and `header.version` (a free-form
 string the game author bumps; compared by exact equality). The header seed is recorded too, but to reseed
-the runtime, not to compare. Planned: a wider seed type (#34 — the current header stores a 32-bit number)
-and protocol/framework version negotiation (#77); neither changes anything above until it ships.
+the runtime, not to compare. Planned: protocol/framework version negotiation (#77); it changes nothing above until it ships.
 
 **Old logs.** A mismatch surfaces as a named `replayLog:` error — or, for changes that only alter state
 values, as a replay that completes with different states. No migration exists: a log without
@@ -974,7 +973,7 @@ export { svelteConfig as default } from "@partygame/config/svelte";
 
 | Import | What |
 |---|---|
-| `@partygame/shared` | `NAME_MAX_LENGTH`: the cap `SET_NAME` enforces on player names; `ROOM_CODE_LENGTH` and `ROOM_CODE_ALPHABET`: the shape of a room code; `sanitizeRoomCode(raw)`: uppercases, drops other characters and cuts to the code length (for a code input) |
+| `@partygame/shared` | `NAME_MAX_LENGTH`: the cap `SET_NAME` enforces on player names; `MAX_SEATS`: the most playerIds a room's `seats` option may list; `MAX_OPTIONS_JSON_LENGTH`: the cap on serialized options at room creation and in `SET_OPTIONS`; `ROOM_CODE_LENGTH` and `ROOM_CODE_ALPHABET`: the shape of a room code; `sanitizeRoomCode(raw)`: uppercases, drops other characters and cuts to the code length (for a code input) |
 | `@partygame/client-utils` | `Parsed<T>` (`{ ok: true, value } \| { ok: false, error }`) and `between(value, min, max)` for argument parsing; `waitFor(predicate, what, timeoutMs)` poll loop; `resolveRoomCode(apiBase, code)` (rejects with `RoomCodeError`, `reason` `"not-found"` or `"bad-reply"`); `joinUrl(base, code)` / `tvUrl(base, code)` share links; `claimName(room, playerId, name, timeoutMs?)` (type `SeatRoom`), `apiBaseOf(endpoint, apiPort)` |
 | `@partygame/core` | `shuffle(items, rng)`, `required(value, what)` |
 | `@partygame/server/node` | `startNodeServer({ games, port?, apiPort? })` (a game server and its API in this process; `.stop()`), `serveApi(codes, { port, host? })`: the code API on Node's `http` (the Bun entry serves its own) |

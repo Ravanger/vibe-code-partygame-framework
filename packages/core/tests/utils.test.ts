@@ -53,14 +53,84 @@ describe("mulberry32", () => {
   });
 });
 
+describe("sfc32", async () => {
+  const mod = await import("../src/utils.js");
+  const sfc32 = mod.sfc32;
+
+  it("returns floats in [0, 1)", () => {
+    const rng = sfc32([1, 2, 3, 4]);
+    for (let i = 0; i < 1000; ++i) {
+      const value = rng();
+      expect(Number.isFinite(value)).toBe(true);
+      expect(value).toBeGreaterThanOrEqual(0);
+      expect(value).toBeLessThan(1);
+    }
+  });
+
+  it("produces the same sequence for the same seed", () => {
+    const a = sfc32([42, 43, 44, 45]);
+    const b = sfc32([42, 43, 44, 45]);
+    const seqA = Array.from({ length: 50 }, () => a());
+    const seqB = Array.from({ length: 50 }, () => b());
+    expect(seqA).toEqual(seqB);
+    expect(new Set(seqA).size).toBeGreaterThan(1);
+  });
+
+  it("produces different sequences for different seeds", () => {
+    const a = Array.from({ length: 20 }, () => sfc32([1, 2, 3, 4])());
+    const b = Array.from({ length: 20 }, () => sfc32([5, 6, 7, 8])());
+    expect(a).not.toEqual(b);
+  });
+
+  it("differs when only the first word differs", () => {
+    const a = sfc32([1, 0, 0, 0]);
+    const b = sfc32([2, 0, 0, 0]);
+    expect(a()).not.toBe(b());
+  });
+});
+
+describe("seedFromNumber", async () => {
+  const mod = await import("../src/utils.js");
+  const seedFromNumber = mod.seedFromNumber;
+
+  it("is deterministic for the same number", () => {
+    expect(seedFromNumber(42)).toEqual(seedFromNumber(42));
+  });
+
+  it("differs for different numbers", () => {
+    expect(seedFromNumber(1)).not.toEqual(seedFromNumber(2));
+  });
+
+  it("returns a 4-tuple of unsigned 32-bit integers", () => {
+    const seed = seedFromNumber(100);
+    expect(Array.isArray(seed)).toBe(true);
+    expect(seed.length).toBe(4);
+    for (const word of seed) {
+      expect(Number.isInteger(word)).toBe(true);
+      expect(word).toBeGreaterThanOrEqual(0);
+      expect(word).toBeLessThanOrEqual(2 ** 32 - 1);
+    }
+  });
+});
+
 describe("randomSeed", () => {
-  it("returns an unsigned 32-bit integer", () => {
+  it("returns a 4-tuple of unsigned 32-bit integers", () => {
     for (let i = 0; i < 100; ++i) {
       const seed = randomSeed();
-      expect(Number.isInteger(seed)).toBe(true);
-      expect(seed).toBeGreaterThanOrEqual(0);
-      expect(seed).toBeLessThanOrEqual(2 ** 32 - 1);
+      expect(Array.isArray(seed)).toBe(true);
+      expect(seed.length).toBe(4);
+      for (const word of seed) {
+        expect(Number.isInteger(word)).toBe(true);
+        expect(word).toBeGreaterThanOrEqual(0);
+        expect(word).toBeLessThanOrEqual(2 ** 32 - 1);
+      }
     }
+  });
+
+  it("returns different values on successive calls", () => {
+    const a = randomSeed();
+    const b = randomSeed();
+    expect(a).not.toEqual(b);
   });
 });
 

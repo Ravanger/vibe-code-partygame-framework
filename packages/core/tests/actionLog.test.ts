@@ -10,6 +10,7 @@ import {
   InvalidPrivateStateError,
   type MiddlewareContext,
   type PhaseState,
+  seedFromNumber,
   timingMiddleware,
 } from "../src/index.js";
 import { replayLog } from "../src/testing/index.js";
@@ -97,7 +98,7 @@ const rawContext = (priv: unknown): MiddlewareContext<PhaseState, unknown, unkno
   now: () => 0,
   gameName: "G",
   gameVersion: "1",
-  seed: 1,
+  seed: [0, 0, 0, 0],
   event: { kind: "enter" },
   rejectionCount: 0,
 });
@@ -132,7 +133,12 @@ describe("actionLogMiddleware", () => {
     const table = new ATable();
     const log = table.log();
     expect(log).toBeDefined();
-    expect(log?.header).toEqual({ seed: 0, game: "Logged", version: "1", startedAt: 1_000_000 });
+    expect(log?.header).toEqual({
+      seed: seedFromNumber(0),
+      game: "Logged",
+      version: "1",
+      startedAt: 1_000_000,
+    });
     expect(log?.entries[0]).toEqual({ seq: 1, t: 1_000_000, phase: "Lobby", kind: "enter" });
   });
 
@@ -321,6 +327,82 @@ describe("action log roster", () => {
     const log = table.log();
     expect(log?.roster).toEqual([defaultSeat("p1"), defaultSeat("p2")]);
     expect(log?.entries.filter((e) => e.actionType === "START_GAME")).toHaveLength(2);
+  });
+});
+
+describe("payload immutability", () => {
+  interface Payload {
+    x: number;
+    items: number[];
+    data: { value: string };
+  }
+  let handled: Payload | undefined;
+
+  class MutatingTable extends TestTable<S, P, O> {
+    constructor() {
+      super({
+        definition: defineGame<S, P, O>({
+          name: "Mutating",
+          version: "1",
+          minPlayers: 1,
+          maxPlayers: 2,
+          startPhase: "Play",
+          createPrivateState: () => ({ secret: "s" }),
+          phases: {
+            Play: {
+              actions: {
+                MUTATE: action({
+                  from: "player",
+                  payload: z.object({
+                    x: z.number(),
+                    items: z.array(z.number()),
+                    data: z.object({ value: z.string() }),
+                  }),
+                  handler: (ctx) => {
+                    handled = ctx.payload;
+                    ctx.payload.x = 99;
+                    ctx.payload.items.push(999);
+                    ctx.payload.data.value = "changed";
+                  },
+                }),
+              },
+            },
+          },
+          middleware: [actionLogMiddleware()],
+        }),
+        state: { phase: "", phaseEndsAt: 0, canStart: false, log: [] },
+        options: { rounds: 1 },
+        players: 1,
+      });
+    }
+
+    logged(): Payload {
+      const entry = getActionLog(this.priv)?.entries.find((e) => e.actionType === "MUTATE");
+      return entry?.payload as Payload;
+    }
+  }
+
+  const original = { x: 1, items: [1, 2], data: { value: "kept" } };
+
+  it("keeps the payload as sent when the handler mutates it", () => {
+    const table = new MutatingTable();
+    table.start();
+    table.act("p1", "MUTATE", structuredClone(original));
+    expect(table.logged()).toEqual(original);
+    expect(table.logged()).not.toBe(handled);
+  });
+
+  it("freezes the logged payload deeply", () => {
+    const table = new MutatingTable();
+    table.start();
+    table.act("p1", "MUTATE", structuredClone(original));
+    const logged = table.logged();
+    expect(Object.isFrozen(logged)).toBe(true);
+    expect(Object.isFrozen(logged.items)).toBe(true);
+    expect(Object.isFrozen(logged.data)).toBe(true);
+    expect(() => {
+      logged.data.value = "rewritten";
+    }).toThrow(TypeError);
   });
 });
 
