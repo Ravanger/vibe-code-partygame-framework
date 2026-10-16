@@ -28,6 +28,7 @@
     "dev": "vite",
     "dev:server": "bun --hot server.ts",
     "test": "vitest run",
+    "test:all": "cd ../.. && bun x vitest run --project __slug__ --project __slug__-game",
     "typecheck": "tsc --noEmit && svelte-check --tsconfig ./tsconfig.json --threshold warning",
     "build": "vite build",
     "demo": "bun run terminal/demo.ts"

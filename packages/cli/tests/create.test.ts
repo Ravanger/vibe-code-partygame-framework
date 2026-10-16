@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -106,10 +107,12 @@ describe("runCreate", () => {
     expect(spy).toHaveBeenCalledWith(expect.stringMatching(/no monorepo root/));
   });
 
-  it("returns 1 when the game directory already exists", async () => {
+  it("returns 1 when the game directory already exists, leaving it intact", async () => {
     const spy = quiet();
     const root = await makeRoot();
+    const marker = join(root, "games", "my-game", "keep.txt");
     await mkdir(join(root, "games", "my-game"), { recursive: true });
+    await writeFile(marker, "precious");
     const code = await runCreate({
       slug: "my-game",
       cwd: root,
@@ -119,9 +122,50 @@ describe("runCreate", () => {
     });
     expect(code).toBe(1);
     expect(spy).toHaveBeenCalledWith(expect.stringMatching(/already exists/));
+    expect(existsSync(marker)).toBe(true);
   });
 
-  it("returns 1 when the template cannot be rendered", async () => {
+  it("returns 1 when the slug collides with an existing workspace package, creating nothing", async () => {
+    const spy = quiet();
+    const root = await makeRoot();
+    await mkdir(join(root, "packages", "core"), { recursive: true });
+    await writeFile(
+      join(root, "packages", "core", "package.json"),
+      JSON.stringify({ name: "@partygame/core" }),
+    );
+    const code = await runCreate({
+      slug: "core",
+      cwd: root,
+      templateDir: TEMPLATE,
+      format: () => 0,
+      install: () => 0,
+    });
+    expect(code).toBe(1);
+    expect(spy).toHaveBeenCalledWith(expect.stringMatching(/@partygame\/core/));
+    expect(existsSync(join(root, "games", "core"))).toBe(false);
+  });
+
+  it("returns 1 when the slug is an existing game's vitest project name, creating nothing", async () => {
+    const spy = quiet();
+    const root = await makeRoot();
+    await mkdir(join(root, "games", "foo"), { recursive: true });
+    await writeFile(
+      join(root, "games", "foo", "package.json"),
+      JSON.stringify({ name: "@partygame/foo" }),
+    );
+    const code = await runCreate({
+      slug: "foo-game",
+      cwd: root,
+      templateDir: TEMPLATE,
+      format: () => 0,
+      install: () => 0,
+    });
+    expect(code).toBe(1);
+    expect(spy).toHaveBeenCalledWith(expect.stringMatching(/foo/));
+    expect(existsSync(join(root, "games", "foo-game"))).toBe(false);
+  });
+
+  it("removes the directory when the template cannot be rendered", async () => {
     const spy = quiet();
     const root = await makeRoot();
     const code = await runCreate({
@@ -133,6 +177,8 @@ describe("runCreate", () => {
     });
     expect(code).toBe(1);
     expect(spy).toHaveBeenCalledWith(expect.stringMatching(/failed to create/));
+    expect(spy).toHaveBeenCalledWith(expect.stringMatching(/incomplete games\/my-game\//));
+    expect(existsSync(join(root, "games", "my-game"))).toBe(false);
   });
 
   it("propagates a non-zero install code and reports it", async () => {
@@ -192,6 +238,26 @@ describe("runCreate", () => {
     expect(spy).toHaveBeenCalledWith(
       expect.stringMatching(/biome check --write failed with exit code 7/),
     );
+    expect(spy).toHaveBeenCalledWith(expect.stringMatching(/incomplete games\/my-game\//));
+    expect(existsSync(join(root, "games", "my-game"))).toBe(false);
+  });
+
+  it("keeps the rendered game and explains recovery when install fails", async () => {
+    const spy = quiet();
+    const root = await makeRoot();
+    const code = await runCreate({
+      slug: "my-game",
+      cwd: root,
+      templateDir: TEMPLATE,
+      format: () => 0,
+      install: () => 1,
+    });
+    expect(code).toBe(1);
+    expect(existsSync(join(root, "games", "my-game"))).toBe(true);
+    expect(spy).toHaveBeenCalledWith(
+      "games/my-game/ was created but bun install failed. Run bun install again from the repo root, " +
+        "or remove games/my-game/ and re-run the command.",
+    );
   });
 
   it("renders the game and returns 0 on success", async () => {
@@ -211,6 +277,9 @@ describe("runCreate", () => {
       "name=my-game\npackage=@partygame/my-game\npascal=MyGame\n",
     );
     expect(log).toHaveBeenCalledWith(expect.stringMatching(/Created games\/my-game\//));
+    expect(log).toHaveBeenCalledWith(
+      expect.stringMatching(/Commit games\/my-game\/ together with the updated bun\.lock/),
+    );
   });
 });
 

@@ -2,7 +2,7 @@
 
 ## Responsibility
 
-The __DisplayName__ game: rules, UI screens and entry points, built only on the framework packages.
+The __DisplayNameMd__ game: rules, UI screens and entry points, built only on the framework packages.
 
 ## Never put here
 

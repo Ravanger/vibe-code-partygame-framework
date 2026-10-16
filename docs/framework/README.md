@@ -22,10 +22,13 @@ This writes a complete, working, fully-tested game to `games/<slug>/` — packag
 ruleset (two phases, `Waving` and `Results`), a Svelte client, a terminal client, bots and one game declaration
 (`gamePackage.ts`) whose entry files are one-line stubs over it — then runs `bun install` so it is ready to play. It targets this monorepo only: it finds the repo root by walking
 up to the nearest `package.json` whose `workspaces` include `games/*`, and fails with a clear error otherwise.
-Then run `bun run launch <slug>` to start the server and dev client; the build step happens automatically.
+Then run `bun run launch <slug>` to start the server and dev client; the build step happens automatically. The
+command also updates `bun.lock` for the new workspace — commit it together with `games/<slug>/`.
 
 The slug must be kebab-case starting with a letter (`[a-z][a-z0-9]*(-[a-z0-9]+)*`), not a reserved name
-(`list`, `launch`, `play`, `bots`, `dev`, `host`, `prod`), and there must be no existing `games/<slug>/`.
+(`list`, `launch`, `play`, `bots`, `dev`, `host`, `prod`), and there must be no existing `games/<slug>/`. It
+must also not collide with the workspace: `@partygame/<slug>` may not be an existing package name, and
+`<slug>`/`<slug>-game` may not be another game's vitest project names.
 Every other name is derived from the slug:
 package `@partygame/<slug>`, room `<slug>` with dashes as underscores, plus PascalCase, camelCase and a spaced
 display name (override the display name with `--name`).

@@ -30,6 +30,9 @@ const ROOT_FILES = new Set([
   ".gitattributes",
   "lefthook.yml",
 ]);
+// #14: the template-versions test pins the template's dependency ranges to the reference game's
+// manifest, so it must name that game.
+const VOCABULARY_EXCEPTIONS = new Set(["packages/cli/tests/templateVersions.test.ts"]);
 const DECORATOR_OPTIONS = ["experimentalDecorators", "emitDecoratorMetadata"];
 const TSCONFIG = /(?:^|\/)tsconfig[^/]*\.json$/;
 
@@ -70,7 +73,11 @@ const fileViolations = (file: TextFile): ConventionViolation[] => {
     });
   }
   found.push(...lineViolations(file, "brand", BRAND, "names a commercial brand"));
-  if (inside(path, "packages") && !inside(path, "packages/cli/template")) {
+  if (
+    inside(path, "packages") &&
+    !inside(path, "packages/cli/template") &&
+    !VOCABULARY_EXCEPTIONS.has(path)
+  ) {
     found.push(...lineViolations(file, "vocabulary", VOCABULARY, "game vocabulary in packages/"));
     if (!inside(path, "packages/terminal")) {
       found.push(...lineViolations(file, "vocabulary", PROMPT, "game vocabulary in packages/"));

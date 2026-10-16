@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { RESERVED_SLUGS } from "../packages/cli/src/slug.js";
 import {
   buildArgs,
   discoverGames,
@@ -41,20 +42,18 @@ describe("discoverGames", () => {
     ]);
   });
 
-  it.each(["list", "launch", "play", "bots", "dev", "host", "prod"])(
-    "ignores a folder named %s and reports it",
-    (folder) => {
-      expect(
-        discoverGames([
-          { folder, packageJson: {} },
-          { folder: "alpha", packageJson: { name: "alpha" } },
-        ]),
-      ).toEqual({
-        games: [{ folder: "alpha", label: "alpha", name: "alpha" }],
-        ignored: [folder],
-      });
-    },
-  );
+  // Driven by the CLI's list: the dispatcher and the scaffolder must see the same reserved names.
+  it.each(RESERVED_SLUGS)("ignores a folder named %s and reports it", (folder) => {
+    expect(
+      discoverGames([
+        { folder, packageJson: {} },
+        { folder: "alpha", packageJson: { name: "alpha" } },
+      ]),
+    ).toEqual({
+      games: [{ folder: "alpha", label: "alpha", name: "alpha" }],
+      ignored: [folder],
+    });
+  });
 
   it.each([[{}], [{ name: 7 }], ["text"], [null], [[]]])(
     "falls back to the folder name for package.json %j",

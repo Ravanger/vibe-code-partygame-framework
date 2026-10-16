@@ -1,4 +1,4 @@
-# __DisplayName__
+# __DisplayNameMd__
 
 A small party game scaffolded by `bun run new`: players take turns waving, and the first to reach
 `waveGoal` waves (default 10) wins. It is a complete, fully-tested starting point — replace the ruleset in
@@ -6,10 +6,8 @@ A small party game scaffolded by `bun run new`: players take turns waving, and t
 
 ## Play it
 
-From the repo root:
-
-The repo dispatcher (`scripts/game.ts`) needs the game named whenever more than one game exists, so every
-command below carries `__slug__`:
+All commands run from the repo root. The dispatcher (`scripts/game.ts`) needs the game named whenever more than
+one game exists, so every command below carries `__slug__`:
 
 ```sh
 bun run launch __slug__            # server + API + dev client; open the printed URL
@@ -19,6 +17,15 @@ bun run bots __slug__ CODE [count] # seat bots in a browser-created room
 ```
 
 `bun run --cwd games/__slug__ demo` runs a narrated all-bot game and prints PASS or FAIL.
+
+## Tests
+
+The suites split across two vitest projects. From this folder:
+
+```sh
+bun run test      # UI project only (tests/App.test.ts, tests/screens/, tests/config.test.ts)
+bun run test:all  # both projects: the UI suites plus rules, bots and terminal
+```
 
 ## Layout
 
@@ -30,7 +37,7 @@ bun run bots __slug__ CODE [count] # seat bots in a browser-created room
 - `server.ts`, `launch.ts`, `bots/cli.ts`, `terminal/play.ts`, `terminal/demo.ts` — the entry stubs.
 - `bots/`, `terminal/` — bot strategy and terminal client.
 - `tests/` — rules (`tests/game/`), bots (`tests/bots/`), terminal (`tests/terminal/`) and UI
-  (`tests/*.test.ts`).
+  (`tests/App.test.ts`, `tests/screens/`, `tests/config.test.ts`; helpers in `tests/helpers/`).
 
 ## Make it yours
 

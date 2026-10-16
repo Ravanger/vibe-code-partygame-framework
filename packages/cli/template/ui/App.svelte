@@ -18,7 +18,7 @@ const route = $derived(vm.screen);
 <main class:tv={vm.isSpectator}>
   {#if route.kind !== 'welcome'}
     <header>
-      <span class="wordmark">__DisplayName__</span>
+      <span class="wordmark">__DisplayNameHtml__</span>
       <span class="room-chip">{vm.roomCode}</span>
       <GameControls vm={controls} />
     </header>
