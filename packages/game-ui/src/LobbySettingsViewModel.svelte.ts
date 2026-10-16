@@ -14,7 +14,7 @@ export interface LobbySettingsConfig {
   labels?: Readonly<Record<string, string>>;
 }
 
-/** The room options as a form: one number field per bounded numeric option of the schema. */
+/** The room options as a form: one number field per bounded numeric option and one choice field per string-enum option of the schema. */
 export class LobbySettingsViewModel<TState extends BaseGameState> {
   readonly fields: OptionField[];
   private readonly drafts = $state<Record<string, string>>({});
@@ -50,10 +50,26 @@ export class LobbySettingsViewModel<TState extends BaseGameState> {
     this.drafts[key] = raw;
   }
 
-  /** Sends the typed value. An empty or non-numeric draft is dropped without sending; a rejection (also shown by the app's error toast) puts the published value back. */
+  /** Picks one of a choice field's options and sends it; a rejection puts the published value back. */
+  async choose(key: string, value: string): Promise<void> {
+    this.setDraft(key, value);
+    await this.commit(key);
+  }
+
+  /** Sends the typed value. An empty draft, a non-numeric number draft or a choice that is not one of the field's options is dropped without sending; a rejection (also shown by the app's error toast) puts the published value back. */
   async commit(key: string): Promise<void> {
     const raw = this.drafts[key];
     if (raw === undefined || !this.canEdit) return;
+    const field = this.fields.find((candidate) => candidate.key === key);
+    if (field?.options !== undefined) {
+      if (!field.options.includes(raw)) {
+        delete this.drafts[key];
+        return;
+      }
+      const result = await this.manager.sendAction(SET_OPTIONS, { [key]: raw });
+      if (!result.ok) delete this.drafts[key];
+      return;
+    }
     const value = Number(raw);
     if (raw.trim() === "" || !Number.isFinite(value)) {
       delete this.drafts[key];

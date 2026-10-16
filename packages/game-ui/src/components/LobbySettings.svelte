@@ -12,17 +12,33 @@ const { vm }: { vm: LobbySettingsViewModel<TState> } = $props();
     {#each vm.fields as field (field.key)}
       <div class="setting">
         {#if vm.canEdit}
-          <label for={`opt-${field.key}`}>{field.label}</label>
-          <input
-            id={`opt-${field.key}`}
-            type="number"
-            min={field.min}
-            max={field.max}
-            step="1"
-            value={vm.valueOf(field.key)}
-            oninput={(e) => vm.setDraft(field.key, e.currentTarget.value)}
-            onchange={() => vm.commit(field.key)}
-          />
+          {#if field.options}
+            <span class="setting-label">{field.label}</span>
+            <fieldset class="choices" aria-label={field.label}>
+              {#each field.options as choice (choice)}
+                <button
+                  type="button"
+                  class:active={vm.valueOf(field.key) === choice}
+                  aria-pressed={vm.valueOf(field.key) === choice}
+                  onclick={() => vm.choose(field.key, choice)}
+                >
+                  {choice}
+                </button>
+              {/each}
+            </fieldset>
+          {:else}
+            <label for={`opt-${field.key}`}>{field.label}</label>
+            <input
+              id={`opt-${field.key}`}
+              type="number"
+              min={field.min}
+              max={field.max}
+              step="1"
+              value={vm.valueOf(field.key)}
+              oninput={(e) => vm.setDraft(field.key, e.currentTarget.value)}
+              onchange={() => vm.commit(field.key)}
+            />
+          {/if}
         {:else}
           <dt>{field.label}</dt>
           <dd>{vm.valueOf(field.key)}</dd>
@@ -100,5 +116,33 @@ const { vm }: { vm: LobbySettingsViewModel<TState> } = $props();
     font-family: var(--font-display);
     font-size: var(--fs-3);
     text-align: center;
+  }
+
+  .setting-label {
+    color: var(--ink-soft);
+  }
+
+  .choices {
+    display: flex;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    border: none;
+  }
+
+  .choices button {
+    min-height: 44px;
+    padding: 0.2rem 0.9rem;
+    border: var(--outline);
+    border-radius: var(--radius-btn);
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-size: var(--fs-3);
+    cursor: pointer;
+  }
+
+  .choices button.active {
+    background: var(--sun);
   }
 </style>

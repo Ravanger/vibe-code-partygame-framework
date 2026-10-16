@@ -37,7 +37,7 @@ const LAYERS: Record<string, { runtime: string[]; dev: string[] }> = {
   terminal: { runtime: ["bots", "client-utils", "server", "shared"], dev: ["core"] },
   launcher: { runtime: ["bots", "client-utils", "server", "shared"], dev: ["core"] },
   "game-kit": {
-    runtime: ["bots", "core", "launcher", "server", "shared", "terminal"],
+    runtime: ["bots", "content", "core", "launcher", "server", "shared", "terminal"],
     dev: [],
   },
   cli: { runtime: [], dev: [] },

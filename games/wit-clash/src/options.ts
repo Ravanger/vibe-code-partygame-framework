@@ -7,6 +7,8 @@ export const WitClashOptionsSchema = z.object({
   promptSeconds: z.number().int().min(15).max(600).default(90),
   voteSeconds: z.number().int().min(5).max(120).default(20),
   revealSeconds: z.number().int().min(1).max(30).default(5),
+  /** How strictly answers and names are filtered. */
+  filterLevel: z.enum(["off", "moderate", "strict"]).default("moderate"),
 });
 
 export type WitClashOptions = z.output<typeof WitClashOptionsSchema>;

@@ -1,3 +1,4 @@
+import { createTextFilter } from "@partygame/content/filter";
 import { defineGamePackage } from "@partygame/game-kit";
 import { witClashKit } from "./bots/witClashBot.js";
 import { createWitClashGame } from "./src/game.js";
@@ -16,6 +17,7 @@ export const gamePackage = defineGamePackage({
   displayName: "WitClash",
   load: (env) => loadContent(contentDir(env, import.meta.url)),
   definition: (categories) => createWitClashGame({ categories }),
+  textFilter: createTextFilter(),
   stateClass: WitClashState,
   isFinished: isGameOver,
   botKit: witClashKit(),

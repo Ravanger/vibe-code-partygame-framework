@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/svelte";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import CategoryVote from "../../ui/screens/CategoryVote.svelte";
 import MatchupReveal from "../../ui/screens/MatchupReveal.svelte";
 import MatchupVote from "../../ui/screens/MatchupVote.svelte";
@@ -109,6 +109,22 @@ describe("Prompting screen", () => {
         payload: { matchupId: "m1", answer: "Mango", type: "SUBMIT_ANSWER" },
       },
     ]);
+  });
+
+  it("keeps the typed answer when the server rejects it", async () => {
+    const { c } = writing();
+    c.room.reply = {
+      ok: false,
+      error: { code: "CONTENT_REJECTED", message: "That text was not allowed" },
+    };
+    render(Prompting, { manager: c.manager });
+    await fireEvent.input(screen.getByLabelText("Your answer"), {
+      target: { value: "Keep me here" },
+    });
+    await fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await vi.waitFor(() => expect(c.manager.lastServerError?.code).toBe("CONTENT_REJECTED"));
+    expect(screen.getByLabelText("Your answer")).toHaveValue("Keep me here");
+    expect(screen.queryByRole("heading", { name: "Second prompt" })).not.toBeInTheDocument();
   });
 
   it("submits on Enter and lets Shift+Enter through", async () => {

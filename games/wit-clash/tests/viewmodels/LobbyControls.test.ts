@@ -12,10 +12,17 @@ describe("LobbySettingsViewModel", () => {
       "promptSeconds",
       "voteSeconds",
       "revealSeconds",
+      "filterLevel",
     ]);
     expect(vm.fields[0]).toEqual({ key: "totalRounds", label: "Total rounds", min: 1, max: 10 });
+    expect(vm.fields[5]).toEqual({
+      key: "filterLevel",
+      label: "Filter level",
+      options: ["off", "moderate", "strict"],
+    });
     expect(vm.valueOf("totalRounds")).toBe("3");
     expect(vm.valueOf("voteSeconds")).toBe("20");
+    expect(vm.valueOf("filterLevel")).toBe("moderate");
   });
 });
 

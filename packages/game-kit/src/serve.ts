@@ -11,7 +11,10 @@ export async function serve<TState extends BaseGameState, TContent>(
 ): Promise<unknown> {
   try {
     const hosted = hostedGame(pkg, await pkg.load?.(io.env));
-    return await io.startServer({ games: [hosted] });
+    return await io.startServer({
+      games: [hosted],
+      ...(pkg.textFilter ? { textFilter: pkg.textFilter } : {}),
+    });
   } catch (error) {
     failWith(io, error);
     return undefined;

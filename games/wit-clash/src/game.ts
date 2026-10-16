@@ -1,4 +1,5 @@
-import { defineGame } from "@partygame/core";
+import { createTextFilter } from "@partygame/content/filter";
+import { defineGame, textFilterMiddleware } from "@partygame/core";
 import type { CategoryRepository } from "./content/CategoryRepository.js";
 import { META } from "./meta.js";
 import { type WitClashOptions, WitClashOptionsSchema } from "./options.js";
@@ -28,6 +29,8 @@ export function createWitClashGame({ categories }: WitClashConfig) {
     maxPlayers: META.maxPlayers,
     startPhase: PHASE.CategorySelection,
     options: WitClashOptionsSchema,
+    filterLevel: (options) => options.filterLevel,
+    middleware: [textFilterMiddleware(createTextFilter())],
     createPrivateState: () => new WitClashPrivate(categories),
     phases: {
       [PHASE.CategorySelection]: CategorySelection,

@@ -2,6 +2,7 @@ import { connectedClient, type SeatConfig } from "@partygame/game-client/testing
 import { BaseGameState } from "@partygame/shared/schema";
 import { fireEvent, render, screen } from "@testing-library/svelte";
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import { LobbySettings } from "../../src/components/index.js";
 import { LobbySettingsViewModel } from "../../src/LobbySettingsViewModel.svelte.js";
 import { TEST_DEFAULTS, TestOptionsSchema } from "../fixtures/optionsSchema.js";
@@ -26,6 +27,23 @@ describe("LobbySettings", () => {
     await fireEvent.change(input);
     expect(c.room.requests).toEqual([
       { type: "ACTION", payload: { type: "SET_OPTIONS", turnSeconds: 40 } },
+    ]);
+  });
+
+  it("gives the host choice buttons per string-enum field that commit a pick", async () => {
+    const c = connectedClient({ stateClass: BaseGameState, seat: { role: "host" } });
+    c.state.options = JSON.stringify({ level: "moderate" });
+    const vm = new LobbySettingsViewModel(c.manager, {
+      schema: z.object({ level: z.enum(["off", "moderate", "strict"]).default("moderate") }),
+    });
+    render(LobbySettings, { vm });
+    expect(screen.getByRole("button", { name: "moderate" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await fireEvent.click(screen.getByRole("button", { name: "strict" }));
+    expect(c.room.requests).toEqual([
+      { type: "ACTION", payload: { level: "strict", type: "SET_OPTIONS" } },
     ]);
   });
 

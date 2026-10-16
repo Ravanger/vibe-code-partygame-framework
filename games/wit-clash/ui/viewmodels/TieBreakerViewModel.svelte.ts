@@ -45,7 +45,7 @@ export class TieBreakerViewModel {
     return this.manager.state?.mine.get(this.manager.playerId);
   }
 
-  private durationOption(): keyof WitClashOptions {
+  private durationOption(): "promptSeconds" | "voteSeconds" | "revealSeconds" {
     const phase = this.manager.state?.phase;
     if (phase === PHASE.TieBreakerPrompting) return "promptSeconds";
     return phase === PHASE.TieBreakerVoting ? "voteSeconds" : "revealSeconds";

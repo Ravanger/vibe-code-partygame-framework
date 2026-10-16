@@ -5,13 +5,14 @@ import { WitClashOptionsSchema } from "../../src/options.js";
 import { makeCategories, Table } from "./support.js";
 
 describe("WitClashOptionsSchema", () => {
-  it("defaults to 3 rounds and the standard timers", () => {
+  it("defaults to 3 rounds, the standard timers and moderate filtering", () => {
     expect(WitClashOptionsSchema.parse({})).toEqual({
       totalRounds: 3,
       categoryVoteSeconds: 60,
       promptSeconds: 90,
       voteSeconds: 20,
       revealSeconds: 5,
+      filterLevel: "moderate",
     });
   });
 
@@ -24,6 +25,7 @@ describe("WitClashOptionsSchema", () => {
     { voteSeconds: 0 },
     { revealSeconds: 0 },
     { revealSeconds: 60 },
+    { filterLevel: "loud" },
   ])("rejects %o", (bad) => {
     expect(WitClashOptionsSchema.safeParse(bad).success).toBe(false);
   });

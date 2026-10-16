@@ -171,6 +171,9 @@ Passed when the room is created or changed by the host in the lobby with `SET_OP
 | `promptSeconds` | 90 | 15 to 600 |
 | `voteSeconds` | 20 | 5 to 120 |
 | `revealSeconds` | 5 | 1 to 30 |
+| `filterLevel` | `moderate` | `off`, `moderate` or `strict` |
+
+`filterLevel` drives the room's text filter (`createTextFilter()` from `@partygame/content/filter`): answers are checked through `textFilterMiddleware` (declared as `textFields: ["answer"]` on `SUBMIT_ANSWER`, which covers tie-breakers too) and player names are checked by the server at join and on `SET_NAME`. At `moderate` slurs and profanity are refused; `strict` also refuses mild terms; `off` checks nothing. A refused answer is rejected with `CONTENT_REJECTED` and the filter's fixed reason, leaving the typed text in the player's box to fix or resend.
 
 ## Content and running
 

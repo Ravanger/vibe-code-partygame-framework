@@ -96,6 +96,43 @@ describe("LobbySettingsViewModel", () => {
     expect(vm.valueOf("turnSeconds")).toBe("20");
   });
 
+  const levelVm = (host: ReturnType<typeof client>) =>
+    new LobbySettingsViewModel(host.manager, {
+      schema: z.object({ level: z.enum(["off", "moderate", "strict"]).default("moderate") }),
+    });
+
+  it("has a field per string enum and sends the chosen value", async () => {
+    const host = client({ role: "host" });
+    const vm = levelVm(host);
+    expect(vm.fields).toEqual([
+      { key: "level", label: "Level", options: ["off", "moderate", "strict"] },
+    ]);
+    await vm.choose("level", "strict");
+    expect(host.room.requests).toEqual([
+      { type: "ACTION", payload: { level: "strict", type: "SET_OPTIONS" } },
+    ]);
+  });
+
+  it("drops an option draft that is not one of the choices", async () => {
+    const host = client({ role: "host" });
+    host.state.options = JSON.stringify({ level: "moderate" });
+    const vm = levelVm(host);
+    vm.setDraft("level", "loud");
+    await vm.commit("level");
+    expect(host.room.requests).toEqual([]);
+    expect(vm.valueOf("level")).toBe("moderate");
+  });
+
+  it("puts the published value back when the server rejects an option change", async () => {
+    const host = client({ role: "host" });
+    host.state.options = JSON.stringify({ level: "moderate" });
+    host.room.reply = { ok: false, error: { code: "INVALID_ACTION", message: "Nope" } };
+    const vm = levelVm(host);
+    vm.setDraft("level", "strict");
+    await vm.commit("level");
+    expect(vm.valueOf("level")).toBe("moderate");
+  });
+
   it("still sends a value the schema would reject; the server validates", async () => {
     const host = client({ role: "host" });
     const vm = new LobbySettingsViewModel(host.manager, {

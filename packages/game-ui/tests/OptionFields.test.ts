@@ -9,6 +9,28 @@ describe("OptionFields", () => {
     expect(fields).toEqual([{ key: "turnSeconds", label: "Turn seconds", min: 5, max: 60 }]);
   });
 
+  it("lists a string enum as an option field with its choices", () => {
+    const fields = new OptionFields().from({
+      properties: {
+        filterLevel: { type: "string", enum: ["off", "moderate", "strict"] },
+        text: { type: "string" },
+        mixed: { type: "string", enum: ["a", 1] },
+      },
+    });
+    expect(fields).toEqual([
+      { key: "filterLevel", label: "Filter level", options: ["off", "moderate", "strict"] },
+    ]);
+  });
+
+  it("labels an option field from the override", () => {
+    const fields = new OptionFields({ filterLevel: "Language filter" }).from({
+      properties: { filterLevel: { type: "string", enum: ["off", "on"] } },
+    });
+    expect(fields).toEqual([
+      { key: "filterLevel", label: "Language filter", options: ["off", "on"] },
+    ]);
+  });
+
   it("skips what is not a bounded number", () => {
     const fields = new OptionFields().from({
       properties: {

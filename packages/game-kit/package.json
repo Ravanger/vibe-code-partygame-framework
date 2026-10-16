@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@partygame/bots": "workspace:*",
+    "@partygame/content": "workspace:*",
     "@partygame/core": "workspace:*",
     "@partygame/launcher": "workspace:*",
     "@partygame/server": "workspace:*",
