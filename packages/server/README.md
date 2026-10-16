@@ -23,7 +23,7 @@ import { ButtonState } from "./src/state.js";
 await startServer({ games: [{ roomName: "button", definition: ButtonGame, stateClass: ButtonState }] });
 ```
 
-Clients join with `{ playerId, name? }`; `spectator: true` gives a TV display with no seat. A dropped player keeps the seat for `reconnectMs` (default 60 s); an empty room lives `emptyRoomGraceMs` (default 120 s).
+Clients join with `{ playerId, name? }`; `spectator: true` gives a TV display with no seat. A dropped player keeps the seat for `reconnectMs` (default 60 s); an empty room lives `emptyRoomGraceMs` (default 120 s). With a `textFilter`, names are checked at join and on `SET_NAME` at the game's `filterLevel` option (default `"off"`); a refused join closes with code 4405.
 
 ## Host without Bun
 

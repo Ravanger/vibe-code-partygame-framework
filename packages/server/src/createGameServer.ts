@@ -1,4 +1,5 @@
 import { Server, type Transport } from "@colyseus/core";
+import type { TextFilter } from "@partygame/content/filter";
 import type { GameDefinition } from "@partygame/core";
 import type { BaseGameState } from "@partygame/shared/schema";
 import { GameRoom, type GameRoomConfig } from "./rooms/GameRoom.js";
@@ -21,6 +22,8 @@ export interface GameServerOptions {
   reconnectMs?: number;
   /** How long an empty room lives before it is disposed. Default 120 s. */
   emptyRoomGraceMs?: number;
+  /** When set, player names are checked against it at join and on `SET_NAME`, at the level of each game's `filterLevel`. */
+  textFilter?: TextFilter;
 }
 
 export const DEFAULT_RECONNECT_MS = 60_000;
@@ -37,6 +40,7 @@ export function createGameServer(options: GameServerOptions): Server {
       roomCodeService,
       reconnectMs: options.reconnectMs ?? DEFAULT_RECONNECT_MS,
       emptyRoomGraceMs: options.emptyRoomGraceMs ?? DEFAULT_EMPTY_ROOM_GRACE_MS,
+      ...(options.textFilter ? { textFilter: options.textFilter } : {}),
     };
     server.define(
       game.roomName,

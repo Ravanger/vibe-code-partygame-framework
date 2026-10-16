@@ -13,7 +13,7 @@ The generic Colyseus host that runs any `defineGame` definition: rooms, seats, r
 
 ## May import
 
-- Runtime: `@partygame/client-utils`, `@partygame/core`, `@partygame/shared`
+- Runtime: `@partygame/client-utils`, `@partygame/content` (types only: `TextFilter` for name checks), `@partygame/core`, `@partygame/shared`
 - Dev: `@partygame/config`
 
 ## Public entry points

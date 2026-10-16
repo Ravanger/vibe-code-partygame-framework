@@ -1,5 +1,6 @@
 import { type Client, type Delayed, logger, Room, ServerError } from "@colyseus/core";
 import { type Schema, StateView } from "@colyseus/schema";
+import type { FilterLevel, TextFilter } from "@partygame/content/filter";
 import {
   type GameDefinition,
   GameRuntime,
@@ -46,6 +47,8 @@ export interface GameRoomConfig {
   roomCodeService: RoomCodeService;
   reconnectMs: number;
   emptyRoomGraceMs: number;
+  /** When set, player names are checked against it at join and on `SET_NAME`. */
+  textFilter?: TextFilter;
 }
 
 /** Generic Colyseus room: seats, roster, reconnection and per-player views around a core `GameRuntime`. */
@@ -58,6 +61,8 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
   private seatList: Set<string> | undefined;
   private readonly views = new Map<string, StateView>();
   private readonly viewRefs = new Map<string, Set<Schema>>();
+  /** The room's current parsed options; the host's `publishOptions` is its single writer. */
+  private roomOptions: Record<string, unknown> = {};
   /** Per-room RNG seed drawn from the platform CSPRNG at room creation; recorded in action logs. */
   private readonly seed: Seed = randomSeed();
   /** Seeded PRNG so a room's randomness is reproducible from its log header. */
@@ -183,6 +188,9 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     if (this.state.players.size >= this.config.definition.maxPlayers) {
       throw this.closeWith(CLOSE_CODES.ROOM_FULL);
     }
+    if (name && this.nameRejected(name) !== undefined) {
+      throw this.closeWith(CLOSE_CODES.CONTENT_REJECTED);
+    }
     const seat = new PlayerSchema();
     seat.id = playerId;
     seat.name = name && !this.nameTaken(playerId, name) ? name : "";
@@ -254,6 +262,7 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
       client?.leave();
     },
     publishOptions: (options) => {
+      this.roomOptions = options as Record<string, unknown>;
       this.state.options = JSON.stringify(options);
     },
     now: () => Date.now(),
@@ -274,6 +283,11 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
       });
       return;
     }
+    const reason = this.nameRejected(name.data);
+    if (reason !== undefined) {
+      client.send(ServerMessage.ERROR, { code: ErrorCode.CONTENT_REJECTED, message: reason });
+      return;
+    }
     if (this.nameTaken(seat.id, name.data)) {
       client.send(ServerMessage.ERROR, {
         code: ErrorCode.NAME_TAKEN,
@@ -285,6 +299,19 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     seat.isReady = true;
     if (this.state.phase === LOBBY_PHASE) seat.isActive = true;
     this.rosterChanged();
+  }
+
+  /** The room's current text-filter level: the definition's `filterLevel` over the live options, default `"off"`. */
+  private filterLevel(): FilterLevel {
+    return this.config.definition.filterLevel?.(this.roomOptions) ?? "off";
+  }
+
+  /** The filter's reason when `name` fails at the room's current level; `undefined` when it passes or no filter is set. */
+  private nameRejected(name: string): string | undefined {
+    const filter = this.config.textFilter;
+    if (!filter) return undefined;
+    const result = filter.check(name, this.filterLevel());
+    return result.ok ? undefined : result.reason;
   }
 
   private nameTaken(playerId: string, name: string): boolean {

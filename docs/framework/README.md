@@ -58,7 +58,7 @@ Every rejection is sent only to the sender as `ERROR { code, message, action }`:
 | `WRONG_PHASE` | action exists, but not in the current phase |
 | `UNAUTHORIZED` | role check failed (for example a guest sent a host action) |
 | `NOT_ACTIVE` | the sender is waiting for the next round |
-| `CONTENT_REJECTED` | free text failed the room's text filter: an action's declared `textFields` (via `textFilterMiddleware`) or a player name; the message is the filter's fixed per-level reason |
+| `CONTENT_REJECTED` | free text failed the room's text filter: an action's declared `textFields` (via `textFilterMiddleware`) or a player name via `SET_NAME`; the message is the filter's fixed per-level reason. A join with a filtered name is refused with close code 4405 instead |
 | `NOT_ENOUGH_PLAYERS` | `START_GAME` below `minPlayers` |
 | `NOT_ALLOWED` | game rule; use `ctx.reject("NOT_ALLOWED", "why")` in a handler |
 | `NAME_TAKEN` | `SET_NAME` with a name another seat already has (compared trimmed and case-insensitively); the seat keeps its name |
@@ -521,12 +521,12 @@ import { startServer } from "@partygame/server/bun";
 await startServer({ games });   // WebSocket on PORT (2567) + /api/resolve-code on API_PORT (3001)
 ```
 
-Elsewhere: `createGameServer({ games, roomCodeService?, transport?, reconnectMs?, emptyRoomGraceMs? })` returns the Colyseus `Server`,
+Elsewhere: `createGameServer({ games, roomCodeService?, transport?, reconnectMs?, emptyRoomGraceMs?, textFilter? })` returns the Colyseus `Server`,
 and `createApiHandler(roomCodeService)` is the pure `(Request) => Response` behind `/api/resolve-code`.
 
 Clients join with `{ playerId, name? }` (`spectator: true` for a TV display: no seat, counted in `spectatorCount`).
 Create a watch-only room with the framework option `seats: string[]` (the playerIds allowed to take a seat): any other non-spectator join is refused with `4404 "This room is watch-only"`, spectators still join. It is not a game option and is not published in `state.options`.
-`SET_NAME` readies a seat (a name another seat has is refused with `NAME_TAKEN`; a join-time `name` that is taken is ignored and the seat joins unnamed). A room is kept alive only by connected seats: once the last one is gone for `emptyRoomGraceMs`, the room is disposed and any spectators are disconnected. `ACTION` carries your actions (`room.send` or `room.request`, see Actions). A dropped connection holds the seat for `reconnectMs`
+`SET_NAME` readies a seat (a name another seat has is refused with `NAME_TAKEN`; a join-time `name` that is taken is ignored and the seat joins unnamed). With a `textFilter` on `createGameServer`, names are also checked against it at the level of the game's `filterLevel` over the room's current options (default `"off"`): a join with a filtered name is refused with close code 4405 (`CONTENT_REJECTED`) and a `SET_NAME` with one is refused with `CONTENT_REJECTED` and the filter's reason, keeping the old name; a level raised mid-lobby applies to the next `SET_NAME`, not to names already set. A room is kept alive only by connected seats: once the last one is gone for `emptyRoomGraceMs`, the room is disposed and any spectators are disconnected. `ACTION` carries your actions (`room.send` or `room.request`, see Actions). A dropped connection holds the seat for `reconnectMs`
 (token reconnect or a new session with the same `playerId`); a mid-game joiner is seated inactive.
 When the host leaves or drops, the role moves to a connected seat that is active and ready, else one that is ready, else any connected seat.
 Spectators get no reconnection window; they simply rejoin.

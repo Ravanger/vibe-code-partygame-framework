@@ -235,6 +235,7 @@
         "@colyseus/schema": "^5.0.35",
         "@colyseus/sdk": "^0.18.4",
         "@partygame/client-utils": "workspace:*",
+        "@partygame/content": "workspace:*",
         "@partygame/core": "workspace:*",
         "@partygame/shared": "workspace:*",
         "zod": "^4.6.5",
