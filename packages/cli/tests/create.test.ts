@@ -107,10 +107,12 @@ describe("runCreate", () => {
     expect(spy).toHaveBeenCalledWith(expect.stringMatching(/no monorepo root/));
   });
 
-  it("returns 1 when the game directory already exists", async () => {
+  it("returns 1 when the game directory already exists, leaving it intact", async () => {
     const spy = quiet();
     const root = await makeRoot();
+    const marker = join(root, "games", "my-game", "keep.txt");
     await mkdir(join(root, "games", "my-game"), { recursive: true });
+    await writeFile(marker, "precious");
     const code = await runCreate({
       slug: "my-game",
       cwd: root,
@@ -120,6 +122,7 @@ describe("runCreate", () => {
     });
     expect(code).toBe(1);
     expect(spy).toHaveBeenCalledWith(expect.stringMatching(/already exists/));
+    expect(existsSync(marker)).toBe(true);
   });
 
   it("returns 1 when the slug collides with an existing workspace package, creating nothing", async () => {
@@ -162,7 +165,7 @@ describe("runCreate", () => {
     expect(existsSync(join(root, "games", "foo-game"))).toBe(false);
   });
 
-  it("returns 1 when the template cannot be rendered", async () => {
+  it("removes the directory when the template cannot be rendered", async () => {
     const spy = quiet();
     const root = await makeRoot();
     const code = await runCreate({
@@ -174,6 +177,8 @@ describe("runCreate", () => {
     });
     expect(code).toBe(1);
     expect(spy).toHaveBeenCalledWith(expect.stringMatching(/failed to create/));
+    expect(spy).toHaveBeenCalledWith(expect.stringMatching(/incomplete games\/my-game\//));
+    expect(existsSync(join(root, "games", "my-game"))).toBe(false);
   });
 
   it("propagates a non-zero install code and reports it", async () => {
@@ -232,6 +237,26 @@ describe("runCreate", () => {
     expect(install).not.toHaveBeenCalled();
     expect(spy).toHaveBeenCalledWith(
       expect.stringMatching(/biome check --write failed with exit code 7/),
+    );
+    expect(spy).toHaveBeenCalledWith(expect.stringMatching(/incomplete games\/my-game\//));
+    expect(existsSync(join(root, "games", "my-game"))).toBe(false);
+  });
+
+  it("keeps the rendered game and explains recovery when install fails", async () => {
+    const spy = quiet();
+    const root = await makeRoot();
+    const code = await runCreate({
+      slug: "my-game",
+      cwd: root,
+      templateDir: TEMPLATE,
+      format: () => 0,
+      install: () => 1,
+    });
+    expect(code).toBe(1);
+    expect(existsSync(join(root, "games", "my-game"))).toBe(true);
+    expect(spy).toHaveBeenCalledWith(
+      "games/my-game/ was created but bun install failed. Run bun install again from the repo root, " +
+        "or remove games/my-game/ and re-run the command.",
     );
   });
 

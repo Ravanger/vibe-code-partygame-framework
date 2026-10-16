@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdir } from "node:fs/promises";
+import { mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { findCollision } from "./collisions.js";
 import { findRepoRoot } from "./repoRoot.js";
@@ -91,17 +91,28 @@ export async function runCreate(options: RunCreateOptions): Promise<number> {
     await mkdir(gameDir, { recursive: true });
     await renderTemplate({ templateDir: options.templateDir, outDir: gameDir, names });
   } catch (error) {
+    await rm(gameDir, { recursive: true, force: true });
     console.error(`failed to create games/${slug.slug}/: ${errorMessage(error)}`);
+    console.error(
+      `Removed the incomplete games/${slug.slug}/ directory; run the command again to retry.`,
+    );
     return 1;
   }
   const formatCode = await options.format(gameDir);
   if (formatCode !== 0) {
+    await rm(gameDir, { recursive: true, force: true });
     console.error(`biome check --write failed with exit code ${formatCode}`);
+    console.error(
+      `Removed the incomplete games/${slug.slug}/ directory; run the command again to retry.`,
+    );
     return formatCode;
   }
   const code = await options.install(root);
   if (code !== 0) {
     console.error(`bun install failed with exit code ${code}`);
+    console.error(
+      `games/${slug.slug}/ was created but bun install failed. Run bun install again from the repo root, or remove games/${slug.slug}/ and re-run the command.`,
+    );
     return code;
   }
   console.log(`Created games/${slug.slug}/. Run \`bun run launch ${slug.slug}\` to play.`);

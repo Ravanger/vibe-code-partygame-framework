@@ -26,6 +26,9 @@ runs `bun install` at the repo root so it is ready to play.
   in code contexts the template renders it as an escaped string literal.
 - The repo root is found by walking up to the nearest `package.json` whose `workspaces` include `games/*`;
   anything else fails with a clear error (this targets this monorepo only).
+- When rendering or formatting fails, the incomplete `games/<slug>/` is removed and the command can simply be
+  re-run. When `bun install` fails, the complete `games/<slug>/` is kept: re-run `bun install` from the repo
+  root, or remove the directory and run the command again.
 
 The template is a small wave-based game (phases `Waving` and `Results`) with a Svelte client, a terminal client,
 bots and one declaration (`gamePackage.ts`) the entry files stub over. Replace the ruleset in `games/<slug>/src/` with your own game. See
