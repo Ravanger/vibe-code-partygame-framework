@@ -116,5 +116,6 @@ export async function runCreate(options: RunCreateOptions): Promise<number> {
     return code;
   }
   console.log(`Created games/${slug.slug}/. Run \`bun run launch ${slug.slug}\` to play.`);
+  console.log(`Commit games/${slug.slug}/ together with the updated bun.lock.`);
   return 0;
 }

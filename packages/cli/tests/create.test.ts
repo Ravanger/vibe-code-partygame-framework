@@ -277,6 +277,9 @@ describe("runCreate", () => {
       "name=my-game\npackage=@partygame/my-game\npascal=MyGame\n",
     );
     expect(log).toHaveBeenCalledWith(expect.stringMatching(/Created games\/my-game\//));
+    expect(log).toHaveBeenCalledWith(
+      expect.stringMatching(/Commit games\/my-game\/ together with the updated bun\.lock/),
+    );
   });
 });
 
