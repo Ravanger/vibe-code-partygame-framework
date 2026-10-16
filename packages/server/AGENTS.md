@@ -7,7 +7,7 @@ The generic Colyseus host that runs any `defineGame` definition: rooms, seats, r
 ## Never put here
 
 - Game rules or game vocabulary.
-- Content loading (`./content`, moving: #81).
+- Content loading (it lives in `@partygame/content`).
 - Port probing (it lives in `./probe`).
 - Raw Zod messages or ad-hoc close codes sent to clients (use `CLOSE_CODES` and `CLIENT_MESSAGES`).
 
@@ -22,7 +22,6 @@ The generic Colyseus host that runs any `defineGame` definition: rooms, seats, r
 - `./bun`: `startServer`.
 - `./node`: `serveApi`, `startNodeServer`.
 - `./probe`: `ServerProbe`, `freePort`, `closeHttpServer`.
-- `./content`: `loadJsoncDir`.
 - `./testing`: `bootTestServer`, `seatPlayers`, `joinPlayer`, `stateOf`.
 
 ## Tests

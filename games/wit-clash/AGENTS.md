@@ -12,7 +12,7 @@ The reference game: rules, UI screens, content and entry points, built only on t
 
 ## May import
 
-- Runtime: `@partygame/bots`, `@partygame/core`, `@partygame/game-client`, `@partygame/game-kit`, `@partygame/game-ui`, `@partygame/server`, `@partygame/shared`, `@partygame/terminal`
+- Runtime: `@partygame/bots`, `@partygame/content`, `@partygame/core`, `@partygame/game-client`, `@partygame/game-kit`, `@partygame/game-ui`, `@partygame/server`, `@partygame/shared`, `@partygame/terminal`
 - Dev: `@partygame/config`
 
 ## Public entry points

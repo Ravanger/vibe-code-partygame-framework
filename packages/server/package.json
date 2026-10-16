@@ -38,10 +38,6 @@
       "types": "./dist/probe.d.ts",
       "default": "./dist/probe.js"
     },
-    "./content": {
-      "types": "./dist/content.d.ts",
-      "default": "./dist/content.js"
-    },
     "./bun": {
       "types": "./dist/bun.d.ts",
       "default": "./dist/bun.js"

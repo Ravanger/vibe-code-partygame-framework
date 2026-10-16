@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { loadJsoncDir, stripJsonComments } from "../src/content.js";
+import { loadJsoncDir, stripJsonComments } from "../src/index.js";
 
 describe("stripJsonComments", () => {
   it("removes line comments", () => {

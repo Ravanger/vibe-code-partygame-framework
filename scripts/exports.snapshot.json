@@ -102,6 +102,19 @@
         }
       }
     },
+    "content": {
+      ".": {
+        "target": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.js"
+        },
+        "symbols": {
+          "LoadJsoncDirOptions": {},
+          "loadJsoncDir": {},
+          "stripJsonComments": {}
+        }
+      }
+    },
     "core": {
       ".": {
         "target": {
@@ -344,17 +357,6 @@
         "symbols": {
           "StartServerOptions": {},
           "startServer": {}
-        }
-      },
-      "./content": {
-        "target": {
-          "types": "./dist/content.d.ts",
-          "default": "./dist/content.js"
-        },
-        "symbols": {
-          "LoadJsoncDirOptions": {},
-          "loadJsoncDir": {},
-          "stripJsonComments": {}
         }
       },
       "./node": {

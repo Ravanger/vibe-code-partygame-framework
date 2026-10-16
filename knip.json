@@ -17,6 +17,9 @@
       "project": ["src/**", "*.ts", "tests/**"],
       "svelte": false
     },
+    "packages/content": {
+      "project": ["src/**", "tests/**"]
+    },
     "packages/core": {
       "project": ["src/**", "tests/**"]
     },

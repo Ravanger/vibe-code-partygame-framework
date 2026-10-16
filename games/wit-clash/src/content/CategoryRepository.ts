@@ -1,5 +1,5 @@
+import { loadJsoncDir } from "@partygame/content";
 import { shuffle } from "@partygame/core";
-import { loadJsoncDir } from "@partygame/server/content";
 import { z } from "zod";
 
 const PromptSchema = z.object({ id: z.string().min(1), text: z.string().min(1) });

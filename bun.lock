@@ -28,6 +28,7 @@
         "@fontsource/gochi-hand": "^5.3.0",
         "@fontsource/lilita-one": "^5.3.0",
         "@partygame/bots": "workspace:*",
+        "@partygame/content": "workspace:*",
         "@partygame/core": "workspace:*",
         "@partygame/game-client": "workspace:*",
         "@partygame/game-kit": "workspace:*",
@@ -112,6 +113,19 @@
         "@sveltejs/vite-plugin-svelte": "^7.3.1",
         "svelte": "^5.57.1",
         "vite": "^8.3.1",
+        "vitest": "^4.1.11",
+      },
+    },
+    "packages/content": {
+      "name": "@partygame/content",
+      "version": "0.1.0",
+      "dependencies": {
+        "zod": "^4.6.5",
+      },
+      "devDependencies": {
+        "@partygame/config": "workspace:*",
+        "@types/node": "^26.6.3",
+        "typescript": "^6.0.3",
         "vitest": "^4.1.11",
       },
     },
@@ -561,6 +575,8 @@
     "@partygame/client-utils": ["@partygame/client-utils@workspace:packages/client-utils"],
 
     "@partygame/config": ["@partygame/config@workspace:packages/config"],
+
+    "@partygame/content": ["@partygame/content@workspace:packages/content"],
 
     "@partygame/core": ["@partygame/core@workspace:packages/core"],
 
