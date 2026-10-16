@@ -221,7 +221,7 @@ function authoritativeDurations<TState extends PhaseState, TPrivate, TOptions>(
  * definition produces. Each step's logged transitions and enters are asserted against the replayed
  * runtime — a log that contradicts what this definition actually does throws, naming the mismatch.
  * The log's shape is validated up front (`entries` an array of objects each with a known `kind`,
- * numeric `t` and `seq` and a string `phase`; `header` with a string `game`, number `seed` and
+ * numeric `t` and `seq` and a string `phase`; `header` with a string `game`, four-number `seed` and
  * number `startedAt`; roster entries carrying `id` plus the seat flags) — a malformed log throws a
  * named error before anything runs. See "Action log and replay" in the framework guide.
  */
