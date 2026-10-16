@@ -41,6 +41,14 @@ describe("RESERVED_SLUGS", () => {
   it.each(RESERVED_SLUGS)("rejects the reserved slug %s", (slug) => {
     expect(parseSlug(slug).ok).toBe(false);
   });
+
+  it("reports a reserved slug with the reserved-name error", () => {
+    for (const slug of RESERVED_SLUGS) {
+      const result = parseSlug(slug);
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error).toBe(`"${slug}" is a reserved name`);
+    }
+  });
 });
 
 describe("deriveNames", () => {

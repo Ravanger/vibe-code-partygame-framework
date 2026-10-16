@@ -1,6 +1,6 @@
 /**
- * Names that would collide with the root dispatcher's commands and launch modes.
- * Equal to RESERVED_NAMES in scripts/gameEntry.ts; scripts/gameEntry.test.ts enforces it.
+ * Names that would collide with the root dispatcher's commands and launch modes. The single
+ * definition of reserved game slugs; scripts/gameEntry.ts imports it for discoverGames.
  */
 export const RESERVED_SLUGS = ["list", "launch", "play", "bots", "dev", "host", "prod"];
 

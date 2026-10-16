@@ -9,7 +9,6 @@ import {
   isGameCommand,
   parseChoice,
   pickGame,
-  RESERVED_NAMES,
 } from "./gameEntry.js";
 
 const alpha = { folder: "alpha", label: "alpha", name: "alpha" };
@@ -43,20 +42,18 @@ describe("discoverGames", () => {
     ]);
   });
 
-  it.each(["list", "launch", "play", "bots", "dev", "host", "prod"])(
-    "ignores a folder named %s and reports it",
-    (folder) => {
-      expect(
-        discoverGames([
-          { folder, packageJson: {} },
-          { folder: "alpha", packageJson: { name: "alpha" } },
-        ]),
-      ).toEqual({
-        games: [{ folder: "alpha", label: "alpha", name: "alpha" }],
-        ignored: [folder],
-      });
-    },
-  );
+  // Driven by the CLI's list: the dispatcher and the scaffolder must see the same reserved names.
+  it.each(RESERVED_SLUGS)("ignores a folder named %s and reports it", (folder) => {
+    expect(
+      discoverGames([
+        { folder, packageJson: {} },
+        { folder: "alpha", packageJson: { name: "alpha" } },
+      ]),
+    ).toEqual({
+      games: [{ folder: "alpha", label: "alpha", name: "alpha" }],
+      ignored: [folder],
+    });
+  });
 
   it.each([[{}], [{ name: 7 }], ["text"], [null], [[]]])(
     "falls back to the folder name for package.json %j",
@@ -66,12 +63,6 @@ describe("discoverGames", () => {
       ]);
     },
   );
-});
-
-describe("reserved names", () => {
-  it("keeps the CLI slug list and the dispatcher name list in sync", () => {
-    expect([...RESERVED_SLUGS].sort()).toEqual([...RESERVED_NAMES].sort());
-  });
 });
 
 describe("pickGame", () => {
