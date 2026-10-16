@@ -1,9 +1,10 @@
-import { mkdtemp, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ModuleKind, ScriptTarget, transpileModule } from "typescript";
 import { describe, expect, it } from "vitest";
+import { formatGame } from "../src/create.js";
 import { deriveNames } from "../src/slug.js";
 import { renderTemplate } from "../src/template.js";
 
@@ -101,6 +102,37 @@ describe("renderTemplate", () => {
         file,
       ).toEqual([]);
     }
+  });
+
+  it("renders a hostile display name escaped in HTML and Markdown contexts", async () => {
+    // Inside the repo so biome can check the output (vcs.ignoreFile refuses paths outside it).
+    const dest = await mkdtemp(join(fileURLToPath(new URL("../..", import.meta.url)), "qa-html-"));
+    try {
+      const names = { ...NAMES, displayName: "<b>&\"'" };
+      await renderTemplate({ templateDir: SHIPPED_TEMPLATE, outDir: dest, names });
+      expect(await readFile(join(dest, "index.html"), "utf8")).toContain(
+        "<title>&lt;b&gt;&amp;&quot;&#39;</title>",
+      );
+      expect(await readFile(join(dest, "README.md"), "utf8")).toMatch(
+        /^# &lt;b&gt;&amp;&quot;&#39;$/m,
+      );
+      expect(await readFile(join(dest, "AGENTS.md"), "utf8")).toContain(
+        "The &lt;b&gt;&amp;&quot;&#39; game:",
+      );
+      for (const file of ["ui/App.svelte", "ui/screens/Welcome.svelte"]) {
+        expect(await readFile(join(dest, file), "utf8")).toContain("&lt;b&gt;&amp;&quot;&#39;");
+      }
+      expect(formatGame(dest)).toBe(0);
+    } finally {
+      await rm(dest, { recursive: true, force: true });
+    }
+  });
+
+  it("escapes backslashes and newlines for the Markdown placeholder", async () => {
+    const dest = await freshDir("cli-md-");
+    const names = { ...NAMES, displayName: "C:\\new\r\nline" };
+    await renderTemplate({ templateDir: SHIPPED_TEMPLATE, outDir: dest, names });
+    expect(await readFile(join(dest, "README.md"), "utf8")).toMatch(/^# C:\\\\new line$/m);
   });
 
   it("rejects when the template directory is missing", async () => {

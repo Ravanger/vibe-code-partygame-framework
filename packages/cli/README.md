@@ -22,8 +22,9 @@ runs `bun install` at the repo root so it is ready to play.
   `<folder>-game`), and `cli`/`scripts` are taken by fixed projects.
 - Every name is derived from the slug: package `@partygame/<slug>`, room `<slug>` with dashes as underscores,
   PascalCase/camelCase identifiers and a spaced display name. `--name` overrides only the display name; it is
-  trimmed and must not be empty. The display name may contain any characters (quotes, backslashes, newlines):
-  in code contexts the template renders it as an escaped string literal.
+  trimmed and must not be empty. The display name may contain any characters (HTML, quotes, backslashes,
+  newlines): code contexts render it as an escaped string literal, HTML placeholders as entities, and Markdown
+  placeholders as entities with doubled backslashes and line breaks collapsed to spaces.
 - The repo root is found by walking up to the nearest `package.json` whose `workspaces` include `games/*`;
   anything else fails with a clear error (this targets this monorepo only).
 - When rendering or formatting fails, the incomplete `games/<slug>/` is removed and the command can simply be

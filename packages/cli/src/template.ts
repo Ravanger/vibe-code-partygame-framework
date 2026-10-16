@@ -1,6 +1,6 @@
 import { chmod, mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
-import type { Names } from "./slug.js";
+import { htmlEscape, markdownEscape, type Names } from "./slug.js";
 
 export interface RenderTemplateOptions {
   /** Directory of source files containing `__token__` placeholders. */
@@ -19,18 +19,34 @@ const TOKEN_KEYS = {
   __DisplayName__: "displayName",
   // JSON.stringify of the display name, quotes included: safe inside TS/JS string literals.
   __DisplayNameJson__: "displayNameJson",
+  // HTML-entity-escaped display name: safe in index.html and Svelte text nodes.
+  __DisplayNameHtml__: "displayNameHtml",
+  // Markdown-safe display name (entities plus doubled backslashes, line breaks as spaces).
+  __DisplayNameMd__: "displayNameMd",
   __roomName__: "roomName",
 } as const satisfies Record<string, keyof TokenValues>;
 
 type Token = keyof typeof TOKEN_KEYS;
 const TOKEN_RE = new RegExp(Object.keys(TOKEN_KEYS).join("|"), "g");
 
-/** Everything the template can substitute: the names plus the code-safe form of the display name. */
-type TokenValues = Names & { displayNameJson: string };
+/**
+ * Everything the template can substitute: the names plus the code-, HTML- and Markdown-safe forms of
+ * the display name.
+ */
+type TokenValues = Names & {
+  displayNameJson: string;
+  displayNameHtml: string;
+  displayNameMd: string;
+};
 
 function tokenValues(names: Names): TokenValues {
-  // Derived here so the raw display name stays the single source.
-  return { ...names, displayNameJson: JSON.stringify(names.displayName) };
+  // Derived here so the raw display name stays the single source (create may override it).
+  return {
+    ...names,
+    displayNameJson: JSON.stringify(names.displayName),
+    displayNameHtml: htmlEscape(names.displayName),
+    displayNameMd: markdownEscape(names.displayName),
+  };
 }
 
 function substitute(content: string, values: TokenValues): string {

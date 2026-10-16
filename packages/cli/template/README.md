@@ -1,4 +1,4 @@
-# __DisplayName__
+# __DisplayNameMd__
 
 A small party game scaffolded by `bun run new`: players take turns waving, and the first to reach
 `waveGoal` waves (default 10) wins. It is a complete, fully-tested starting point — replace the ruleset in

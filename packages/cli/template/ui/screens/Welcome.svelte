@@ -14,7 +14,7 @@ $effect(() => {
 </script>
 
 <div class="welcome stack">
-  <h1 class="wordmark">__DisplayName__</h1>
+  <h1 class="wordmark">__DisplayNameHtml__</h1>
   <p class="tagline">Wave as fast as you can. First to the goal wins.</p>
 
   {#if vm.localError}
