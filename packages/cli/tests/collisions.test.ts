@@ -78,9 +78,15 @@ describe("findCollision", () => {
     await addFolder(root, "packages", "invalid");
     await writeFile(join(root, "packages", "invalid", "package.json"), "{ not json");
     await addPackage(root, "packages", "numbered", { name: 7 });
+    await addFolder(root, "packages", "nullish");
+    await writeFile(join(root, "packages", "nullish", "package.json"), "null");
+    await addFolder(root, "packages", "scalar");
+    await writeFile(join(root, "packages", "scalar", "package.json"), '"just text"');
     await expect(findCollision(root, "notes")).resolves.toBeUndefined();
     await expect(findCollision(root, "invalid")).resolves.toBeUndefined();
     await expect(findCollision(root, "numbered")).resolves.toBeUndefined();
+    await expect(findCollision(root, "nullish")).resolves.toBeUndefined();
+    await expect(findCollision(root, "scalar")).resolves.toBeUndefined();
   });
 
   it("counts a game folder even when its manifest has no string name", async () => {
