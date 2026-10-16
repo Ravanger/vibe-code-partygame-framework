@@ -2,7 +2,7 @@
 
 ## Responsibility
 
-Game-agnostic content tooling: JSONC parsing and content-directory loading, validated against a caller-supplied Zod schema.
+Game-agnostic content tooling: JSONC parsing and content-directory loading, validated against a caller-supplied Zod schema; free-text profanity filtering (`TextFilter`).
 
 ## Never put here
 
@@ -18,6 +18,7 @@ Game-agnostic content tooling: JSONC parsing and content-directory loading, vali
 ## Public entry points
 
 - `.`: `stripJsonComments`, `loadJsoncDir`.
+- `./filter`: `TextFilter`, `FilterLevel`, `FilterResult`, `createTextFilter`.
 
 ## Tests
 

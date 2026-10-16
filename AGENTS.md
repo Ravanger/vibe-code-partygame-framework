@@ -58,7 +58,7 @@ Each package's README has its API. Each package also has an `AGENTS.md` (respons
 | Path | Holds |
 |---|---|
 | [`packages/shared`](packages/shared/README.md) | wire protocol (`protocol.ts`: messages, `ErrorCode`, `ActionResult`, zod schemas), limits, browser-safe state classes (`/schema`) |
-| [`packages/content`](packages/content/README.md) | content tooling: `stripJsonComments`, `loadJsoncDir` (a folder of commented JSON files, validated against a caller-supplied schema) |
+| [`packages/content`](packages/content/README.md) | content tooling: `stripJsonComments`, `loadJsoncDir` (a folder of commented JSON files, validated against a caller-supplied schema); `/filter`: `TextFilter`, `createTextFilter` (profanity filtering with `off`/`moderate`/`strict` levels) |
 | [`packages/client-utils`](packages/client-utils/README.md) | client helpers hoisted out of `shared`: `waitFor` poll loop, `resolveRoomCode` (the code API), `joinUrl`/`tvUrl` share links, `between`/`Parsed` arg parsing, `claimName`/`SeatRoom`, `apiBaseOf` |
 | [`packages/core`](packages/core/README.md) | pure runtime, no Colyseus: `defineGame`, `actionFactory`, `GameRuntime`, built-in lobby actions, action log, scoring helpers; `/testing` (`FakeHost`, `TestTable`, `replayLog`) |
 | [`packages/server`](packages/server/README.md) | Colyseus host: `createGameServer`, `GameRoom`, `RoomCodeService`, `createApiHandler`; `/bun`, `/node`, `/testing` |

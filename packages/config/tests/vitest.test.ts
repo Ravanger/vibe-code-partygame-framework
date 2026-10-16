@@ -120,6 +120,7 @@ const EXPECTED_SOURCE_ALIASES: Record<string, string> = {
   "@partygame/config/vite": "config/src/vite.ts",
   "@partygame/config/vitest": "config/src/vitest.ts",
   "@partygame/content": "content/src/index.ts",
+  "@partygame/content/filter": "content/src/filter.ts",
   "@partygame/core": "core/src/index.ts",
   "@partygame/core/testing": "core/src/testing/index.ts",
   "@partygame/game-client": "game-client/src/index.ts",
