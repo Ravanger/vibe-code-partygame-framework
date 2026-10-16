@@ -19,4 +19,6 @@ const items = await loadJsoncDir("./content/items", Item, { idOf: (item) => item
 ```
 
 - `stripJsonComments(input)` removes `//` and `/* */` comments without touching comment-like sequences inside string literals.
-- `loadJsoncDir(dir, schema, { idOf, label })` loads every `.json`/`.jsonc` file in `dir` (name order), parses it with `schema`, and refuses duplicate ids. A missing directory throws; an unparsable file or a schema failure is skipped with a warning.
+- `loadJsoncDir(dir, schema, { idOf, label, onInvalid?, maxFiles?, maxFileBytes? })` loads every regular `.json`/`.jsonc` file in `dir` (name order; symlinks and subdirectories are ignored), parses it with `schema`, and refuses duplicate ids. A missing directory throws.
+- Fail loudly by default: an unparsable file or a schema failure throws, naming the file (and the failing entry for schema errors). Pass `onInvalid: "skip"` to skip such files with a `console.warn` instead.
+- Caps: more than `maxFiles` files (default 256) or a file above `maxFileBytes` bytes (default 1 MiB) throws.

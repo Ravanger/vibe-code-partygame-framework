@@ -6,7 +6,7 @@ Game-agnostic content tooling: JSONC parsing and content-directory loading, vali
 
 ## Never put here
 
-- Game vocabulary (schemas, repositories, category/prompt concepts stay in the game).
+- Game vocabulary (the caller's schemas and domain concepts stay in the game).
 - Colyseus, sockets, HTTP, Svelte or DOM code.
 - Anything that needs another `@partygame/*` package at runtime; this is a bottom-layer package next to `shared`.
 
