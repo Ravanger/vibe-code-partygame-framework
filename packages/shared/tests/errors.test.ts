@@ -88,4 +88,8 @@ describe("CLIENT_MESSAGES", () => {
   it("keeps the INTERNAL text clients see today", () => {
     expect(CLIENT_MESSAGES.INTERNAL).toBe("The action failed on the server");
   });
+
+  it("has a fixed message for CONTENT_REJECTED", () => {
+    expect(CLIENT_MESSAGES.CONTENT_REJECTED).toBe("That text was not allowed");
+  });
 });

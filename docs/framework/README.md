@@ -58,6 +58,7 @@ Every rejection is sent only to the sender as `ERROR { code, message, action }`:
 | `WRONG_PHASE` | action exists, but not in the current phase |
 | `UNAUTHORIZED` | role check failed (for example a guest sent a host action) |
 | `NOT_ACTIVE` | the sender is waiting for the next round |
+| `CONTENT_REJECTED` | free text failed the room's text filter: an action's declared `textFields` (via `textFilterMiddleware`) or a player name; the message is the filter's fixed per-level reason |
 | `NOT_ENOUGH_PLAYERS` | `START_GAME` below `minPlayers` |
 | `NOT_ALLOWED` | game rule; use `ctx.reject("NOT_ALLOWED", "why")` in a handler |
 | `NAME_TAKEN` | `SET_NAME` with a name another seat already has (compared trimmed and case-insensitively); the seat keeps its name |
@@ -149,7 +150,7 @@ Every call receives `ctx`, the usual context plus a `readonly event`:
 | `enter` | around each phase's `onEnter` | — |
 | `timeout` | around each phase's `onTimeout` | — |
 | `roster-change` | around each phase's `onRosterChange` | — |
-| `action` | around each action handler, built-ins included | `actionType`, `senderId`, `payload` (zod-parsed) |
+| `action` | around each action handler, built-ins included | `actionType`, `senderId`, `payload` (zod-parsed), `textFields?` (the action definition's declared text fields), `filterLevel` (the room's current level, default `"off"`) |
 | `transition` | after the source hook's chain unwinds, just before the target's `onEnter` chain runs | `from`, `to` |
 
 Semantics:
@@ -158,19 +159,20 @@ Semantics:
 2. Transitions stay queued: `ctx.transition("X")` called inside a hook or middleware still applies only after the outermost hook returns, exactly as without middleware. Middleware cannot apply a transition synchronously.
 3. Transition observation is an event (`{ from, to }`), not a wrapped `ctx.transition`. The event fires only after the source chain has fully unwound. It also covers `returnToLobby` (`to: "Lobby"`) and re-entering the current phase (`from === to`).
 4. Errors: a middleware throw is handled exactly like a hook throw today — on the action path the sender gets `INTERNAL`; enter/timeout/roster paths follow the existing hook-failure path; a throw on a `transition` event defers the same way and never cancels the transition it observes. No new error codes.
-5. Veto is not in v1 (deliberate non-goal): middleware can skip `next()` but cannot cancel a queued transition or reject an action itself — action handlers already have `ctx.reject`.
+5. Rejecting: middleware gets `ctx.reject(code, message)` for `action` events (it throws for any other event kind) — the sender gets the `ERROR` with that code and message, and the rejection counts in `rejectionCount`. It does not stop the chain by itself: omit `next()` to keep the handler from running. Middleware still cannot cancel a queued transition.
 6. `defineGame` validates at definition time: `middleware` must be an array of functions, otherwise the problem is listed in the `GameDefinitionError`. Reserved action names are unchanged.
 7. Ordering: for `enter`, the outermost middleware runs first; a transition event fires only after the full chain unwinds (consistent with queued transitions).
 8. The built-in lobby hooks run through the same wrapped path — middleware applies to `Lobby` too.
 
 Non-goals in v1: no async/await inside the chain (synchronous; a middleware that returns a Promise throws
 `middleware[i] returned a Promise; the middleware chain is synchronous` on the first event — do fire-and-forget work
-outside the chain), no veto.
+outside the chain), no cancelling queued transitions.
 
 #### Built-ins
 - `loggingMiddleware({ log })` — one line per event, no hardcoded console. Exact formats: `enter <phase>`, `timeout <phase>`, `action <ACTION_TYPE> by <senderId> in <phase>`, `transition <from> -> <to>`. No line for `roster-change`.
 - `timingMiddleware()` — records per-phase durations into a store kept outside `ctx.priv` (keyed by it; read back with `getPhaseTimings(priv)`); each phase gets `{ enteredAt: number, durationsMs: number[] }`. Started on enter (before the hook), closed when a transition out of that phase is observed. The currently open phase has no final duration yet. Never touches `ctx.state` (it is synced to clients) or `ctx.priv`; timing metadata stays server-side.
 - `actionLogMiddleware()` — append-only, JSON-serializable record of every middleware-visible event, kept outside `ctx.priv` (read back with `getActionLog(priv)`); see Action log and replay below.
+- `textFilterMiddleware(filter)` — rejects an action whose declared text fields fail the room's filter level. Declare which payload fields are free text per action (`textFields: ["..."]` on the action definition; the framework never guesses) and how strict this room is via `filterLevel?: (options) => "off" | "moderate" | "strict"` on the game definition (default `"off"`). For each declared string field it runs `filter.check(value, level)` in declaration order and, on the first failure, rejects with `CONTENT_REJECTED` and the filter's reason without running the handler. A `TextFilter` comes from `@partygame/content` (`createTextFilter()` is the default English one); at `"off"` the filter is never called, and actions without `textFields` pass untouched.
 
 ### Action log and replay
 `actionLogMiddleware()` records everything the middleware sees into an append-only, JSON-serializable log

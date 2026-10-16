@@ -1,3 +1,4 @@
+import type { FilterLevel } from "@partygame/content/filter";
 import {
   ActionEnvelopeSchema,
   CLIENT_MESSAGES,
@@ -27,6 +28,8 @@ interface DispatchPipelineDeps<TState extends PhaseState, TPrivate, TOptions> {
   phaseName(): string;
   players(): PlayerInfo[];
   contextFactory(): GameContext<TState, TPrivate, TOptions>;
+  /** The room's current text-filter level (the definition's `filterLevel`, default `"off"`). */
+  filterLevel(): FilterLevel;
   reject(playerId: string, action: string | undefined, code: ErrorCode, message: string): void;
   chain(event: MiddlewareEvent, inner: () => void): void;
 }
@@ -81,7 +84,14 @@ export class DispatchPipeline<TState extends PhaseState, TPrivate, TOptions> {
       reject: (code, message) => this.deps.reject(playerId, type, code, message),
     };
     this.deps.chain(
-      { kind: "action", actionType: type, senderId: playerId, payload: payload.data },
+      {
+        kind: "action",
+        actionType: type,
+        senderId: playerId,
+        payload: payload.data,
+        ...(action.textFields ? { textFields: action.textFields } : {}),
+        filterLevel: this.deps.filterLevel(),
+      },
       () => action.handler(actionContext),
     );
   }

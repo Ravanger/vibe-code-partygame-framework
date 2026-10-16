@@ -38,6 +38,7 @@ describe("protocol constants", () => {
       [
         "BAD_REPLY",
         "CONNECTION_LOST",
+        "CONTENT_REJECTED",
         "INTERNAL",
         "INVALID_ACTION",
         "KICKED",

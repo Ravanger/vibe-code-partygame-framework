@@ -134,6 +134,7 @@
       "name": "@partygame/core",
       "version": "0.1.0",
       "dependencies": {
+        "@partygame/content": "workspace:*",
         "@partygame/shared": "workspace:*",
         "xstate": "^5.33.2",
         "zod": "^4.6.5",

@@ -29,7 +29,7 @@ const LAYERS: Record<string, { runtime: string[]; dev: string[] }> = {
   shared: { runtime: [], dev: [] },
   content: { runtime: [], dev: [] },
   "client-utils": { runtime: ["shared"], dev: [] },
-  core: { runtime: ["shared"], dev: [] },
+  core: { runtime: ["content", "shared"], dev: [] },
   server: { runtime: ["client-utils", "core", "shared"], dev: [] },
   "game-client": { runtime: ["client-utils", "shared"], dev: ["core", "server"] },
   "game-ui": { runtime: ["client-utils", "game-client", "shared"], dev: [] },

@@ -101,6 +101,7 @@ const rawContext = (priv: unknown): MiddlewareContext<PhaseState, unknown, unkno
   seed: [0, 0, 0, 0],
   event: { kind: "enter" },
   rejectionCount: 0,
+  reject: () => {},
 });
 
 describe("getActionLog", () => {

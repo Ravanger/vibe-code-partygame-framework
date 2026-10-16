@@ -1,3 +1,5 @@
+import type { TextFilter } from "@partygame/content/filter";
+import { ErrorCode } from "@partygame/shared";
 import {
   InvalidPrivateStateError,
   type MiddlewareContext,
@@ -92,6 +94,34 @@ export function timingMiddleware(): PhaseMiddleware<PhaseState, unknown, unknown
       const record = timingsOf(ctx)[event.from];
       if (record !== undefined) {
         record.durationsMs.push(ctx.now() - record.enteredAt);
+      }
+    }
+    next();
+  };
+}
+
+/**
+ * Rejects actions whose declared text fields fail the room's filter level. For an `action` event
+ * with `textFields`, runs `filter.check(value, level)` on each named string field of the payload in
+ * declaration order and, on the first failure, rejects with `CONTENT_REJECTED` and the filter's
+ * reason, skipping the rest of the chain (the handler never runs). Actions without `textFields`,
+ * declared fields that are not strings, and a level of `"off"` (the default) pass untouched; at
+ * `"off"` the filter is never called.
+ */
+export function textFilterMiddleware(
+  filter: TextFilter,
+): PhaseMiddleware<PhaseState, unknown, unknown> {
+  return (ctx, next) => {
+    const event = ctx.event;
+    if (event.kind === "action" && event.filterLevel !== "off") {
+      for (const field of event.textFields ?? []) {
+        const value = (event.payload as Record<string, unknown>)[field];
+        if (typeof value !== "string") continue;
+        const result = filter.check(value, event.filterLevel);
+        if (!result.ok) {
+          ctx.reject(ErrorCode.CONTENT_REJECTED, result.reason);
+          return;
+        }
       }
     }
     next();

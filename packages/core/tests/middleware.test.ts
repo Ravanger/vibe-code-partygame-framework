@@ -1,3 +1,5 @@
+import type { FilterLevel, TextFilter } from "@partygame/content/filter";
+import { ErrorCode } from "@partygame/shared";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
@@ -10,6 +12,7 @@ import {
   type PhaseMiddleware,
   type PhaseState,
   type PhaseTimingRecord,
+  textFilterMiddleware,
   timingMiddleware,
 } from "../src/index.js";
 import { TestTable } from "../src/testing/TestTable.js";
@@ -150,6 +153,7 @@ const rawContext = (priv: unknown): MiddlewareContext<PhaseState, unknown, unkno
   seed: [0, 0, 0, 0],
   event: { kind: "enter" },
   rejectionCount: 0,
+  reject: () => {},
 });
 
 describe("getPhaseTimings", () => {
@@ -245,5 +249,172 @@ describe("compile-time sync rule", () => {
       next();
     };
     expect(sync).toBeTypeOf("function");
+  });
+});
+
+class FTable extends TestTable<S, P, O> {
+  constructor(
+    middleware: PhaseMiddleware<S, P, O>[],
+    filterLevel?: (options: O) => FilterLevel,
+    onError?: (error: unknown) => void,
+  ) {
+    super({
+      definition: defineGame<S, P, O>({
+        name: "Filter",
+        version: "1",
+        minPlayers: 1,
+        maxPlayers: 4,
+        startPhase: "Play",
+        createPrivateState: () => ({ secret: "s" }),
+        ...(filterLevel ? { filterLevel } : {}),
+        onError: (_ctx, error) => onError?.(error),
+        phases: {
+          Play: {
+            actions: {
+              SAY: action({
+                from: "player",
+                payload: z.object({ text: z.string() }),
+                textFields: ["text"],
+                handler: (ctx) => ctx.state.log.push(`said:${ctx.payload.text}`),
+              }),
+              SHOUT: action({
+                from: "player",
+                payload: z.object({ first: z.string(), second: z.string() }),
+                textFields: ["first", "second"],
+                handler: (ctx) => ctx.state.log.push("shouted"),
+              }),
+              MUMBLE: action({
+                from: "player",
+                payload: z.object({ text: z.string() }),
+                handler: (ctx) => ctx.state.log.push("mumbled"),
+              }),
+              COUNT: action({
+                from: "player",
+                payload: z.object({ n: z.number() }),
+                textFields: ["n"],
+                handler: (ctx) => ctx.state.log.push(`counted:${ctx.payload.n}`),
+              }),
+            },
+          },
+        },
+        middleware,
+      }),
+      state: { phase: "", phaseEndsAt: 0, canStart: false, log: [] },
+      options: { rounds: 2 },
+      players: 2,
+    });
+  }
+}
+
+describe("MiddlewareContext.reject", () => {
+  it("stops the chain, reaches the sender and counts as a rejection", () => {
+    const seen: number[] = [];
+    const observe: PhaseMiddleware<S, P, O> = (ctx, next) => {
+      next();
+      if (ctx.event.kind === "action" && ctx.event.actionType === "SAY")
+        seen.push(ctx.rejectionCount);
+    };
+    const veto: PhaseMiddleware<S, P, O> = (ctx, next) => {
+      if (ctx.event.kind === "action" && ctx.event.actionType === "SAY") {
+        ctx.reject(ErrorCode.NOT_ALLOWED, "no saying");
+        return;
+      }
+      next();
+    };
+    const table = new FTable([observe, veto]);
+    table.start();
+    const error = table.act("p2", "SAY", { text: "hello" });
+    expect(error).toEqual({ code: ErrorCode.NOT_ALLOWED, message: "no saying", action: "SAY" });
+    expect(table.errors("p2")).toContainEqual(error);
+    expect(seen).toEqual([1]);
+    expect(table.state.log).toEqual([]);
+  });
+
+  it("throws for non-action events, like a hook throw", () => {
+    const errors: unknown[] = [];
+    const vetoEnter: PhaseMiddleware<S, P, O> = (ctx, next) => {
+      if (ctx.event.kind === "enter" && ctx.phase === "Play")
+        ctx.reject(ErrorCode.NOT_ALLOWED, "no");
+      next();
+    };
+    const table = new FTable([vetoEnter], undefined, (error) => errors.push(error));
+    expect(() => table.start()).toThrow("only available for action events");
+    expect(errors).toHaveLength(1);
+    expect(table.state.notice).toBe("The game stopped because of an unexpected error.");
+  });
+});
+
+const filterCalls: [FilterLevel, string][] = [];
+const testFilter: TextFilter = {
+  check(text, level) {
+    filterCalls.push([level, text]);
+    return text.includes("bad") ? { ok: false, reason: "no bad words" } : { ok: true };
+  },
+};
+
+describe("textFilterMiddleware", () => {
+  it("rejects a declared text field that fails the filter, without running the handler", () => {
+    filterCalls.length = 0;
+    const table = new FTable([textFilterMiddleware(testFilter)], () => "moderate");
+    table.start();
+    const error = table.act("p2", "SAY", { text: "a bad one" });
+    expect(error).toEqual({
+      code: ErrorCode.CONTENT_REJECTED,
+      message: "no bad words",
+      action: "SAY",
+    });
+    expect(table.errors("p2")).toContainEqual(error);
+    expect(table.state.log).toEqual([]);
+    expect(filterCalls).toEqual([["moderate", "a bad one"]]);
+  });
+
+  it("lets clean text reach the handler", () => {
+    const table = new FTable([textFilterMiddleware(testFilter)], () => "moderate");
+    table.start();
+    expect(table.act("p2", "SAY", { text: "fine" })).toBeUndefined();
+    expect(table.state.log).toEqual(["said:fine"]);
+  });
+
+  it("checks every declared field in order and rejects on the first failure", () => {
+    filterCalls.length = 0;
+    const table = new FTable([textFilterMiddleware(testFilter)], () => "strict");
+    table.start();
+    expect(table.act("p2", "SHOUT", { first: "clean", second: "bad" })).toEqual({
+      code: ErrorCode.CONTENT_REJECTED,
+      message: "no bad words",
+      action: "SHOUT",
+    });
+    expect(table.state.log).toEqual([]);
+    expect(filterCalls).toEqual([
+      ["strict", "clean"],
+      ["strict", "bad"],
+    ]);
+  });
+
+  it("never calls the filter when the level is off, including by default", () => {
+    filterCalls.length = 0;
+    const table = new FTable([textFilterMiddleware(testFilter)]); // no filterLevel: defaults to off
+    table.start();
+    expect(table.act("p2", "SAY", { text: "a bad one" })).toBeUndefined();
+    expect(table.state.log).toEqual(["said:a bad one"]);
+    expect(filterCalls).toEqual([]);
+  });
+
+  it("leaves an action without textFields untouched", () => {
+    filterCalls.length = 0;
+    const table = new FTable([textFilterMiddleware(testFilter)], () => "strict");
+    table.start();
+    expect(table.act("p2", "MUMBLE", { text: "a bad one" })).toBeUndefined();
+    expect(table.state.log).toEqual(["mumbled"]);
+    expect(filterCalls).toEqual([]);
+  });
+
+  it("skips a declared field that is not a string", () => {
+    filterCalls.length = 0;
+    const table = new FTable([textFilterMiddleware(testFilter)], () => "strict");
+    table.start();
+    expect(table.act("p2", "COUNT", { n: 3 })).toBeUndefined();
+    expect(table.state.log).toEqual(["counted:3"]);
+    expect(filterCalls).toEqual([]);
   });
 });

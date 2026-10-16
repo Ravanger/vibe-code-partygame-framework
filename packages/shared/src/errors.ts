@@ -60,6 +60,7 @@ export const CLIENT_MESSAGES: Record<ErrorCode, string> = {
   NOT_ENOUGH_PLAYERS: "Not enough players to start",
   NOT_ALLOWED: "This action is not allowed",
   NOT_ACTIVE: "You are waiting to be let in",
+  CONTENT_REJECTED: "That text was not allowed",
   NAME_TAKEN: "That name is already taken",
   KICKED: "Removed by the host",
   INTERNAL: "The action failed on the server",

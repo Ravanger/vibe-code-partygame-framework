@@ -176,6 +176,7 @@
           "seedFromNumber": {},
           "sfc32": {},
           "shuffle": {},
+          "textFilterMiddleware": {},
           "timingMiddleware": {}
         }
       },

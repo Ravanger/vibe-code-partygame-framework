@@ -117,6 +117,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       phaseName: () => this.phaseName,
       players: () => this.host.players(),
       contextFactory: () => this.context(),
+      filterLevel: () => this.spec.filterLevel?.(this.options) ?? "off",
       reject: (playerId, action, code, message) => this.reject(playerId, action, code, message),
       chain: (event, inner) => this.chain(event, () => this.rejectThrown(event, inner)),
     });
@@ -262,7 +263,15 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       get rejectionCount() {
         return rejections.length;
       },
+      reject: (code, message) => this.middlewareReject(event, code, message),
     };
+  }
+
+  /** Middleware rejections target the action's sender; other event kinds have no one to tell. */
+  private middlewareReject(event: MiddlewareEvent, code: ErrorCode, message: string): void {
+    if (event.kind !== "action")
+      throw new Error("ctx.reject() is only available for action events");
+    this.reject(event.senderId, event.actionType, code, message);
   }
 
   private rosterChange(): void {
