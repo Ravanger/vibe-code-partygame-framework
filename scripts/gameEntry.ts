@@ -48,13 +48,13 @@ const packageName = (packageJson: unknown): string | undefined => {
   return typeof packageJson.name === "string" ? packageJson.name : undefined;
 };
 
-const RESERVED = ["list", ...Object.keys(ENTRIES), "dev", "host", "prod"];
+export const RESERVED_NAMES = ["list", ...Object.keys(ENTRIES), "dev", "host", "prod"];
 
 /** Games are the folders that have a package.json, sorted by folder name; folders named like a command or launch mode are ignored and reported. */
 export const discoverGames = (records: FolderRecord[]): { games: Game[]; ignored: string[] } => {
   const candidates = records.filter((record) => record.packageJson !== undefined);
   const games = candidates
-    .filter((record) => !RESERVED.includes(record.folder))
+    .filter((record) => !RESERVED_NAMES.includes(record.folder))
     .map((record) => {
       const pkgName = packageName(record.packageJson) ?? record.folder;
       return {
@@ -66,7 +66,7 @@ export const discoverGames = (records: FolderRecord[]): { games: Game[]; ignored
     .sort((a, b) => a.folder.localeCompare(b.folder));
   const ignored = candidates
     .map((record) => record.folder)
-    .filter((folder) => RESERVED.includes(folder));
+    .filter((folder) => RESERVED_NAMES.includes(folder));
   return { games, ignored };
 };
 

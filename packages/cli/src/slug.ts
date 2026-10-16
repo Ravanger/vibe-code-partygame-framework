@@ -1,8 +1,8 @@
 /**
- * Names that would collide with the root dispatcher's commands and launch modes. Mirrors `RESERVED` in
- * `scripts/gameEntry.ts`, which is not exported; keep the two lists in sync if either changes.
+ * Names that would collide with the root dispatcher's commands and launch modes.
+ * Equal to RESERVED_NAMES in scripts/gameEntry.ts; scripts/gameEntry.test.ts enforces it.
  */
-const RESERVED = ["list", "launch", "play", "bots", "dev", "host", "prod"];
+export const RESERVED_SLUGS = ["list", "launch", "play", "bots", "dev", "host", "prod"];
 
 // The first word must start with a letter: the slug is turned into identifiers (`PascalName`, `camelName`),
 // which cannot begin with a digit.
@@ -19,7 +19,7 @@ export function parseSlug(input: unknown): ParseSlugResult {
       error: `invalid slug "${input}": use kebab-case [a-z][a-z0-9]*(-[a-z0-9]+)*, starting with a letter`,
     };
   }
-  if (RESERVED.includes(input)) {
+  if (RESERVED_SLUGS.includes(input)) {
     return { ok: false, error: `"${input}" is a reserved name` };
   }
   return { ok: true, slug: input };

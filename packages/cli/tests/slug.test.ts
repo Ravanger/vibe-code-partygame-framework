@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deriveNames, parseSlug } from "../src/slug.js";
+import { deriveNames, parseSlug, RESERVED_SLUGS } from "../src/slug.js";
 
 describe("parseSlug", () => {
   it.each([["my-game"], ["a"], ["x2-y3"]])("accepts a valid slug: %s", (slug) => {
@@ -34,6 +34,12 @@ describe("parseSlug", () => {
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.error).not.toBe("");
     }
+  });
+});
+
+describe("RESERVED_SLUGS", () => {
+  it.each(RESERVED_SLUGS)("rejects the reserved slug %s", (slug) => {
+    expect(parseSlug(slug).ok).toBe(false);
   });
 });
 

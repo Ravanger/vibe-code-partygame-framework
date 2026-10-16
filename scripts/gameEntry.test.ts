@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { RESERVED_SLUGS } from "../packages/cli/src/slug.js";
 import {
   buildArgs,
   discoverGames,
@@ -8,6 +9,7 @@ import {
   isGameCommand,
   parseChoice,
   pickGame,
+  RESERVED_NAMES,
 } from "./gameEntry.js";
 
 const alpha = { folder: "alpha", label: "alpha", name: "alpha" };
@@ -64,6 +66,12 @@ describe("discoverGames", () => {
       ]);
     },
   );
+});
+
+describe("reserved names", () => {
+  it("keeps the CLI slug list and the dispatcher name list in sync", () => {
+    expect([...RESERVED_SLUGS].sort()).toEqual([...RESERVED_NAMES].sort());
+  });
 });
 
 describe("pickGame", () => {
