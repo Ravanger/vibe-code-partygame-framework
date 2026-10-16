@@ -34,7 +34,7 @@ runs `bun install` at the repo root so it is ready to play.
 The template is a small wave-based game (phases `Waving` and `Results`) with a Svelte client, a terminal client,
 bots and one declaration (`gamePackage.ts`) the entry files stub over. Replace the ruleset in `games/<slug>/src/` with your own game. See
 `docs/framework/README.md` for how each piece works. Dependency ranges in `template/package.json` must equal those of
-`games/wit-clash`; `tests/templateVersions.test.ts` enforces it.
+the reference game; `tests/templateVersions.test.ts` enforces it.
 
 ## Smoke test
 

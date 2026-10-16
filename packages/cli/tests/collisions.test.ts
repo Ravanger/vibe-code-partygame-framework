@@ -47,8 +47,8 @@ describe("findCollision", () => {
 
   it("reports a slug that is an existing game's -game project name", async () => {
     const root = await makeRoot();
-    await addPackage(root, "games", "wit-clash", { name: "@partygame/wit-clash" });
-    const message = await findCollision(root, "wit-clash-game");
+    await addPackage(root, "games", "alpha", { name: "@partygame/alpha" });
+    const message = await findCollision(root, "alpha-game");
     expect(message).toBeDefined();
     expect(message).toMatch(/vitest project/);
   });
@@ -97,7 +97,7 @@ describe("findCollision", () => {
   it("returns undefined for a free slug among existing workspaces", async () => {
     const root = await makeRoot();
     await addPackage(root, "packages", "core", { name: "@partygame/core" });
-    await addPackage(root, "games", "wit-clash", { name: "@partygame/wit-clash" });
+    await addPackage(root, "games", "beta", { name: "@partygame/beta" });
     await expect(findCollision(root, "fresh-game")).resolves.toBeUndefined();
   });
 });

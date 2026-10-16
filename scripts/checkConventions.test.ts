@@ -24,6 +24,8 @@ describe("checkConventions", () => {
     expect(rules("packages/terminal/src/a.ts", "const prompt = 1")).toEqual([]);
     expect(rules("packages/terminal/src/a.ts", "a category")).toEqual(["vocabulary"]);
     expect(rules("packages/cli/template/a.ts", "category prompt matchup")).toEqual([]);
+    // #14: the template-versions test pins ranges to the reference game's manifest and must name it.
+    expect(rules("packages/cli/tests/templateVersions.test.ts", "games/wit-clash")).toEqual([]);
     expect(rules("games/x/src/a.ts", "category prompt matchup")).toEqual([]);
     expect(rules("packages/core/src/a.ts", "const item = 1")).toEqual([]);
   });
