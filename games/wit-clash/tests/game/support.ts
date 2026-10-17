@@ -1,3 +1,4 @@
+import type { GameDefinition } from "@partygame/core";
 import { TestTable } from "@partygame/core/testing";
 import {
   type Category,
@@ -42,18 +43,33 @@ export const makeCategories = (
 export interface TableConfig {
   players?: number;
   categories?: CategoryRepository;
+  /** The canon repository daily mode plays from; `categories` when omitted. */
+  canon?: CategoryRepository;
   options?: Partial<WitClashOptions>;
+  /** Seed for the room RNG; 1234 when omitted. */
+  seed?: number;
+  /** Initial fake clock value (epoch ms); FakeHost's default when omitted. */
+  startTime?: number;
+  /** Overrides the built definition (e.g. with an extra middleware). */
+  definition?: GameDefinition<WitClashState, WitClashPrivate, WitClashOptions>;
 }
 
 /** A WitClash room driven through the real runtime and the real state schema, with a manual clock. */
 export class Table extends TestTable<WitClashState, WitClashPrivate, WitClashOptions> {
   constructor(config: TableConfig = {}) {
+    const categories = config.categories ?? makeCategories();
     super({
-      definition: createWitClashGame({ categories: config.categories ?? makeCategories() }),
+      definition:
+        config.definition ??
+        createWitClashGame({
+          categories,
+          ...(config.canon !== undefined ? { canon: config.canon } : {}),
+        }),
       state: new WitClashState(),
       options: WitClashOptionsSchema.parse(config.options ?? {}),
       players: config.players ?? 4,
-      seed: 1234,
+      seed: config.seed ?? 1234,
+      ...(config.startTime !== undefined ? { startTime: config.startTime } : {}),
     });
   }
 

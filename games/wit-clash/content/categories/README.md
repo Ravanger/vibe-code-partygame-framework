@@ -1,7 +1,9 @@
 # WitClash Categories
 
-Each file in this directory defines one category of prompts for WitClash games. Every round the game offers three random categories
-and the players vote for one; its prompts become that round's matchups.
+Each file in this directory defines one category of prompts for WitClash games. In free play (the default) every round the game offers
+three random categories and the players vote for one; its prompts become that round's matchups. In daily mode (`mode: "daily"` room
+option, see the game README) the vote is skipped and each round plays the next category of a day-seeded order of exactly these files —
+they are the canon every server plays on a given UTC date, so adding or editing a file changes what daily rooms deal.
 
 ## File Format
 
@@ -43,7 +45,8 @@ once per game. A category without any simply adds nothing to the pool.
 4. **Bad files are skipped:** A file that is not valid JSON or does not match the schema is skipped with a `[CategoryRepository] Skipping <file>`
    warning in the server log, so a typo quietly removes a category. Check the log after adding one.
 5. **Minimum:** The server refuses to start with fewer than 3 valid categories.
-6. **Restart to reload:** Files are read once at startup. Set `WITCLASH_CONTENT_DIR` to read them from another directory.
+6. **Restart to reload:** Files are read once at startup. Set `WITCLASH_CONTENT_DIR` to read the free-play content from another
+   directory; daily mode always uses this repo directory and ignores the variable.
 
 ## Adding a Category
 

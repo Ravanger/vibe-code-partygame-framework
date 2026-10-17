@@ -7,6 +7,7 @@ describe("LobbySettingsViewModel", () => {
   it("lists the fields of the game and its defaults", () => {
     const vm = new LobbySettingsViewModel(connectedClient({ role: "host" }).manager);
     expect(vm.fields.map((f) => f.key)).toEqual([
+      "mode",
       "totalRounds",
       "categoryVoteSeconds",
       "promptSeconds",
@@ -14,12 +15,14 @@ describe("LobbySettingsViewModel", () => {
       "revealSeconds",
       "filterLevel",
     ]);
-    expect(vm.fields[0]).toEqual({ key: "totalRounds", label: "Total rounds", min: 1, max: 10 });
-    expect(vm.fields[5]).toEqual({
+    expect(vm.fields[0]).toEqual({ key: "mode", label: "Mode", options: ["free", "daily"] });
+    expect(vm.fields[1]).toEqual({ key: "totalRounds", label: "Total rounds", min: 1, max: 10 });
+    expect(vm.fields[6]).toEqual({
       key: "filterLevel",
       label: "Filter level",
       options: ["off", "moderate", "strict"],
     });
+    expect(vm.valueOf("mode")).toBe("free");
     expect(vm.valueOf("totalRounds")).toBe("3");
     expect(vm.valueOf("voteSeconds")).toBe("20");
     expect(vm.valueOf("filterLevel")).toBe("moderate");

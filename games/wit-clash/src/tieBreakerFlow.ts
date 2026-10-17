@@ -183,8 +183,10 @@ export class TieBreakerFlow {
   private plan(contenderIds: string[]): boolean {
     const { priv } = this.ctx;
     if (this.votersAmong(contenderIds).length === 0) return false;
+    // Daily mode plays the canon, so tie-breaker prompts come from it too.
+    const repository = this.ctx.options.mode === "daily" ? priv.canon : priv.content;
     const prompt = pickTieBreakerPrompt(
-      priv.content.all(),
+      repository.all(),
       priv.categoryId,
       priv.usedPromptIds,
       this.ctx.rng,

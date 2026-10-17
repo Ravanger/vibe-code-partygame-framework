@@ -17,3 +17,9 @@ export async function loadContent(dir: string): Promise<CategoryRepository> {
   }
   return categories;
 }
+
+/** The canon: the category files shipped in the repo next to `entryUrl`, always. Daily mode must
+ * not see a host's `WITCLASH_CONTENT_DIR`. */
+export async function loadCanonContent(entryUrl: string): Promise<CategoryRepository> {
+  return loadContent(fileURLToPath(new URL("./content/categories", entryUrl)));
+}

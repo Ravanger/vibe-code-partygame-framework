@@ -18,9 +18,11 @@ import type { WitClashState } from "./state.js";
 
 export interface WitClashConfig {
   categories: CategoryRepository;
+  /** The repo-shipped canon daily mode plays from; `categories` when omitted. */
+  canon?: CategoryRepository;
 }
 
-export function createWitClashGame({ categories }: WitClashConfig) {
+export function createWitClashGame({ categories, canon = categories }: WitClashConfig) {
   if (categories.all().length === 0) throw new Error("WitClash needs at least one category");
   return defineGame<WitClashState, WitClashPrivate, WitClashOptions>({
     name: "WitClash",
@@ -31,7 +33,7 @@ export function createWitClashGame({ categories }: WitClashConfig) {
     options: WitClashOptionsSchema,
     filterLevel: (options) => options.filterLevel,
     middleware: [textFilterMiddleware(createTextFilter())],
-    createPrivateState: () => new WitClashPrivate(categories),
+    createPrivateState: () => new WitClashPrivate(categories, canon),
     phases: {
       [PHASE.CategorySelection]: CategorySelection,
       [PHASE.Prompting]: Prompting,

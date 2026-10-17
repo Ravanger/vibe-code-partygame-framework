@@ -29,7 +29,10 @@ const options = async (): Promise<PlaySessionOptions<WitClashState>> => ({
   games: [
     {
       roomName: META.roomName,
-      definition: gamePackage.definition(makeCategories(4, 8, 2)),
+      definition: gamePackage.definition({
+        categories: makeCategories(4, 8, 2),
+        canon: makeCategories(4, 8, 2),
+      }),
       stateClass: WitClashState,
     },
   ],

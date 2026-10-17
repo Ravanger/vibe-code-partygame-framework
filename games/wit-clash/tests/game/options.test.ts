@@ -5,8 +5,9 @@ import { WitClashOptionsSchema } from "../../src/options.js";
 import { makeCategories, Table } from "./support.js";
 
 describe("WitClashOptionsSchema", () => {
-  it("defaults to 3 rounds, the standard timers and moderate filtering", () => {
+  it("defaults to free play, 3 rounds, the standard timers and moderate filtering", () => {
     expect(WitClashOptionsSchema.parse({})).toEqual({
+      mode: "free",
       totalRounds: 3,
       categoryVoteSeconds: 60,
       promptSeconds: 90,
@@ -17,6 +18,7 @@ describe("WitClashOptionsSchema", () => {
   });
 
   it.each([
+    { mode: "weekly" },
     { totalRounds: 0 },
     { totalRounds: 11 },
     { totalRounds: 1.5 },

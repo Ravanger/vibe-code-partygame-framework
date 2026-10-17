@@ -11,10 +11,11 @@ describe("gamePackage", () => {
   it("describes WitClash for a server to host", () => {
     expect(gamePackage.meta).toBe(META);
     expect(gamePackage.stateClass).toBe(WitClashState);
-    expect(gamePackage.definition(makeCategories()).name).toBe("WitClash");
+    const categories = makeCategories();
+    expect(gamePackage.definition({ categories, canon: categories }).name).toBe("WitClash");
   });
 
-  it("loads the content from WITCLASH_CONTENT_DIR", async () => {
+  it("loads the host-editable content from WITCLASH_CONTENT_DIR and the canon from the repo", async () => {
     const dir = await mkdtemp(join(tmpdir(), "witclash-"));
     for (const id of ["a", "b", "c"])
       await writeFile(
@@ -22,7 +23,9 @@ describe("gamePackage", () => {
         JSON.stringify({ id, name: id, prompts: [{ id: `${id}-1`, text: "Say something." }] }),
       );
     if (gamePackage.load === undefined) throw new Error("expected a load function");
-    const categories = await gamePackage.load({ WITCLASH_CONTENT_DIR: dir });
+    const { categories, canon } = await gamePackage.load({ WITCLASH_CONTENT_DIR: dir });
     expect(categories.all().map((category) => category.id)).toEqual(["a", "b", "c"]);
+    // The canon never reads the host's directory.
+    expect(canon.all().length).toBeGreaterThanOrEqual(3);
   });
 });

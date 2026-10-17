@@ -17,8 +17,9 @@ src/
   tieBreakerFlow.ts  the final tie-breaker: contenders, prompt, answers, votes, verdict
   matchups.ts  categoryVote.ts  eligibility.ts  tally.ts  drafts.ts  promptPool.ts  scoring.ts  scoreboard.ts  tieBreaker.ts  bestAnswers.ts
                      pure rules: plain data and the rng in, plain data out
+  dailySeed.ts       daily mode's date seed: `utcDay` and `dailyRng` (FNV-1a into `mulberry32`)
   content/           category files (.jsonc) loader
-  loadContent.ts     loads and validates the content directory (the declaration's `load`)
+  loadContent.ts     loads and validates the content directory (the declaration's `load`), plus `loadCanonContent` for daily mode
 ui/                  Svelte client, built on @partygame/game-client (see below)
 gamePackage.ts       WitClash declared once (`defineGamePackage`): meta, definition, state class, is-finished, bot kit, terminal strategy and demo; the entry files stub over it
 launch.ts            one-line stub: `launch(gamePackage)` from `@partygame/game-kit`; `bun run launch` reaches it through `scripts/game.ts`
@@ -38,7 +39,8 @@ The bracketed tie-breaker phases only follow the final round.
 
 1. **CategorySelection**: three random categories are offered; everyone votes (changing your vote is fine). The phase ends when every
    active player has voted or the timer runs out; ties, and nobody voting, are broken at random among the leaders.
-   This happens every round. Players who joined mid-game become active here.
+   This happens every round. Players who joined mid-game become active here. In daily mode the phase resolves instantly instead (see
+   Daily mode under Options).
 2. **Prompting**: with 3 or more players each player is dealt two prompts and each prompt is shared by two players (ring pairing),
    so there is one matchup per player. With 2 players there is one shared matchup; with 1, one prompt. A prompt is never reused
    within a game (a category that runs out of fresh prompts starts over). The phase ends when everyone has answered
@@ -166,6 +168,7 @@ Passed when the room is created or changed by the host in the lobby with `SET_OP
 
 | Option | Default | Range |
 | --- | --- | --- |
+| `mode` | `free` | `free` or `daily` |
 | `totalRounds` | 3 | 1 to 10 |
 | `categoryVoteSeconds` | 60 | 5 to 300 |
 | `promptSeconds` | 90 | 15 to 600 |
@@ -173,13 +176,25 @@ Passed when the room is created or changed by the host in the lobby with `SET_OP
 | `revealSeconds` | 5 | 1 to 30 |
 | `filterLevel` | `moderate` | `off`, `moderate` or `strict` |
 
+### Daily mode
+
+`mode: "daily"` makes every server play the same content on a given UTC date, from the categories shipped in the repo
+(`content/categories/`, never `WITCLASH_CONTENT_DIR`). The category vote is skipped: each round plays the next category of a
+day-seeded order of the canon, and the prompts dealt are drawn with an rng seeded from `` `${date}:<round>` `` (FNV-1a into
+`mulberry32`, in `src/dailySeed.ts`) instead of the room seed — so two rooms on the same date deal identical categories and
+prompt texts whatever their room seeds, while free play (`mode: "free"`, the default) keeps host-editable content and the vote.
+The date is taken from the server clock when the first round starts and stored in private state; a room that crosses UTC
+midnight keeps the date it started with. The room seed still drives everything else (answer shuffles), so action-log replay
+of a daily game reproduces the same final state.
+
 `filterLevel` drives the room's text filter (`createTextFilter()` from `@partygame/content/filter`): answers are checked through `textFilterMiddleware` (declared as `textFields: ["answer"]` on `SUBMIT_ANSWER`, which covers tie-breakers too) and player names are checked by the server at join and on `SET_NAME`. At `moderate` slurs and profanity are refused; `strict` also refuses mild terms; `off` checks nothing. A refused answer is rejected with `CONTENT_REJECTED` and the filter's fixed reason, leaving the typed text in the player's box to fix or resend.
 
 ## Content and running
 
 Category files live in `content/categories/*.jsonc` (format: `content/categories/README.md`); drop a file in and restart. The declaration's
-`load` reads `WITCLASH_CONTENT_DIR` or `content/categories` next to `gamePackage.ts`, and the server refuses to start with fewer than 3
-categories. Ports come from `PORT` (2567) and `API_PORT` (3001). Hosting and LAN play: `docs/HOSTING.md`.
+`load` reads `WITCLASH_CONTENT_DIR` or `content/categories` next to `gamePackage.ts` for free play, and always loads the repo-shipped
+categories as the canon that daily mode plays from (it never reads `WITCLASH_CONTENT_DIR`); the server refuses to start with fewer than 3
+categories in either. Ports come from `PORT` (2567) and `API_PORT` (3001). Hosting and LAN play: `docs/HOSTING.md`.
 
 ```
 bun run launch         # repo root: game server, API and Vite, waits until all answer (config: launch.ts)

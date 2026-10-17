@@ -1,6 +1,8 @@
+import { required, shuffle } from "@partygame/core";
 import { ErrorCode } from "@partygame/shared";
 import { ACTION, defineAction, VoteCategorySchema } from "../actions.js";
 import { resolveCategoryVote } from "../categoryVote.js";
+import { dailyRng, utcDay } from "../dailySeed.js";
 import { PHASE } from "../phaseNames.js";
 import type { WitClashContext, WitClashPhase } from "../private.js";
 import { Round } from "../round.js";
@@ -49,6 +51,16 @@ export const CategorySelection: WitClashPhase = {
     round.remember();
     ++state.roundNumber;
     state.totalRounds = ctx.options.totalRounds;
+    if (ctx.options.mode === "daily") {
+      // The date is fixed on the first round of the game: a room that crosses midnight keeps it.
+      if (ctx.priv.dailyDay === "") ctx.priv.dailyDay = utcDay(ctx.now());
+      const order = shuffle(ctx.priv.canon.all(), dailyRng(ctx.priv.dailyDay, "categories"));
+      const category = required(order[(state.roundNumber - 1) % order.length], "daily category");
+      ctx.priv.categoryId = category.id;
+      ctx.state.selectedCategory = category.id;
+      ctx.transition(PHASE.Prompting);
+      return;
+    }
     for (const category of ctx.priv.content.pickRandom(OPTION_COUNT, ctx.rng)) {
       const option = new CategoryOption();
       option.id = category.id;
