@@ -28,6 +28,7 @@
         "@fontsource/gochi-hand": "^5.3.0",
         "@fontsource/lilita-one": "^5.3.0",
         "@partygame/bots": "workspace:*",
+        "@partygame/content": "workspace:*",
         "@partygame/core": "workspace:*",
         "@partygame/game-client": "workspace:*",
         "@partygame/game-kit": "workspace:*",
@@ -115,10 +116,25 @@
         "vitest": "^4.1.11",
       },
     },
+    "packages/content": {
+      "name": "@partygame/content",
+      "version": "0.1.0",
+      "dependencies": {
+        "obscenity": "^0.4.6",
+        "zod": "^4.6.5",
+      },
+      "devDependencies": {
+        "@partygame/config": "workspace:*",
+        "@types/node": "^26.6.3",
+        "typescript": "^6.0.3",
+        "vitest": "^4.1.11",
+      },
+    },
     "packages/core": {
       "name": "@partygame/core",
       "version": "0.1.0",
       "dependencies": {
+        "@partygame/content": "workspace:*",
         "@partygame/shared": "workspace:*",
         "xstate": "^5.33.2",
         "zod": "^4.6.5",
@@ -155,6 +171,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@partygame/bots": "workspace:*",
+        "@partygame/content": "workspace:*",
         "@partygame/core": "workspace:*",
         "@partygame/launcher": "workspace:*",
         "@partygame/server": "workspace:*",
@@ -219,6 +236,7 @@
         "@colyseus/schema": "^5.0.35",
         "@colyseus/sdk": "^0.18.4",
         "@partygame/client-utils": "workspace:*",
+        "@partygame/content": "workspace:*",
         "@partygame/core": "workspace:*",
         "@partygame/shared": "workspace:*",
         "zod": "^4.6.5",
@@ -561,6 +579,8 @@
     "@partygame/client-utils": ["@partygame/client-utils@workspace:packages/client-utils"],
 
     "@partygame/config": ["@partygame/config@workspace:packages/config"],
+
+    "@partygame/content": ["@partygame/content@workspace:packages/content"],
 
     "@partygame/core": ["@partygame/core@workspace:packages/core"],
 
@@ -1061,6 +1081,8 @@
     "npm-run-path": ["npm-run-path@6.0.0", "", { "dependencies": { "path-key": "^4.0.0", "unicorn-magic": "^0.3.0" } }, "sha512-9qny7Z9DsQU8Ou39ERsPU4OZQlSTP47ShQzuKZ6PRXpYLtIFgl/DEBYEXKlvcEa+9tHVcK8CF81Y2V72qaZhWA=="],
 
     "object-inspect": ["object-inspect@1.13.4", "", {}, "sha512-W67iLl4J2EXEGTbfeHCffrjDfitvLANg0UlX3wFUUSTx92KXRFegMHUVgSqE+wvhAbi4WqjGg9czysTV2Epbew=="],
+
+    "obscenity": ["obscenity@0.4.6", "", {}, "sha512-pHk7kNN7j3L3zGhhGnwxjvXIGsPpLrcZl2r58fqWh/V/rH6b/dafscj2sMmAY+A/9/wPsocLmimgGk2DKeKsFQ=="],
 
     "obug": ["obug@2.2.1", "", {}, "sha512-XrsrhT5sybtKI6wakr2SPOlGZWWYbUXZ7a0jT8/QOeAPau+1X/bSegNe5YR75oJmEZQbKningirmGOEJCIk61Q=="],
 

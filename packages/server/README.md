@@ -8,7 +8,6 @@ Generic Colyseus server: host any game defined with `@partygame/core`.
 | `@partygame/server/bun` | `startServer`: Bun entry point (WebSocket on 2567, API on 3001) |
 | `@partygame/server/node` | `startNodeServer`, `serveApi`: in-process Node hosting (game server plus code API) |
 | `@partygame/server/probe` | `ServerProbe` (`isGameServer`, `canConnect`, `answers`), `freePort`, `closeHttpServer`: port probing, no Colyseus |
-| `@partygame/server/content` | `loadJsoncDir`: load and validate a folder of `.jsonc` content files |
 | `@partygame/server/testing` | `bootTestServer`, `seatPlayers`, `joinPlayer`, `stateOf`, `waitUntil`, `testPlayerId`, `TestServer` for room tests |
 
 ## Host a game
@@ -24,7 +23,7 @@ import { ButtonState } from "./src/state.js";
 await startServer({ games: [{ roomName: "button", definition: ButtonGame, stateClass: ButtonState }] });
 ```
 
-Clients join with `{ playerId, name? }`; `spectator: true` gives a TV display with no seat. A dropped player keeps the seat for `reconnectMs` (default 60 s); an empty room lives `emptyRoomGraceMs` (default 120 s).
+Clients join with `{ playerId, name? }`; `spectator: true` gives a TV display with no seat. A dropped player keeps the seat for `reconnectMs` (default 60 s); an empty room lives `emptyRoomGraceMs` (default 120 s). With a `textFilter`, names are checked at join and on `SET_NAME` at the game's `filterLevel` option (default `"off"`); a refused join closes with code 4405.
 
 ## Host without Bun
 
@@ -39,20 +38,7 @@ await server.stop();
 
 Share one `RoomCodeService` between `createGameServer({ games, roomCodeService })` and `createApiHandler(roomCodeService)` (a pure `(Request) => Response`) when wiring your own HTTP layer.
 
-## Load content from files
-
-Drop commented JSON files in a folder and validate them with a zod schema. Invalid files are skipped with a warning; a repeated id throws.
-
-```ts
-import { loadJsoncDir } from "@partygame/server/content";
-import { z } from "zod";
-
-const Item = z.object({ id: z.string(), text: z.string() });
-const items = await loadJsoncDir("content/items", Item, {
-  idOf: (item) => item.id,
-  label: "Item",
-});
-```
+Content-directory loading (`loadJsoncDir`) lives in [`@partygame/content`](../content/README.md).
 
 ## Private views
 

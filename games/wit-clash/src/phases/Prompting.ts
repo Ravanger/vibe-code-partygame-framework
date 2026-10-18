@@ -1,4 +1,5 @@
 import { required, shuffle } from "@partygame/core";
+import { dailyRng } from "../dailySeed.js";
 import { classifyMatchup, draftsFor } from "../drafts.js";
 import { buildMatchups } from "../matchups.js";
 import { PHASE } from "../phaseNames.js";
@@ -42,17 +43,23 @@ const deal = (ctx: WitClashContext): void => {
   const round = new Round(ctx);
   round.remember();
   const players = ctx.activePlayers();
-  const category = required(priv.content.byId(priv.categoryId), "selected category");
+  // Daily mode plays the canon, so a selected category may not exist in the host's content.
+  const repository = ctx.options.mode === "daily" ? priv.canon : priv.content;
+  const category = required(repository.byId(priv.categoryId), "selected category");
   const { prompts, exhausted } = pickPromptPool(
     category.prompts,
     priv.usedPromptIds,
     Math.max(players.length, 1),
   );
   if (exhausted) for (const prompt of category.prompts) priv.usedPromptIds.delete(prompt.id);
+  // Daily mode deals from the date seed so every server deals identically; the room rng still
+  // drives everything else (answer shuffles and friends).
+  const dealRng =
+    ctx.options.mode === "daily" ? dailyRng(ctx.priv.dailyDay, state.roundNumber) : ctx.rng;
   const planned = buildMatchups(
     players.map((p) => p.id),
     prompts,
-    ctx.rng,
+    dealRng,
   );
   const promptTexts = new Map<string, string>();
   for (const plan of planned) {

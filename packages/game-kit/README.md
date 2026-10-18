@@ -36,6 +36,7 @@ export const gamePackage = defineGamePackage({
 | `displayName?` | the launcher name; `meta.roomName` when omitted |
 | `load?(env)` | loads server-side content from disk; without it `definition` is called with `undefined` |
 | `definition(content)` | builds the `defineGame` result for the loaded content |
+| `textFilter?` | the room's `TextFilter` (`@partygame/content/filter`); `serve` hands it to the server starter, which checks player names and the game's filtered actions |
 | `stateClass` | the synced state class (a `BaseGameState` subclass) |
 | `isFinished(state)` | true once the game is over; the demo tables and the demo run watch for it |
 | `botKit` | the game's `BotKit` (`roomName`, `stateClass`, `strategy`) |
@@ -71,5 +72,5 @@ The injectable process: `env`, `argv`, `exit`, `log`, `error`, `onSignal` and th
 ## Types
 
 - `GameMeta`: room name and player bounds (`roomName: string`, `minPlayers: number`, `maxPlayers: number`).
-- `ServeOptions`: config for `serve()` (`games: HostedGame[]`, `port?: number`, `apiPort?: number`).
+- `ServeOptions`: config for `serve()` (`games: HostedGame[]`, `port?: number`, `apiPort?: number`, `textFilter?` — the declaration's filter).
 - `GameDemoOptions`: the declaration's `demo` field (`kit?`, `roomOptions?`, `bot?`, `hostName?`, `narrate?`, `problems?`, `passMessage?`).

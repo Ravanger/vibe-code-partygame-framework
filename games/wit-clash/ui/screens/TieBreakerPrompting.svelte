@@ -17,6 +17,9 @@ $effect(() => () => vm.destroy());
 <div class="tie-breaker">
   <div class="top">
     <span class="chip chip--paper">{`Tied for the lead: ${vm.contenderNames.join(", ")}`}</span>
+    {#if vm.moderationLine}
+      <span class="chip">{vm.moderationLine}</span>
+    {/if}
     <Timer seconds={vm.secondsLeft} total={vm.totalSeconds} announcement={vm.announcement} />
   </div>
 
@@ -30,6 +33,9 @@ $effect(() => () => vm.destroy());
 
   {#if vm.isContender}
     <p class="how hand">Write the funniest answer you can</p>
+    {#if vm.rejectionReason}
+      <p class="reject-reason">{vm.rejectionReason}</p>
+    {/if}
     <AnswerBox
       value={vm.draft}
       remaining={vm.charsRemaining}
@@ -76,6 +82,13 @@ $effect(() => () => vm.destroy());
   .how {
     margin: 0;
     color: var(--ink-soft);
+    font-size: var(--fs-3);
+    text-align: center;
+  }
+
+  .reject-reason {
+    margin: 0;
+    color: var(--danger);
     font-size: var(--fs-3);
     text-align: center;
   }

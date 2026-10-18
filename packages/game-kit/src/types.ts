@@ -1,4 +1,5 @@
 import type { BotKit, BotOptions } from "@partygame/bots";
+import type { TextFilter } from "@partygame/content/filter";
 import type { GameDefinition } from "@partygame/core";
 import type { LaunchConfig } from "@partygame/launcher";
 import type { HostedGame } from "@partygame/server";
@@ -38,6 +39,8 @@ export interface GameDeclaration<TState extends BaseGameState, TContent = undefi
   /** Loads server-side content; without it `definition` is called with `undefined`. */
   load?(env: NodeJS.ProcessEnv): Promise<TContent>;
   definition(content: TContent): GameDefinition<BaseGameState, unknown, unknown>;
+  /** The room's text filter (player names and the game's filtered actions); `serve` hands it to the server starter. */
+  textFilter?: TextFilter;
   stateClass: new () => TState;
   /** True once the game is over; the demo tables watch for it. */
   isFinished(state: TState): boolean;
@@ -53,6 +56,8 @@ export interface ServeOptions {
   games: HostedGame[];
   port?: number;
   apiPort?: number;
+  /** The declaration's text filter, so the room checks player names and filtered actions. */
+  textFilter?: TextFilter;
 }
 
 /** The injectable process behind a one-line entry stub. */

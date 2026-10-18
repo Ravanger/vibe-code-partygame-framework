@@ -5,17 +5,20 @@ import { WitClashOptionsSchema } from "../../src/options.js";
 import { makeCategories, Table } from "./support.js";
 
 describe("WitClashOptionsSchema", () => {
-  it("defaults to 3 rounds and the standard timers", () => {
+  it("defaults to free play, 3 rounds, the standard timers and moderate filtering", () => {
     expect(WitClashOptionsSchema.parse({})).toEqual({
+      mode: "free",
       totalRounds: 3,
       categoryVoteSeconds: 60,
       promptSeconds: 90,
       voteSeconds: 20,
       revealSeconds: 5,
+      filterLevel: "moderate",
     });
   });
 
   it.each([
+    { mode: "weekly" },
     { totalRounds: 0 },
     { totalRounds: 11 },
     { totalRounds: 1.5 },
@@ -24,6 +27,7 @@ describe("WitClashOptionsSchema", () => {
     { voteSeconds: 0 },
     { revealSeconds: 0 },
     { revealSeconds: 60 },
+    { filterLevel: "loud" },
   ])("rejects %o", (bad) => {
     expect(WitClashOptionsSchema.safeParse(bad).success).toBe(false);
   });
@@ -62,6 +66,9 @@ describe("room options", () => {
     t.start();
     t.act("p1", "SET_OPTIONS", { totalRounds: 1 });
     expect(t.errors("p1")).toMatchObject([{ code: "WRONG_PHASE" }]);
+    // the filter level is a room option too: refused outside the lobby, still in force
+    const error = t.act("p1", "SET_OPTIONS", { filterLevel: "off" });
+    expect(error?.code).toBe("WRONG_PHASE");
   });
 });
 

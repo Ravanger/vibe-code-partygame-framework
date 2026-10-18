@@ -53,17 +53,16 @@ describe("loadCategoriesFromDir", () => {
     );
   });
 
-  it("skips a malformed file but still loads the good ones", async () => {
+  it("refuses a directory with a malformed file, naming it", async () => {
     await writeFile(join(dir, "good.json"), valid("good", "Good"));
     await writeFile(join(dir, "bad.json"), "{ not json");
-    const repo = await loadCategoriesFromDir(dir);
-    expect(repo.all().map((c) => c.id)).toEqual(["good"]);
+    await expect(loadCategoriesFromDir(dir)).rejects.toThrow("bad.json");
   });
 
-  it("skips a file that fails schema validation (no prompts)", async () => {
+  it("refuses a file that fails schema validation (no prompts), naming the entry", async () => {
     await writeFile(join(dir, "empty.json"), JSON.stringify({ id: "e", name: "E", prompts: [] }));
-    const repo = await loadCategoriesFromDir(dir);
-    expect(repo.all()).toHaveLength(0);
+    await expect(loadCategoriesFromDir(dir)).rejects.toThrow("empty.json");
+    await expect(loadCategoriesFromDir(dir)).rejects.toThrow(/prompts/);
   });
 
   it("rejects duplicate ids across files", async () => {

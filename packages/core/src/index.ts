@@ -12,6 +12,8 @@ export {
   type LoggingMiddlewareOptions,
   loggingMiddleware,
   type PhaseTimingRecord,
+  type TextFilterMiddlewareOptions,
+  textFilterMiddleware,
   timingMiddleware,
 } from "./middleware.js";
 export * from "./runtime/index.js";

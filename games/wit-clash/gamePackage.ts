@@ -1,8 +1,9 @@
+import { createTextFilter } from "@partygame/content/filter";
 import { defineGamePackage } from "@partygame/game-kit";
 import { witClashKit } from "./bots/witClashBot.js";
 import { createWitClashGame } from "./src/game.js";
 import { isGameOver } from "./src/isGameOver.js";
-import { contentDir, loadContent } from "./src/loadContent.js";
+import { contentDir, loadCanonContent, loadContent } from "./src/loadContent.js";
 import { META } from "./src/meta.js";
 import { WitClashState } from "./src/state.js";
 import { Narrator } from "./terminal/Narrator.js";
@@ -14,8 +15,12 @@ const narrator = new Narrator();
 export const gamePackage = defineGamePackage({
   meta: META,
   displayName: "WitClash",
-  load: (env) => loadContent(contentDir(env, import.meta.url)),
-  definition: (categories) => createWitClashGame({ categories }),
+  load: async (env) => ({
+    categories: await loadContent(contentDir(env, import.meta.url)),
+    canon: await loadCanonContent(import.meta.url),
+  }),
+  definition: ({ categories, canon }) => createWitClashGame({ categories, canon }),
+  textFilter: createTextFilter(),
   stateClass: WitClashState,
   isFinished: isGameOver,
   botKit: witClashKit(),

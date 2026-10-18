@@ -1,9 +1,14 @@
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { beforeEach, describe, expect, it } from "vitest";
-import { contentDir, loadContent, MIN_CATEGORIES } from "../../src/loadContent.js";
+import {
+  contentDir,
+  loadCanonContent,
+  loadContent,
+  MIN_CATEGORIES,
+} from "../../src/loadContent.js";
 
 let dir: string;
 beforeEach(async () => {
@@ -46,5 +51,31 @@ describe("loadContent", () => {
   it("loads the shipped content", async () => {
     const shipped = join(import.meta.dirname, "..", "..", "content", "categories");
     expect((await loadContent(shipped)).all().length).toBeGreaterThanOrEqual(MIN_CATEGORIES);
+  });
+});
+
+describe("loadCanonContent", () => {
+  it("reads the repo directory next to the entry file, ignoring WITCLASH_CONTENT_DIR", async () => {
+    const saved = process.env.WITCLASH_CONTENT_DIR;
+    try {
+      await mkdir(join(dir, "content", "categories"), { recursive: true });
+      for (const id of ["a", "b", "c"])
+        await writeFile(join(dir, "content", "categories", `${id}.jsonc`), category(id));
+      process.env.WITCLASH_CONTENT_DIR = join(dir, "elsewhere");
+      const entry = pathToFileURL(join(dir, "server.ts")).href;
+      expect((await loadCanonContent(entry)).all().map((c) => c.id)).toEqual(["a", "b", "c"]);
+    } finally {
+      if (saved === undefined) delete process.env.WITCLASH_CONTENT_DIR;
+      else process.env.WITCLASH_CONTENT_DIR = saved;
+    }
+  });
+
+  it("refuses to start with too few categories", async () => {
+    await mkdir(join(dir, "content", "categories"), { recursive: true });
+    await writeFile(join(dir, "content", "categories", "a.json"), category("a"));
+    const entry = pathToFileURL(join(dir, "server.ts")).href;
+    await expect(loadCanonContent(entry)).rejects.toThrow(
+      `Need at least ${MIN_CATEGORIES} categories`,
+    );
   });
 });

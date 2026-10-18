@@ -14,6 +14,7 @@ export function answeringActions(
     [ACTION.SUBMIT_ANSWER]: defineAction({
       from: "player",
       payload: SubmitAnswerSchema,
+      textFields: ["answer"],
       handler: (ctx) => {
         const { matchupId, answer } = ctx.payload;
         const assigned = ctx.priv.assignments.get(ctx.playerId);

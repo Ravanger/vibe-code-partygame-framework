@@ -1,0 +1,32 @@
+{
+  "name": "@partygame/content",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.test.json"
+  },
+  "dependencies": {
+    "obscenity": "^0.4.6",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@partygame/config": "workspace:*",
+    "@types/node": "^26.6.3",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.11"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./filter": {
+      "types": "./dist/filter.d.ts",
+      "default": "./dist/filter.js"
+    }
+  }
+}

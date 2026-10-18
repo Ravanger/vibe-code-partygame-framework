@@ -58,6 +58,7 @@ Every rejection is sent only to the sender as `ERROR { code, message, action }`:
 | `WRONG_PHASE` | action exists, but not in the current phase |
 | `UNAUTHORIZED` | role check failed (for example a guest sent a host action) |
 | `NOT_ACTIVE` | the sender is waiting for the next round |
+| `CONTENT_REJECTED` | free text failed the room's text filter: an action's declared `textFields` (via `textFilterMiddleware`) or a player name via `SET_NAME`; the message is the filter's fixed per-level reason. A join with a filtered name is refused with close code 4405 instead |
 | `NOT_ENOUGH_PLAYERS` | `START_GAME` below `minPlayers` |
 | `NOT_ALLOWED` | game rule; use `ctx.reject("NOT_ALLOWED", "why")` in a handler |
 | `NAME_TAKEN` | `SET_NAME` with a name another seat already has (compared trimmed and case-insensitively); the seat keeps its name |
@@ -149,7 +150,7 @@ Every call receives `ctx`, the usual context plus a `readonly event`:
 | `enter` | around each phase's `onEnter` | — |
 | `timeout` | around each phase's `onTimeout` | — |
 | `roster-change` | around each phase's `onRosterChange` | — |
-| `action` | around each action handler, built-ins included | `actionType`, `senderId`, `payload` (zod-parsed) |
+| `action` | around each action handler, built-ins included | `actionType`, `senderId`, `payload` (zod-parsed), `textFields?` (the action definition's declared text fields), `filterLevel` (the room's current level, default `"off"`) |
 | `transition` | after the source hook's chain unwinds, just before the target's `onEnter` chain runs | `from`, `to` |
 
 Semantics:
@@ -158,19 +159,20 @@ Semantics:
 2. Transitions stay queued: `ctx.transition("X")` called inside a hook or middleware still applies only after the outermost hook returns, exactly as without middleware. Middleware cannot apply a transition synchronously.
 3. Transition observation is an event (`{ from, to }`), not a wrapped `ctx.transition`. The event fires only after the source chain has fully unwound. It also covers `returnToLobby` (`to: "Lobby"`) and re-entering the current phase (`from === to`).
 4. Errors: a middleware throw is handled exactly like a hook throw today — on the action path the sender gets `INTERNAL`; enter/timeout/roster paths follow the existing hook-failure path; a throw on a `transition` event defers the same way and never cancels the transition it observes. No new error codes.
-5. Veto is not in v1 (deliberate non-goal): middleware can skip `next()` but cannot cancel a queued transition or reject an action itself — action handlers already have `ctx.reject`.
+5. Rejecting: middleware gets `ctx.reject(code, message, options?)` for `action` events (it throws for any other event kind) — the sender gets the `ERROR` with that code and message, and the rejection counts in `rejectionCount`. Pass `{ redactPayload: true }` to also count it in `redactedRejectionCount`: an action log then records the entry with `rejected: true`, `redacted: true` and no `payload`, so rejected text (like a filter hit) never lands in the log or a replay bundle. It does not stop the chain by itself: omit `next()` to keep the handler from running. Middleware still cannot cancel a queued transition.
 6. `defineGame` validates at definition time: `middleware` must be an array of functions, otherwise the problem is listed in the `GameDefinitionError`. Reserved action names are unchanged.
 7. Ordering: for `enter`, the outermost middleware runs first; a transition event fires only after the full chain unwinds (consistent with queued transitions).
 8. The built-in lobby hooks run through the same wrapped path — middleware applies to `Lobby` too.
 
 Non-goals in v1: no async/await inside the chain (synchronous; a middleware that returns a Promise throws
 `middleware[i] returned a Promise; the middleware chain is synchronous` on the first event — do fire-and-forget work
-outside the chain), no veto.
+outside the chain), no cancelling queued transitions.
 
 #### Built-ins
 - `loggingMiddleware({ log })` — one line per event, no hardcoded console. Exact formats: `enter <phase>`, `timeout <phase>`, `action <ACTION_TYPE> by <senderId> in <phase>`, `transition <from> -> <to>`. No line for `roster-change`.
 - `timingMiddleware()` — records per-phase durations into a store kept outside `ctx.priv` (keyed by it; read back with `getPhaseTimings(priv)`); each phase gets `{ enteredAt: number, durationsMs: number[] }`. Started on enter (before the hook), closed when a transition out of that phase is observed. The currently open phase has no final duration yet. Never touches `ctx.state` (it is synced to clients) or `ctx.priv`; timing metadata stays server-side.
 - `actionLogMiddleware()` — append-only, JSON-serializable record of every middleware-visible event, kept outside `ctx.priv` (read back with `getActionLog(priv)`); see Action log and replay below.
+- `textFilterMiddleware(filter)` — rejects an action whose declared text fields fail the room's filter level. Declare which payload fields are free text per action (`textFields: ["..."]` on the action definition; the framework never guesses) and how strict this room is via `filterLevel?: (options) => "off" | "moderate" | "strict"` on the game definition (default `"off"`). For each declared string field it runs `filter.check(value, level)` in declaration order and, on the first failure, rejects with `CONTENT_REJECTED` and the filter's reason — always with `redactPayload`, so an action log records the rejection without the offending text — without running the handler. Pass `{ onRejected?(ctx, reason) }` as the second argument to be told about each refusal (after the rejection is recorded); the game can react (e.g. count rejections) but cannot change the outcome. A `TextFilter` comes from `@partygame/content` (`createTextFilter()` is the default English one); at `"off"` the filter is never called, and actions without `textFields` pass untouched.
 
 ### Action log and replay
 `actionLogMiddleware()` records everything the middleware sees into an append-only, JSON-serializable log
@@ -213,14 +215,19 @@ every room and replay table append to one log and one timing store.
 | `kind` | `"action" \| "transition" \| "enter" \| "timeout" \| "roster-change"` |
 | `actionType`, `senderId`, `payload` | `kind === "action"` only; `payload` is the zod-parsed action object |
 | `rejected` | `kind === "action"` only; `true` when the handler called `ctx.reject()` or threw a `FrameworkError` (the action ran but changed nothing). Absent on accepted actions |
+| `redacted` | `kind === "action"` only; `true` when the rejection asked for payload redaction (`ctx.reject` with `redactPayload: true`) — the entry then carries no `payload`. The action was refused before the handler ran, so it changed no state and `replayLog` skips re-dispatching it. Implies `rejected: true` |
 | `from`, `to` | `kind === "transition"` only |
 
 Actions rejected **before the handler chain** — malformed envelope, unknown action, unauthorized sender,
 inactive player, invalid payload — are **not** logged: they never reach the middleware and change no state.
 An action whose *handler* calls `ctx.reject()` or throws a `FrameworkError` (as the built-in `START_GAME` does with too few players) has reached the chain and **is** logged, marked
 `rejected: true`; it changes no state either, and such logs replay — the re-dispatch re-runs the handler
-(RNG draws included) and must reject again (a mismatch in either direction throws). Roster changes are
-recorded for observability (see the replay limitation below).
+(RNG draws included) and must reject again (a mismatch in either direction throws). A rejection recorded with
+`redactPayload: true` — a middleware that refused the action before the handler ran (the text filter does this) — is logged with `rejected: true`,
+`redacted: true` and no `payload`; because it changed no state and drew no RNG, `replayLog` skips re-dispatching it
+(the clock still advances to its `t`). For such refusals to be logged at all, register the logger outside the
+refusing middleware (`middleware: [actionLogMiddleware(), textFilterMiddleware(filter)]`) — a layer that omits
+`next()` never runs what is inside. Roster changes are recorded for observability (see the replay limitation below).
 
 **Roster.** When `START_GAME` is dispatched, the middleware also records `log.roster` — the seats in
 seat order at start time, each as `{ id, isConnected, isReady, isActive }`, captured once (a second
@@ -519,12 +526,12 @@ import { startServer } from "@partygame/server/bun";
 await startServer({ games });   // WebSocket on PORT (2567) + /api/resolve-code on API_PORT (3001)
 ```
 
-Elsewhere: `createGameServer({ games, roomCodeService?, transport?, reconnectMs?, emptyRoomGraceMs? })` returns the Colyseus `Server`,
+Elsewhere: `createGameServer({ games, roomCodeService?, transport?, reconnectMs?, emptyRoomGraceMs?, textFilter? })` returns the Colyseus `Server`,
 and `createApiHandler(roomCodeService)` is the pure `(Request) => Response` behind `/api/resolve-code`.
 
 Clients join with `{ playerId, name? }` (`spectator: true` for a TV display: no seat, counted in `spectatorCount`).
 Create a watch-only room with the framework option `seats: string[]` (the playerIds allowed to take a seat): any other non-spectator join is refused with `4404 "This room is watch-only"`, spectators still join. It is not a game option and is not published in `state.options`.
-`SET_NAME` readies a seat (a name another seat has is refused with `NAME_TAKEN`; a join-time `name` that is taken is ignored and the seat joins unnamed). A room is kept alive only by connected seats: once the last one is gone for `emptyRoomGraceMs`, the room is disposed and any spectators are disconnected. `ACTION` carries your actions (`room.send` or `room.request`, see Actions). A dropped connection holds the seat for `reconnectMs`
+`SET_NAME` readies a seat (a name another seat has is refused with `NAME_TAKEN`; a join-time `name` that is taken is ignored and the seat joins unnamed). With a `textFilter` on `createGameServer`, names are also checked against it at the level of the game's `filterLevel` over the room's current options (default `"off"`): a join with a filtered name is refused with close code 4405 (`CONTENT_REJECTED`) and a `SET_NAME` with one is refused with `CONTENT_REJECTED` and the filter's reason, keeping the old name; a level raised mid-lobby applies to the next `SET_NAME`, not to names already set. A room is kept alive only by connected seats: once the last one is gone for `emptyRoomGraceMs`, the room is disposed and any spectators are disconnected. `ACTION` carries your actions (`room.send` or `room.request`, see Actions). A dropped connection holds the seat for `reconnectMs`
 (token reconnect or a new session with the same `playerId`); a mid-game joiner is seated inactive.
 When the host leaves or drops, the role moves to a connected seat that is active and ready, else one that is ready, else any connected seat.
 Spectators get no reconnection window; they simply rejoin.
@@ -679,7 +686,7 @@ export class GameControlsViewModel extends GameControlsBase<ButtonState> {
 }
 ```
 
-`LobbySettingsViewModel` takes the same options schema you pass to `defineGame`, optional `defaults` shown until the server publishes valid options, and optional `labels`. Every bounded numeric option (`.min()` and `.max()`) appears in the form with no UI work; a field is labelled from its camelCase key ("Turn seconds") unless `labels` overrides it:
+`LobbySettingsViewModel` takes the same options schema you pass to `defineGame`, optional `defaults` shown until the server publishes valid options, and optional `labels`. Every bounded numeric option (`.min()` and `.max()`) appears in the form with no UI work; a string-enum option (`z.enum([...])`) appears as a row of choice buttons, one per value, also with no UI work; a field is labelled from its camelCase key ("Turn seconds") unless `labels` overrides it:
 
 ```ts
 import { LobbySettingsViewModel as LobbySettingsBase } from "@partygame/game-ui";
@@ -981,7 +988,8 @@ export { svelteConfig as default } from "@partygame/config/svelte";
 | `@partygame/core` | `shuffle(items, rng)`, `required(value, what)` |
 | `@partygame/server/node` | `startNodeServer({ games, port?, apiPort? })` (a game server and its API in this process; `.stop()`), `serveApi(codes, { port, host? })`: the code API on Node's `http` (the Bun entry serves its own) |
 | `@partygame/server/probe` | `ServerProbe` (`isGameServer(port, apiPort)`, `canConnect(port)`, `answers(url)`), `freePort()`, `closeHttpServer(server)` (resolves when the server already stopped): port probing without Colyseus |
-| `@partygame/server/content` | `loadJsoncDir(dir, schema, { idOf, label })`: a folder of commented JSON files, validated, duplicate ids refused; `stripJsonComments` |
+| `@partygame/content` | `loadJsoncDir(dir, schema, { idOf, label, onInvalid?, maxFiles?, maxFileBytes? })`: a folder of commented JSON files (symlinks ignored), validated; bad files throw by default (`onInvalid: "skip"` warns and skips), caps at 256 files / 1 MiB per file; `stripJsonComments` |
+| `@partygame/content/filter` | `createTextFilter()`: a `TextFilter` over the English obscenity dataset — `check(text, "off" \| "moderate" \| "strict")` returns `{ ok: true }` or `{ ok: false, reason }`; moderate blocks slurs and profanity, strict adds mild terms; the reason is a fixed per-level string that never names the matched word |
 | `@partygame/game-client` | `resolveEndpoints(overrides, pageHost)`, `readCodeParam(search, "code" \| "tv")` |
 | `@partygame/game-client/test-setup` | vitest `setupFiles` entry for jsdom: storage shims, SDK on `ws` (repo-internal, raw `.ts`) |
 | `@partygame/game-kit` | types: `GameMeta` (`roomName`, `minPlayers`, `maxPlayers`), `ServeOptions` (`games`, `port?`, `apiPort?`), `GameDemoOptions` (the declaration's `demo` field, see All-bot demo run) |

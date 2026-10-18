@@ -27,16 +27,17 @@ const IMPORT = /(?:\bfrom\s*|\bimport\s*\(?\s*)["']([^"']+)["']/g;
 
 const LAYERS: Record<string, { runtime: string[]; dev: string[] }> = {
   shared: { runtime: [], dev: [] },
+  content: { runtime: [], dev: [] },
   "client-utils": { runtime: ["shared"], dev: [] },
-  core: { runtime: ["shared"], dev: [] },
-  server: { runtime: ["client-utils", "core", "shared"], dev: [] },
+  core: { runtime: ["content", "shared"], dev: [] },
+  server: { runtime: ["client-utils", "content", "core", "shared"], dev: [] },
   "game-client": { runtime: ["client-utils", "shared"], dev: ["core", "server"] },
   "game-ui": { runtime: ["client-utils", "game-client", "shared"], dev: [] },
   bots: { runtime: ["client-utils", "shared"], dev: ["core", "server"] },
   terminal: { runtime: ["bots", "client-utils", "server", "shared"], dev: ["core"] },
   launcher: { runtime: ["bots", "client-utils", "server", "shared"], dev: ["core"] },
   "game-kit": {
-    runtime: ["bots", "core", "launcher", "server", "shared", "terminal"],
+    runtime: ["bots", "content", "core", "launcher", "server", "shared", "terminal"],
     dev: [],
   },
   cli: { runtime: [], dev: [] },

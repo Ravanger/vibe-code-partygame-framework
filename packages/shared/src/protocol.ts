@@ -21,6 +21,8 @@ export const ErrorCode = {
   NOT_ENOUGH_PLAYERS: "NOT_ENOUGH_PLAYERS",
   NOT_ALLOWED: "NOT_ALLOWED",
   NOT_ACTIVE: "NOT_ACTIVE",
+  /** Free text (an action's declared text field or a player name) failed the room's text filter. */
+  CONTENT_REJECTED: "CONTENT_REJECTED",
   /** `SET_NAME` with a name another seat already has. */
   NAME_TAKEN: "NAME_TAKEN",
   /** Sent by the server to a player the host removed. */

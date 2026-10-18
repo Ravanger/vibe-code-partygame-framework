@@ -86,9 +86,25 @@ const relaxedCompilerOptions = (change: FileChange): GateViolation[] =>
     detail: `compiler check relaxed: ${line.trim()}`,
   }));
 
+/** Maintainer-approved additions: an explicit per-file exception for one exact line, never a general exemption. */
+const APPROVED_LINES: { path: string; pattern: RegExp }[] = [
+  // #129: the symlink test bails out where the OS forbids creating symlinks (Windows without privilege).
+  {
+    path: "packages/content/tests/content.test.ts",
+    pattern: /ctx\.skip\("symlinks not permitted on this machine"\)/,
+  },
+];
+
+const isApprovedLine = (path: string, line: string): boolean =>
+  APPROVED_LINES.some(
+    ({ path: approvedPath, pattern }) => approvedPath === path && pattern.test(line),
+  );
+
 const forbiddenAdditions = (change: FileChange): GateViolation[] =>
   change.added.flatMap((line) =>
-    FORBIDDEN_LINES.filter(({ pattern }) => pattern.test(line)).map(({ rule }) => ({
+    FORBIDDEN_LINES.filter(
+      ({ pattern }) => pattern.test(line) && !isApprovedLine(change.path, line),
+    ).map(({ rule }) => ({
       path: change.path,
       rule,
       detail: line.trim(),

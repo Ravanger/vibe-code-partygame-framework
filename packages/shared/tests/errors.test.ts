@@ -19,8 +19,9 @@ describe("FrameworkError", () => {
 });
 
 describe("CLOSE_CODES", () => {
-  it("maps the six join/create close codes to error codes and fixed messages", () => {
+  it("maps the seven join/create close codes to error codes and fixed messages", () => {
     expect(Object.keys(CLOSE_CODES).sort()).toEqual([
+      "CONTENT_REJECTED",
       "INTERNAL",
       "INVALID_OPTIONS",
       "KICKED_REJOIN",
@@ -33,6 +34,8 @@ describe("CLOSE_CODES", () => {
     expect(CLOSE_CODES.SEAT_REMOVED.code).toBe(4402);
     expect(CLOSE_CODES.KICKED_REJOIN.code).toBe(4403);
     expect(CLOSE_CODES.WATCH_ONLY.code).toBe(4404);
+    expect(CLOSE_CODES.CONTENT_REJECTED.code).toBe(4405);
+    expect(CLOSE_CODES.CONTENT_REJECTED.errorCode).toBe(ErrorCode.CONTENT_REJECTED);
     expect(CLOSE_CODES.INTERNAL.code).toBe(4500);
     expect(CLOSE_CODES.INTERNAL.errorCode).toBe(ErrorCode.INTERNAL);
   });
@@ -52,6 +55,7 @@ describe("CLOSE_CODES", () => {
     expect(CLOSE_CODES.SEAT_REMOVED.message).toBe("Your seat was removed");
     expect(CLOSE_CODES.KICKED_REJOIN.message).toBe(CLIENT_MESSAGES.KICKED);
     expect(CLOSE_CODES.WATCH_ONLY.message).toBe("This room is watch-only");
+    expect(CLOSE_CODES.CONTENT_REJECTED.message).toBe(CLIENT_MESSAGES.CONTENT_REJECTED);
     expect(CLOSE_CODES.INTERNAL.message).toBe("The server could not handle the request");
     expect(CLOSE_CODES.KICKED_REJOIN.errorCode).toBe(ErrorCode.KICKED);
     expect(CLOSE_CODES.WATCH_ONLY.errorCode).toBe(ErrorCode.NOT_ALLOWED);
@@ -68,7 +72,7 @@ describe("closeCodeEntry", () => {
 
   it("returns undefined for unknown numbers", () => {
     expect(closeCodeEntry(2000)).toBeUndefined();
-    expect(closeCodeEntry(4405)).toBeUndefined();
+    expect(closeCodeEntry(4406)).toBeUndefined();
     expect(closeCodeEntry(-1)).toBeUndefined();
   });
 });
@@ -87,5 +91,9 @@ describe("CLIENT_MESSAGES", () => {
 
   it("keeps the INTERNAL text clients see today", () => {
     expect(CLIENT_MESSAGES.INTERNAL).toBe("The action failed on the server");
+  });
+
+  it("has a fixed message for CONTENT_REJECTED", () => {
+    expect(CLIENT_MESSAGES.CONTENT_REJECTED).toBe("That text was not allowed");
   });
 });

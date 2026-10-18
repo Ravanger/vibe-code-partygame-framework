@@ -82,6 +82,7 @@ function makePipeline(
     phaseName: () => options.phaseName ?? "Play",
     players: () => options.players ?? [player()],
     contextFactory: fakeContext,
+    filterLevel: () => "off",
     reject: (_playerId, action, code, message) => {
       sent.push(action === undefined ? { code, message } : { code, message, action });
     },
@@ -193,7 +194,13 @@ describe("DispatchPipeline", () => {
     expect(ran()).toBe(1);
     expect(lastPayload()).toEqual({ n: 7 });
     expect(h.events).toEqual([
-      { kind: "action", actionType: "GIVE_UP", senderId: "p1", payload: { n: 7 } },
+      {
+        kind: "action",
+        actionType: "GIVE_UP",
+        senderId: "p1",
+        payload: { n: 7 },
+        filterLevel: "off",
+      },
     ]);
   });
 

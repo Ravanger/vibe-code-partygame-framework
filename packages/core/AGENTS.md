@@ -13,12 +13,12 @@ The Colyseus-free game runtime: `defineGame`, `GameRuntime`, lobby built-ins, ac
 
 ## May import
 
-- Runtime: `@partygame/shared`
+- Runtime: `@partygame/content` (types only: `TextFilter`/`FilterLevel` for the text-filter middleware), `@partygame/shared`
 - Dev: `@partygame/config`
 
 ## Public entry points
 
-- `.`: `defineGame`, `actionFactory`, `GameRuntime`, scoring, `shuffle`, action log.
+- `.`: `defineGame`, `actionFactory`, `GameRuntime`, scoring, `shuffle`, action log, `textFilterMiddleware`.
 - `./testing`: `FakeHost`, `TestTable`, `replayLog`.
 
 ## Tests

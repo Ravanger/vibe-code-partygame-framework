@@ -16,6 +16,8 @@ export class WitClashPrivate {
   participants = new Set<string>();
   usedPromptIds = new Set<string>();
   categoryId = "";
+  /** The UTC date (`YYYY-MM-DD`) a daily game started on; empty outside daily mode. */
+  dailyDay = "";
   categoryVotes = new Map<string, string>();
   assignments = new Map<string, string[]>();
   drafts = new Map<string, Map<string, string>>();
@@ -27,7 +29,11 @@ export class WitClashPrivate {
   tieBreakerPlan: TieBreakerPlan | undefined;
   tieBreakerWinnerId = "";
 
-  constructor(readonly content: CategoryRepository) {}
+  constructor(
+    readonly content: CategoryRepository,
+    /** The repo-shipped categories daily mode plays from; never host-editable. */
+    readonly canon: CategoryRepository,
+  ) {}
 
   clearRound(): void {
     this.categoryId = "";
@@ -49,5 +55,6 @@ export class WitClashPrivate {
     this.usedPromptIds.clear();
     this.answerHistory = [];
     this.tieBreakerWinnerId = "";
+    this.dailyDay = "";
   }
 }

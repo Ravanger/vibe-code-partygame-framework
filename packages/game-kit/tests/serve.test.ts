@@ -1,3 +1,4 @@
+import type { TextFilter } from "@partygame/content/filter";
 import { type NodeServerHandle, startNodeServer } from "@partygame/server/node";
 import { freePort, ServerProbe } from "@partygame/server/probe";
 import { describe, expect, it } from "vitest";
@@ -53,7 +54,34 @@ describe("serve", () => {
     if (options === undefined) throw new Error("the server starter never ran");
     expect(options.port).toBeUndefined();
     expect(options.apiPort).toBeUndefined();
+    expect(options.textFilter).toBeUndefined();
     expect(options.games.map((each) => each.roomName)).toEqual([TAP_ROOM]);
+  });
+
+  it("hands the declaration's text filter to the server starter", async () => {
+    const started: NodeServerHandle[] = [];
+    const seens: ServeOptions[] = [];
+    const filter: TextFilter = { check: () => ({ ok: true }) };
+    const game = defineGamePackage({
+      meta: { roomName: TAP_ROOM, minPlayers: 2, maxPlayers: 6 },
+      definition: () => TapGame,
+      stateClass: TapState,
+      isFinished: () => true,
+      botKit: tapKit(),
+      textFilter: filter,
+    });
+
+    await serve(game, ioWith({}, started, seens));
+
+    expect(started).toHaveLength(1);
+    const [handle] = started;
+    if (handle === undefined) throw new Error("the server starter never ran");
+    await handle.stop();
+
+    expect(seens).toHaveLength(1);
+    const [options] = seens;
+    if (options === undefined) throw new Error("the server starter never ran");
+    expect(options.textFilter).toBe(filter);
   });
 
   it("calls definition with undefined and lets the starter pick ports when env has none", async () => {

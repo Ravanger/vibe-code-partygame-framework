@@ -1,4 +1,5 @@
-import { defineGame } from "@partygame/core";
+import { createTextFilter } from "@partygame/content/filter";
+import { defineGame, textFilterMiddleware } from "@partygame/core";
 import type { CategoryRepository } from "./content/CategoryRepository.js";
 import { META } from "./meta.js";
 import { type WitClashOptions, WitClashOptionsSchema } from "./options.js";
@@ -17,9 +18,11 @@ import type { WitClashState } from "./state.js";
 
 export interface WitClashConfig {
   categories: CategoryRepository;
+  /** The repo-shipped canon daily mode plays from; `categories` when omitted. */
+  canon?: CategoryRepository;
 }
 
-export function createWitClashGame({ categories }: WitClashConfig) {
+export function createWitClashGame({ categories, canon = categories }: WitClashConfig) {
   if (categories.all().length === 0) throw new Error("WitClash needs at least one category");
   return defineGame<WitClashState, WitClashPrivate, WitClashOptions>({
     name: "WitClash",
@@ -28,7 +31,16 @@ export function createWitClashGame({ categories }: WitClashConfig) {
     maxPlayers: META.maxPlayers,
     startPhase: PHASE.CategorySelection,
     options: WitClashOptionsSchema,
-    createPrivateState: () => new WitClashPrivate(categories),
+    filterLevel: (options) => options.filterLevel,
+    middleware: [
+      textFilterMiddleware(createTextFilter(), {
+        onRejected: (ctx) => {
+          const state = ctx.state as WitClashState;
+          ++state.rejectedTexts;
+        },
+      }),
+    ],
+    createPrivateState: () => new WitClashPrivate(categories, canon),
     phases: {
       [PHASE.CategorySelection]: CategorySelection,
       [PHASE.Prompting]: Prompting,

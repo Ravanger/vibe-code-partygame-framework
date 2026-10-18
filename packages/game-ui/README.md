@@ -67,7 +67,7 @@ Build the waiting room the same way and call `vm.destroy()` on teardown: `$effec
 
 ## Settings from your options schema
 
-`LobbySettingsViewModel` takes the zod schema you pass to `defineGame`. Every bounded numeric option becomes a labelled number input for the host and a read-only line for everyone else; `labels` overrides the generated names.
+`LobbySettingsViewModel` takes the zod schema you pass to `defineGame`. Every bounded numeric option becomes a labelled number input for the host and a read-only line for everyone else; every string-enum option becomes a row of choice buttons, one per value (a commit that is not one of them is dropped without sending); `labels` overrides the generated names.
 
 ```ts
 import type { GameConnectionManager } from "@partygame/game-client";

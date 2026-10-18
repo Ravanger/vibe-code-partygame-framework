@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/svelte";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import TieBreakerPrompting from "../../ui/screens/TieBreakerPrompting.svelte";
 import TieBreakerReveal from "../../ui/screens/TieBreakerReveal.svelte";
 import TieBreakerVote from "../../ui/screens/TieBreakerVote.svelte";
@@ -62,6 +62,28 @@ describe("Tie-breaker answering screen", () => {
     render(TieBreakerPrompting, { manager: tieBreaker("TieBreakerPrompting", false).manager });
     expect(screen.getByText(/sit tight while the tied players answer/i)).toBeInTheDocument();
     expect(screen.queryByLabelText("Your answer")).not.toBeInTheDocument();
+  });
+
+  it("keeps a rejected answer and shows the reason beside it", async () => {
+    const c = tieBreaker("TieBreakerPrompting");
+    addMine(c.state, c.manager.playerId).prompts.push(prompt("tb1", "Name a bird"));
+    c.room.reply = {
+      ok: false,
+      error: { code: "CONTENT_REJECTED", message: "That text was not allowed" },
+    };
+    render(TieBreakerPrompting, { manager: c.manager });
+    await fireEvent.input(screen.getByLabelText("Your answer"), { target: { value: "Keep me" } });
+    await fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await vi.waitFor(() => expect(c.manager.lastServerError?.code).toBe("CONTENT_REJECTED"));
+    expect(screen.getByLabelText("Your answer")).toHaveValue("Keep me");
+    expect(screen.getByText("That text was not allowed")).toBeInTheDocument();
+  });
+
+  it("shows the host a moderation line with the count and level", () => {
+    const c = connectedClient({ role: "host" }, "TieBreakerPrompting");
+    c.state.rejectedTexts = 1;
+    render(TieBreakerPrompting, { manager: c.manager });
+    expect(screen.getByText("1 answer rejected, level moderate")).toBeInTheDocument();
   });
 });
 

@@ -1,3 +1,5 @@
+import type { TextFilter } from "@partygame/content/filter";
+import { ErrorCode } from "@partygame/shared";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
@@ -10,7 +12,9 @@ import {
   InvalidPrivateStateError,
   type MiddlewareContext,
   type PhaseState,
+  required,
   seedFromNumber,
+  textFilterMiddleware,
   timingMiddleware,
 } from "../src/index.js";
 import { replayLog } from "../src/testing/index.js";
@@ -101,6 +105,8 @@ const rawContext = (priv: unknown): MiddlewareContext<PhaseState, unknown, unkno
   seed: [0, 0, 0, 0],
   event: { kind: "enter" },
   rejectionCount: 0,
+  redactedRejectionCount: 0,
+  reject: () => {},
 });
 
 describe("getActionLog", () => {
@@ -327,6 +333,87 @@ describe("action log roster", () => {
     const log = table.log();
     expect(log?.roster).toEqual([defaultSeat("p1"), defaultSeat("p2")]);
     expect(log?.entries.filter((e) => e.actionType === "START_GAME")).toHaveLength(2);
+  });
+});
+
+const redactFilter: TextFilter = {
+  check(text) {
+    return text.includes("bad") ? { ok: false, reason: "no bad words" } : { ok: true };
+  },
+};
+
+/** A table whose logger sits outside the text filter, so it observes the filter's rejection. */
+class RTable extends TestTable<S, P, O> {
+  constructor() {
+    super({
+      definition: defineGame<S, P, O>({
+        name: "Redacted",
+        version: "1",
+        minPlayers: 1,
+        maxPlayers: 4,
+        startPhase: "Play",
+        createPrivateState: () => ({ secret: "s" }),
+        filterLevel: () => "moderate",
+        phases: {
+          Play: {
+            duration: 1000,
+            onTimeout: (ctx) => ctx.transition("Score"),
+            actions: {
+              SAY: action({
+                from: "player",
+                payload: z.object({ text: z.string() }),
+                textFields: ["text"],
+                handler: (ctx) => ctx.state.log.push(`said:${ctx.payload.text}`),
+              }),
+              REFUSE: action({
+                from: "player",
+                payload: z.object({}),
+                handler: (ctx) => ctx.reject(ErrorCode.NOT_ALLOWED, "no"),
+              }),
+            },
+          },
+          Score: {},
+        },
+        middleware: [actionLogMiddleware(), textFilterMiddleware(redactFilter)],
+      }),
+      state: { phase: "", phaseEndsAt: 0, canStart: false, log: [] },
+      options: { rounds: 2 },
+      players: 2,
+    });
+  }
+
+  log(): ActionLog | undefined {
+    return getActionLog(this.priv);
+  }
+}
+
+describe("redacted rejections", () => {
+  it("records a filter rejection with rejected and redacted, and no payload", () => {
+    const table = new RTable();
+    table.start();
+    table.act("p2", "SAY", { text: "a bad one" });
+    const entry = required(
+      table.log()?.entries.find((e) => e.kind === "action" && e.actionType === "SAY"),
+      "SAY log entry",
+    );
+    expect(entry.senderId).toBe("p2");
+    expect(entry.rejected).toBe(true);
+    expect(entry.redacted).toBe(true);
+    expect(entry.payload).toBeUndefined();
+    expect(JSON.stringify(table.log())).not.toContain("bad one");
+  });
+
+  it("keeps the payload of a rejection that did not ask for redaction", () => {
+    const table = new RTable();
+    table.start();
+    table.act("p2", "REFUSE");
+    const entry = required(
+      table.log()?.entries.find((e) => e.kind === "action" && e.actionType === "REFUSE"),
+      "REFUSE log entry",
+    );
+    expect(entry.rejected).toBe(true);
+    expect(entry.redacted).toBeUndefined();
+    expect(entry.payload).toEqual({});
   });
 });
 

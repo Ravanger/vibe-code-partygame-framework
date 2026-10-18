@@ -20,6 +20,7 @@
     "typecheck": "tsc -p tsconfig.test.json"
   },
   "dependencies": {
+    "@partygame/content": "workspace:*",
     "@partygame/shared": "workspace:*",
     "zod": "^4.6.5",
     "xstate": "^5.33.2"

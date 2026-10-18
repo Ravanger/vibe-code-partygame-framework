@@ -1,3 +1,4 @@
+import type { TextFilter } from "@partygame/content/filter";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
@@ -12,6 +13,7 @@ import {
   seedFromNumber,
   sfc32,
   shuffle,
+  textFilterMiddleware,
 } from "../src/index.js";
 import { replayLog } from "../src/testing/index.js";
 import { TestTable } from "../src/testing/TestTable.js";
@@ -843,5 +845,61 @@ describe("replay round-trip", () => {
       players: 2,
     });
     expect(states).toEqual(snapshots);
+  });
+});
+
+describe("redacted entries", () => {
+  interface RS extends PhaseState {
+    log: string[];
+  }
+  const rAction = actionFactory<RS, { secret: string }, Record<string, never>>();
+  const redactFilter: TextFilter = {
+    check(text) {
+      return text.includes("bad") ? { ok: false, reason: "no bad words" } : { ok: true };
+    },
+  };
+  // An empty payload is accepted and changes state: if replay re-dispatched a redacted entry
+  // (whose payload was never logged), the final state would diverge from live. Reproducing
+  // live requires skipping the entry.
+  const definition = defineGame<RS, { secret: string }, Record<string, never>>({
+    name: "RedactedReplay",
+    version: "1",
+    minPlayers: 1,
+    maxPlayers: 4,
+    startPhase: "Play",
+    createPrivateState: () => ({ secret: "s" }),
+    filterLevel: () => "moderate",
+    phases: {
+      Play: {
+        actions: {
+          MAYBE: rAction({
+            from: "player",
+            payload: z.object({ text: z.string().optional() }),
+            textFields: ["text"],
+            handler: (ctx) => ctx.state.log.push(`maybe:${ctx.payload.text ?? ""}`),
+          }),
+        },
+      },
+    },
+    middleware: [actionLogMiddleware(), textFilterMiddleware(redactFilter)],
+  });
+  const newState = (): RS => ({ phase: "", phaseEndsAt: 0, canStart: false, log: [] });
+
+  it("skips redacted entries and reproduces the live final state", () => {
+    const table = new TestTable<RS, { secret: string }, Record<string, never>>({
+      definition,
+      state: newState(),
+      options: {},
+      players: 2,
+    });
+    table.start();
+    table.act("p2", "MAYBE", { text: "fine" });
+    table.act("p2", "MAYBE", { text: "a bad one" }); // refused by the filter, redacted in the log
+    expect(table.state.log).toEqual(["maybe:fine"]);
+    const log = JSON.parse(JSON.stringify(getActionLog(table.priv))) as ActionLog;
+    expect(log.entries.some((e) => e.redacted === true)).toBe(true);
+    const { states } = replayLog(definition, log, { state: newState(), options: {} });
+    const last = required(states[states.length - 1], "final replayed state");
+    expect(last.log).toEqual(["maybe:fine"]);
   });
 });

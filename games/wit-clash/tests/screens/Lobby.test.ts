@@ -104,6 +104,19 @@ describe("Waiting room", () => {
     expect(full.room.requests).toEqual([{ type: "ACTION", payload: { type: "START_GAME" } }]);
   });
 
+  it("lets the host pick the filter level", async () => {
+    const c = lobby("host");
+    render(WaitingRoom, { manager: c.manager });
+    expect(screen.getByRole("button", { name: "moderate" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await fireEvent.click(screen.getByRole("button", { name: "strict" }));
+    expect(c.room.requests).toEqual([
+      { type: "ACTION", payload: { filterLevel: "strict", type: "SET_OPTIONS" } },
+    ]);
+  });
+
   it("sends the name after typing pauses", async () => {
     vi.useFakeTimers();
     const c = lobby("player");

@@ -1,3 +1,4 @@
+import type { FilterLevel } from "@partygame/content/filter";
 import type { ErrorCode } from "@partygame/shared";
 import type { z } from "zod";
 import type { Seed } from "../utils.js";
@@ -86,19 +87,53 @@ export type MiddlewareEvent =
   | { kind: "enter" }
   | { kind: "timeout" }
   | { kind: "roster-change" }
-  | { kind: "action"; actionType: string; senderId: string; payload: unknown }
+  | {
+      kind: "action";
+      actionType: string;
+      senderId: string;
+      payload: unknown;
+      /** The action definition's declared text fields, when it has any. */
+      textFields?: readonly string[];
+      /** The room's current text-filter level (`GameDefinition.filterLevel`, default `"off"`). */
+      filterLevel: FilterLevel;
+    }
   | { kind: "transition"; from: string; to: string };
+
+/** Options for {@link MiddlewareContext.reject}. */
+export interface RejectOptions {
+  /**
+   * Ask the action log to record this rejection without its payload: the entry gets
+   * `rejected: true` and `redacted: true` and no `payload`, so the rejected text (e.g. a filter
+   * hit) never lands in the log or a replay bundle. `replayLog` skips such entries — they were
+   * refused before the handler ran and changed no state.
+   */
+  redactPayload?: boolean;
+}
 
 /** What a middleware receives: the game context plus the event being wrapped or observed. */
 export interface MiddlewareContext<TState extends PhaseState, TPrivate, TOptions>
   extends GameContext<TState, TPrivate, TOptions> {
   readonly event: MiddlewareEvent;
   /**
-   * `ctx.reject()` calls and a handler-thrown `FrameworkError` recorded since this dispatch started. Live: read it after `next()` to see
-   * whether the action's handler rejected. Pre-chain rejections never enter the chain, and hooks
-   * have no `reject`, so a non-zero count here means the handler rejected.
+   * `ctx.reject()` calls (middleware or handler) and a handler-thrown `FrameworkError` recorded
+   * since this dispatch started. Live: read it after `next()` to see whether the action was
+   * rejected. Pre-chain rejections never enter the chain, so a non-zero count here means the
+   * rejection happened inside this chain.
    */
   readonly rejectionCount: number;
+  /**
+   * Rejections recorded since this dispatch started that asked for payload redaction (a `reject`
+   * with `redactPayload: true`). Always ≤ {@link rejectionCount}; read it after `next()`, like
+   * the count.
+   */
+  readonly redactedRejectionCount: number;
+  /**
+   * Send an `ERROR` to the action's sender with `code` and `message`; counted in
+   * {@link rejectionCount}, and in {@link redactedRejectionCount} when `redactPayload` is set.
+   * Available for `action` events only — throws for any other event kind. Does not stop the chain
+   * by itself: omit `next()` to skip what is inside.
+   */
+  reject(code: ErrorCode, message: string, options?: RejectOptions): void;
 }
 
 /**
@@ -120,6 +155,8 @@ export interface ActionDefinition<TState extends PhaseState, TPrivate, TOptions,
   from: PlayerRole;
   /** Validates the whole action object (`type` plus flat fields). */
   payload: z.ZodType<TPayload>;
+  /** Payload fields that hold free text; `textFilterMiddleware` checks exactly these. The framework never guesses. */
+  textFields?: readonly string[];
   handler(ctx: ActionContext<TState, TPrivate, TOptions, TPayload>): void;
 }
 
@@ -160,6 +197,8 @@ export interface GameDefinition<
   autoStart?: boolean;
   /** Parses the room-create options. Omit for a game without options. */
   options?: z.ZodType<TOptions>;
+  /** The room's text-filter level, from the parsed options (e.g. a host-picked lobby option). Default `"off"`. */
+  filterLevel?(options: TOptions): FilterLevel;
   /** Called once per room (and per replay table); must return a fresh object each call, never a shared one: the action log and phase timings are keyed by it. */
   createPrivateState(): TPrivate;
   /** `"Lobby"` is reserved and built in. */

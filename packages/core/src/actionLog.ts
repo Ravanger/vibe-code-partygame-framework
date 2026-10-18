@@ -41,6 +41,13 @@ export interface ActionLogEntry {
    * as well, and throws on a mismatch in either direction.
    */
   rejected?: boolean;
+  /**
+   * `kind === "action"`: true when the rejection asked for payload redaction (`ctx.reject` with
+   * `redactPayload: true`) — the entry then carries no `payload`, so the rejected text never lands
+   * in the log or a replay bundle. The action was refused before the handler ran, so it changed no
+   * state and `replayLog` skips re-dispatching it. Implies `rejected: true`.
+   */
+  redacted?: boolean;
   /** `kind === "transition"`: source phase. */
   from?: string;
   /** `kind === "transition"`: target phase. */
@@ -124,7 +131,10 @@ function logOf(ctx: MiddlewareContext<PhaseState, unknown, unknown>): ActionLog 
  * (malformed envelope, unknown action, unauthorized sender, inactive player, invalid payload) are not
  * logged; an action whose handler calls `ctx.reject()` or throws a `FrameworkError` has reached the
  * chain and is logged with `rejected: true`, so such logs replay — the re-dispatch re-runs the handler (RNG draws included)
- * and must reject again. See "Action log and replay" in the framework guide.
+ * and must reject again. A rejection recorded with `redactPayload: true` (a middleware that refused
+ * the action before the handler ran, like the text filter) is logged with `rejected: true` and
+ * `redacted: true` and no `payload`; `replayLog` skips such entries. See "Action log and replay" in
+ * the framework guide.
  */
 export function actionLogMiddleware(): PhaseMiddleware<PhaseState, unknown, unknown> {
   return (ctx, next) => {
@@ -158,6 +168,11 @@ export function actionLogMiddleware(): PhaseMiddleware<PhaseState, unknown, unkn
     next();
     if (event.kind === "action" && ctx.rejectionCount > 0) {
       entry.rejected = true;
+      if (ctx.redactedRejectionCount > 0) {
+        // The rejection asked for redaction: the payload never lands in the log.
+        delete entry.payload;
+        entry.redacted = true;
+      }
     }
   };
 }

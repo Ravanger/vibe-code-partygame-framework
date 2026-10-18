@@ -1,4 +1,5 @@
 import { OptionsReader, PhaseClock, TypingReporter } from "@partygame/game-ui";
+import { ErrorCode } from "@partygame/shared";
 import { ACTION, ANSWER_MAX_LENGTH } from "../../src/actionNames.js";
 import type { SubmitAnswerPayload } from "../../src/actions.js";
 import { DEFAULT_OPTIONS, type WitClashOptions, WitClashOptionsSchema } from "../../src/options.js";
@@ -17,15 +18,16 @@ export class PromptingViewModel {
   private readonly drafts = $state<Record<string, string>>({});
   private readonly clock: PhaseClock;
   private readonly typing: TypingReporter;
+  private readonly options: OptionsReader<WitClashOptions>;
   readonly progress: AnswerProgress;
 
   constructor(private readonly manager: WitClashManager) {
-    const options = new OptionsReader<WitClashOptions>(
+    this.options = new OptionsReader<WitClashOptions>(
       manager,
       WitClashOptionsSchema,
       DEFAULT_OPTIONS,
     );
-    this.clock = new PhaseClock(manager, () => options.current.promptSeconds);
+    this.clock = new PhaseClock(manager, () => this.options.current.promptSeconds);
     this.typing = new TypingReporter((typing) => {
       void this.manager.sendAction(ACTION.SET_TYPING, { typing });
     });
@@ -82,6 +84,20 @@ export class PromptingViewModel {
     return !this.allSubmitted || this.editing;
   }
 
+  get rejectionReason(): string {
+    const error = this.manager.lastServerError;
+    return error?.code === ErrorCode.CONTENT_REJECTED ? error.message : "";
+  }
+
+  get moderationLine(): string {
+    const state = this.manager.state;
+    if (!state || !this.manager.isHost) return "";
+    const level = this.options.current.filterLevel;
+    if (level === "off") return "";
+    const count = state.rejectedTexts;
+    return `${count} ${count === 1 ? "answer" : "answers"} rejected, level ${level}`;
+  }
+
   get answersIn(): number {
     return [...(this.manager.state?.progress.values() ?? [])].reduce((sum, n) => sum + n, 0);
   }
@@ -129,6 +145,8 @@ export class PromptingViewModel {
     };
     const result = await this.manager.sendAction(ACTION.SUBMIT_ANSWER, payload);
     if (!result.ok) return;
+    // The rejection is answered: clear the reason and the toast it drove.
+    this.manager.dismissError();
     if (this.currentIndex < this.prompts.length - 1) ++this.currentIndex;
     else this.editing = false;
   }

@@ -12,6 +12,7 @@ import {
   matchup,
   option,
   prompt,
+  type SeatConfig,
   scoreRow,
   withoutTyping,
 } from "../helpers/client.js";
@@ -91,8 +92,8 @@ describe("CategoryVoteViewModel", () => {
 });
 
 describe("PromptingViewModel", () => {
-  function writing() {
-    const c = connectedClient({}, "Prompting");
+  function writing(seat: SeatConfig = {}) {
+    const c = connectedClient(seat, "Prompting");
     const mine = addMine(c.state, c.manager.playerId);
     mine.prompts.push(prompt("m1", "First prompt"), prompt("m2", "Second prompt"));
     c.state.progress.set(c.manager.playerId, 0);
@@ -168,7 +169,55 @@ describe("PromptingViewModel", () => {
     await vm.submit();
     expect(vm.currentIndex).toBe(0);
     expect(c.manager.lastServerError?.message).toBe("Too late");
+    expect(vm.rejectionReason).toBe("");
     vm.destroy();
+  });
+
+  it("keeps the draft and shows the filter's reason after a rejected submit, then clears it", async () => {
+    const { c, vm } = writing();
+    expect(vm.rejectionReason).toBe("");
+    c.room.reply = {
+      ok: false,
+      error: { code: "CONTENT_REJECTED", message: "contains inappropriate language" },
+    };
+    vm.setDraft("a rude line");
+    await vm.submit();
+    expect(vm.currentIndex).toBe(0);
+    expect(vm.draft).toBe("a rude line");
+    expect(vm.rejectionReason).toBe("contains inappropriate language");
+    c.room.reply = { ok: true };
+    vm.setDraft("a kind line");
+    await vm.submit();
+    expect(vm.currentIndex).toBe(1);
+    expect(vm.rejectionReason).toBe("");
+    expect(c.manager.lastServerError).toBeUndefined();
+    vm.destroy();
+  });
+
+  it("gives the host a moderation line with the count and level", () => {
+    const { c, vm } = writing({ role: "host" });
+    expect(vm.moderationLine).toBe("0 answers rejected, level moderate");
+    c.state.rejectedTexts = 1;
+    c.patch();
+    expect(vm.moderationLine).toBe("1 answer rejected, level moderate");
+    c.state.rejectedTexts = 2;
+    c.patch();
+    expect(vm.moderationLine).toBe("2 answers rejected, level moderate");
+    vm.destroy();
+  });
+
+  it("hides the moderation line from non-hosts and when filtering is off", () => {
+    const { c, vm } = writing();
+    c.state.rejectedTexts = 3;
+    c.patch();
+    expect(vm.moderationLine).toBe("");
+    vm.destroy();
+
+    const host = writing({ role: "host" });
+    host.c.state.options = JSON.stringify({ totalRounds: 3, filterLevel: "off" });
+    host.c.patch();
+    expect(host.vm.moderationLine).toBe("");
+    host.vm.destroy();
   });
 
   it("does not submit an empty draft or without prompts", async () => {
@@ -231,6 +280,7 @@ describe("PromptingViewModel", () => {
     c.manager.dispose();
     expect([vm.answersIn, vm.answersExpected, vm.roundLabel]).toEqual([0, 0, "Round 0 of 0"]);
     expect(vm.categoryLabel).toBe("");
+    expect([vm.moderationLine, vm.rejectionReason]).toEqual(["", ""]);
     vm.destroy();
   });
 });

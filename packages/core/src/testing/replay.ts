@@ -218,7 +218,10 @@ function authoritativeDurations<TState extends PhaseState, TPrivate, TOptions>(
  * Entries must be time-ordered; a backwards clock throws. A re-dispatch that rejects where the log
  * says the action was accepted throws, and one that accepts where the log marks the entry
  * `rejected: true` throws as well — both directions of mismatch mean the log is not what this
- * definition produces. Each step's logged transitions and enters are asserted against the replayed
+ * definition produces. Redacted entries (`redacted: true`) are skipped: they were refused before the
+ * handler ran, so no payload was logged and no state or RNG changed — the clock still advances to
+ * their `t` and they produce a snapshot like any other step. Each step's logged transitions and enters
+ * are asserted against the replayed
  * runtime — a log that contradicts what this definition actually does throws, naming the mismatch.
  * The log's shape is validated up front (`entries` an array of objects each with a known `kind`,
  * numeric `t` and `seq` and a string `phase`; `header` with a string `game`, four-number `seed` and
@@ -302,7 +305,9 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
     const prePhase = table.phase;
     const error = failedRunGuard(entry, () => {
       table.tick(entry.t - table.host.time);
-      if (entry.kind !== "action") return undefined;
+      // A redacted entry was refused before the handler ran and its payload is not in the log:
+      // re-dispatching it is impossible, and skipping it keeps state and RNG in step with live.
+      if (entry.kind !== "action" || entry.redacted === true) return undefined;
       const senderId = entry.senderId ?? "";
       return table.act(
         toSeat?.get(senderId) ?? senderId,
@@ -310,7 +315,7 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
         (entry.payload ?? {}) as Record<string, unknown>,
       );
     });
-    if (entry.kind === "action") {
+    if (entry.kind === "action" && entry.redacted !== true) {
       if (entry.rejected === true) {
         // The live handler rejected: the re-dispatch must reject again. Re-running it also consumes
         // any RNG draws the handler made before rejecting, keeping the stream in step with live.

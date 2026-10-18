@@ -12,7 +12,7 @@ The dev-side game declaration: `defineGamePackage` plus the entry functions (`se
 
 ## May import
 
-- Runtime: `@partygame/bots`, `@partygame/core`, `@partygame/launcher`, `@partygame/server`, `@partygame/shared`, `@partygame/terminal`
+- Runtime: `@partygame/bots`, `@partygame/content` (types only: `TextFilter` for the declaration's filter field), `@partygame/core`, `@partygame/launcher`, `@partygame/server`, `@partygame/shared`, `@partygame/terminal`
 - Dev: `@partygame/config`
 
 ## Public entry points
