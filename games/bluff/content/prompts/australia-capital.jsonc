@@ -1,0 +1,6 @@
+{
+  // A prompt with one canonical answer; players fake the rest.
+  "id": "australia-capital",
+  "question": "What is the capital of Australia?",
+  "truth": "Canberra"
+}

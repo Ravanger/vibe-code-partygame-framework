@@ -1,0 +1,20 @@
+{
+  "name": "@partygame/bluff",
+  "version": "0.1.0",
+  "type": "module",
+  "dependencies": {
+    "@colyseus/schema": "^5.0.35",
+    "@partygame/content": "workspace:*",
+    "@partygame/core": "workspace:*",
+    "@partygame/shared": "workspace:*",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@partygame/config": "workspace:*",
+    "vitest": "^4.1.11"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit && svelte-check --tsconfig ./tsconfig.json --threshold warning"
+  }
+}
