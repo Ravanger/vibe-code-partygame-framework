@@ -5,7 +5,7 @@ import { type BluffPhase, FAKE_SLOT } from "../private.js";
 import { Round } from "../round.js";
 
 export const Writing: BluffPhase = {
-  duration: 45_000,
+  duration: (ctx) => ctx.options.writingSeconds * 1000,
   onEnter: (ctx) => new Round(ctx).startRound(),
   onTimeout: (ctx) => ctx.transition(PHASE.Voting),
   onRosterChange: (ctx) => {

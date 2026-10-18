@@ -1,7 +1,7 @@
-import { nodeTestConfig } from "@partygame/config/vitest";
+import { uiTestConfig } from "@partygame/config/vitest";
 
-export default nodeTestConfig({
-  name: "bluff-game",
-  include: ["tests/game/**/*.test.ts", "tests/bots/**/*.test.ts", "tests/terminal/**/*.test.ts"],
-  coverage: ["src/**/*.ts", "bots/**/*.ts", "terminal/**/*.ts"],
+export default uiTestConfig({
+  name: "bluff",
+  exclude: ["tests/game/**", "tests/bots/**", "tests/terminal/**"],
+  coverage: ["src/**/*.ts", "ui/**/*.ts"],
 });

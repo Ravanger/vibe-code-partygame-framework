@@ -5,3 +5,5 @@ export const PHASE = {
   Reveal: "Reveal",
   Results: "Results",
 } as const;
+
+export type PhaseName = (typeof PHASE)[keyof typeof PHASE];

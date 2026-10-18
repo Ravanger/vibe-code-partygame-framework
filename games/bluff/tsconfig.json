@@ -1,4 +1,12 @@
 {
   "extends": "@partygame/config/tsconfig.game.json",
-  "include": ["src/**/*.ts", "tests/**/*.ts"]
+  "include": [
+    "src/**/*.ts",
+    "ui/**/*.ts",
+    "ui/**/*.svelte",
+    "tests/**/*.ts",
+    "server.ts",
+    "launch.ts",
+    "bots/**/*.ts"
+  ]
 }

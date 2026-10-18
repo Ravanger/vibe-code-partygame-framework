@@ -2,7 +2,7 @@
 
 A bluffing party game: each round the room draws a trivia prompt with one hidden true answer. Every player writes a fake answer, the truth and the fakes are shuffled, and everyone votes on which option is real. You score for guessing the truth and for fooling others into picking your fake.
 
-This is the headless rules spike of the M6 archetypes milestone (#156): rules plus `FakeHost` tests, no UI yet (the UI lands in #157).
+Part of the M6 archetypes milestone: the headless rules spike (#156) plus the browser UI (#157) — player and TV screens for every phase, a demo bot, and `server.ts`/`launch.ts` entries over one `gamePackage` declaration.
 
 ## Rules
 
@@ -14,7 +14,7 @@ This is the headless rules spike of the M6 archetypes milestone (#156): rules pl
 
 A departure mid-round prunes that player's data; a drop below 3 players ends the game back in the lobby. A dropped connection is not a departure.
 
-Options: `rounds` (1–10, default 3).
+Options (host-tunable in the lobby): `rounds` (1–10, default 3), `writingSeconds` (10–300, default 45), `votingSeconds` (5–120, default 30), `revealSeconds` (1–60, default 15).
 
 ## Framework kits used (`@partygame/core/kits`, `@experimental`)
 
@@ -23,6 +23,19 @@ Options: `rounds` (1–10, default 3).
 - **drawPool** (prompt draw with pool wrap-around).
 
 Roster guards from the core root: `departedIds`, `isBelowMinimum`.
+
+## UI
+
+One screen per phase in `ui/screens/` (registered in `ui/screens/index.ts`), one viewmodel each under `ui/viewmodels/`, routed by `createAppRouter` from `@partygame/game-ui`. Every screen also renders with no seat (the TV display): the prompt, the board and the vote count stay visible, inputs disappear. Your own option is marked "yours" only in your private view — authorship never leaves the server until Reveal.
+
+## Running it
+
+```sh
+bun run launch bluff        # server + API + browser client (see the root AGENTS.md)
+cd games/bluff && bun run dev:server   # just the game server, hot-reloading
+```
+
+A watch-only all-bot room comes from the launcher's demo tables (`botKit` in `gamePackage.ts`).
 
 ## Running the tests
 

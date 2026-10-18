@@ -5,7 +5,7 @@ import type { BluffPhase } from "../private.js";
 import { Round } from "../round.js";
 
 export const Voting: BluffPhase = {
-  duration: 30_000,
+  duration: (ctx) => ctx.options.votingSeconds * 1000,
   onEnter: (ctx) => {
     const round = new Round(ctx);
     round.buildOptions();
