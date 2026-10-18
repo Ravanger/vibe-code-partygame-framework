@@ -167,19 +167,60 @@
           "awardPoints": {},
           "composeLeaderboard": {},
           "defineGame": {},
+          "departedIds": {},
           "getActionLog": {},
           "getPhaseTimings": {},
+          "isBelowMinimum": {},
           "leaderboard": {},
           "loggingMiddleware": {},
           "mulberry32": {},
           "newId": {},
           "randomSeed": {},
           "required": {},
+          "seatedCount": {},
           "seedFromNumber": {},
           "sfc32": {},
           "shuffle": {},
           "textFilterMiddleware": {},
           "timingMiddleware": {}
+        }
+      },
+      "./kits": {
+        "target": {
+          "import": "./dist/kits/index.js",
+          "types": "./dist/kits/index.d.ts"
+        },
+        "symbols": {
+          "Responses": {
+            "experimental": true
+          },
+          "Slots": {
+            "experimental": true
+          },
+          "allHaveVoted": {
+            "experimental": true
+          },
+          "allResponded": {
+            "experimental": true
+          },
+          "countVoted": {
+            "experimental": true
+          },
+          "drawPool": {
+            "experimental": true
+          },
+          "eligibleVoters": {
+            "experimental": true
+          },
+          "entriesFor": {
+            "experimental": true
+          },
+          "leaders": {
+            "experimental": true
+          },
+          "tallyVotes": {
+            "experimental": true
+          }
         }
       },
       "./testing": {

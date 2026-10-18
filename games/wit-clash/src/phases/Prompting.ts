@@ -1,10 +1,10 @@
-import { required, shuffle } from "@partygame/core";
+import { departedIds, required, shuffle } from "@partygame/core";
+import { drawPool, entriesFor } from "@partygame/core/kits";
 import { dailyRng } from "../dailySeed.js";
-import { classifyMatchup, draftsFor } from "../drafts.js";
+import { classifyMatchup } from "../drafts.js";
 import { buildMatchups } from "../matchups.js";
 import { PHASE } from "../phaseNames.js";
 import type { WitClashContext, WitClashPhase } from "../private.js";
-import { pickPromptPool } from "../promptPool.js";
 import { PLACEHOLDER_TEXT, Round } from "../round.js";
 import { Answer, Matchup, PromptAssignment } from "../state.js";
 import { TieBreakerFlow } from "../tieBreakerFlow.js";
@@ -14,7 +14,7 @@ const finish = (ctx: WitClashContext): void => {
   const { state, priv } = ctx;
   const skipped: number[] = [];
   state.matchups.forEach((matchup, index) => {
-    const entries = draftsFor(matchup.id, priv.assignments, priv.drafts);
+    const entries = entriesFor(matchup.id, priv.assignments, priv.drafts);
     const answers = entries.map((entry) => {
       const answer = new Answer();
       answer.id = ctx.newId();
@@ -46,12 +46,11 @@ const deal = (ctx: WitClashContext): void => {
   // Daily mode plays the canon, so a selected category may not exist in the host's content.
   const repository = ctx.options.mode === "daily" ? priv.canon : priv.content;
   const category = required(repository.byId(priv.categoryId), "selected category");
-  const { prompts, exhausted } = pickPromptPool(
+  const { items: prompts } = drawPool(
     category.prompts,
     priv.usedPromptIds,
     Math.max(players.length, 1),
   );
-  if (exhausted) for (const prompt of category.prompts) priv.usedPromptIds.delete(prompt.id);
   // Daily mode deals from the date seed so every server deals identically; the room rng still
   // drives everything else (answer shuffles and friends).
   const dealRng =
@@ -97,8 +96,7 @@ export const Prompting: WitClashPhase = {
     const round = new Round(ctx);
     if (round.endIfTooFewPlayers()) return;
     round.remember();
-    for (const playerId of [...ctx.priv.assignments.keys()]) {
-      if (ctx.player(playerId)) continue;
+    for (const playerId of departedIds(ctx.priv.assignments.keys(), ctx)) {
       ctx.priv.assignments.delete(playerId);
       ctx.priv.drafts.delete(playerId);
     }

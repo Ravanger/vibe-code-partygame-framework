@@ -1,10 +1,9 @@
 import { awardPoints, required, shuffle } from "@partygame/core";
-import { draftsFor } from "./drafts.js";
+import { countVoted, entriesFor, tallyVotes } from "@partygame/core/kits";
 import { PHASE } from "./phaseNames.js";
 import type { WitClashContext } from "./private.js";
 import { Round } from "./round.js";
 import { Answer, Matchup, PromptAssignment } from "./state.js";
-import { countVoted, tallyVotes } from "./tally.js";
 import {
   pickTieBreakerPrompt,
   resolveTieBreaker,
@@ -100,7 +99,7 @@ export class TieBreakerFlow {
     const { priv } = this.ctx;
     this.round.clearTyping();
     const matchup = this.current();
-    const answers = draftsFor(matchup.id, priv.assignments, priv.drafts).flatMap((entry) => {
+    const answers = entriesFor(matchup.id, priv.assignments, priv.drafts).flatMap((entry) => {
       if (entry.text === undefined) return [];
       const answer = new Answer();
       answer.id = this.ctx.newId();

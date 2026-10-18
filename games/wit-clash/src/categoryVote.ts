@@ -1,4 +1,5 @@
 import { required } from "@partygame/core";
+import { leaders } from "@partygame/core/kits";
 
 export interface TalliedOption {
   id: string;
@@ -13,7 +14,6 @@ export function resolveCategoryVote(
   if (options.length === 0) {
     throw new Error("Cannot resolve category vote: no options provided");
   }
-  const maxVotes = Math.max(...options.map((o) => o.votes));
-  const leaders = options.filter((o) => o.votes === maxVotes);
-  return required(leaders[Math.floor(random() * leaders.length)], "category leader").id;
+  const { ids } = leaders(new Map(options.map((o): [string, number] => [o.id, o.votes])));
+  return required(ids[Math.floor(random() * ids.length)], "category leader");
 }

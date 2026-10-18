@@ -15,7 +15,7 @@ src/
   phases/            one PhaseDefinition per file; answering.ts holds the answer actions shared by both answering phases, endGame.ts the host-only END_GAME every phase accepts
   round.ts           writes rule results into the synced state
   tieBreakerFlow.ts  the final tie-breaker: contenders, prompt, answers, votes, verdict
-  matchups.ts  categoryVote.ts  eligibility.ts  tally.ts  drafts.ts  promptPool.ts  scoring.ts  scoreboard.ts  tieBreaker.ts  bestAnswers.ts
+  matchups.ts  categoryVote.ts  eligibility.ts  drafts.ts  scoring.ts  scoreboard.ts  tieBreaker.ts  bestAnswers.ts
                      pure rules: plain data and the rng in, plain data out
   dailySeed.ts       daily mode's date seed: `utcDay` and `dailyRng` (FNV-1a into `mulberry32`)
   content/           category files (.jsonc) loader
