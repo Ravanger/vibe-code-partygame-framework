@@ -19,6 +19,7 @@ The Colyseus-free game runtime: `defineGame`, `GameRuntime`, lobby built-ins, ac
 ## Public entry points
 
 - `.`: `defineGame`, `actionFactory`, `GameRuntime`, scoring, `shuffle`, action log, `textFilterMiddleware`.
+- `./kits`: phase kits (`@experimental`): collectResponses (`allResponded`, `entriesFor`, `dropLeavers`).
 - `./testing`: `FakeHost`, `TestTable`, `replayLog`.
 
 ## Tests

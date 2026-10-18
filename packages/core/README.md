@@ -5,6 +5,7 @@ Pure game runtime (no Colyseus, no I/O): define phases and rules, dispatch actio
 | Import | What |
 |---|---|
 | `@partygame/core` | `defineGame`, `actionFactory`, `GameRuntime`; `leaderboard`, `composeLeaderboard`, `awardPoints`; `shuffle`, `required`; seeded RNG `sfc32`, `Seed`, `randomSeed`, `seedFromNumber`, `mulberry32`, `newId` |
+| `@partygame/core/kits` | Phase kits (`@experimental`): collectResponses — `allResponded(slots, responses, presentIds)`, `entriesFor(slotId, slots, responses)`, `dropLeavers(slots, responses, presentIds)` (mutable maps), types `Slots`, `Responses` |
 | `@partygame/core/testing` | `FakeHost` (manual clock, in-memory seats), `TestTable` (scenario boilerplate) |
 
 ## Define a game

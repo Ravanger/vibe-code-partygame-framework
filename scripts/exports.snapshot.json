@@ -182,6 +182,29 @@
           "timingMiddleware": {}
         }
       },
+      "./kits": {
+        "target": {
+          "import": "./dist/kits/index.js",
+          "types": "./dist/kits/index.d.ts"
+        },
+        "symbols": {
+          "Responses": {
+            "experimental": true
+          },
+          "Slots": {
+            "experimental": true
+          },
+          "allResponded": {
+            "experimental": true
+          },
+          "dropLeavers": {
+            "experimental": true
+          },
+          "entriesFor": {
+            "experimental": true
+          }
+        }
+      },
       "./testing": {
         "target": {
           "import": "./dist/testing/index.js",

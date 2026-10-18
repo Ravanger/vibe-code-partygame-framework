@@ -1,6 +1,7 @@
 import { required, shuffle } from "@partygame/core";
+import { dropLeavers, entriesFor } from "@partygame/core/kits";
 import { dailyRng } from "../dailySeed.js";
-import { classifyMatchup, draftsFor } from "../drafts.js";
+import { classifyMatchup } from "../drafts.js";
 import { buildMatchups } from "../matchups.js";
 import { PHASE } from "../phaseNames.js";
 import type { WitClashContext, WitClashPhase } from "../private.js";
@@ -14,7 +15,7 @@ const finish = (ctx: WitClashContext): void => {
   const { state, priv } = ctx;
   const skipped: number[] = [];
   state.matchups.forEach((matchup, index) => {
-    const entries = draftsFor(matchup.id, priv.assignments, priv.drafts);
+    const entries = entriesFor(matchup.id, priv.assignments, priv.drafts);
     const answers = entries.map((entry) => {
       const answer = new Answer();
       answer.id = ctx.newId();
@@ -97,11 +98,7 @@ export const Prompting: WitClashPhase = {
     const round = new Round(ctx);
     if (round.endIfTooFewPlayers()) return;
     round.remember();
-    for (const playerId of [...ctx.priv.assignments.keys()]) {
-      if (ctx.player(playerId)) continue;
-      ctx.priv.assignments.delete(playerId);
-      ctx.priv.drafts.delete(playerId);
-    }
+    dropLeavers(ctx.priv.assignments, ctx.priv.drafts, new Set(ctx.players().map((p) => p.id)));
     round.pruneDeparted();
     if (answersComplete(ctx)) finish(ctx);
   },

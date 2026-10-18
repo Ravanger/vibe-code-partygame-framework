@@ -1,11 +1,15 @@
+import { allResponded } from "@partygame/core/kits";
 import { ErrorCode } from "@partygame/shared";
 import { ACTION, defineAction, SetTypingSchema, SubmitAnswerSchema } from "../actions.js";
-import { allAnswered } from "../drafts.js";
 import type { WitClashContext, WitClashPhase } from "../private.js";
 import { Round } from "../round.js";
 
 export const answersComplete = (ctx: WitClashContext): boolean =>
-  allAnswered(ctx.priv.assignments, ctx.priv.drafts, new Set(ctx.activePlayers().map((p) => p.id)));
+  allResponded(
+    ctx.priv.assignments,
+    ctx.priv.drafts,
+    new Set(ctx.activePlayers().map((p) => p.id)),
+  );
 
 export function answeringActions(
   finish: (ctx: WitClashContext) => void,

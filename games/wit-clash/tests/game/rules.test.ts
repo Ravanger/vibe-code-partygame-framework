@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ACTION } from "../../src/actions.js";
-import { allAnswered, classifyMatchup, draftsFor } from "../../src/drafts.js";
+import { classifyMatchup } from "../../src/drafts.js";
 import { eligibleVoterIds } from "../../src/eligibility.js";
 import { DEFAULT_OPTIONS } from "../../src/options.js";
 import { PHASE } from "../../src/phaseNames.js";
@@ -65,41 +65,7 @@ describe("pickPromptPool", () => {
   });
 });
 
-describe("drafts", () => {
-  const assignments = new Map([
-    ["a", ["m1", "m2"]],
-    ["b", ["m1"]],
-  ]);
-  const drafts = new Map([
-    ["a", new Map([["m1", "hi"]])],
-    ["b", new Map([["m1", "yo"]])],
-  ]);
-
-  it("lists the authors of a matchup with their text or lack of it", () => {
-    expect(draftsFor("m1", assignments, drafts)).toEqual([
-      { playerId: "a", text: "hi" },
-      { playerId: "b", text: "yo" },
-    ]);
-    expect(draftsFor("m2", assignments, drafts)).toEqual([{ playerId: "a", text: undefined }]);
-  });
-
-  it("is complete only when every assignment has a draft", () => {
-    const present = new Set(["a", "b"]);
-    expect(allAnswered(assignments, drafts, present)).toBe(false);
-    drafts.get("a")?.set("m2", "late");
-    expect(allAnswered(assignments, drafts, present)).toBe(true);
-    expect(allAnswered(new Map(), new Map(), present)).toBe(false);
-  });
-
-  it("does not wait for absent authors, and never completes with nobody present", () => {
-    const pending = new Map([["a", new Map([["m1", "hi"]])]]);
-    expect(allAnswered(assignments, pending, new Set(["a"]))).toBe(false);
-    expect(allAnswered(assignments, pending, new Set(["b"]))).toBe(false);
-    expect(allAnswered(new Map([["b", ["m1"]]]), drafts, new Set(["a", "b"]))).toBe(true);
-    expect(allAnswered(assignments, drafts, new Set(["c"]))).toBe(false);
-    expect(allAnswered(assignments, drafts, new Set())).toBe(false);
-  });
-
+describe("classifyMatchup", () => {
   it("classifies matchups by how many real answers they have", () => {
     const real = { playerId: "a", text: "x" };
     const blank = { playerId: "b", text: undefined };
