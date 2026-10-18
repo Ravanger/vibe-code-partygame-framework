@@ -43,20 +43,3 @@ export function entriesFor(
     .filter(([, ids]) => ids.includes(slotId))
     .map(([playerId]) => ({ playerId, text: responses.get(playerId)?.get(slotId) }));
 }
-
-/**
- * Deletes the entries of players who are not present from both maps.
- *
- * @experimental Phase kit API; may change before 1.0.
- */
-export function dropLeavers(
-  slots: Map<string, readonly string[]>,
-  responses: Map<string, Map<string, string>>,
-  presentIds: ReadonlySet<string>,
-): void {
-  for (const playerId of [...slots.keys()]) {
-    if (presentIds.has(playerId)) continue;
-    slots.delete(playerId);
-    responses.delete(playerId);
-  }
-}

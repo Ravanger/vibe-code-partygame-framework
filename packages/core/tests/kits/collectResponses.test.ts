@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { allResponded, dropLeavers, entriesFor } from "../../src/kits/collectResponses.js";
+import { allResponded, entriesFor } from "../../src/kits/collectResponses.js";
 
 describe("entriesFor", () => {
   const slots = new Map([
@@ -49,42 +49,5 @@ describe("allResponded", () => {
 
   it("is not complete when a present author has no responses at all", () => {
     expect(allResponded(new Map([["a", ["s1"]]]), new Map(), new Set(["a"]))).toBe(false);
-  });
-});
-
-describe("dropLeavers", () => {
-  it("removes the entries of players who are not present, keeps the rest", () => {
-    const slots = new Map([
-      ["a", ["s1"]],
-      ["b", ["s2"]],
-      ["c", ["s3"]],
-    ]);
-    const responses = new Map([
-      ["a", new Map([["s1", "hi"]])],
-      ["b", new Map([["s2", "yo"]])],
-      ["c", new Map([["s3", "zz"]])],
-    ]);
-    dropLeavers(slots, responses, new Set(["a", "c"]));
-    expect([...slots.keys()]).toEqual(["a", "c"]);
-    expect([...responses.keys()]).toEqual(["a", "c"]);
-  });
-
-  it("removes a leaver even when they never responded", () => {
-    const slots = new Map([
-      ["a", ["s1"]],
-      ["b", ["s2"]],
-    ]);
-    const responses = new Map([["a", new Map([["s1", "hi"]])]]);
-    dropLeavers(slots, responses, new Set(["a"]));
-    expect([...slots.keys()]).toEqual(["a"]);
-    expect(responses.has("b")).toBe(false);
-  });
-
-  it("is a no-op on empty maps", () => {
-    const slots = new Map<string, string[]>();
-    const responses = new Map<string, Map<string, string>>();
-    dropLeavers(slots, responses, new Set());
-    expect(slots.size).toBe(0);
-    expect(responses.size).toBe(0);
   });
 });
