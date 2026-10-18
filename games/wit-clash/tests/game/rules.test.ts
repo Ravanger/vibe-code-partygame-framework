@@ -7,46 +7,10 @@ import { PHASE } from "../../src/phaseNames.js";
 import { pickPromptPool } from "../../src/promptPool.js";
 import { composeScoreboard } from "../../src/scoreboard.js";
 import { forfeitAward, settleMatchup } from "../../src/scoring.js";
-import { allHaveVoted, countVoted, tallyVotes } from "../../src/tally.js";
 
 describe("eligibleVoterIds", () => {
-  it("excludes the authors", () => {
-    expect(eligibleVoterIds(["a", "b", "c", "d"], ["a", "b"], false)).toEqual(["c", "d"]);
-  });
-
   it("is empty for a forfeit", () => {
     expect(eligibleVoterIds(["a", "b", "c"], ["a"], true)).toEqual([]);
-  });
-
-  it("is empty when everyone wrote an answer", () => {
-    expect(eligibleVoterIds(["a", "b"], ["a", "b"], false)).toEqual([]);
-  });
-});
-
-describe("tally", () => {
-  const votes = new Map([
-    ["a", "x"],
-    ["b", "x"],
-    ["c", "y"],
-  ]);
-
-  it("counts only the given voters", () => {
-    expect(tallyVotes(["a", "c", "z"], votes)).toEqual(
-      new Map([
-        ["x", 1],
-        ["y", 1],
-      ]),
-    );
-  });
-
-  it("knows when every voter has voted, and never for nobody", () => {
-    expect(allHaveVoted(["a", "b"], votes)).toBe(true);
-    expect(allHaveVoted(["a", "z"], votes)).toBe(false);
-    expect(allHaveVoted([], votes)).toBe(false);
-  });
-
-  it("counts who has voted", () => {
-    expect(countVoted(["a", "z", "c"], votes)).toBe(2);
   });
 });
 

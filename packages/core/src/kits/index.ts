@@ -5,3 +5,10 @@ export {
   type Responses,
   type Slots,
 } from "./collectResponses.js";
+export {
+  allHaveVoted,
+  countVoted,
+  eligibleVoters,
+  leaders,
+  tallyVotes,
+} from "./voteAndTally.js";

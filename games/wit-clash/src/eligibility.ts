@@ -1,3 +1,5 @@
+import { eligibleVoters } from "@partygame/core/kits";
+
 /** Who may vote on a matchup: the active players who did not write one of its answers. A forfeit has no vote. */
 export function eligibleVoterIds(
   activeIds: readonly string[],
@@ -5,6 +7,5 @@ export function eligibleVoterIds(
   isForfeit: boolean,
 ): string[] {
   if (isForfeit) return [];
-  const authors = new Set(authorIds);
-  return activeIds.filter((id) => !authors.has(id));
+  return eligibleVoters(activeIds, authorIds);
 }

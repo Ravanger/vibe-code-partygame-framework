@@ -1,9 +1,9 @@
 import { awardPoints, required } from "@partygame/core";
+import { tallyVotes } from "@partygame/core/kits";
 import { PHASE } from "../phaseNames.js";
 import type { WitClashContext, WitClashPhase } from "../private.js";
 import { Round } from "../round.js";
 import { settleMatchup } from "../scoring.js";
-import { tallyVotes } from "../tally.js";
 import { TieBreakerFlow } from "../tieBreakerFlow.js";
 
 const reveal = (ctx: WitClashContext): void => {

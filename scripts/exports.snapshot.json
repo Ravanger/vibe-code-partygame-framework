@@ -194,13 +194,28 @@
           "Slots": {
             "experimental": true
           },
+          "allHaveVoted": {
+            "experimental": true
+          },
           "allResponded": {
+            "experimental": true
+          },
+          "countVoted": {
             "experimental": true
           },
           "dropLeavers": {
             "experimental": true
           },
+          "eligibleVoters": {
+            "experimental": true
+          },
           "entriesFor": {
+            "experimental": true
+          },
+          "leaders": {
+            "experimental": true
+          },
+          "tallyVotes": {
             "experimental": true
           }
         }

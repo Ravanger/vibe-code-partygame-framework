@@ -1,11 +1,11 @@
 import { required } from "@partygame/core";
+import { countVoted } from "@partygame/core/kits";
 import { pickBestAnswers } from "./bestAnswers.js";
 import { eligibleVoterIds } from "./eligibility.js";
 import { META } from "./meta.js";
 import type { WitClashContext } from "./private.js";
 import { composeScoreboard } from "./scoreboard.js";
 import { BestAnswer, type Matchup, PlayerPrivate, ScoreEntry } from "./state.js";
-import { countVoted } from "./tally.js";
 
 export const PLACEHOLDER_TEXT = "(no answer)";
 

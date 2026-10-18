@@ -1,10 +1,9 @@
 import { awardPoints, required, shuffle } from "@partygame/core";
-import { entriesFor } from "@partygame/core/kits";
+import { countVoted, entriesFor, tallyVotes } from "@partygame/core/kits";
 import { PHASE } from "./phaseNames.js";
 import type { WitClashContext } from "./private.js";
 import { Round } from "./round.js";
 import { Answer, Matchup, PromptAssignment } from "./state.js";
-import { countVoted, tallyVotes } from "./tally.js";
 import {
   pickTieBreakerPrompt,
   resolveTieBreaker,

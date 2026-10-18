@@ -1,4 +1,5 @@
 import { required, shuffle } from "@partygame/core";
+import { allHaveVoted, countVoted, tallyVotes } from "@partygame/core/kits";
 import { ErrorCode } from "@partygame/shared";
 import { ACTION, defineAction, VoteCategorySchema } from "../actions.js";
 import { resolveCategoryVote } from "../categoryVote.js";
@@ -7,7 +8,6 @@ import { PHASE } from "../phaseNames.js";
 import type { WitClashContext, WitClashPhase } from "../private.js";
 import { Round } from "../round.js";
 import { CategoryOption } from "../state.js";
-import { allHaveVoted, countVoted, tallyVotes } from "../tally.js";
 
 const OPTION_COUNT = 3;
 

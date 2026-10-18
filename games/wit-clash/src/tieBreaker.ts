@@ -1,3 +1,4 @@
+import { eligibleVoters, leaders } from "@partygame/core/kits";
 import type { Category, Prompt } from "./content/CategoryRepository.js";
 
 export interface TieBreakerPlan {
@@ -16,8 +17,8 @@ export function topScorers(
   scores: Readonly<Record<string, number>>,
   candidateIds: readonly string[],
 ): string[] {
-  const best = Math.max(...candidateIds.map((id) => scores[id] ?? 0));
-  return candidateIds.filter((id) => (scores[id] ?? 0) === best);
+  const counts = new Map(candidateIds.map((id): [string, number] => [id, scores[id] ?? 0]));
+  return leaders(counts).ids;
 }
 
 /** An unused tie-breaker of the last category if there is one, otherwise of any other category. */
@@ -42,17 +43,15 @@ export function tieBreakerVoterIds(
   activeIds: readonly string[],
   contenderIds: readonly string[],
 ): string[] {
-  return activeIds.filter((id) => !contenderIds.includes(id));
+  return eligibleVoters(activeIds, contenderIds);
 }
 
 /** A lone answer wins by default; otherwise the single top vote-getter, or the authors still level. */
 export function resolveTieBreaker(
   answers: ReadonlyArray<{ authorId: string; votes: number }>,
 ): TieBreakerResult {
-  const best = Math.max(...answers.map((a) => a.votes));
-  const leaderIds = answers.filter((a) => a.votes === best).map((a) => a.authorId);
-  const [only] = leaderIds;
-  return { winnerId: leaderIds.length === 1 ? only : undefined, leaderIds };
+  const { ids } = leaders(new Map(answers.map((a): [string, number] => [a.authorId, a.votes])));
+  return { winnerId: ids.length === 1 ? ids[0] : undefined, leaderIds: ids };
 }
 
 export const TIE_BREAKER_BONUS = 1;
