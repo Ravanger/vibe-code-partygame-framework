@@ -203,6 +203,9 @@
           "countVoted": {
             "experimental": true
           },
+          "drawPool": {
+            "experimental": true
+          },
           "dropLeavers": {
             "experimental": true
           },

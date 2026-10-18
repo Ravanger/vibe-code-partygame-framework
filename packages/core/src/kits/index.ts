@@ -5,6 +5,7 @@ export {
   type Responses,
   type Slots,
 } from "./collectResponses.js";
+export { drawPool } from "./drawPool.js";
 export {
   allHaveVoted,
   countVoted,

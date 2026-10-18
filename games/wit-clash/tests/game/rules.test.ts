@@ -4,28 +4,12 @@ import { classifyMatchup } from "../../src/drafts.js";
 import { eligibleVoterIds } from "../../src/eligibility.js";
 import { DEFAULT_OPTIONS } from "../../src/options.js";
 import { PHASE } from "../../src/phaseNames.js";
-import { pickPromptPool } from "../../src/promptPool.js";
 import { composeScoreboard } from "../../src/scoreboard.js";
 import { forfeitAward, settleMatchup } from "../../src/scoring.js";
 
 describe("eligibleVoterIds", () => {
   it("is empty for a forfeit", () => {
     expect(eligibleVoterIds(["a", "b", "c"], ["a"], true)).toEqual([]);
-  });
-});
-
-describe("pickPromptPool", () => {
-  const prompts = ["p1", "p2", "p3", "p4"].map((id) => ({ id, text: id }));
-
-  it("offers only unused prompts while enough remain", () => {
-    expect(pickPromptPool(prompts, new Set(["p1"]), 3)).toEqual({
-      prompts: prompts.slice(1),
-      exhausted: false,
-    });
-  });
-
-  it("falls back to the whole category when too few are left", () => {
-    expect(pickPromptPool(prompts, new Set(["p1", "p2"]), 3)).toEqual({ prompts, exhausted: true });
   });
 });
 
