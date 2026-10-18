@@ -67,6 +67,23 @@ describe("checkGates", () => {
     expect(rules(diffOf("packages/core/src/a.ts", [], [line]))).toEqual([rule]);
   });
 
+  describe("approved lines", () => {
+    const bailOut = '    ctx.skip("symlinks not permitted on this machine");';
+
+    it("allows the maintainer-approved #129 symlink bail-out in the content test", () => {
+      expect(rules(diffOf("packages/content/tests/content.test.ts", [], [bailOut]))).toEqual([]);
+    });
+
+    it("approves nothing else, in that file or anywhere", () => {
+      expect(
+        rules(diffOf("packages/content/tests/content.test.ts", [], ["it.skip('x', () => {});"])),
+      ).toEqual(["focused-or-skipped-test"]);
+      expect(rules(diffOf("packages/core/src/a.ts", [], [bailOut]))).toEqual([
+        "focused-or-skipped-test",
+      ]);
+    });
+  });
+
   it("ignores forbidden text on removed lines", () => {
     expect(rules(diffOf("packages/core/src/a.ts", ["// biome-ignore x"], []))).toEqual([]);
   });

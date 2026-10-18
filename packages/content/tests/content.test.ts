@@ -123,11 +123,15 @@ describe("loadJsoncDir", () => {
     );
   });
 
-  it("ignores a symlinked .jsonc file", async () => {
+  it("ignores a symlinked .jsonc file", async (ctx) => {
     const dir = await dirWith({ "real.json": '{ "id": "a", "n": 1 }' });
     const outside = await mkdtemp(join(tmpdir(), "jsonc-outside-"));
     await writeFile(join(outside, "linked.jsonc"), '{ "id": "b", "n": 2 }');
-    await symlink(join(outside, "linked.jsonc"), join(dir, "linked.jsonc"));
+    try {
+      await symlink(join(outside, "linked.jsonc"), join(dir, "linked.jsonc"));
+    } catch {
+      ctx.skip("symlinks not permitted on this machine");
+    }
     expect((await loadJsoncDir(dir, Item, byId)).map((item) => item.id)).toEqual(["a"]);
   });
 
