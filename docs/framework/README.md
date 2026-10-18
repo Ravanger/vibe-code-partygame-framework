@@ -159,7 +159,7 @@ Semantics:
 2. Transitions stay queued: `ctx.transition("X")` called inside a hook or middleware still applies only after the outermost hook returns, exactly as without middleware. Middleware cannot apply a transition synchronously.
 3. Transition observation is an event (`{ from, to }`), not a wrapped `ctx.transition`. The event fires only after the source chain has fully unwound. It also covers `returnToLobby` (`to: "Lobby"`) and re-entering the current phase (`from === to`).
 4. Errors: a middleware throw is handled exactly like a hook throw today — on the action path the sender gets `INTERNAL`; enter/timeout/roster paths follow the existing hook-failure path; a throw on a `transition` event defers the same way and never cancels the transition it observes. No new error codes.
-5. Rejecting: middleware gets `ctx.reject(code, message)` for `action` events (it throws for any other event kind) — the sender gets the `ERROR` with that code and message, and the rejection counts in `rejectionCount`. It does not stop the chain by itself: omit `next()` to keep the handler from running. Middleware still cannot cancel a queued transition.
+5. Rejecting: middleware gets `ctx.reject(code, message, options?)` for `action` events (it throws for any other event kind) — the sender gets the `ERROR` with that code and message, and the rejection counts in `rejectionCount`. Pass `{ redactPayload: true }` to also count it in `redactedRejectionCount`: an action log then records the entry with `rejected: true`, `redacted: true` and no `payload`, so rejected text (like a filter hit) never lands in the log or a replay bundle. It does not stop the chain by itself: omit `next()` to keep the handler from running. Middleware still cannot cancel a queued transition.
 6. `defineGame` validates at definition time: `middleware` must be an array of functions, otherwise the problem is listed in the `GameDefinitionError`. Reserved action names are unchanged.
 7. Ordering: for `enter`, the outermost middleware runs first; a transition event fires only after the full chain unwinds (consistent with queued transitions).
 8. The built-in lobby hooks run through the same wrapped path — middleware applies to `Lobby` too.
@@ -172,7 +172,7 @@ outside the chain), no cancelling queued transitions.
 - `loggingMiddleware({ log })` — one line per event, no hardcoded console. Exact formats: `enter <phase>`, `timeout <phase>`, `action <ACTION_TYPE> by <senderId> in <phase>`, `transition <from> -> <to>`. No line for `roster-change`.
 - `timingMiddleware()` — records per-phase durations into a store kept outside `ctx.priv` (keyed by it; read back with `getPhaseTimings(priv)`); each phase gets `{ enteredAt: number, durationsMs: number[] }`. Started on enter (before the hook), closed when a transition out of that phase is observed. The currently open phase has no final duration yet. Never touches `ctx.state` (it is synced to clients) or `ctx.priv`; timing metadata stays server-side.
 - `actionLogMiddleware()` — append-only, JSON-serializable record of every middleware-visible event, kept outside `ctx.priv` (read back with `getActionLog(priv)`); see Action log and replay below.
-- `textFilterMiddleware(filter)` — rejects an action whose declared text fields fail the room's filter level. Declare which payload fields are free text per action (`textFields: ["..."]` on the action definition; the framework never guesses) and how strict this room is via `filterLevel?: (options) => "off" | "moderate" | "strict"` on the game definition (default `"off"`). For each declared string field it runs `filter.check(value, level)` in declaration order and, on the first failure, rejects with `CONTENT_REJECTED` and the filter's reason without running the handler. A `TextFilter` comes from `@partygame/content` (`createTextFilter()` is the default English one); at `"off"` the filter is never called, and actions without `textFields` pass untouched.
+- `textFilterMiddleware(filter)` — rejects an action whose declared text fields fail the room's filter level. Declare which payload fields are free text per action (`textFields: ["..."]` on the action definition; the framework never guesses) and how strict this room is via `filterLevel?: (options) => "off" | "moderate" | "strict"` on the game definition (default `"off"`). For each declared string field it runs `filter.check(value, level)` in declaration order and, on the first failure, rejects with `CONTENT_REJECTED` and the filter's reason — always with `redactPayload`, so an action log records the rejection without the offending text — without running the handler. Pass `{ onRejected?(ctx, reason) }` as the second argument to be told about each refusal (after the rejection is recorded); the game can react (e.g. count rejections) but cannot change the outcome. A `TextFilter` comes from `@partygame/content` (`createTextFilter()` is the default English one); at `"off"` the filter is never called, and actions without `textFields` pass untouched.
 
 ### Action log and replay
 `actionLogMiddleware()` records everything the middleware sees into an append-only, JSON-serializable log
@@ -215,14 +215,19 @@ every room and replay table append to one log and one timing store.
 | `kind` | `"action" \| "transition" \| "enter" \| "timeout" \| "roster-change"` |
 | `actionType`, `senderId`, `payload` | `kind === "action"` only; `payload` is the zod-parsed action object |
 | `rejected` | `kind === "action"` only; `true` when the handler called `ctx.reject()` or threw a `FrameworkError` (the action ran but changed nothing). Absent on accepted actions |
+| `redacted` | `kind === "action"` only; `true` when the rejection asked for payload redaction (`ctx.reject` with `redactPayload: true`) — the entry then carries no `payload`. The action was refused before the handler ran, so it changed no state and `replayLog` skips re-dispatching it. Implies `rejected: true` |
 | `from`, `to` | `kind === "transition"` only |
 
 Actions rejected **before the handler chain** — malformed envelope, unknown action, unauthorized sender,
 inactive player, invalid payload — are **not** logged: they never reach the middleware and change no state.
 An action whose *handler* calls `ctx.reject()` or throws a `FrameworkError` (as the built-in `START_GAME` does with too few players) has reached the chain and **is** logged, marked
 `rejected: true`; it changes no state either, and such logs replay — the re-dispatch re-runs the handler
-(RNG draws included) and must reject again (a mismatch in either direction throws). Roster changes are
-recorded for observability (see the replay limitation below).
+(RNG draws included) and must reject again (a mismatch in either direction throws). A rejection recorded with
+`redactPayload: true` — a middleware that refused the action before the handler ran (the text filter does this) — is logged with `rejected: true`,
+`redacted: true` and no `payload`; because it changed no state and drew no RNG, `replayLog` skips re-dispatching it
+(the clock still advances to its `t`). For such refusals to be logged at all, register the logger outside the
+refusing middleware (`middleware: [actionLogMiddleware(), textFilterMiddleware(filter)]`) — a layer that omits
+`next()` never runs what is inside. Roster changes are recorded for observability (see the replay limitation below).
 
 **Roster.** When `START_GAME` is dispatched, the middleware also records `log.roster` — the seats in
 seat order at start time, each as `{ id, isConnected, isReady, isActive }`, captured once (a second

@@ -99,6 +99,17 @@ export type MiddlewareEvent =
     }
   | { kind: "transition"; from: string; to: string };
 
+/** Options for {@link MiddlewareContext.reject}. */
+export interface RejectOptions {
+  /**
+   * Ask the action log to record this rejection without its payload: the entry gets
+   * `rejected: true` and `redacted: true` and no `payload`, so the rejected text (e.g. a filter
+   * hit) never lands in the log or a replay bundle. `replayLog` skips such entries — they were
+   * refused before the handler ran and changed no state.
+   */
+  redactPayload?: boolean;
+}
+
 /** What a middleware receives: the game context plus the event being wrapped or observed. */
 export interface MiddlewareContext<TState extends PhaseState, TPrivate, TOptions>
   extends GameContext<TState, TPrivate, TOptions> {
@@ -111,11 +122,18 @@ export interface MiddlewareContext<TState extends PhaseState, TPrivate, TOptions
    */
   readonly rejectionCount: number;
   /**
-   * Send an `ERROR` to the action's sender with `code` and `message`; counted in
-   * {@link rejectionCount}. Available for `action` events only — throws for any other event kind.
-   * Does not stop the chain by itself: omit `next()` to skip what is inside.
+   * Rejections recorded since this dispatch started that asked for payload redaction (a `reject`
+   * with `redactPayload: true`). Always ≤ {@link rejectionCount}; read it after `next()`, like
+   * the count.
    */
-  reject(code: ErrorCode, message: string): void;
+  readonly redactedRejectionCount: number;
+  /**
+   * Send an `ERROR` to the action's sender with `code` and `message`; counted in
+   * {@link rejectionCount}, and in {@link redactedRejectionCount} when `redactPayload` is set.
+   * Available for `action` events only — throws for any other event kind. Does not stop the chain
+   * by itself: omit `next()` to skip what is inside.
+   */
+  reject(code: ErrorCode, message: string, options?: RejectOptions): void;
 }
 
 /**

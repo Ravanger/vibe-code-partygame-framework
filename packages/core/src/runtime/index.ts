@@ -12,5 +12,6 @@ export type {
   PhaseState,
   PlayerInfo,
   PlayerRole,
+  RejectOptions,
   RuntimeHost,
 } from "./types.js";

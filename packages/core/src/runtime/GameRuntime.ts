@@ -23,6 +23,7 @@ import type {
   PhaseDefinition,
   PhaseMiddleware,
   PhaseState,
+  RejectOptions,
   RuntimeHost,
 } from "./types.js";
 
@@ -76,6 +77,8 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   private readonly queue = new TransitionQueue();
   private readonly failures: unknown[] = [];
   private readonly rejections: ServerError[] = [];
+  /** Rejections this dispatch recorded with `redactPayload`; reset like `rejections`. */
+  private redactedRejections = 0;
   private current: PhaseDefinition<TState, TPrivate, TOptions>;
   private phaseName: string = LOBBY_PHASE;
   private duration = 0;
@@ -161,6 +164,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   dispatch(playerId: string, rawAction: unknown): ServerError | undefined {
     if (this.stopped) return STOPPED_ERROR;
     this.rejections.length = 0;
+    this.redactedRejections = 0;
     try {
       this.run(() => this.handle(playerId, rawAction), true);
     } catch (error) {
@@ -256,6 +260,9 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
 
   private middlewareContext(event: MiddlewareEvent): MiddlewareContext<TState, TPrivate, TOptions> {
     const rejections = this.rejections;
+    // A getter shorthand binds `this` to the returned context object, so the live counter is
+    // read through a captured reference to the runtime.
+    const runtime = this;
     return {
       ...this.context(),
       event,
@@ -263,15 +270,23 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       get rejectionCount() {
         return rejections.length;
       },
-      reject: (code, message) => this.middlewareReject(event, code, message),
+      get redactedRejectionCount() {
+        return runtime.redactedRejections;
+      },
+      reject: (code, message, options) => this.middlewareReject(event, code, message, options),
     };
   }
 
   /** Middleware rejections target the action's sender; other event kinds have no one to tell. */
-  private middlewareReject(event: MiddlewareEvent, code: ErrorCode, message: string): void {
+  private middlewareReject(
+    event: MiddlewareEvent,
+    code: ErrorCode,
+    message: string,
+    options?: RejectOptions,
+  ): void {
     if (event.kind !== "action")
       throw new Error("ctx.reject() is only available for action events");
-    this.reject(event.senderId, event.actionType, code, message);
+    this.reject(event.senderId, event.actionType, code, message, options?.redactPayload);
   }
 
   private rosterChange(): void {
@@ -442,9 +457,11 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     action: string | undefined,
     code: ErrorCode,
     message: string,
+    redactPayload?: boolean,
   ): void {
     const error: ServerError = action === undefined ? { code, message } : { code, message, action };
     this.rejections.push(error);
+    if (redactPayload) ++this.redactedRejections;
     this.host.send(playerId, ServerMessage.ERROR, error);
   }
 }

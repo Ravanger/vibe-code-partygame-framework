@@ -153,6 +153,7 @@ const rawContext = (priv: unknown): MiddlewareContext<PhaseState, unknown, unkno
   seed: [0, 0, 0, 0],
   event: { kind: "enter" },
   rejectionCount: 0,
+  redactedRejectionCount: 0,
   reject: () => {},
 });
 
@@ -416,5 +417,31 @@ describe("textFilterMiddleware", () => {
     expect(table.act("p2", "COUNT", { n: 3 })).toBeUndefined();
     expect(table.state.log).toEqual(["counted:3"]);
     expect(filterCalls).toEqual([]);
+  });
+
+  it("calls onRejected once with the filter's reason when it refuses an action", () => {
+    const reasons: string[] = [];
+    const table = new FTable(
+      [textFilterMiddleware(testFilter, { onRejected: (_ctx, reason) => reasons.push(reason) })],
+      () => "moderate",
+    );
+    table.start();
+    const error = table.act("p2", "SAY", { text: "a bad one" });
+    expect(error?.code).toBe(ErrorCode.CONTENT_REJECTED);
+    expect(table.state.log).toEqual([]);
+    expect(reasons).toEqual(["no bad words"]);
+  });
+
+  it("rejects with redactPayload, visible to an outer middleware after next()", () => {
+    const counts: number[] = [];
+    const observe: PhaseMiddleware<S, P, O> = (ctx, next) => {
+      next();
+      if (ctx.event.kind === "action" && ctx.event.actionType === "SAY")
+        counts.push(ctx.redactedRejectionCount);
+    };
+    const table = new FTable([observe, textFilterMiddleware(testFilter, {})], () => "moderate");
+    table.start();
+    table.act("p2", "SAY", { text: "a bad one" });
+    expect(counts).toEqual([1]);
   });
 });
