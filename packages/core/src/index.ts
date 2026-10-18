@@ -16,6 +16,7 @@ export {
   textFilterMiddleware,
   timingMiddleware,
 } from "./middleware.js";
+export { departedIds, isBelowMinimum, seatedCount } from "./roster.js";
 export * from "./runtime/index.js";
 export {
   awardPoints,

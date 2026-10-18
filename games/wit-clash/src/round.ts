@@ -1,4 +1,4 @@
-import { required } from "@partygame/core";
+import { departedIds, isBelowMinimum, required } from "@partygame/core";
 import { countVoted } from "@partygame/core/kits";
 import { pickBestAnswers } from "./bestAnswers.js";
 import { eligibleVoterIds } from "./eligibility.js";
@@ -35,16 +35,21 @@ export class Round {
   }
 
   pruneDeparted(): void {
-    for (const [playerId, entry] of [...this.ctx.state.mine]) {
-      if (this.ctx.player(playerId)) continue;
+    const { state } = this.ctx;
+    const departed = new Set(
+      departedIds(
+        [...state.mine.keys(), ...state.progress.keys(), ...state.typing.keys()],
+        this.ctx,
+      ),
+    );
+    for (const [playerId, entry] of [...state.mine]) {
+      if (!departed.has(playerId)) continue;
       this.ctx.hideFrom(playerId, entry);
-      this.ctx.state.mine.delete(playerId);
+      state.mine.delete(playerId);
     }
-    for (const playerId of [...this.ctx.state.progress.keys()]) {
-      if (!this.ctx.player(playerId)) this.ctx.state.progress.delete(playerId);
-    }
-    for (const playerId of [...this.ctx.state.typing.keys()]) {
-      if (!this.ctx.player(playerId)) this.ctx.state.typing.delete(playerId);
+    for (const playerId of departed) {
+      state.progress.delete(playerId);
+      state.typing.delete(playerId);
     }
   }
 
@@ -114,8 +119,7 @@ export class Round {
   }
 
   endIfTooFewPlayers(): boolean {
-    const seated = this.ctx.players().filter((p) => p.isActive && p.isReady).length;
-    if (seated >= META.minPlayers) return false;
+    if (!isBelowMinimum(this.ctx, META.minPlayers)) return false;
     this.ctx.state.notice = `Fewer than ${META.minPlayers} players were left, so the game ended.`;
     this.ctx.returnToLobby();
     return true;

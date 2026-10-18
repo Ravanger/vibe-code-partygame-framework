@@ -1,5 +1,5 @@
-import { required, shuffle } from "@partygame/core";
-import { drawPool, dropLeavers, entriesFor } from "@partygame/core/kits";
+import { departedIds, required, shuffle } from "@partygame/core";
+import { drawPool, entriesFor } from "@partygame/core/kits";
 import { dailyRng } from "../dailySeed.js";
 import { classifyMatchup } from "../drafts.js";
 import { buildMatchups } from "../matchups.js";
@@ -96,7 +96,10 @@ export const Prompting: WitClashPhase = {
     const round = new Round(ctx);
     if (round.endIfTooFewPlayers()) return;
     round.remember();
-    dropLeavers(ctx.priv.assignments, ctx.priv.drafts, new Set(ctx.players().map((p) => p.id)));
+    for (const playerId of departedIds(ctx.priv.assignments.keys(), ctx)) {
+      ctx.priv.assignments.delete(playerId);
+      ctx.priv.drafts.delete(playerId);
+    }
     round.pruneDeparted();
     if (answersComplete(ctx)) finish(ctx);
   },
