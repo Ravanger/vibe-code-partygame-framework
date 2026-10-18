@@ -20,6 +20,9 @@ $effect(() => () => vm.destroy());
       {#if vm.categoryLabel}
         <span class="chip">{vm.categoryLabel}</span>
       {/if}
+      {#if vm.moderationLine}
+        <span class="chip">{vm.moderationLine}</span>
+      {/if}
     </div>
     <Timer seconds={vm.secondsLeft} total={vm.totalSeconds} announcement={vm.announcement} />
   </div>
@@ -66,6 +69,10 @@ $effect(() => () => vm.destroy());
       </div>
     {/key}
     <p class="how hand">Write the funniest answer you can</p>
+
+    {#if vm.rejectionReason}
+      <p class="reject-reason">{vm.rejectionReason}</p>
+    {/if}
 
     <AnswerBox
       value={vm.draft}
@@ -140,6 +147,13 @@ $effect(() => () => vm.destroy());
   .how {
     margin: 0;
     color: var(--ink-soft);
+    font-size: var(--fs-3);
+    text-align: center;
+  }
+
+  .reject-reason {
+    margin: 0;
+    color: var(--danger);
     font-size: var(--fs-3);
     text-align: center;
   }

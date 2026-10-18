@@ -102,6 +102,8 @@ export const WitClashState = BaseGameState.extend(
     votesExpected: t.number().default(0),
     progress: t.map("number"),
     answersPerPlayer: t.number().default(0),
+    /** Answers refused by the text filter since the game started; the host sees this count, never the text. */
+    rejectedTexts: t.number().default(0),
     scoreboard: t.array(ScoreEntry),
     tieBreakers: t.array(Matchup),
     tieBreakerContenders: t.array("string"),

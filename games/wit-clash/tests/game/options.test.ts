@@ -66,6 +66,9 @@ describe("room options", () => {
     t.start();
     t.act("p1", "SET_OPTIONS", { totalRounds: 1 });
     expect(t.errors("p1")).toMatchObject([{ code: "WRONG_PHASE" }]);
+    // the filter level is a room option too: refused outside the lobby, still in force
+    const error = t.act("p1", "SET_OPTIONS", { filterLevel: "off" });
+    expect(error?.code).toBe("WRONG_PHASE");
   });
 });
 

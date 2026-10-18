@@ -7,6 +7,7 @@ import {
   connectedClient,
   matchup,
   prompt,
+  type SeatConfig,
   withoutTyping,
 } from "../helpers/client.js";
 
@@ -16,8 +17,8 @@ beforeEach(() => {
 });
 afterEach(() => vi.useRealTimers());
 
-function tieBreaker(phase: string) {
-  const c = connectedClient({ name: "Me" }, phase);
+function tieBreaker(phase: string, seat: SeatConfig = { name: "Me" }) {
+  const c = connectedClient(seat, phase);
   addSeat(c.state, "zed-12345", { name: "Zed" });
   c.state.tieBreakers.push(matchup("old", "Earlier prompt", []));
   c.state.tieBreakers.push(matchup("tb1", "Name a bird", []));
@@ -107,6 +108,43 @@ describe("TieBreakerViewModel answering", () => {
     vm.destroy();
   });
 
+  it("keeps the draft and shows the filter's reason after a rejected submit, then clears it", async () => {
+    const { c, vm } = tieBreaker("TieBreakerPrompting");
+    expect(vm.rejectionReason).toBe("");
+    c.room.reply = {
+      ok: false,
+      error: { code: "CONTENT_REJECTED", message: "contains inappropriate language" },
+    };
+    vm.setDraft("a rude line");
+    await vm.submit();
+    expect(vm.draft).toBe("a rude line");
+    expect(vm.rejectionReason).toBe("contains inappropriate language");
+    c.room.reply = { ok: true };
+    vm.setDraft("a kind line");
+    await vm.submit();
+    expect(vm.rejectionReason).toBe("");
+    expect(c.manager.lastServerError).toBeUndefined();
+    vm.destroy();
+  });
+
+  it("gives the host a moderation line and hides it from others", () => {
+    const { c, vm } = tieBreaker("TieBreakerPrompting");
+    c.state.rejectedTexts = 2;
+    c.patch();
+    expect(vm.moderationLine).toBe("");
+    vm.destroy();
+
+    const host = tieBreaker("TieBreakerPrompting", { role: "host" });
+    expect(host.vm.moderationLine).toBe("0 answers rejected, level moderate");
+    host.c.state.rejectedTexts = 1;
+    host.c.patch();
+    expect(host.vm.moderationLine).toBe("1 answer rejected, level moderate");
+    host.c.state.options = JSON.stringify({ totalRounds: 3, filterLevel: "off" });
+    host.c.patch();
+    expect(host.vm.moderationLine).toBe("");
+    host.vm.destroy();
+  });
+
   it("shows what the server accepted", () => {
     const { c, vm } = tieBreaker("TieBreakerPrompting");
     expect(vm.hasSubmitted).toBe(false);
@@ -174,6 +212,7 @@ describe("TieBreakerViewModel voting", () => {
       false,
     ]);
     expect(vm.promptText).toBe("");
+    expect([vm.moderationLine, vm.rejectionReason]).toEqual(["", ""]);
     vm.destroy();
   });
 });

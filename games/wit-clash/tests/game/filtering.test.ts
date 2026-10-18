@@ -95,4 +95,29 @@ describe("answer filtering", () => {
     const off = toTieBreaker({ options: { filterLevel: "off" } });
     expect(submitFirst(off, "p1", PROFANE)).toBeUndefined();
   });
+
+  it("counts each filtered answer so the host sees how many were refused", () => {
+    const t = new Table();
+    t.toPrompting();
+    submitFirst(t, "p1", PROFANE);
+    submitFirst(t, "p2", PROFANE);
+    expect(t.state.rejectedTexts).toBe(2);
+  });
+
+  it("counts filtered tie-breaker answers too", () => {
+    const t = toTieBreaker();
+    expect(t.state.rejectedTexts).toBe(0);
+    submitFirst(t, "p1", PROFANE);
+    expect(t.state.rejectedTexts).toBe(1);
+  });
+
+  it("clears the count when the game returns to the lobby", () => {
+    const t = new Table();
+    t.toPrompting();
+    submitFirst(t, "p1", PROFANE);
+    expect(t.state.rejectedTexts).toBe(1);
+    t.act("p1", "END_GAME");
+    expect(t.phase).toBe("Lobby");
+    expect(t.state.rejectedTexts).toBe(0);
+  });
 });

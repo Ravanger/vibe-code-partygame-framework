@@ -1,4 +1,5 @@
 import { OptionsReader, PhaseClock, TypingReporter } from "@partygame/game-ui";
+import { ErrorCode } from "@partygame/shared";
 import { ACTION, ANSWER_MAX_LENGTH } from "../../src/actionNames.js";
 import type { CastVotePayload, SubmitAnswerPayload } from "../../src/actions.js";
 import { DEFAULT_OPTIONS, type WitClashOptions, WitClashOptionsSchema } from "../../src/options.js";
@@ -20,15 +21,16 @@ export class TieBreakerViewModel {
   private readonly clock: PhaseClock;
   private readonly recap: MatchupRecap;
   private readonly typing: TypingReporter;
+  private readonly options: OptionsReader<WitClashOptions>;
   readonly progress: AnswerProgress;
 
   constructor(private readonly manager: WitClashManager) {
-    const options = new OptionsReader<WitClashOptions>(
+    this.options = new OptionsReader<WitClashOptions>(
       manager,
       WitClashOptionsSchema,
       DEFAULT_OPTIONS,
     );
-    this.clock = new PhaseClock(manager, () => options.current[this.durationOption()]);
+    this.clock = new PhaseClock(manager, () => this.options.current[this.durationOption()]);
     this.recap = new MatchupRecap(manager);
     this.typing = new TypingReporter((typing) => {
       void this.manager.sendAction(ACTION.SET_TYPING, { typing });
@@ -84,6 +86,20 @@ export class TieBreakerViewModel {
     return this.mine?.prompts[0]?.submitted ?? false;
   }
 
+  get rejectionReason(): string {
+    const error = this.manager.lastServerError;
+    return error?.code === ErrorCode.CONTENT_REJECTED ? error.message : "";
+  }
+
+  get moderationLine(): string {
+    const state = this.manager.state;
+    if (!state || !this.manager.isHost) return "";
+    const level = this.options.current.filterLevel;
+    if (level === "off") return "";
+    const count = state.rejectedTexts;
+    return `${count} ${count === 1 ? "answer" : "answers"} rejected, level ${level}`;
+  }
+
   get choices(): TieBreakerChoice[] {
     const picked = this.mine?.matchupVote;
     return [...(this.matchup?.answers ?? [])].map((a) => ({
@@ -137,7 +153,8 @@ export class TieBreakerViewModel {
     if (!this.canSubmit || !matchup) return;
     this.typing.stop();
     const payload: SubmitAnswerPayload = { matchupId: matchup.id, answer: this.draftText.trim() };
-    await this.manager.sendAction(ACTION.SUBMIT_ANSWER, payload);
+    const result = await this.manager.sendAction(ACTION.SUBMIT_ANSWER, payload);
+    if (result.ok) this.manager.dismissError();
   }
 
   async vote(answerId: string): Promise<void> {

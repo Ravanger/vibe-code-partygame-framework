@@ -111,7 +111,7 @@ describe("Prompting screen", () => {
     ]);
   });
 
-  it("keeps the typed answer when the server rejects it", async () => {
+  it("keeps the typed answer when the server rejects it, with the reason beside it", async () => {
     const { c } = writing();
     c.room.reply = {
       ok: false,
@@ -124,7 +124,22 @@ describe("Prompting screen", () => {
     await fireEvent.click(screen.getByRole("button", { name: "Submit" }));
     await vi.waitFor(() => expect(c.manager.lastServerError?.code).toBe("CONTENT_REJECTED"));
     expect(screen.getByLabelText("Your answer")).toHaveValue("Keep me here");
+    expect(screen.getByText("That text was not allowed")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Second prompt" })).not.toBeInTheDocument();
+  });
+
+  it("shows the host a moderation line with the count and level", () => {
+    const c = connectedClient({ role: "host" }, "Prompting");
+    c.state.rejectedTexts = 2;
+    render(Prompting, { manager: c.manager });
+    expect(screen.getByText("2 answers rejected, level moderate")).toBeInTheDocument();
+  });
+
+  it("shows no moderation line to a non-host", () => {
+    const { c } = writing();
+    c.state.rejectedTexts = 2;
+    render(Prompting, { manager: c.manager });
+    expect(screen.queryByText(/rejected, level/)).not.toBeInTheDocument();
   });
 
   it("submits on Enter and lets Shift+Enter through", async () => {

@@ -32,7 +32,14 @@ export function createWitClashGame({ categories, canon = categories }: WitClashC
     startPhase: PHASE.CategorySelection,
     options: WitClashOptionsSchema,
     filterLevel: (options) => options.filterLevel,
-    middleware: [textFilterMiddleware(createTextFilter())],
+    middleware: [
+      textFilterMiddleware(createTextFilter(), {
+        onRejected: (ctx) => {
+          const state = ctx.state as WitClashState;
+          ++state.rejectedTexts;
+        },
+      }),
+    ],
     createPrivateState: () => new WitClashPrivate(categories, canon),
     phases: {
       [PHASE.CategorySelection]: CategorySelection,
