@@ -24,7 +24,7 @@ export class DemoTable<TState extends BaseGameState> {
   private readonly hostId = crypto.randomUUID();
   private readonly botIds: string[];
   private host: BotPlayer<TState> | undefined;
-  private seat: { room: BotRoom<TState>; watch: RoomWatch } | undefined;
+  protected seat: { room: BotRoom<TState>; watch: RoomWatch; code: string } | undefined;
   private bots: BotPlayer<TState>[] = [];
 
   constructor(private readonly options: DemoTableOptions<TState>) {
@@ -48,19 +48,20 @@ export class DemoTable<TState extends BaseGameState> {
       await Promise.allSettled([room.leave(true)]);
       throw error;
     }
-    this.seat = { room, watch };
+    // claimName has observed a non-empty code; keep it — live state can be clobbered later.
+    this.seat = { room, watch, code: room.state.roomCode };
     this.host = new BotPlayer(room, this.hostId, hostName, strategy, {
       ...bot,
       host: { expectedPlayers: bots + 1, ...bot?.host },
     });
-    return room.state.roomCode;
+    return this.seat.code;
   }
 
   async seatBots(): Promise<BotPlayer<TState>[]> {
-    const { room } = this.openSeat();
+    const { code } = this.openSeat();
     const { endpoint, apiPort, stateClass, strategy, bot, bots, nameFor, timeoutMs } = this.options;
     this.bots = await joinBots({
-      code: room.state.roomCode,
+      code,
       count: bots,
       endpoint,
       apiPort,
@@ -87,7 +88,7 @@ export class DemoTable<TState extends BaseGameState> {
     await Promise.allSettled([host?.leave(), ...this.bots.splice(0).map((each) => each.leave())]);
   }
 
-  private openSeat(): { room: BotRoom<TState>; watch: RoomWatch } {
+  private openSeat(): { room: BotRoom<TState>; watch: RoomWatch; code: string } {
     if (!this.seat) throw new Error("The table is not open");
     return this.seat;
   }

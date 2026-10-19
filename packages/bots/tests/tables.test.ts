@@ -58,6 +58,14 @@ const paddedKit: BotKit<PaddedState> = {
   strategy: { play: (turn) => turn.once("tap", () => turn.later("react", () => turn.act("TAP"))) },
 };
 
+/** Simulates the wire-level decode hiccup that clobbers a synced field after open(). */
+class ClobberingDemoTable extends DemoTable<PaddedState> {
+  clobberRoomCode(): void {
+    if (!this.seat) throw new Error("the table is not open");
+    this.seat.room.state.roomCode = "";
+  }
+}
+
 beforeAll(async () => {
   t = await bootTestServer({
     roomCodeService: codes,
@@ -314,6 +322,23 @@ describe("table overrides", () => {
     });
     leavers.push(demo);
     await demo.open();
+    await expect(demo.seatBots()).rejects.toThrow("Timed out waiting for the room state");
+  }, 20_000);
+
+  it("DemoTable keeps the code open() verified when synced state is later clobbered", async () => {
+    // CI observed a wire-level decode hiccup on the ~4 MB padded state: after open() had read
+    // the code, roomCode came back "" and seatBots died with the API's "Invalid code format".
+    const demo = new ClobberingDemoTable({
+      ...paddedKit,
+      endpoint: t.endpoint,
+      apiPort,
+      bots: 1,
+      timeoutMs: 1,
+      isFinished: () => true,
+    });
+    leavers.push(demo);
+    await demo.open();
+    demo.clobberRoomCode();
     await expect(demo.seatBots()).rejects.toThrow("Timed out waiting for the room state");
   }, 20_000);
 
