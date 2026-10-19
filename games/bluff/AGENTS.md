@@ -17,7 +17,7 @@ The bluffing party game: rules, UI screens, content and entry points, built only
 ## Public entry points
 
 - No `exports`. Entries: `server.ts`, `launch.ts`.
-- Content: `content/prompts/*.jsonc`.
+- Content: `content/prompts.jsonc`.
 
 ## Tests
 

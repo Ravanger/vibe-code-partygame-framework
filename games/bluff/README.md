@@ -7,7 +7,7 @@ Part of the M6 archetypes milestone: the headless rules spike (#156) plus the br
 ## Rules
 
 - **Lobby** — the built-in lobby; the host starts with at least 3 players (max 8).
-- **Writing** (45 s) — a prompt is drawn from `content/prompts/*.jsonc` without replacement (the pool wraps when exhausted). Each player submits one fake answer; the round moves on once everyone has submitted or the timer runs out.
+- **Writing** (45 s) — a prompt is drawn from `content/prompts.jsonc` without replacement (the pool wraps when exhausted). Each player submits one fake answer; the round moves on once everyone has submitted or the timer runs out.
 - **Voting** (30 s) — the truth and every submitted fake become anonymous, shuffled options. Each option's authorship stays server-side; each player privately learns which option is theirs (`mine` view entry, `myOptionId`) so they cannot vote for their own fake. The round moves on once everyone has voted or the timer runs out.
 - **Reveal** (15 s) — the truth and every author are revealed, votes are counted. Points: **+2 for guessing the truth**, **+1 per vote that lands on your fake**.
 - **Results** — final scoreboard; the host can play again.
@@ -15,6 +15,10 @@ Part of the M6 archetypes milestone: the headless rules spike (#156) plus the br
 A departure mid-round prunes that player's data; a drop below 3 players ends the game back in the lobby. A dropped connection is not a departure.
 
 Options (host-tunable in the lobby): `rounds` (1–10, default 3), `writingSeconds` (10–300, default 45), `votingSeconds` (5–120, default 30), `revealSeconds` (1–60, default 15).
+
+## Content
+
+All prompts live in one file: `content/prompts.jsonc`, shaped `{ "prompts": [{ "id", "question", "truth" }] }`. Ids are lowercase kebab-case and unique. A good prompt has a truth that is surprising enough to sound fake — anyone who knows the answer breaks the bluffing, so school trivia with known answers does not belong here. The server refuses to start on missing or invalid JSONC, duplicate ids, an empty list, or fewer than 6 prompts.
 
 ## Framework kits used (`@partygame/core/kits`, `@experimental`)
 
