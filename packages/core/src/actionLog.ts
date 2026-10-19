@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   InvalidPrivateStateError,
   type MiddlewareContext,
@@ -92,6 +93,51 @@ export interface ActionLog {
   roster?: RosterSeat[];
   entries: ActionLogEntry[];
 }
+
+/** One recorded seat: the id plus the flags replay restores when pre-seating. */
+const RosterSeatSchema = z.strictObject({
+  id: z.string(),
+  isConnected: z.boolean(),
+  isReady: z.boolean(),
+  isActive: z.boolean(),
+});
+
+/**
+ * One recorded event. `kind` is declared first and the fields follow the order replay's shape
+ * check has always reported them, so a corrupt entry fails on the same field it used to.
+ */
+const ActionLogEntrySchema = z.strictObject({
+  kind: z.enum(["action", "transition", "enter", "timeout", "roster-change"]),
+  t: z.number(),
+  seq: z.number(),
+  phase: z.string(),
+  actionType: z.string().optional(),
+  senderId: z.string().optional(),
+  payload: z.unknown().optional(),
+  rejected: z.boolean().optional(),
+  redacted: z.boolean().optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
+});
+
+/** The log header, in the order replay's shape check has always reported its fields. */
+const ActionLogHeaderSchema = z.strictObject({
+  game: z.string(),
+  seed: z.tuple([z.number(), z.number(), z.number(), z.number()]),
+  version: z.string().optional(),
+  startedAt: z.number(),
+});
+
+/**
+ * The wire shape of an {@link ActionLog}: strict objects, so a hand-edited log with unknown
+ * fields is rejected as well. `replayLog` validates every log against this before reading it;
+ * bundle and spectator code (#19) validates untrusted logs with it too.
+ */
+export const ActionLogSchema = z.strictObject({
+  entries: z.array(ActionLogEntrySchema),
+  header: ActionLogHeaderSchema,
+  roster: z.array(RosterSeatSchema).optional(),
+});
 
 /**
  * Reads the action log recorded for a runtime's private state. Returns the stored object itself —

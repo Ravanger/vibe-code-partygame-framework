@@ -140,6 +140,7 @@
           "ActionLogEntry": {},
           "ActionLogEntryKind": {},
           "ActionLogHeader": {},
+          "ActionLogSchema": {},
           "GameContext": {},
           "GameDefinition": {},
           "GameDefinitionError": {},
@@ -221,6 +222,18 @@
           "tallyVotes": {
             "experimental": true
           }
+        }
+      },
+      "./replay": {
+        "target": {
+          "import": "./dist/replay/index.js",
+          "types": "./dist/replay/index.d.ts"
+        },
+        "symbols": {
+          "ReplayHost": {},
+          "ReplayInit": {},
+          "ReplayResult": {},
+          "replayLog": {}
         }
       },
       "./testing": {

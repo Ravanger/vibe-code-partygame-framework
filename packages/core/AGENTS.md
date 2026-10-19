@@ -20,7 +20,8 @@ The Colyseus-free game runtime: `defineGame`, `GameRuntime`, lobby built-ins, ac
 
 - `.`: `defineGame`, `actionFactory`, `GameRuntime`, scoring, roster guards (`seatedCount`, `isBelowMinimum`, `departedIds`), `shuffle`, action log, `textFilterMiddleware`.
 - `./kits`: phase kits (`@experimental`): collectResponses (`allResponded`, `entriesFor`), voteAndTally (`tallyVotes`, `allHaveVoted`, `countVoted`, `eligibleVoters`, `leaders`), drawPool (`drawPool`).
-- `./testing`: `FakeHost`, `TestTable`, `replayLog`.
+- `./replay`: `replayLog`, `ReplayHost`.
+- `./testing`: `FakeHost`, `TestTable`, `replayLog` (re-export from `./replay`).
 
 ## Tests
 

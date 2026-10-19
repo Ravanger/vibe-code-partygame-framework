@@ -3,6 +3,7 @@ export {
   type ActionLogEntry,
   type ActionLogEntryKind,
   type ActionLogHeader,
+  ActionLogSchema,
   actionLogMiddleware,
   getActionLog,
   type RosterSeat,

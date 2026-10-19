@@ -13,6 +13,10 @@
       "import": "./dist/kits/index.js",
       "types": "./dist/kits/index.d.ts"
     },
+    "./replay": {
+      "import": "./dist/replay/index.js",
+      "types": "./dist/replay/index.d.ts"
+    },
     "./testing": {
       "import": "./dist/testing/index.js",
       "types": "./dist/testing/index.d.ts"

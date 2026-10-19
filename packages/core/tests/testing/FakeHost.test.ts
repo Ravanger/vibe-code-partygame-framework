@@ -65,6 +65,14 @@ describe("FakeHost", () => {
     for (let i = 0; i < 10; ++i) expect(host.rng()).toBe(expected());
   });
 
+  it("keeps a given Seed tuple as-is", () => {
+    const seed = seedFromNumber(7);
+    const host = new FakeHost(seed);
+    expect(host.seed).toEqual(seed);
+    const expected = sfc32(seed);
+    for (let i = 0; i < 10; ++i) expect(host.rng()).toBe(expected());
+  });
+
   it("unseeded is seed 0: deterministic, and replayable by that seed", () => {
     const host = new FakeHost();
     expect(host.seed).toEqual(seedFromNumber(0));

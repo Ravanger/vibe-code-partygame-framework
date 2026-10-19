@@ -17,7 +17,7 @@ import {
   textFilterMiddleware,
   timingMiddleware,
 } from "../src/index.js";
-import { replayLog } from "../src/testing/index.js";
+import { replayLog } from "../src/replay/index.js";
 import { TestTable } from "../src/testing/TestTable.js";
 
 interface S extends PhaseState {

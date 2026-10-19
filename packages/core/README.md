@@ -4,9 +4,10 @@ Pure game runtime (no Colyseus, no I/O): define phases and rules, dispatch actio
 
 | Import | What |
 |---|---|
-| `@partygame/core` | `defineGame`, `actionFactory`, `GameRuntime`; `leaderboard`, `composeLeaderboard`, `awardPoints`; roster guards `seatedCount(ctx)`, `isBelowMinimum(ctx, min)`, `departedIds(ids, ctx)`; `shuffle`, `required`; seeded RNG `sfc32`, `Seed`, `randomSeed`, `seedFromNumber`, `mulberry32`, `newId` |
+| `@partygame/core` | `defineGame`, `actionFactory`, `GameRuntime`; `leaderboard`, `composeLeaderboard`, `awardPoints`; roster guards `seatedCount(ctx)`, `isBelowMinimum(ctx, min)`, `departedIds(ids, ctx)`; `shuffle`, `required`; seeded RNG `sfc32`, `Seed`, `randomSeed`, `seedFromNumber`, `mulberry32`, `newId`; action-log validation `ActionLogSchema` |
 | `@partygame/core/kits` | Phase kits (`@experimental`). collectResponses: `allResponded(slots, responses, presentIds)`, `entriesFor(slotId, slots, responses)`, types `Slots`, `Responses`. voteAndTally: `tallyVotes(voterIds, votes)`, `allHaveVoted(voterIds, votes)`, `countVoted(voterIds, votes)`, `eligibleVoters(activeIds, excludedIds)`, `leaders(counts)` → `{ top, ids }`. drawPool: `drawPool(items, usedIds, needed)` → `{ items, exhausted }` (on exhaustion it clears the drawn ids from the mutable `usedIds`) |
-| `@partygame/core/testing` | `FakeHost` (manual clock, in-memory seats), `TestTable` (scenario boilerplate) |
+| `@partygame/core/replay` | `replayLog(definition, log, init)` (re-drives a fresh runtime over a recorded action log, returns state snapshots), `ReplayHost` (minimal `RuntimeHost`: manual clock, seats, given seed) |
+| `@partygame/core/testing` | `FakeHost` (manual clock, in-memory seats), `TestTable` (scenario boilerplate); re-exports `replayLog` from `./replay` |
 
 ## Define a game
 

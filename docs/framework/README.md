@@ -248,9 +248,9 @@ positionally to `p1..pN`, so every recorded sender re-dispatches against the mat
 
 - **RNG.** Rooms draw their randomness from `sfc32`, a PRNG with 128 bits of state; each room gets a
   `Seed` (four unsigned 32-bit numbers) from `crypto.getRandomValues` at creation, recorded in the header,
-  so published ids do not reveal the stream. `FakeHost`/`TestTable` accept a `Seed` or a number (expanded
-  by `seedFromNumber`); an unseeded host is `seedFromNumber(0)`, so even unseeded test rooms are
-  replayable by seed (and their ids from `ctx.newId()` stay unique).
+  so published ids do not reveal the stream. `ReplayHost`, `FakeHost`/`TestTable` accept a `Seed` or a
+  number (expanded by `seedFromNumber`); an unseeded host is `seedFromNumber(0)`, so even unseeded test
+  rooms are replayable by seed (and their ids from `ctx.newId()` stay unique).
 - **Clock.** Replay scripts the fake clock: it advances to each entry's `t` before applying the entry, and
   logged timeouts are authoritative — when replay enters a timed phase, its timer is made to expire at the
   time recorded in the log. A live room's phase timers run on Colyseus's tick-quantized clock (a ~17 ms
@@ -260,14 +260,14 @@ positionally to `p1..pN`, so every recorded sender re-dispatches against the mat
   from the room RNG). `crypto.randomUUID()` breaks replay: re-dispatched payloads reference ids the fresh
   runtime never generated.
 
-**Replay.** `replayLog(definition, log, init)` (from `@partygame/core/testing` — it builds a `TestTable`)
-re-drives a fresh runtime — same definition, RNG seeded from
-the header, clock starting at `header.startedAt`, the recorded roster pre-seated with its flags restored
-(`p1..pN` mapped positionally; for logs without a roster, `init.players` pre-seats that many seats instead)
-— dispatching every logged action in order:
+**Replay.** `replayLog(definition, log, init)` (from `@partygame/core/replay`; `@partygame/core/testing`
+re-exports it for existing test suites) re-drives a fresh runtime on a `ReplayHost` — same definition, RNG
+seeded from the header, clock starting at `header.startedAt`, the recorded roster pre-seated with its flags
+restored (`p1..pN` mapped positionally; for logs without a roster, `init.players` pre-seats that many seats
+instead) — dispatching every logged action in order:
 
 ```ts
-import { replayLog } from "@partygame/core/testing";
+import { replayLog } from "@partygame/core/replay";
 
 const { states } = replayLog(ButtonGame, log, {
   state: new State(), // same shape as passed to TestTable
@@ -280,17 +280,24 @@ const { states } = replayLog(ButtonGame, log, {
 `states[0]` is the fresh construction at `header.startedAt`, before any entry; each following element is
 one deep-cloned snapshot per step — every logged `action`, `timeout` or (skipped) lobby `roster-change`
 starts a step, and the transitions and enters that follow from it belong to the same step. It throws when
-the log's shape is malformed — validated up front with named errors: `entries` not an array, an entry
-that is not an object or lacks a known `kind`, numeric `t` and `seq` and a string `phase`, `header`
-missing or lacking a string `game`, a four-number `seed` and number `startedAt`, or a roster entry missing its
-`id`/flags — when the first entry is not the construction-time Lobby enter (every recorded session starts
-with it), when the log's `game` does not match the definition, when its `version` differs from the
+the log's shape is malformed — validated up front against `ActionLogSchema` with named errors: `entries`
+not an array, an entry that is not an object or lacks a known `kind`, numeric `t` and `seq` and a string
+`phase`, `header` missing or lacking a string `game`, a four-number `seed` and number `startedAt`, a roster
+entry missing its `id`/flags, or any unknown field anywhere in the log (the schema is strict) — when the
+first entry is not the construction-time Lobby enter (every recorded session starts with it), when the log's `game` does not match the definition, when its `version` differs from the
 definition's or is absent (a log predating versioning), on a mid-game roster change, on out-of-order
 entry times,
 when a re-dispatch rejects an action the log records as accepted or accepts one recorded with
 `rejected: true` (a mismatch in either direction means the log is not what this definition produces), or
 when a logged transition or enter contradicts what the replayed runtime actually did — each step asserts
 its own consequence run, so a tampered log throws naming the mismatch.
+
+`ActionLogSchema` (from `@partygame/core`) is the zod schema behind that validation: strict objects over
+the exact log shape. It is also the gate for untrusted logs — replay bundles and spectators (#19) parse
+with it before anything else runs. `ReplayHost` (from `@partygame/core/replay`) is the host `replayLog`
+drives: a minimal `RuntimeHost` with a manual clock (`advance(ms)`), seats and the given seed, and no
+recording or assertion helpers — client traffic is dropped. Build one directly to drive a `GameRuntime`
+over a log yourself.
 
 **Limitations in v1.** Mid-game roster changes are not replayed: `replayLog` throws naming the first such
 entry. Lobby-phase roster changes are skipped — the recorded roster is pre-seated at construction — so a
