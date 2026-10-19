@@ -299,6 +299,21 @@ drives: a minimal `RuntimeHost` with a manual clock (`advance(ms)`), seats and t
 recording or assertion helpers — client traffic is dropped. Build one directly to drive a `GameRuntime`
 over a log yourself.
 
+**Bundles.** A `ReplayBundle` (from `@partygame/core/replay`) is what a finished session is shared as: the
+action log plus `name`, `frameworkVersion`, `gameVersion` and a game-supplied `contentHash`, and
+`snapshots` — per-phase synced-state snapshots for viewing without re-running the runtime. Snapshots are
+opaque JSON (synced state only, never `ctx.priv` or `.view()` fields), each naming the `seq` of the log
+entry (`transition` or `enter`) at which it was taken; capturing them is the server's job (#19).
+`createBundle(parts)` stamps the current format version. `parseBundle(json)` validates untrusted bundle
+JSON against `ReplayBundleSchema` (strict objects, snapshot state as JSON) and throws a named error on an
+unknown `bundleVersion` — the common "written by a newer framework" case. `hashBundle(bundle)` is the
+sha-256 hex digest of the bundle's canonical JSON (object keys sorted; arrays keep their order), computed
+with Web Crypto so it runs in browsers, and stable across key order. `verifyBundle(bundle)` checks
+consistency without a runtime — the log header must match the bundle's `name`/`gameVersion`, and snapshot
+`seq`s must be strictly increasing with each naming a `transition`/`enter` entry in the log — returning
+`{ ok: true }` or `{ ok: false, seq, phase, reason }` for the first failure (non-snapshot failures report
+`seq: 0`).
+
 **Limitations in v1.** Mid-game roster changes are not replayed: `replayLog` throws naming the first such
 entry. Lobby-phase roster changes are skipped — the recorded roster is pre-seated at construction — so a
 game whose `Lobby.onRosterChange` writes synced state may diverge in intermediate states for sessions with

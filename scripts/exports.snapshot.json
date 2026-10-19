@@ -230,10 +230,19 @@
           "types": "./dist/replay/index.d.ts"
         },
         "symbols": {
+          "ReplayBundle": {},
+          "ReplayBundleParts": {},
+          "ReplayBundleSchema": {},
           "ReplayHost": {},
           "ReplayInit": {},
           "ReplayResult": {},
-          "replayLog": {}
+          "ReplaySnapshot": {},
+          "VerifyBundleResult": {},
+          "createBundle": {},
+          "hashBundle": {},
+          "parseBundle": {},
+          "replayLog": {},
+          "verifyBundle": {}
         }
       },
       "./testing": {
