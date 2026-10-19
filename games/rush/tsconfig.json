@@ -1,0 +1,7 @@
+{
+  "extends": "@partygame/config/tsconfig.game.json",
+  "compilerOptions": {
+    "types": []
+  },
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
+}

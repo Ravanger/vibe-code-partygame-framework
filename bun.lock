@@ -61,6 +61,20 @@
         "vitest": "^4.1.11",
       },
     },
+    "games/rush": {
+      "name": "@partygame/rush",
+      "version": "0.1.0",
+      "dependencies": {
+        "@colyseus/schema": "^5.0.35",
+        "@partygame/core": "workspace:*",
+        "@partygame/shared": "workspace:*",
+        "zod": "^4.6.5",
+      },
+      "devDependencies": {
+        "@partygame/config": "workspace:*",
+        "vitest": "^4.1.11",
+      },
+    },
     "games/wit-clash": {
       "name": "@partygame/wit-clash",
       "version": "0.1.0",
@@ -636,6 +650,8 @@
     "@partygame/game-ui": ["@partygame/game-ui@workspace:packages/game-ui"],
 
     "@partygame/launcher": ["@partygame/launcher@workspace:packages/launcher"],
+
+    "@partygame/rush": ["@partygame/rush@workspace:games/rush"],
 
     "@partygame/server": ["@partygame/server@workspace:packages/server"],
 

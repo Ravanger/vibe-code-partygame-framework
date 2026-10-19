@@ -74,6 +74,21 @@ describe("defineGame", () => {
     );
   });
 
+  it("rejects a tickMs without onTick", () => {
+    expect(errorsOf({ ...valid(), phases: { Play: { tickMs: 100 } } })).toContain("tickMs");
+  });
+
+  it("rejects an invalid tickMs", () => {
+    const onTick = () => {};
+    for (const tickMs of [0, -5, 1.5]) {
+      expect(errorsOf({ ...valid(), phases: { Play: { onTick, tickMs } } })).toContain("tickMs");
+    }
+  });
+
+  it("accepts onTick with a tickMs", () => {
+    expect(errorsOf({ ...valid(), phases: { Play: { onTick: () => {}, tickMs: 50 } } })).toBe("");
+  });
+
   it("rejects bad or reserved action names", () => {
     const handler = () => {};
     const payload = z.object({});

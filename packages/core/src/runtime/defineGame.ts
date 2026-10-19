@@ -44,6 +44,12 @@ export function defineGame<
     if (phase.duration !== undefined && !phase.onTimeout) {
       problems.push(`phase "${name}" has a duration but no onTimeout`);
     }
+    if (phase.tickMs !== undefined && phase.onTick === undefined) {
+      problems.push(`phase "${name}" has a tickMs but no onTick`);
+    }
+    if (phase.tickMs !== undefined && (!Number.isInteger(phase.tickMs) || phase.tickMs < 1)) {
+      problems.push(`phase "${name}" has an invalid tickMs (must be an integer >= 1)`);
+    }
     for (const action of Object.keys(phase.actions ?? {})) {
       if (RESERVED_ACTIONS.includes(action)) problems.push(`${action} is reserved and built in`);
       else if (!ACTION_NAME_PATTERN.test(action))

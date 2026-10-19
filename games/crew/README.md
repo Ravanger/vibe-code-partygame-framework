@@ -1,12 +1,11 @@
 # Crew
 
-An asymmetric cooperative party game (headless rules spike for M6 · Archetypes, #158): every player is dealt a public role and a private signal (1–9). The crew shares one goal — after the briefing rounds, guess the sum of all starting players' signals. Each round every player chooses to SHARE their signal publicly or HOLD it; the crew gets three guesses in the verdict. Everyone wins or loses together.
+An asymmetric cooperative party game (headless rules spike for M6 · Archetypes, #158): every player is dealt a public role and a private signal (1–9). The crew shares one goal — after the share/hold rounds, guess the sum of all starting players' signals. Each round every player chooses to SHARE their signal publicly or HOLD it; the crew gets three guesses in the verdict. Everyone wins or loses together.
 
 ## Rules
 
 - **Lobby** — the built-in lobby; the host starts with 3–5 players.
-- **Briefing** (15 s) — a unique role is dealt to each player from a seeded shuffle (participant order), and each player privately learns their signal (`mine` view entry). The target sum is locked to the starting crew.
-- **Round** (20 s; `rounds` option, 1–5, default 2) — every seated player chooses SHARE or HOLD once. A SHARE reveals that player's signal to the whole room (`reveals`); a HOLD keeps it hidden. The round ends when everyone has chosen or on timeout (no choice).
+- **Round** (20 s; `rounds` option, 1–5, default 2) — on the first round, a unique role is dealt to each player from a seeded shuffle (participant order), each player privately learns their signal (`mine` view entry), and the target sum is locked to the starting crew. Every seated player then chooses SHARE or HOLD once. A SHARE reveals that player's signal to the whole room (`reveals`); a HOLD keeps it hidden. The round ends when everyone has chosen or on timeout (no choice).
 - **Verdict** (30 s) — any player may GUESS the sum of all starting signals; up to 3 guesses. A correct guess wins; the third wrong guess or the timeout loses.
 - **Results** — win/lose, the target sum and every signal are revealed publicly. The host plays again from a clean slate.
 

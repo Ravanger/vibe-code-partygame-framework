@@ -32,6 +32,8 @@ const STOPPED_ERROR: ServerError = {
   message: "The game has ended",
 };
 const FAILURE_NOTICE = "The game stopped because of an unexpected error.";
+/** `PhaseDefinition.tickMs` when a ticking phase does not set one: 10 Hz. */
+const DEFAULT_TICK_MS = 100;
 
 /** Thrown by the {@link GameRuntime} constructor when `createPrivateState()` returns a non-object. */
 export class InvalidPrivateStateError extends Error {
@@ -82,6 +84,8 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   private current: PhaseDefinition<TState, TPrivate, TOptions>;
   private phaseName: string = LOBBY_PHASE;
   private duration = 0;
+  /** Pending `onTick` timer of the current phase, while it has one. */
+  private tickHandle: unknown = undefined;
   private stopped = false;
   private hasStarted = false;
   private lobbyReturnFailed = false;
@@ -191,6 +195,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     this.stopped = true;
     this.queue.clear();
     this.actor.stop();
+    this.clearTick();
   }
 
   private context(): GameContext<TState, TPrivate, TOptions> {
@@ -294,6 +299,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   }
 
   private enter(name: string, phase: PhaseDefinition<TState, TPrivate, TOptions>): void {
+    this.clearTick();
     this.phaseName = name;
     this.hasStarted ||= name !== LOBBY_PHASE;
     this.current = phase;
@@ -307,6 +313,33 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       this.state.phaseEndsAt = this.host.now() + this.duration;
     }
     this.chain({ kind: "enter" }, () => phase.onEnter?.(this.context()));
+    this.startTicks(phase);
+  }
+
+  /** Cancels the pending `onTick` timer, if the current phase has one. */
+  private clearTick(): void {
+    if (this.tickHandle === undefined) return;
+    this.host.clearTimeout(this.tickHandle);
+    this.tickHandle = undefined;
+  }
+
+  /**
+   * Arms the first `onTick` of a ticking phase, one interval after entry. Each tick reschedules
+   * the next, so tick k fires at enter + k·tickMs (the replay clock reproduces exactly those).
+   * Ticks stop when the phase is left: every transition and `stop()` clears the pending timer,
+   * including one scheduled by a tick that itself queued the transition.
+   */
+  private startTicks(phase: PhaseDefinition<TState, TPrivate, TOptions>): void {
+    const onTick = phase.onTick;
+    if (onTick === undefined) return;
+    const dtMs = phase.tickMs ?? DEFAULT_TICK_MS;
+    const step = (): void => {
+      this.run(() => {
+        onTick(this.context(), dtMs);
+        this.tickHandle = this.host.setTimeout(step, dtMs);
+      });
+    };
+    this.tickHandle = this.host.setTimeout(step, dtMs);
   }
 
   private guarded(fn: () => void): void {
