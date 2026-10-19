@@ -1,0 +1,20 @@
+{
+  "name": "@partygame/crew",
+  "version": "0.1.0",
+  "type": "module",
+  "dependencies": {
+    "@colyseus/schema": "^5.0.35",
+    "@partygame/core": "workspace:*",
+    "@partygame/shared": "workspace:*",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@partygame/config": "workspace:*",
+    "@partygame/server": "workspace:*",
+    "vitest": "^4.1.11"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  }
+}

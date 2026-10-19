@@ -1,0 +1,108 @@
+// Bluff prompts: one file, every prompt in `prompts`.
+// Format per prompt: { "id": lowercase-kebab-case-unique, "question", "truth" }.
+// Quality bar (Fibbage style): the truth must be surprising enough to sound fake.
+// If most players already know the answer, there is nothing left to bluff — replace it.
+{
+  "prompts": [
+    {
+      "id": "most-time-zones",
+      "question": "Which country spans the most time zones, counting overseas territories?",
+      "truth": "France"
+    },
+    {
+      "id": "best-selling-novel",
+      "question": "What is the best-selling novel of all time?",
+      "truth": "Don Quixote"
+    },
+    {
+      "id": "octopus-hearts",
+      "question": "How many hearts does an octopus have?",
+      "truth": "three"
+    },
+    {
+      "id": "banana-plant",
+      "question": "A banana plant is actually what kind of plant?",
+      "truth": "a giant herb"
+    },
+    {
+      "id": "moon-walkers",
+      "question": "How many people have walked on the Moon?",
+      "truth": "twelve"
+    },
+    {
+      "id": "shortest-war",
+      "question": "How long did the shortest war in history last?",
+      "truth": "about 38 minutes"
+    },
+    {
+      "id": "never-spoils",
+      "question": "What is the only food that never spoils?",
+      "truth": "honey"
+    },
+    {
+      "id": "baby-bones",
+      "question": "Roughly how many bones does a newborn baby have?",
+      "truth": "about 300"
+    },
+    {
+      "id": "no-jump",
+      "question": "What is the only mammal that cannot jump?",
+      "truth": "the elephant"
+    },
+    {
+      "id": "first-youtube",
+      "question": "What was the first video ever uploaded to YouTube?",
+      "truth": "Me at the zoo"
+    },
+    {
+      "id": "bee-eyes",
+      "question": "How many eyes does a bee have?",
+      "truth": "five"
+    },
+    {
+      "id": "most-lakes",
+      "question": "Which country has more natural lakes than all other countries combined?",
+      "truth": "Canada"
+    },
+    {
+      "id": "coffee-champion",
+      "question": "Which country drinks the most coffee per person?",
+      "truth": "Finland"
+    },
+    {
+      "id": "seeds-outside",
+      "question": "What is the only fruit with its seeds on the outside?",
+      "truth": "the strawberry"
+    },
+    {
+      "id": "first-disney-feature",
+      "question": "What was Disney's first full-length animated feature film?",
+      "truth": "Snow White and the Seven Dwarfs"
+    },
+    {
+      "id": "blue-blood",
+      "question": "What ancient creature has had blue blood for over 400 million years?",
+      "truth": "the horseshoe crab"
+    },
+    {
+      "id": "one-syllable-state",
+      "question": "Which US state is the only one with a single syllable?",
+      "truth": "Maine"
+    },
+    {
+      "id": "deepest-lake",
+      "question": "Which country is home to the world's deepest lake?",
+      "truth": "Russia"
+    },
+    {
+      "id": "missing-letter",
+      "question": "What is the only letter that appears in no US state name?",
+      "truth": "Q"
+    },
+    {
+      "id": "space-survivor",
+      "question": "What tiny creature can survive the vacuum of space?",
+      "truth": "the tardigrade"
+    }
+  ]
+}

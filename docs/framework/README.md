@@ -40,7 +40,7 @@ terminal, bots and the declaration are small, self-contained files you can edit.
 
 ### Phases
 A game is a set of named phases. `Lobby` is reserved and built in. `startPhase` is where `START_GAME` goes.
-Each phase may declare `onEnter`, `duration` + `onTimeout`, `onRosterChange` and `actions`.
+Each phase may declare `onEnter`, `duration` + `onTimeout`, `onTick`, `onRosterChange` and `actions`.
 Move between phases only with `ctx.transition("Name")`; it is queued and applied after the current hook returns.
 Transitioning to the current phase re-enters it and restarts its timer.
 `ctx.returnToLobby()` calls `onReturnToLobby` and enters `Lobby`.
@@ -116,6 +116,12 @@ After a player reconnects, `onPlayerSync(ctx, playerId)` runs so you can resend 
 `duration` is milliseconds, or a function of the context. The timer restarts on every entry (including re-entry).
 `onTimeout` is required whenever `duration` is set, fires once, and never fires after the phase was left.
 The server owns the clock: clients render a countdown from `phaseEndsAt`.
+
+A real-time phase declares `onTick(ctx, dtMs)`, called every `tickMs` while the phase is active — default 100 ms (10 Hz); it must be an integer >= 1 and is rejected at definition time without `onTick`.
+`dtMs` is that nominal interval, not wall-clock elapsed time, so integrating state by it (`pos += speed * dtMs / 1000`) is deterministic: tick k fires at enter + k·tickMs, and `replayLog` reproduces exactly those ticks because the replay clock advances fire precisely the ones due between logged entries.
+Ticks stop as soon as the phase is left — including a transition queued from within `onTick` — and on shutdown; leaving and re-entering restarts the cadence.
+Like `onPlayerSync`, ticks are not wrapped by phase middleware.
+On a live room the Colyseus clock quantizes delivery to its ~16 ms grid, so a tick can land up to one grid step late relative to enter + k·tickMs: an action in that window sees one fewer tick than a replay would. Timeouts have the same skew and the log corrects them; ticks are too chatty to log; closing the gap is tracked in #246.
 
 ### Lobby
 Built in. `START_GAME` is host only and needs `minPlayers` active players (else `NOT_ENOUGH_PLAYERS`).
@@ -332,7 +338,7 @@ handler rejected.
 
 ### Errors at definition time
 `defineGame` throws `GameDefinitionError` listing every problem: empty `name` or `version`, reserved or unknown
-phase names, missing `startPhase`, `duration` without `onTimeout`, bad player limits, bad action names.
+phase names, missing `startPhase`, `duration` without `onTimeout`, `tickMs` without `onTick` or a non-integer `tickMs` below 1, bad player limits, bad action names.
 A `ctx.transition()` to an undeclared phase throws at the call site.
 
 ### Errors at runtime

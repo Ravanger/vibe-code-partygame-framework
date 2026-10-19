@@ -10,7 +10,7 @@ Pure game runtime (no Colyseus, no I/O): define phases and rules, dispatch actio
 
 ## Define a game
 
-Named phases, each with optional `onEnter`, `duration` + `onTimeout`, `onRosterChange` and `actions`. `Lobby` is built in; `startPhase` is where `START_GAME` goes. Move between phases only with `ctx.transition("Name")`.
+Named phases, each with optional `onEnter`, `duration` + `onTimeout`, `onTick(ctx, dtMs)` (real-time phases; rate and determinism rules in the guide's Timers section), `onRosterChange` and `actions`. `Lobby` is built in; `startPhase` is where `START_GAME` goes. Move between phases only with `ctx.transition("Name")`.
 
 ```ts
 import { actionFactory, defineGame } from "@partygame/core";

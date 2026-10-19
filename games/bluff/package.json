@@ -1,0 +1,35 @@
+{
+  "name": "@partygame/bluff",
+  "version": "0.1.0",
+  "type": "module",
+  "dependencies": {
+    "@colyseus/schema": "^5.0.35",
+    "@partygame/bots": "workspace:*",
+    "@partygame/content": "workspace:*",
+    "@partygame/core": "workspace:*",
+    "@partygame/game-client": "workspace:*",
+    "@partygame/game-kit": "workspace:*",
+    "@partygame/game-ui": "workspace:*",
+    "@partygame/shared": "workspace:*",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@partygame/config": "workspace:*",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@testing-library/jest-dom": "^6.10.0",
+    "@testing-library/svelte": "^5.4.2",
+    "jsdom": "^29.1.1",
+    "svelte": "^5.57.1",
+    "svelte-check": "^4.7.6",
+    "vite": "^8.3.1",
+    "vitest": "^4.1.11"
+  },
+  "scripts": {
+    "dev": "vite",
+    "dev:server": "bun --hot server.ts",
+    "test": "vitest run",
+    "test:all": "cd ../.. && bun x vitest run --project bluff --project bluff-game",
+    "typecheck": "tsc --noEmit && svelte-check --tsconfig ./tsconfig.json --threshold warning",
+    "build": "vite build"
+  }
+}
