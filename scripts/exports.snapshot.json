@@ -499,6 +499,8 @@
           "CloseCode": {},
           "END_GAME": {},
           "ErrorCode": {},
+          "ExportReplayResponse": {},
+          "FRAMEWORK_VERSION": {},
           "FrameworkError": {},
           "JoinOptionsSchema": {},
           "KICK_PLAYER": {},
@@ -530,7 +532,8 @@
         },
         "symbols": {
           "BaseGameState": {},
-          "PlayerSchema": {}
+          "PlayerSchema": {},
+          "syncedJsonOf": {}
         }
       }
     },

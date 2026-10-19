@@ -1,3 +1,4 @@
+import { LOBBY_PHASE } from "@partygame/shared";
 import { z } from "zod";
 import {
   InvalidPrivateStateError,
@@ -186,6 +187,19 @@ export function actionLogMiddleware(): PhaseMiddleware<PhaseState, unknown, unkn
   return (ctx, next) => {
     const log = logOf(ctx);
     const event = ctx.event;
+    // The seats when the game starts, in seat order — what replay pre-seats. The flags are
+    // recorded too: replay restores them so its bench-on-start matches live's exactly. An
+    // auto-started session has no START_GAME action, so a departure from the Lobby records it.
+    const recordRoster = (): void => {
+      if (log.roster === undefined) {
+        log.roster = ctx.players().map((seat) => ({
+          id: seat.id,
+          isConnected: seat.isConnected,
+          isReady: seat.isReady,
+          isActive: seat.isActive,
+        }));
+      }
+    };
     const entry: ActionLogEntry = {
       seq: log.entries.length + 1,
       t: ctx.now(),
@@ -196,19 +210,11 @@ export function actionLogMiddleware(): PhaseMiddleware<PhaseState, unknown, unkn
       entry.actionType = event.actionType;
       entry.senderId = event.senderId;
       entry.payload = deepFreeze(structuredClone(event.payload));
-      if (event.actionType === "START_GAME" && log.roster === undefined) {
-        // The seats when the game starts, in seat order — what replay pre-seats. The flags are
-        // recorded too: replay restores them so its bench-on-start matches live's exactly.
-        log.roster = ctx.players().map((seat) => ({
-          id: seat.id,
-          isConnected: seat.isConnected,
-          isReady: seat.isReady,
-          isActive: seat.isActive,
-        }));
-      }
+      if (event.actionType === "START_GAME") recordRoster();
     } else if (event.kind === "transition") {
       entry.from = event.from;
       entry.to = event.to;
+      if (event.from === LOBBY_PHASE) recordRoster();
     }
     log.entries.push(entry);
     next();

@@ -10,7 +10,8 @@ interface Timer {
 /**
  * A minimal {@link RuntimeHost} for replaying a recorded session: a manual clock, seats and the
  * given seed — no recording or assertion helpers, because a replay observes state snapshots, not
- * messages. Client traffic (send, broadcast, views) is dropped; `kick` only removes the seat.
+ * messages. Client traffic (send, broadcast, views) and transition notifications are dropped;
+ * `kick` only removes the seat.
  */
 export class ReplayHost implements RuntimeHost {
   readonly seats: PlayerInfo[] = [];
@@ -69,6 +70,8 @@ export class ReplayHost implements RuntimeHost {
   send(_playerId: string, _type: string, _payload: unknown): void {}
 
   broadcast(_type: string, _payload: unknown): void {}
+
+  notifyTransition(_from: string, _to: string): void {}
 
   showTo(_playerId: string, _ref: object): void {}
 

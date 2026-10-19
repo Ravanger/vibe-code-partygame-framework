@@ -22,6 +22,7 @@ export class FakeHost implements RuntimeHost {
   readonly views: Array<{ op: "show" | "hide"; playerId: string; ref: object }> = [];
   readonly kicked: string[] = [];
   readonly published: unknown[] = [];
+  readonly transitions: Array<{ from: string; to: string }> = [];
   /** The room RNG seed; an unseeded host is `seedFromNumber(0)`, a deterministic stream. */
   readonly seed: Seed;
   private rngFn: () => number;
@@ -90,6 +91,10 @@ export class FakeHost implements RuntimeHost {
 
   broadcast(type: string, payload: unknown): void {
     this.broadcasts.push({ type, payload });
+  }
+
+  notifyTransition(from: string, to: string): void {
+    this.transitions.push({ from, to });
   }
 
   showTo(playerId: string, ref: object): void {

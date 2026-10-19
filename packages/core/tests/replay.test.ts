@@ -257,6 +257,38 @@ describe("replayLog", () => {
     expect(states.at(-1)).toEqual({ phase: "Done", phaseEndsAt: 0, canStart: false, taps: 0 });
   });
 
+  it("replays an auto-started session that recorded no roster to the same final state", () => {
+    const auto = { ...definition, autoStart: true };
+    const live = new TestTable({
+      definition: { ...auto, middleware: [actionLogMiddleware()] },
+      state: newState(),
+      options: {},
+      players: 2,
+      seats: [{}, { isReady: false }],
+    });
+    // p2 is not ready yet: this roster change does not start the game.
+    live.runtime.rosterChanged();
+    expect(live.phase).toBe("Lobby");
+    required(live.host.seats[1], "p2").isReady = true;
+    live.runtime.rosterChanged(); // everyone ready now: auto-start fires
+    expect(live.phase).toBe("Tap");
+    live.act("p2", "TAP", { by: 3 });
+    const log = getActionLog(live.priv);
+    expect(log).toBeDefined();
+    // No START_GAME was dispatched, so the roster is recorded when the session leaves the Lobby.
+    expect((log as ActionLog).roster).toEqual([
+      { id: "p1", isConnected: true, isReady: true, isActive: true },
+      { id: "p2", isConnected: true, isReady: true, isActive: true },
+    ]);
+
+    const { states } = replayLog(auto, log as ActionLog, {
+      state: newState(),
+      options: {},
+      players: 2,
+    });
+    expect(states.at(-1)).toEqual(live.state);
+  });
+
   it("throws when entry times go backwards", () => {
     const live = liveTable();
     live.start();

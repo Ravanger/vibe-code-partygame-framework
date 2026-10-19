@@ -235,7 +235,9 @@ function authoritativeDurations<TState extends PhaseState, TPrivate, TOptions>(
  * the replayed bench-on-start and `activePlayers()` reads match live — and its ids are mapped
  * positionally to p1..pN so actions re-dispatch against the matching seats; a log without a roster
  * requires `init.players` instead. Roster changes during the Lobby are skipped — the table is
- * already seated; a mid-game roster change throws, because v1 does not replay it.
+ * already seated — except the one an auto-started session records right before its start
+ * transition, which re-runs the lobby hook against the seated table so the replay performs the
+ * same start at the same time; a mid-game roster change throws, because v1 does not replay it.
  * A step whose re-run throws (the live run failed and the failure policy returned the room to the Lobby)
  * throws a `replayLog:` error saying logs with a failed run are not replayable in v1.
  * Entries must be time-ordered; a backwards clock throws. A re-dispatch that rejects where the log
@@ -311,6 +313,19 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
     host,
   });
   const states: TState[] = [clone(init.state)];
+  // An auto-started session records its start transition right after the roster change that
+  // triggered it; those steps re-run the lobby hook against the already-seated table so the
+  // replay performs the same start at the same time. Other lobby roster changes stay skipped.
+  const settleSeqs = new Set<number>();
+  for (let i = 0; i + 1 < log.entries.length; ++i) {
+    const entry = required(log.entries[i], "log entry");
+    if (
+      entry.kind === "roster-change" &&
+      required(log.entries[i + 1], "log entry").kind === "transition"
+    ) {
+      settleSeqs.add(entry.seq);
+    }
+  }
   for (let i = 0; i < log.entries.length; ++i) {
     const entry = required(log.entries[i], "log entry");
     // Transition and enter entries are consequences of the step that caused them; each step asserts
@@ -329,6 +344,7 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
     const prePhase = init.state.phase;
     const error = failedRunGuard(entry, () => {
       host.advance(entry.t - host.time);
+      if (settleSeqs.has(entry.seq)) runtime.rosterChanged();
       // A redacted entry was refused before the handler ran and its payload is not in the log:
       // re-dispatching it is impossible, and skipping it keeps state and RNG in step with live.
       if (entry.kind !== "action" || entry.redacted === true) return undefined;

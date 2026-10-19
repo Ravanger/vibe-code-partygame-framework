@@ -57,6 +57,16 @@ describe("FakeHost", () => {
     expect(host.players().map((p) => p.id)).toEqual(["a"]);
   });
 
+  it("records every applied phase transition", () => {
+    const host = new FakeHost();
+    host.notifyTransition("Lobby", "Play");
+    host.notifyTransition("Play", "Lobby");
+    expect(host.transitions).toEqual([
+      { from: "Lobby", to: "Play" },
+      { from: "Play", to: "Lobby" },
+    ]);
+  });
+
   it("draws rng from sfc32 when constructed with a seed", () => {
     const host = new FakeHost(42);
     const expectedSeed = seedFromNumber(42);

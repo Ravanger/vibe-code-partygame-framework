@@ -300,6 +300,13 @@ describe("Lobby", () => {
     expect(state.log).toEqual(["enter:Play"]);
   });
 
+  it("notifies the host of every applied phase transition", () => {
+    const { runtime, host } = setup2();
+    expect(host.transitions).toEqual([]);
+    runtime.dispatch("p1", { type: "START_GAME" });
+    expect(host.transitions).toEqual([{ from: "Lobby", to: "Play" }]);
+  });
+
   it("START_GAME is WRONG_PHASE outside the Lobby", () => {
     const { runtime, host } = inPlay();
     runtime.dispatch("p1", { type: "START_GAME" });

@@ -23,7 +23,11 @@ import {
 
 describe("protocol constants", () => {
   it("exposes message names, lobby phase and start action", () => {
-    expect(ClientMessage).toEqual({ SET_NAME: "SET_NAME", ACTION: "ACTION" });
+    expect(ClientMessage).toEqual({
+      SET_NAME: "SET_NAME",
+      ACTION: "ACTION",
+      EXPORT_REPLAY: "EXPORT_REPLAY",
+    });
     expect(ServerMessage).toEqual({ ERROR: "ERROR" });
     expect(LOBBY_PHASE).toBe("Lobby");
     expect(START_GAME).toBe("START_GAME");

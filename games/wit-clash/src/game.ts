@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { createTextFilter } from "@partygame/content/filter";
 import { defineGame, textFilterMiddleware } from "@partygame/core";
 import type { CategoryRepository } from "./content/CategoryRepository.js";
@@ -27,6 +28,16 @@ export function createWitClashGame({ categories, canon = categories }: WitClashC
   return defineGame<WitClashState, WitClashPrivate, WitClashOptions>({
     name: "WitClash",
     version: "1",
+    contentHash: () =>
+      createHash("sha256")
+        .update(
+          categories
+            .all()
+            .map((category) => JSON.stringify(category))
+            .sort()
+            .join("\n"),
+        )
+        .digest("hex"),
     minPlayers: META.minPlayers,
     maxPlayers: META.maxPlayers,
     startPhase: PHASE.CategorySelection,

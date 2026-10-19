@@ -5,6 +5,8 @@ import { MAX_SEATS, NAME_MAX_LENGTH, ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH } from
 export const ClientMessage = {
   SET_NAME: "SET_NAME",
   ACTION: "ACTION",
+  /** Host-only request that answers with the room's replay bundle (see {@link ExportReplayResponse}). */
+  EXPORT_REPLAY: "EXPORT_REPLAY",
 } as const;
 
 /** Message names the room sends to a single client for protocol-level events. */
@@ -58,6 +60,19 @@ export interface ServerError {
  * still pushed as `ERROR` either way.
  */
 export type ActionResult = { ok: true } | { ok: false; error: ServerError };
+
+/**
+ * The framework version that produced a session; recorded in exported replay bundles so a viewer can
+ * check compatibility. Bump together with the package versions.
+ */
+export const FRAMEWORK_VERSION = "0.1.0";
+
+/**
+ * Answer to `room.request(ClientMessage.EXPORT_REPLAY)`. The host receives the room's replay bundle —
+ * the shape of `ReplayBundleSchema` from `@partygame/core/replay`; a non-host receives a refusal shaped
+ * like a rejected {@link ActionResult} with `ErrorCode.UNAUTHORIZED`.
+ */
+export type ExportReplayResponse = { ok: false; error: ServerError } | Record<string, unknown>;
 
 /** True for a well-formed {@link ServerError}; the payload of `ERROR` arrives as `unknown`. */
 export function isServerError(value: unknown): value is ServerError {
