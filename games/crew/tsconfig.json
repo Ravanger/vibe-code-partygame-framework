@@ -1,0 +1,4 @@
+{
+  "extends": "@partygame/config/tsconfig.game.json",
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
+}
