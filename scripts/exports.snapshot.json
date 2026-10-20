@@ -186,6 +186,17 @@
           "timingMiddleware": {}
         }
       },
+      "./awards": {
+        "target": {
+          "import": "./dist/awards/index.js",
+          "types": "./dist/awards/index.d.ts"
+        },
+        "symbols": {
+          "AwardDefinition": {},
+          "AwardResult": {},
+          "computeAwards": {}
+        }
+      },
       "./kits": {
         "target": {
           "import": "./dist/kits/index.js",

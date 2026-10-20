@@ -19,6 +19,7 @@ The Colyseus-free game runtime: `defineGame`, `GameRuntime`, lobby built-ins, ac
 ## Public entry points
 
 - `.`: `defineGame`, `actionFactory`, `GameRuntime`, scoring, roster guards (`seatedCount`, `isBelowMinimum`, `departedIds`), `shuffle`, action log, `textFilterMiddleware`.
+- `./awards`: award declarations computed from the action log (`AwardDefinition`, `computeAwards`).
 - `./kits`: phase kits (`@experimental`): collectResponses (`allResponded`, `entriesFor`), voteAndTally (`tallyVotes`, `allHaveVoted`, `countVoted`, `eligibleVoters`, `leaders`), drawPool (`drawPool`).
 - `./replay`: `replayLog`, `ReplayHost`; replay bundles (`createBundle`, `parseBundle`, `hashBundle`, `verifyBundle`, `ReplayBundleSchema`).
 - `./testing`: `FakeHost`, `TestTable`, `replayLog` (re-export from `./replay`).

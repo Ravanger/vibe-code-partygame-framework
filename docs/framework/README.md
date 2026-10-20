@@ -391,6 +391,56 @@ Determinism contract above). Middleware contexts additionally expose `ctx.reject
 of rejections (`ctx.reject()` calls and a handler-thrown `FrameworkError`) for the current dispatch, so a middleware can tell after `next()` whether an action's
 handler rejected.
 
+### Awards
+`@partygame/core/awards` lets a game declare awards as data — pure reducers over the session's action log —
+and compute them when the session ends:
+
+```ts
+import { getActionLog } from "@partygame/core";
+import { computeAwards, type AwardDefinition } from "@partygame/core/awards";
+
+const fastestAnswer: AwardDefinition = {
+  id: "fastest-answer",
+  title: "Fastest answer",
+  higherIsBetter: false, // the smallest delta wins
+  reduce(entries) {
+    const scores = new Map<string, number>();
+    let windowStart: number | undefined;
+    let answered = new Set<string>();
+    for (const entry of entries) {
+      if (entry.kind === "enter") {
+        windowStart = entry.t; // a new phase opens a new answer window
+        answered = new Set();
+        continue;
+      }
+      if (entry.kind !== "action" || entry.actionType !== "SUBMIT" || entry.senderId === undefined) continue;
+      if (windowStart !== undefined && !answered.has(entry.senderId)) {
+        scores.set(entry.senderId, entry.t - windowStart); // first answer in the window only
+        answered.add(entry.senderId);
+      }
+    }
+    return scores;
+  },
+};
+
+// Wherever the session ends (e.g. the Results phase):
+const log = getActionLog(ctx.priv);
+if (log) for (const award of computeAwards(log, [fastestAnswer])) { /* award.winners, award.scores */ }
+```
+
+- `AwardDefinition` is `{ id, title, reduce(entries, roster), higherIsBetter? }` (default `true`). `reduce`
+  receives the log's entries — rejected ones (`rejected: true`) are filtered out before any reducer runs,
+  because they changed nothing and score nothing — plus the recorded roster (an empty array when the session
+  never started), and returns a `Map<playerId, number>`. Entries and their payloads are read-only.
+- `computeAwards(log, defs)` returns one `AwardResult` per declaration, in order: `{ id, title, scores,
+  winners }`. `winners` carries the best score(s) — ties share, in the score map's iteration order — and is
+  empty when the reducer returned no data.
+- An award that needs game state at each step (anything not a fact about the log) uses the escape hatch: the
+  game feeds accumulators into its private state as play progresses, then declares the award with a reducer
+  that ignores the log — a closure over the final private data, e.g. `reduce: () => new Map(
+  Object.entries(ctx.priv.fastestTimes))`. There is no framework code for this; it is the game's own
+  bookkeeping.
+
 ### Protocol versioning
 `PROTOCOL_VERSION` (from `@partygame/shared`) is an integer identifying the wire and action-log protocol.
 Every first-party client — the browser SDK (`GameConnectionManager`), bots (`joinBots`, `BotTable`,
