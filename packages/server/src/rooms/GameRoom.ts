@@ -24,6 +24,7 @@ import {
   JoinOptionsSchema,
   LOBBY_PHASE,
   MAX_OPTIONS_JSON_LENGTH,
+  PROTOCOL_VERSION,
   type ServerError as ProtocolError,
   RoomOptionsSchema,
   ServerMessage,
@@ -78,8 +79,19 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
   /** Seeded PRNG so a room's randomness is reproducible from its log header. */
   private readonly rngFn = sfc32(this.seed);
   /** Builds the Colyseus close `ServerError` for a {@link CLOSE_CODES} entry; the only place one is made. */
-  private readonly closeWith = (entry: CloseCode): ServerError =>
-    new ServerError(entry.code, entry.message);
+  private readonly closeWith = (entry: CloseCode, message?: string): ServerError =>
+    new ServerError(entry.code, message ?? entry.message);
+
+  /** Refuses a create/join whose protocolVersion is missing or different; fills the template from numbers only. */
+  private readonly versionMismatch = (clientVersion?: number): ServerError => {
+    const client = clientVersion === undefined ? "unknown" : String(clientVersion);
+    return this.closeWith(
+      CLOSE_CODES.VERSION_MISMATCH,
+      CLOSE_CODES.VERSION_MISMATCH.message
+        .replace("{client}", client)
+        .replace("{server}", `${PROTOCOL_VERSION}`),
+    );
+  };
 
   constructor(private readonly config: GameRoomConfig) {
     super();
@@ -117,6 +129,9 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     const { definition, stateClass, roomCodeService } = this.config;
     const roomOptions = RoomOptionsSchema.safeParse(options);
     if (!roomOptions.success) throw this.invalidOptions("create", roomOptions.error);
+    if (roomOptions.data.protocolVersion !== PROTOCOL_VERSION) {
+      throw this.versionMismatch(roomOptions.data.protocolVersion);
+    }
     if (roomOptions.data.seats) {
       if (roomOptions.data.seats.length > definition.maxPlayers) {
         throw this.closeWith(CLOSE_CODES.INVALID_OPTIONS);
@@ -176,6 +191,9 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
   private join(client: Client, options?: unknown): void {
     const parsed = JoinOptionsSchema.safeParse(options);
     if (!parsed.success) throw this.invalidOptions("join", parsed.error);
+    if (parsed.data.protocolVersion !== PROTOCOL_VERSION) {
+      throw this.versionMismatch(parsed.data.protocolVersion);
+    }
     const { playerId, name, spectator } = parsed.data;
     if (this.kicked.has(playerId)) throw this.closeWith(CLOSE_CODES.KICKED_REJOIN);
     if (!spectator && this.seatList && !this.seatList.has(playerId)) {

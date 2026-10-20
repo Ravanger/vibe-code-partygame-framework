@@ -24,7 +24,11 @@ export interface CloseCode {
   message: string;
 }
 
-/** Join/create close codes (4400-4405, 4500), each mapped to an {@link ErrorCode} and a fixed message. */
+/**
+ * Join/create close codes (4400-4405, 4426, 4500), each mapped to an {@link ErrorCode} and a fixed
+ * message. `VERSION_MISMATCH`'s message is a template the server fills with both versions (numbers
+ * only; a missing client version renders as `unknown`) before closing.
+ */
 export const CLOSE_CODES = {
   INVALID_OPTIONS: {
     code: 4400,
@@ -43,6 +47,11 @@ export const CLOSE_CODES = {
     code: 4405,
     errorCode: ErrorCode.CONTENT_REJECTED,
     message: "That text was not allowed",
+  },
+  VERSION_MISMATCH: {
+    code: 4426,
+    errorCode: ErrorCode.NOT_ALLOWED,
+    message: "Protocol version mismatch: client {client}, server {server}",
   },
   INTERNAL: {
     code: 4500,

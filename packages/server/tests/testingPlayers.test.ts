@@ -99,7 +99,7 @@ describe("stateOf", () => {
   });
 });
 
-describe("TestServer joins", () => {
+describe("TestServer protocol versioning", () => {
   it("sends the current protocol version on join and joinAs", async () => {
     const room = await t.createRoom("plain");
     const spy = vi.spyOn(t.sdk, "joinById").mockResolvedValue(undefined as never);
@@ -118,5 +118,10 @@ describe("TestServer joins", () => {
     } finally {
       spy.mockRestore();
     }
+  });
+
+  it("stamps created rooms with the current protocol version, not overridable by the caller", async () => {
+    const room = await t.createRoom("plain", { protocolVersion: 9 });
+    expect(stateOf(room, BaseGameState).players.size).toBe(0);
   });
 });

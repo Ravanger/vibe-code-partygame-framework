@@ -19,7 +19,7 @@ describe("FrameworkError", () => {
 });
 
 describe("CLOSE_CODES", () => {
-  it("maps the seven join/create close codes to error codes and fixed messages", () => {
+  it("maps the eight join/create close codes to error codes and fixed messages", () => {
     expect(Object.keys(CLOSE_CODES).sort()).toEqual([
       "CONTENT_REJECTED",
       "INTERNAL",
@@ -27,6 +27,7 @@ describe("CLOSE_CODES", () => {
       "KICKED_REJOIN",
       "ROOM_FULL",
       "SEAT_REMOVED",
+      "VERSION_MISMATCH",
       "WATCH_ONLY",
     ]);
     expect(CLOSE_CODES.INVALID_OPTIONS.code).toBe(4400);
@@ -36,6 +37,8 @@ describe("CLOSE_CODES", () => {
     expect(CLOSE_CODES.WATCH_ONLY.code).toBe(4404);
     expect(CLOSE_CODES.CONTENT_REJECTED.code).toBe(4405);
     expect(CLOSE_CODES.CONTENT_REJECTED.errorCode).toBe(ErrorCode.CONTENT_REJECTED);
+    expect(CLOSE_CODES.VERSION_MISMATCH.code).toBe(4426);
+    expect(CLOSE_CODES.VERSION_MISMATCH.errorCode).toBe(ErrorCode.NOT_ALLOWED);
     expect(CLOSE_CODES.INTERNAL.code).toBe(4500);
     expect(CLOSE_CODES.INTERNAL.errorCode).toBe(ErrorCode.INTERNAL);
   });
@@ -56,6 +59,9 @@ describe("CLOSE_CODES", () => {
     expect(CLOSE_CODES.KICKED_REJOIN.message).toBe(CLIENT_MESSAGES.KICKED);
     expect(CLOSE_CODES.WATCH_ONLY.message).toBe("This room is watch-only");
     expect(CLOSE_CODES.CONTENT_REJECTED.message).toBe(CLIENT_MESSAGES.CONTENT_REJECTED);
+    expect(CLOSE_CODES.VERSION_MISMATCH.message).toBe(
+      "Protocol version mismatch: client {client}, server {server}",
+    );
     expect(CLOSE_CODES.INTERNAL.message).toBe("The server could not handle the request");
     expect(CLOSE_CODES.KICKED_REJOIN.errorCode).toBe(ErrorCode.KICKED);
     expect(CLOSE_CODES.WATCH_ONLY.errorCode).toBe(ErrorCode.NOT_ALLOWED);

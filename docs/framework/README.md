@@ -389,11 +389,16 @@ handler rejected.
 
 ### Protocol versioning
 `PROTOCOL_VERSION` (from `@partygame/shared`) is an integer identifying the wire and action-log protocol.
-Every first-party client — the browser SDK (`GameConnectionManager`), bots (`joinBots`), the terminal client
-(`GameClient`) and the test helpers (`TestServer.join`/`joinAs`) — sends it as `protocolVersion` in its
-create/join options. Both option schemas accept an optional integer `protocolVersion`. Bump the constant
-whenever you change anything breaking on the wire or in the log format: every first-party client then sends
-the new number from one place, and a mismatch is a close, not a negotiation.
+Every first-party client — the browser SDK (`GameConnectionManager`), bots (`joinBots`, `BotTable`,
+`DemoTable`), the terminal client (`GameClient`) and the test helpers (`TestServer.createRoom`/`join`/`joinAs`)
+— sends it as `protocolVersion` in its create/join options. Both option schemas accept an optional integer
+`protocolVersion`. The server enforces it on every create and join, before any seating work: a missing or
+different version is refused with close code 4426 (`CLOSE_CODES.VERSION_MISMATCH`) and the message
+`Protocol version mismatch: client {client}, server {server}` filled from numbers only — a missing client
+version renders as `unknown`. The browser SDK shows that filled text in `lastServerError`; token reconnects
+are not re-checked, since they carry no options. Bump the constant whenever you change anything breaking on
+the wire or in the log format: every first-party client then sends the new number from one place, and a
+mismatch is a close, not a negotiation.
 
 ### Errors at definition time
 `defineGame` throws `GameDefinitionError` listing every problem: empty `name` or `version`, reserved or unknown

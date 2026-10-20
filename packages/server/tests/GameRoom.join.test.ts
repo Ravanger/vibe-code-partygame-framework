@@ -1,4 +1,5 @@
-import { CLIENT_MESSAGES, CLOSE_CODES, RoomCodeSchema } from "@partygame/shared";
+import { matchMaker } from "@colyseus/core";
+import { CLIENT_MESSAGES, CLOSE_CODES, PROTOCOL_VERSION, RoomCodeSchema } from "@partygame/shared";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { collectMessages, type TestServer, waitUntil } from "../src/testing/index.js";
 import { bootBuzzer, clientState, pid, seat, stateOf } from "./support.js";
@@ -221,5 +222,59 @@ describe("GameRoom SET_NAME", () => {
     second.send("SET_NAME", "P2");
     await waitUntil(() => stateOf(room).phase === "Buzz", "started");
     expect(stateOf(room).phaseEndsAt).toBeGreaterThan(Date.now());
+  });
+});
+
+describe("GameRoom protocol versioning", () => {
+  it("refuses a join with a different version, naming both versions", async () => {
+    const room = await t.createRoom("buzzer");
+    await expect(
+      t.sdk.joinById(room.roomId, { playerId: pid(1), protocolVersion: 9 }),
+    ).rejects.toMatchObject({
+      code: CLOSE_CODES.VERSION_MISMATCH.code,
+      message: `Protocol version mismatch: client 9, server ${PROTOCOL_VERSION}`,
+    });
+    expect(stateOf(room).players.size).toBe(0);
+  });
+
+  it("refuses a create with a different version, naming both versions", async () => {
+    await expect(matchMaker.createRoom("buzzer", { protocolVersion: 9 })).rejects.toMatchObject({
+      code: CLOSE_CODES.VERSION_MISMATCH.code,
+      message: `Protocol version mismatch: client 9, server ${PROTOCOL_VERSION}`,
+    });
+  });
+
+  it("refuses a missing version the same way, rendering it as unknown", async () => {
+    const room = await t.createRoom("buzzer");
+    await expect(t.sdk.joinById(room.roomId, { playerId: pid(1) })).rejects.toMatchObject({
+      code: CLOSE_CODES.VERSION_MISMATCH.code,
+      message: `Protocol version mismatch: client unknown, server ${PROTOCOL_VERSION}`,
+    });
+    await expect(matchMaker.createRoom("buzzer", {})).rejects.toMatchObject({
+      code: CLOSE_CODES.VERSION_MISMATCH.code,
+      message: `Protocol version mismatch: client unknown, server ${PROTOCOL_VERSION}`,
+    });
+  });
+
+  it("lets a matching version join", async () => {
+    const room = await t.createRoom("buzzer");
+    const client = await t.sdk.joinById(room.roomId, {
+      playerId: pid(1),
+      protocolVersion: PROTOCOL_VERSION,
+    });
+    expect(stateOf(room).players.get(pid(1))).toMatchObject({ id: pid(1) });
+    await client.leave(true);
+  });
+
+  it("lets a seated player reconnect after a drop", async () => {
+    const room = await t.createRoom("buzzer");
+    await seat(t, room, 1);
+    const p2 = await seat(t, room, 2);
+    const token = p2.client.reconnectionToken;
+    await p2.client.leave(false);
+    await waitUntil(() => stateOf(room).players.get(pid(2))?.isConnected === false, "dropped");
+    const back = await t.sdk.reconnect(token);
+    await waitUntil(() => stateOf(room).players.get(pid(2))?.isConnected === true, "back");
+    expect(back.roomId).toBe(room.roomId);
   });
 });

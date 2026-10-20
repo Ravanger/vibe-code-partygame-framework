@@ -1,6 +1,6 @@
 import { CloseCode } from "@colyseus/sdk";
 import { bootTestServer, type TestServer, waitUntil } from "@partygame/server/testing";
-import { ErrorCode, RoomCodeSchema } from "@partygame/shared";
+import { ErrorCode, PROTOCOL_VERSION, RoomCodeSchema } from "@partygame/shared";
 import { flushSync } from "svelte";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { GameConnectionManager } from "../src/GameConnectionManager.svelte.js";
@@ -181,7 +181,11 @@ describe("dropped connections", () => {
     const host = newManager();
     await host.join(code);
     const guest = newManager();
-    const sdkRoom = await t.sdk.joinById(room.roomId, { playerId: guest.playerId }, PressState);
+    const sdkRoom = await t.sdk.joinById(
+      room.roomId,
+      { playerId: guest.playerId, protocolVersion: PROTOCOL_VERSION },
+      PressState,
+    );
     sdkRoom.reconnection.minUptime = 0;
     guest.attach(sdkRoom);
     guest.setName("Guest");

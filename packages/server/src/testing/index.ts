@@ -49,7 +49,10 @@ export class TestServer {
 
   /** Create a room server-side; resolves with the live room object for state inspection. */
   async createRoom(roomName: string, options: Record<string, unknown> = {}): Promise<Room> {
-    const listing = await matchMaker.createRoom(roomName, options);
+    const listing = await matchMaker.createRoom(roomName, {
+      ...options,
+      protocolVersion: PROTOCOL_VERSION,
+    });
     return matchMaker.getLocalRoomById(listing.roomId) as Room;
   }
 

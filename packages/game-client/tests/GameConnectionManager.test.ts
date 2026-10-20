@@ -840,4 +840,36 @@ describe("protocol versioning", () => {
       undefined,
     );
   });
+
+  it("shows both versions when a join is refused for a protocol mismatch", async () => {
+    const manager = newManager();
+    stubFetchReply({ roomId: "room-1" });
+    vi.spyOn(Client.prototype, "joinById").mockRejectedValue(
+      Object.assign(new Error("Protocol version mismatch: client 9, server 1"), {
+        code: CLOSE_CODES.VERSION_MISMATCH.code,
+      }),
+    );
+    await expect(manager.join("WXYZ")).rejects.toThrow();
+    expect(manager.lastServerError).toEqual({
+      code: ErrorCode.NOT_ALLOWED,
+      message: "Protocol version mismatch: client 9, server 1",
+    });
+  });
+
+  it.each([
+    { code: CLOSE_CODES.VERSION_MISMATCH.code },
+    { code: CLOSE_CODES.VERSION_MISMATCH.code, message: 123 },
+  ])(
+    "falls back to the fixed template when the mismatch text is not a string (%i)",
+    async (error) => {
+      const manager = newManager();
+      stubFetchReply({ roomId: "room-1" });
+      vi.spyOn(Client.prototype, "joinById").mockRejectedValue(error);
+      await expect(manager.join("WXYZ")).rejects.toThrow();
+      expect(manager.lastServerError).toEqual({
+        code: ErrorCode.NOT_ALLOWED,
+        message: CLOSE_CODES.VERSION_MISMATCH.message,
+      });
+    },
+  );
 });

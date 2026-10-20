@@ -3,6 +3,7 @@ import { BotPlayer, BotTable, joinBots } from "@partygame/bots";
 import { type TestServer, waitUntil } from "@partygame/server/testing";
 import {
   ClientMessage,
+  PROTOCOL_VERSION,
   ResolveCodeResponseSchema,
   SET_OPTIONS,
   START_GAME,
@@ -36,7 +37,12 @@ describe("WitClash bots on a real server", () => {
     const log = (line: string) => lines.push(line);
     const host = await t.sdk.create<WitClashState>(
       ROOM,
-      { playerId: "host-Host-0001", totalRounds: 1, revealSeconds: 1 },
+      {
+        playerId: "host-Host-0001",
+        totalRounds: 1,
+        revealSeconds: 1,
+        protocolVersion: PROTOCOL_VERSION,
+      },
       WitClashState,
     );
     await waitUntil(() => host.state.roomCode !== "", "room code");
@@ -76,7 +82,7 @@ describe("WitClash bots on a real server", () => {
     if (!("roomId" in body)) throw new Error(body.error);
     const human: Room<WitClashState> = await t.sdk.joinById<WitClashState>(
       body.roomId,
-      { playerId: "human-0001" },
+      { playerId: "human-0001", protocolVersion: PROTOCOL_VERSION },
       WitClashState,
     );
     await waitUntil(() => human.state.roomCode !== "", "room state");
