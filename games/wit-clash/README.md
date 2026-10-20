@@ -49,7 +49,7 @@ The bracketed tie-breaker phases only follow the final round.
    Votes can be changed until the reveal and stay hidden until then.
 4. **MatchupReveal**: authors and vote counts are shown, points are awarded, then the next matchup starts.
 5. **Tie-breaker** (final round only): see below.
-6. **Results**: scoreboard. The host sends `NEXT_ROUND` (not after the final round) or `PLAY_AGAIN` (back to the lobby, everything reset).
+6. **Results**: scoreboard. On the final round it also shows the best answer and the awards ceremony. The host sends `NEXT_ROUND` (not after the final round) or `PLAY_AGAIN` (back to the lobby, everything reset).
 
 ### Scoring
 
@@ -86,6 +86,19 @@ The attempts accumulate in `tieBreakers` (a `Matchup` each, the last is current)
 The answer with the highest vote share in a contested matchup (its votes divided by the votes cast in that matchup), ties broken by raw
 votes. Answers level on both share the award. Forfeits and tie-breaker answers do not count. The history is kept across rounds and
 published as `bestAnswers` when the final round reaches Results; `PLAY_AGAIN` resets it.
+
+### Awards
+
+Two end-of-game awards, computed from the session's action log (see `src/awards.ts`, built on `@partygame/core/awards`) and
+published as `awards` when the final round reaches Results; `PLAY_AGAIN` clears them. An award with no data is omitted:
+
+- **Fastest answer**: the smallest time between a phase enter and one of the player's `SUBMIT_ANSWER`s, across the whole game.
+  The detail line is that delta (`850 ms`, or seconds once it passes a second).
+- **Most votes received**: the total votes each author took across all contested matchups of the game. The log records which answer
+  each vote went to but not who wrote it, so this award reads the game's own `answerHistory` accumulator instead of the log
+  (the documented escape hatch for stateful awards).
+
+Winners share ties; names come from the remembered player names.
 
 ### Typing indicator
 
@@ -139,6 +152,7 @@ who cast them is not.
 | `tieBreakers` | `Matchup[]` | One per tie-breaker attempt; `answers` hide authors and votes until `isRevealed`; `isForfeit` for a lone answer |
 | `tieBreakerContenders` | `string[]` of playerIds | Who is in the current tie-breaker |
 | `bestAnswers` | `BestAnswer[]` `{text,authorId,authorName,promptText,votes}` | Empty until the final Results; several entries when the award is shared |
+| `awards` | `Award[]` `{id,title,winnerNames,detail}` | Empty until the final Results; one entry per award with data (see Awards) |
 | `typing` | `map<playerId, boolean>` | Present and `true` while that player is typing an answer |
 | `mine` | `map<playerId, PlayerPrivate>` (`.view()`) | Each entry is visible to its owner only |
 

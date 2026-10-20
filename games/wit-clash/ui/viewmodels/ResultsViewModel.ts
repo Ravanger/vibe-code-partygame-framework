@@ -12,6 +12,13 @@ export interface BestAnswerView {
   isMine: boolean;
 }
 
+export interface AwardView {
+  id: string;
+  title: string;
+  winnerNames: string[];
+  detail: string;
+}
+
 export class ResultsViewModel {
   readonly scoreboard: Scoreboard;
   private readonly recap: MatchupRecap;
@@ -37,6 +44,15 @@ export class ResultsViewModel {
 
   get bestAnswerTitle(): string {
     return this.bestAnswers.length > 1 ? "Shared best answer" : "Best answer";
+  }
+
+  get awards(): AwardView[] {
+    return [...(this.manager.state?.awards ?? [])].map((award) => ({
+      id: award.id,
+      title: award.title,
+      winnerNames: [...award.winnerNames],
+      detail: award.detail,
+    }));
   }
 
   get isFinalRound(): boolean {

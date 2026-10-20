@@ -1,5 +1,6 @@
 import { ErrorCode } from "@partygame/shared";
 import { ACTION, defineAction, NoPayloadSchema } from "../actions.js";
+import { writeAwards } from "../awards.js";
 import { PHASE } from "../phaseNames.js";
 import type { WitClashPhase } from "../private.js";
 import { Round } from "../round.js";
@@ -9,7 +10,10 @@ export const Results: WitClashPhase = {
     ctx.state.isFinalRound = ctx.state.roundNumber >= ctx.state.totalRounds;
     const round = new Round(ctx);
     round.writeScoreboard();
-    if (ctx.state.isFinalRound) round.writeBestAnswers();
+    if (ctx.state.isFinalRound) {
+      round.writeBestAnswers();
+      writeAwards(ctx);
+    }
   },
   onRosterChange: (ctx) => {
     const round = new Round(ctx);

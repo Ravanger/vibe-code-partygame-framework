@@ -148,6 +148,7 @@ export class Round {
     this.clearRound();
     this.ctx.priv.clearGame();
     this.ctx.state.bestAnswers.clear();
+    this.ctx.state.awards.clear();
     this.ctx.state.roundNumber = 0;
     this.ctx.state.totalRounds = this.ctx.options.totalRounds;
     this.ctx.state.rejectedTexts = 0;

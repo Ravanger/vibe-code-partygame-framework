@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { BestAnswer } from "../../src/state.js";
+import { Award, BestAnswer } from "../../src/state.js";
 import { AnswerProgress } from "../../ui/viewmodels/AnswerProgress.js";
 import { PromptingViewModel } from "../../ui/viewmodels/PromptingViewModel.svelte.js";
 import { ResultsViewModel } from "../../ui/viewmodels/ResultsViewModel.js";
@@ -115,13 +115,24 @@ describe("ResultsViewModel awards", () => {
     expect(new ResultsViewModel(c.manager).bestAnswerTitle).toBe("Shared best answer");
   });
 
-  it("exposes the podium and copes with no state", () => {
+  it("exposes the podium, the ceremony and copes with no state", () => {
     const c = connectedClient({}, "Results");
     const vm = new ResultsViewModel(c.manager);
     c.state.scoreboard.push(scoreRow("a", 1, { wonTieBreaker: true }));
     expect(vm.podiumSteps[0]?.players[0]?.wonTieBreaker).toBe(true);
+    const award = Object.assign(new Award(), {
+      id: "fastest-answer",
+      title: "Fastest answer",
+      detail: "1.2 s",
+    });
+    award.winnerNames.push("Ann");
+    c.state.awards.push(award);
+    expect(vm.awards).toEqual([
+      { id: "fastest-answer", title: "Fastest answer", winnerNames: ["Ann"], detail: "1.2 s" },
+    ]);
     c.manager.dispose();
     expect(vm.bestAnswers).toEqual([]);
+    expect(vm.awards).toEqual([]);
     expect(vm.podiumSteps).toEqual([]);
   });
 });

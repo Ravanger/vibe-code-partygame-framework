@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/svelte";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { BestAnswer } from "../../src/state.js";
+import { Award, BestAnswer } from "../../src/state.js";
 import Prompting from "../../ui/screens/Prompting.svelte";
 import Results from "../../ui/screens/Results.svelte";
 import TieBreakerPrompting from "../../ui/screens/TieBreakerPrompting.svelte";
@@ -37,6 +37,7 @@ describe("Results podium and awards", () => {
     render(Results, { manager: connectedClient({}, "Results").manager });
     expect(screen.queryByLabelText("Podium")).not.toBeInTheDocument();
     expect(screen.queryByText(/best answer/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Awards")).not.toBeInTheDocument();
   });
 
   it("gives tied players one step and the next tier the next step", () => {
@@ -107,6 +108,27 @@ describe("Results podium and awards", () => {
     expect(screen.getByRole("heading", { name: "Shared best answer" })).toBeInTheDocument();
     expect(screen.getByText("by Bob")).toBeInTheDocument();
     expect(screen.getAllByText("3 votes")).toHaveLength(2);
+  });
+
+  function ceremony(id: string, title: string, winnerNames: string[], detail: string) {
+    const made = Object.assign(new Award(), { id, title, detail });
+    for (const name of winnerNames) made.winnerNames.push(name);
+    return made;
+  }
+
+  it("lists each award with its winners and detail", () => {
+    const c = finale();
+    c.state.awards.push(
+      ceremony("fastest-answer", "Fastest answer", ["Ann"], "1.2 s"),
+      ceremony("most-votes-received", "Most votes received", ["Bob", "Cy"], "3 votes"),
+    );
+    render(Results, { manager: c.manager });
+    const section = screen.getByLabelText("Awards");
+    expect(within(section).getByText("Fastest answer")).toBeInTheDocument();
+    expect(within(section).getByText("Ann")).toBeInTheDocument();
+    expect(within(section).getByText("1.2 s")).toBeInTheDocument();
+    expect(within(section).getByText("Bob & Cy")).toBeInTheDocument();
+    expect(within(section).getByText("3 votes")).toBeInTheDocument();
   });
 });
 

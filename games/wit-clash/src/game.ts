@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { createTextFilter } from "@partygame/content/filter";
-import { defineGame, textFilterMiddleware } from "@partygame/core";
+import { actionLogMiddleware, defineGame, textFilterMiddleware } from "@partygame/core";
 import type { CategoryRepository } from "./content/CategoryRepository.js";
 import { META } from "./meta.js";
 import { type WitClashOptions, WitClashOptionsSchema } from "./options.js";
@@ -44,6 +44,7 @@ export function createWitClashGame({ categories, canon = categories }: WitClashC
     options: WitClashOptionsSchema,
     filterLevel: (options) => options.filterLevel,
     middleware: [
+      actionLogMiddleware(),
       textFilterMiddleware(createTextFilter(), {
         onRejected: (ctx) => {
           const state = ctx.state as WitClashState;

@@ -66,6 +66,17 @@ export const BestAnswer = schema(
 );
 export type BestAnswer = SchemaType<typeof BestAnswer>;
 
+export const Award = schema(
+  {
+    id: t.string().default(""),
+    title: t.string().default(""),
+    winnerNames: t.array("string"),
+    detail: t.string().default(""),
+  },
+  "Award",
+);
+export type Award = SchemaType<typeof Award>;
+
 export const PromptAssignment = schema(
   {
     matchupId: t.string().default(""),
@@ -108,6 +119,7 @@ export const WitClashState = BaseGameState.extend(
     tieBreakers: t.array(Matchup),
     tieBreakerContenders: t.array("string"),
     bestAnswers: t.array(BestAnswer),
+    awards: t.array(Award),
     typing: t.map("boolean"),
     mine: t.map(PlayerPrivate).view(),
   },
