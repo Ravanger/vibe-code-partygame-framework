@@ -118,6 +118,15 @@ describe("ActionLogSchema accepts", () => {
     expect(parsed.success).toBe(true);
   });
 
+  it("a log without header.protocolVersion (recorded before protocol versioning)", () => {
+    // The schema stays permissive like `version`: the refusal, naming the expected version, is replay's job.
+    const log = raw();
+    const header = { ...((log as { header?: object }).header ?? {}) };
+    delete (header as Record<string, unknown>).protocolVersion;
+    const parsed = ActionLogSchema.safeParse({ ...(log as object), header });
+    expect(parsed.success).toBe(true);
+  });
+
   it("a lobby-only log without a roster", () => {
     const table = new TestTable({
       definition: { ...definition, middleware: [actionLogMiddleware()] },

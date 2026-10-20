@@ -1,4 +1,4 @@
-import { LOBBY_PHASE, type ServerError } from "@partygame/shared";
+import { LOBBY_PHASE, PROTOCOL_VERSION, type ServerError } from "@partygame/shared";
 import { type ActionLog, type ActionLogEntry, ActionLogSchema } from "../actionLog.js";
 import {
   type GameDefinition,
@@ -221,7 +221,9 @@ function authoritativeDurations<TState extends PhaseState, TPrivate, TOptions>(
 /**
  * Re-drives a fresh runtime from an {@link ActionLog} and returns deep-cloned state snapshots.
  * The definition's `name` and `version` must match the log's header: a different game or version
- * throws, as does a log with no recorded version (one predating versioning).
+ * throws, as does a log with no recorded version (one predating versioning). The header's
+ * `protocolVersion` must equal the current `PROTOCOL_VERSION`: a different one, or a log without
+ * it (recorded before protocol versioning), throws too.
  * The log must start with the construction-time Lobby enter (seq 1) — every recorded session does,
  * because the middleware creates the log on its first event — and a different first entry throws.
  * Builds a {@link ReplayHost} with the log's seed (or `init.seed`) and start time and drives a
@@ -271,6 +273,16 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
   if (log.header.version !== definition.version) {
     throw new Error(
       `replayLog: log was recorded for version "${log.header.version}", not "${definition.version}"`,
+    );
+  }
+  if (typeof log.header.protocolVersion !== "number") {
+    throw new Error(
+      `replayLog: log.header.protocolVersion is missing (the log predates protocol versioning); expected ${PROTOCOL_VERSION}`,
+    );
+  }
+  if (log.header.protocolVersion !== PROTOCOL_VERSION) {
+    throw new Error(
+      `replayLog: log was recorded with protocol version ${log.header.protocolVersion}, not ${PROTOCOL_VERSION}`,
     );
   }
   // The middleware creates the log on its first event, and a runtime's first event is always the

@@ -210,6 +210,7 @@ every room and replay table append to one log and one timing store.
 | `seed` | Room RNG `Seed`, four unsigned 32-bit numbers (see Determinism contract) |
 | `game` | Definition name; `replayLog` refuses a log recorded for another game |
 | `version` | Definition version; `replayLog` refuses a log recorded for another version, or one without it (recorded before versioning) |
+| `protocolVersion` | The framework's `PROTOCOL_VERSION` at record time; `replayLog` refuses a log recorded under another one, or one without it (recorded before protocol versioning) |
 | `startedAt` | `ctx.now()` at the first entry (the construction-time Lobby enter) |
 
 **Entries** — one per middleware-visible event, in append order:
@@ -371,12 +372,15 @@ outcomes, never state contents.
 | Framework upgrade that changes `GameRuntime` ordering | Yes | Replay runs on the current framework's runtime (transition queue, middleware chain, built-in lobby behavior); if the order of effects changed since recording, the log's consequences no longer match — the step assertions throw, or state diverges |
 
 **What is recorded to detect it.** `header.game` (the definition name) and `header.version` (a free-form
-string the game author bumps; compared by exact equality). The header seed is recorded too, but to reseed
-the runtime, not to compare. Planned: protocol/framework version negotiation (#77); it changes nothing above until it ships.
+string the game author bumps; compared by exact equality). `header.protocolVersion` (the framework's
+`PROTOCOL_VERSION`, bumped with breaking wire or log-format changes — see Protocol versioning) is compared
+by exact equality too: a log recorded under another protocol, or without one, is refused outright. The
+header seed is recorded as well, but to reseed the runtime, not to compare.
 
 **Old logs.** A mismatch surfaces as a named `replayLog:` error — or, for changes that only alter state
 values, as a replay that completes with different states. No migration exists: a log without
-`header.version` (recorded before versioning) is refused outright. The recommended practice is to keep the
+`header.version` (recorded before versioning) or `header.protocolVersion` (recorded before protocol
+versioning) is refused outright. The recommended practice is to keep the
 game at the recorded name and version to replay its log — bump `version` whenever you change anything the
 table above marks "yes".
 

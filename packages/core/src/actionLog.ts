@@ -1,4 +1,4 @@
-import { LOBBY_PHASE } from "@partygame/shared";
+import { LOBBY_PHASE, PROTOCOL_VERSION } from "@partygame/shared";
 import { z } from "zod";
 import {
   InvalidPrivateStateError,
@@ -67,6 +67,11 @@ export interface ActionLogHeader {
    * (recorded before versioning).
    */
   version?: string;
+  /**
+   * The framework's `PROTOCOL_VERSION` at record time; `replayLog` refuses a log with a different
+   * one, or one without (recorded before protocol versioning).
+   */
+  protocolVersion?: number;
   /** `ctx.now()` at the first entry (the construction-time Lobby enter). */
   startedAt: number;
 }
@@ -126,6 +131,7 @@ const ActionLogHeaderSchema = z.strictObject({
   game: z.string(),
   seed: z.tuple([z.number(), z.number(), z.number(), z.number()]),
   version: z.string().optional(),
+  protocolVersion: z.number().int().optional(),
   startedAt: z.number(),
 });
 
@@ -160,6 +166,7 @@ function logOf(ctx: MiddlewareContext<PhaseState, unknown, unknown>): ActionLog 
         seed: ctx.seed,
         game: ctx.gameName,
         version: ctx.gameVersion,
+        protocolVersion: PROTOCOL_VERSION,
         startedAt: ctx.now(),
       },
       entries: [],

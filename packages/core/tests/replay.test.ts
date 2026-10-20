@@ -1,4 +1,5 @@
 import type { TextFilter } from "@partygame/content/filter";
+import { PROTOCOL_VERSION } from "@partygame/shared";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
@@ -200,6 +201,36 @@ describe("replayLog", () => {
         players: 2,
       }),
     ).toThrow("log.header.version is missing; the log predates versioned logs");
+  });
+
+  it("throws when the log was recorded with another protocol version", () => {
+    const live = liveTable();
+    live.start();
+    const log = getActionLog(live.priv) as ActionLog;
+    log.header.protocolVersion = 9;
+    expect(() =>
+      replayLog(definition, log, {
+        state: newState(),
+        options: {},
+        players: 2,
+      }),
+    ).toThrow(`log was recorded with protocol version 9, not ${PROTOCOL_VERSION}`);
+  });
+
+  it("throws when the log predates protocol versioning (no header.protocolVersion)", () => {
+    const live = liveTable();
+    live.start();
+    const log = getActionLog(live.priv) as ActionLog;
+    delete log.header.protocolVersion;
+    expect(() =>
+      replayLog(definition, log, {
+        state: newState(),
+        options: {},
+        players: 2,
+      }),
+    ).toThrow(
+      `log.header.protocolVersion is missing (the log predates protocol versioning); expected ${PROTOCOL_VERSION}`,
+    );
   });
 
   it("throws when the first entry is not the construction-time Lobby enter (entry removed)", () => {
