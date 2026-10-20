@@ -1,6 +1,6 @@
 import { Client } from "@colyseus/sdk";
 import { RoomCodeError } from "@partygame/client-utils";
-import { CLIENT_MESSAGES, CLOSE_CODES, ErrorCode } from "@partygame/shared";
+import { CLIENT_MESSAGES, CLOSE_CODES, ErrorCode, PROTOCOL_VERSION } from "@partygame/shared";
 import { BaseGameState, PlayerSchema } from "@partygame/shared/schema";
 import { flushSync } from "svelte";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -817,5 +817,27 @@ describe("resume", () => {
     expect(await manager.resume()).toBe(false);
     expect(sessionStorage.getItem(`unit${counter}.reconnectionToken`)).toBeNull();
     expect(manager.status).toBe("disconnected");
+  });
+});
+
+describe("protocol versioning", () => {
+  it("sends the current protocol version when creating and joining", async () => {
+    const manager = newManager();
+    const { room } = seated(manager);
+    stubFetchReply({ roomId: "room-1" });
+    const created = vi.spyOn(Client.prototype, "create").mockResolvedValue(room as never);
+    await manager.create();
+    expect(created).toHaveBeenCalledWith(
+      "stub",
+      expect.objectContaining({ protocolVersion: PROTOCOL_VERSION }),
+      undefined,
+    );
+    const joined = vi.spyOn(Client.prototype, "joinById").mockResolvedValue(room as never);
+    await manager.join("WXYZ");
+    expect(joined).toHaveBeenCalledWith(
+      "room-1",
+      expect.objectContaining({ protocolVersion: PROTOCOL_VERSION }),
+      undefined,
+    );
   });
 });

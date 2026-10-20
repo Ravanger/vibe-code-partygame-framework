@@ -387,6 +387,14 @@ Determinism contract above). Middleware contexts additionally expose `ctx.reject
 of rejections (`ctx.reject()` calls and a handler-thrown `FrameworkError`) for the current dispatch, so a middleware can tell after `next()` whether an action's
 handler rejected.
 
+### Protocol versioning
+`PROTOCOL_VERSION` (from `@partygame/shared`) is an integer identifying the wire and action-log protocol.
+Every first-party client — the browser SDK (`GameConnectionManager`), bots (`joinBots`), the terminal client
+(`GameClient`) and the test helpers (`TestServer.join`/`joinAs`) — sends it as `protocolVersion` in its
+create/join options. Both option schemas accept an optional integer `protocolVersion`. Bump the constant
+whenever you change anything breaking on the wire or in the log format: every first-party client then sends
+the new number from one place, and a mismatch is a close, not a negotiation.
+
 ### Errors at definition time
 `defineGame` throws `GameDefinitionError` listing every problem: empty `name` or `version`, reserved or unknown
 phase names, missing `startPhase`, `duration` without `onTimeout`, `tickMs` without `onTick` or a non-integer `tickMs` below 1, bad player limits, bad action names.

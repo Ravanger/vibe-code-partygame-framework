@@ -35,7 +35,7 @@ import type { ZodError } from "zod";
 import type { RoomCodeService } from "../services/RoomCodeService.js";
 
 const SPECTATOR_SLOTS = 32;
-const FRAMEWORK_KEYS = ["playerId", "name", "spectator", "seats"];
+const FRAMEWORK_KEYS = ["playerId", "name", "spectator", "seats", "protocolVersion"];
 const SPECTATOR_ERROR: ProtocolError = {
   code: ErrorCode.UNAUTHORIZED,
   message: CLIENT_MESSAGES.UNAUTHORIZED,

@@ -2,6 +2,7 @@ import type { Server as HttpServer } from "node:http";
 import { matchMaker, type Room, type Server } from "@colyseus/core";
 import { type Room as ClientRoom, ColyseusSDK } from "@colyseus/sdk";
 import { waitFor } from "@partygame/client-utils";
+import { PROTOCOL_VERSION } from "@partygame/shared";
 import { createGameServer, type GameServerOptions } from "../createGameServer.js";
 import { serveApi as serveApiOnNode } from "../node.js";
 import { closeHttpServer, freePort } from "../probe.js";
@@ -54,7 +55,7 @@ export class TestServer {
 
   /** Join `room` as a player (or a spectator). Send `SET_NAME` yourself to become ready. */
   join(room: Room, options: TestJoinOptions): Promise<ClientRoom> {
-    return this.sdk.joinById(room.roomId, options);
+    return this.sdk.joinById(room.roomId, { ...options, protocolVersion: PROTOCOL_VERSION });
   }
 
   /** Like {@link TestServer.join}, with the client state typed as `stateClass`. */
@@ -63,7 +64,11 @@ export class TestServer {
     options: TestJoinOptions,
     stateClass: new () => TState,
   ): Promise<ClientRoom<unknown, TState>> {
-    return this.sdk.joinById<TState>(room.roomId, options, stateClass);
+    return this.sdk.joinById<TState>(
+      room.roomId,
+      { ...options, protocolVersion: PROTOCOL_VERSION },
+      stateClass,
+    );
   }
 
   /** Start the `/api/resolve-code` HTTP API for this server's rooms on a free port; stopped by `shutdown()`. */

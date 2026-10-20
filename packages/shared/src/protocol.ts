@@ -135,11 +135,20 @@ export const PlayerIdSchema = z
   .regex(/^[A-Za-z0-9_-]+$/)
   .refine((id) => !Object.hasOwn(Object.prototype, id));
 
+/**
+ * The wire/log protocol version every first-party client sends and the server compares against.
+ * Bump it on any breaking change to the wire format or the action-log format; a mismatch is a
+ * close, not a negotiation (see docs/framework/README.md, Protocol versioning).
+ */
+export const PROTOCOL_VERSION = 1;
+
 /** Options a client passes when joining a room. `spectator` joins without taking a seat. */
 export const JoinOptionsSchema = z.object({
   playerId: PlayerIdSchema,
   name: SetNameSchema.optional(),
   spectator: z.boolean().optional(),
+  /** The protocol version the client speaks; optional so a missing one gets the version-mismatch close, not an invalid-options error. */
+  protocolVersion: z.number().int().optional(),
 });
 
 /**
@@ -148,6 +157,8 @@ export const JoinOptionsSchema = z.object({
  */
 export const RoomOptionsSchema = z.object({
   seats: z.array(PlayerIdSchema).max(MAX_SEATS).optional(),
+  /** The protocol version the client speaks; optional as in {@link JoinOptionsSchema}. */
+  protocolVersion: z.number().int().optional(),
 });
 
 /** Body of `GET /api/resolve-code`: the room id, or why the code did not resolve. */

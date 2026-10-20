@@ -514,6 +514,7 @@
           "MAX_OPTIONS_JSON_LENGTH": {},
           "MAX_SEATS": {},
           "NAME_MAX_LENGTH": {},
+          "PROTOCOL_VERSION": {},
           "PlayerIdSchema": {},
           "ROOM_CODE_ALPHABET": {},
           "ROOM_CODE_LENGTH": {},

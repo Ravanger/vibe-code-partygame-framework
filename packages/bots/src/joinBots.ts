@@ -1,5 +1,6 @@
 import { Client } from "@colyseus/sdk";
 import { apiBaseOf, claimName, resolveRoomCode, waitFor } from "@partygame/client-utils";
+import { PROTOCOL_VERSION } from "@partygame/shared";
 import type { BaseGameState } from "@partygame/shared/schema";
 import { BotPlayer } from "./BotPlayer.js";
 import type { BotConnection, BotKit } from "./types.js";
@@ -42,7 +43,11 @@ class BotJoiner<TState extends BaseGameState> {
     const { stateClass, strategy, bot, playerIds } = this.options;
     const timeoutMs = this.options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     const playerId = playerIds?.[index] ?? crypto.randomUUID();
-    const room = await this.client.joinById<TState>(roomId, { playerId }, stateClass);
+    const room = await this.client.joinById<TState>(
+      roomId,
+      { playerId, protocolVersion: PROTOCOL_VERSION },
+      stateClass,
+    );
     try {
       await waitFor(() => room.state.roomCode !== "", "the room state", timeoutMs);
       const name = this.freeName(room.state);

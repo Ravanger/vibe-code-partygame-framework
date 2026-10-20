@@ -1,4 +1,5 @@
 import { Client } from "@colyseus/sdk";
+import { PROTOCOL_VERSION } from "@partygame/shared";
 import type { BaseGameState } from "@partygame/shared/schema";
 import type { BotPlayer } from "./BotPlayer.js";
 import { type JoinBotsOptions, joinBots } from "./joinBots.js";
@@ -33,7 +34,7 @@ export class BotTable<TState extends BaseGameState> {
     if (this.seat) throw new Error("The table is already open");
     const room = await this.client.create<TState>(
       this.options.roomName,
-      { playerId: crypto.randomUUID(), spectator: true },
+      { playerId: crypto.randomUUID(), spectator: true, protocolVersion: PROTOCOL_VERSION },
       this.options.stateClass,
     );
     const watch = new RoomWatch(room);

@@ -1,10 +1,11 @@
 import { type SchemaType, t as schemaField } from "@colyseus/schema";
+import { Client } from "@colyseus/sdk";
 import { claimName, resolveRoomCode } from "@partygame/client-utils";
 import { defineGame } from "@partygame/core";
 import { RoomCodeService } from "@partygame/server";
 import { bootTestServer, type TestServer, waitUntil } from "@partygame/server/testing";
-import { LOBBY_PHASE, NAME_MAX_LENGTH, RoomCodeSchema } from "@partygame/shared";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { LOBBY_PHASE, NAME_MAX_LENGTH, PROTOCOL_VERSION, RoomCodeSchema } from "@partygame/shared";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { BotPlayer } from "../src/BotPlayer.js";
 import { BotTable } from "../src/BotTable.js";
 import { DemoTable } from "../src/DemoTable.js";
@@ -167,6 +168,19 @@ describe("joinBots", () => {
     await expect(join(room.state.roomCode, 1, { nameFor })).rejects.toThrow();
     await waitUntil(() => room.state.players.size === 1, "bot gone");
   });
+
+  it("sends the current protocol version on join", async () => {
+    const room = await humanRoom("Ann");
+    const spy = vi.spyOn(Client.prototype, "joinById");
+    try {
+      await join(room.state.roomCode, 1);
+      expect(spy.mock.calls.at(-1)?.[1]).toEqual(
+        expect.objectContaining({ protocolVersion: PROTOCOL_VERSION }),
+      );
+    } finally {
+      spy.mockRestore();
+    }
+  });
 });
 
 describe("BotTable", () => {
@@ -207,6 +221,20 @@ describe("BotTable", () => {
     leavers.push(table);
     await table.open();
     await expect(table.open()).rejects.toThrow("The table is already open");
+  });
+
+  it("stamps created rooms with the current protocol version", async () => {
+    const table = new BotTable({ ...tapper, endpoint: t.endpoint, apiPort, bot: FAST });
+    leavers.push(table);
+    const spy = vi.spyOn(Client.prototype, "create");
+    try {
+      await table.open();
+      expect(spy.mock.calls.at(-1)?.[1]).toEqual(
+        expect.objectContaining({ protocolVersion: PROTOCOL_VERSION }),
+      );
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("leaves without hanging once the room is gone", async () => {
@@ -396,6 +424,27 @@ describe("DemoTable", () => {
     await waitUntil(() => seatedNames(spectator).includes("Boss"), "host named");
     expect(await table.seatBots()).toHaveLength(1);
     await table.leave();
+  });
+
+  it("stamps created rooms with the current protocol version", async () => {
+    const table = new DemoTable({
+      ...tapper,
+      endpoint: t.endpoint,
+      apiPort,
+      bots: 1,
+      roomOptions: {},
+      isFinished: (state) => state.done,
+    });
+    leavers.push(table);
+    const spy = vi.spyOn(Client.prototype, "create");
+    try {
+      await table.open();
+      expect(spy.mock.calls.at(-1)?.[1]).toEqual(
+        expect.objectContaining({ protocolVersion: PROTOCOL_VERSION }),
+      );
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("refuses to open twice", async () => {

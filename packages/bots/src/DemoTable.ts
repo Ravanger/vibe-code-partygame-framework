@@ -1,5 +1,6 @@
 import { Client } from "@colyseus/sdk";
 import { claimName } from "@partygame/client-utils";
+import { PROTOCOL_VERSION } from "@partygame/shared";
 import type { BaseGameState } from "@partygame/shared/schema";
 import { BotPlayer } from "./BotPlayer.js";
 import { type JoinBotsOptions, joinBots } from "./joinBots.js";
@@ -38,7 +39,12 @@ export class DemoTable<TState extends BaseGameState> {
     const hostName = this.options.hostName ?? "Host Bot";
     const room = await new Client(endpoint).create<TState>(
       roomName,
-      { ...roomOptions, playerId: this.hostId, seats: [this.hostId, ...this.botIds] },
+      {
+        ...roomOptions,
+        playerId: this.hostId,
+        seats: [this.hostId, ...this.botIds],
+        protocolVersion: PROTOCOL_VERSION,
+      },
       stateClass,
     );
     const watch = new RoomWatch(room);

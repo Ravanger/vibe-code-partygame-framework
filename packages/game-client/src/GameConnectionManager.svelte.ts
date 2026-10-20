@@ -9,6 +9,7 @@ import {
   ErrorCode,
   isActionResult,
   isServerError,
+  PROTOCOL_VERSION,
   ROOM_CODE_LENGTH,
   RoomCodeSchema,
   type ServerError,
@@ -127,7 +128,7 @@ export class GameConnectionManager<
         () =>
           this.client.create<TState>(
             this.options.roomName,
-            { ...options, playerId: this.playerId },
+            { ...options, playerId: this.playerId, protocolVersion: PROTOCOL_VERSION },
             this.options.rootSchema,
           ),
         false,
@@ -148,7 +149,7 @@ export class GameConnectionManager<
         async () =>
           this.client.joinById<TState>(
             await resolveRoomCode(this.apiBase, clean),
-            { ...options, playerId: this.playerId },
+            { ...options, playerId: this.playerId, protocolVersion: PROTOCOL_VERSION },
             this.options.rootSchema,
           ),
         spectator,
