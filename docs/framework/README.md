@@ -330,6 +330,17 @@ consistency without a runtime — the log header must match the bundle's `name`/
 `{ ok: true }` or `{ ok: false, seq, phase, reason }` for the first failure (non-snapshot failures report
 `seq: 0`).
 
+**Viewing.** A bundle is meant to be watched without re-running the runtime: `ReplayViewModel` (from
+`@partygame/game-ui`) takes the bundle file's text, validates it structurally (a wrong `bundleVersion`,
+missing or malformed snapshots set its `error` and leave no snapshots) and steps through the `snapshots` —
+`index`, `current` (the snapshot's synced state as plain JSON) and `phase` are reactive, `next()`/
+`previous()`/`goTo(i)` clamp at the ends, and `play()` auto-advances on an injectable timer.
+`snapshotManager(viewModel, stateClass)` adapts it to the shape screens read from a `GameConnectionManager`:
+`state` is a fresh `stateClass` instance filled from the current snapshot (via `syncedStateFromJson`, the
+inverse of `syncedJsonOf`, from `@partygame/shared/schema`), and `isSpectator` is always true — so a game's
+existing screens render a replay read-only. Snapshots hold synced state only: no private or per-client data,
+and player ids are the live ones (no `p1..pN` remapping).
+
 **Limitations in v1.** Mid-game roster changes are not replayed: `replayLog` throws naming the first such
 entry. Lobby-phase roster changes are skipped — the table is already seated — except the one that
 auto-started the session, which re-runs so the replay performs the same start at the same time; a game whose

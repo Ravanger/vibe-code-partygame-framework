@@ -347,9 +347,14 @@
           "PodiumRow": {},
           "PodiumStep": {},
           "QrCode": {},
+          "ReplaySnapshot": {},
+          "ReplayTimer": {},
+          "ReplayViewModel": {},
+          "ReplayViewModelOptions": {},
           "Route": {},
           "RouterScreen": {},
           "STICKER_SHAPES": {},
+          "SnapshotManager": {},
           "StickerShape": {},
           "TypingReporter": {},
           "WaitingRoomViewModel": {},
@@ -359,6 +364,7 @@
           "podiumSteps": {},
           "qrCode": {},
           "rankRows": {},
+          "snapshotManager": {},
           "stickerLetter": {}
         }
       },
@@ -533,7 +539,8 @@
         "symbols": {
           "BaseGameState": {},
           "PlayerSchema": {},
-          "syncedJsonOf": {}
+          "syncedJsonOf": {},
+          "syncedStateFromJson": {}
         }
       }
     },

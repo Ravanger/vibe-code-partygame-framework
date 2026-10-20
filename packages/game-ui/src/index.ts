@@ -16,6 +16,14 @@ export {
 } from "./playerSticker.js";
 export { type QrCode, qrCode } from "./qr.js";
 export {
+  type ReplaySnapshot,
+  type ReplayTimer,
+  ReplayViewModel,
+  type ReplayViewModelOptions,
+  type SnapshotManager,
+  snapshotManager,
+} from "./ReplayViewModel.svelte.js";
+export {
   type PodiumRow,
   type PodiumStep,
   podiumSteps,
