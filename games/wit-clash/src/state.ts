@@ -92,6 +92,8 @@ export const PlayerPrivate = schema(
     prompts: t.array(PromptAssignment),
     categoryVote: t.string().default(""),
     matchupVote: t.string().default(""),
+    /** The authorId I voted for in the honor vote; empty when I have not (or cannot) voted. */
+    honorVote: t.string().default(""),
     canVote: t.boolean().default(false),
     isOwnMatchup: t.boolean().default(false),
     ownAnswerId: t.string().default(""),
@@ -120,6 +122,8 @@ export const WitClashState = BaseGameState.extend(
     tieBreakerContenders: t.array("string"),
     bestAnswers: t.array(BestAnswer),
     awards: t.array(Award),
+    /** The honor-vote winner names, for the ceremony; empty when there was no (or no result of a) honor vote. */
+    honorWinnerNames: t.array("string"),
     typing: t.map("boolean"),
     mine: t.map(PlayerPrivate).view(),
   },

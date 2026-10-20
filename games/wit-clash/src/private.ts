@@ -24,6 +24,8 @@ export class WitClashPrivate {
   authors = new Map<string, string>();
   placeholders = new Set<string>();
   matchupVotes = new Map<string, string>();
+  /** Honor-vote ballots: voter to the authorId they voted for. */
+  honorVotes = new Map<string, string>();
   roundAwards: MatchupAward[] = [];
   answerHistory: AnswerRecord[] = [];
   tieBreakerPlan: TieBreakerPlan | undefined;
@@ -49,6 +51,7 @@ export class WitClashPrivate {
 
   clearGame(): void {
     this.clearRound();
+    this.honorVotes.clear();
     this.scores = {};
     this.names = {};
     this.participants.clear();

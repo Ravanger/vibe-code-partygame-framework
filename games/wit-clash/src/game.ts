@@ -6,6 +6,7 @@ import { META } from "./meta.js";
 import { type WitClashOptions, WitClashOptionsSchema } from "./options.js";
 import { PHASE } from "./phaseNames.js";
 import { CategorySelection } from "./phases/CategorySelection.js";
+import { HonorVote } from "./phases/HonorVote.js";
 import { MatchupReveal } from "./phases/MatchupReveal.js";
 import { MatchupVoting } from "./phases/MatchupVoting.js";
 import { Prompting } from "./phases/Prompting.js";
@@ -58,6 +59,7 @@ export function createWitClashGame({ categories, canon = categories }: WitClashC
       [PHASE.Prompting]: Prompting,
       [PHASE.MatchupVoting]: MatchupVoting,
       [PHASE.MatchupReveal]: MatchupReveal,
+      [PHASE.HonorVote]: HonorVote,
       [PHASE.TieBreakerPrompting]: TieBreakerPrompting,
       [PHASE.TieBreakerVoting]: TieBreakerVoting,
       [PHASE.TieBreakerReveal]: TieBreakerReveal,

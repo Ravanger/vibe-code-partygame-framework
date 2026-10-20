@@ -4,6 +4,7 @@ export const PHASE = {
   Prompting: "Prompting",
   MatchupVoting: "MatchupVoting",
   MatchupReveal: "MatchupReveal",
+  HonorVote: "HonorVote",
   Results: "Results",
   TieBreakerPrompting: "TieBreakerPrompting",
   TieBreakerVoting: "TieBreakerVoting",

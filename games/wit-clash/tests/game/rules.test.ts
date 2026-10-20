@@ -140,7 +140,7 @@ describe("composeScoreboard", () => {
 
 describe("shared names and defaults", () => {
   it("exposes every phase and action name", () => {
-    expect(Object.keys(PHASE)).toHaveLength(8);
+    expect(Object.keys(PHASE)).toHaveLength(9);
     expect(Object.keys(ACTION)).toEqual(Object.values(ACTION));
     expect(Object.keys(PHASE)).toEqual(Object.values(PHASE));
   });

@@ -14,6 +14,7 @@ describe("WitClashOptionsSchema", () => {
       voteSeconds: 20,
       revealSeconds: 5,
       filterLevel: "moderate",
+      honorVote: false,
     });
   });
 
@@ -28,6 +29,7 @@ describe("WitClashOptionsSchema", () => {
     { revealSeconds: 0 },
     { revealSeconds: 60 },
     { filterLevel: "loud" },
+    { honorVote: "maybe" },
   ])("rejects %o", (bad) => {
     expect(WitClashOptionsSchema.safeParse(bad).success).toBe(false);
   });
@@ -92,6 +94,7 @@ describe("createWitClashGame", () => {
       "Prompting",
       "MatchupVoting",
       "MatchupReveal",
+      "HonorVote",
       "TieBreakerPrompting",
       "TieBreakerVoting",
       "TieBreakerReveal",

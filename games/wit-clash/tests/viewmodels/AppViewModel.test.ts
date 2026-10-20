@@ -3,13 +3,18 @@ import { AppViewModel } from "../../ui/viewmodels/AppViewModel.js";
 import { connectedClient } from "../helpers/client.js";
 
 describe("AppViewModel.screen", () => {
-  it.each(["Lobby", "CategorySelection", "Prompting", "MatchupVoting", "MatchupReveal", "Results"])(
-    "routes the %s phase to its screen",
-    (phase) => {
-      const c = connectedClient({}, phase);
-      expect(new AppViewModel(c.manager).screen).toEqual({ kind: "phase", phase });
-    },
-  );
+  it.each([
+    "Lobby",
+    "CategorySelection",
+    "Prompting",
+    "MatchupVoting",
+    "MatchupReveal",
+    "HonorVote",
+    "Results",
+  ])("routes the %s phase to its screen", (phase) => {
+    const c = connectedClient({}, phase);
+    expect(new AppViewModel(c.manager).screen).toEqual({ kind: "phase", phase });
+  });
 
   it("waits for a phase it does not know", () => {
     const c = connectedClient({}, "Intermission");

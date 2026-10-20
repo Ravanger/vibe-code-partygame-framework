@@ -83,6 +83,9 @@ class WitClashBot implements BotStrategy<WitClashState> {
       case PHASE.TieBreakerVoting:
         this.voteOn(turn, state.tieBreakers[state.tieBreakers.length - 1]);
         break;
+      case PHASE.HonorVote:
+        this.voteHonor(turn);
+        break;
     }
   }
 
@@ -136,6 +139,23 @@ class WitClashBot implements BotStrategy<WitClashState> {
     turn.once(`${this.stage(turn)}:${matchup.id}`, () =>
       turn.later("react", () =>
         turn.act(ACTION.CAST_VOTE, { answerId: answer.id }, `votes for ${answer.text}`),
+      ),
+    );
+  }
+
+  private voteHonor(turn: Turn): void {
+    const candidates = [...turn.state.bestAnswers].filter(
+      (answer) => answer.authorId !== turn.playerId,
+    );
+    const choice = turn.pick(candidates);
+    if (!choice || !turn.state.mine.get(turn.playerId)?.canVote) return;
+    turn.once(`${this.stage(turn)}:honor`, () =>
+      turn.later("react", () =>
+        turn.act(
+          ACTION.VOTE_HONOR,
+          { authorId: choice.authorId },
+          `votes for ${choice.authorName}`,
+        ),
       ),
     );
   }

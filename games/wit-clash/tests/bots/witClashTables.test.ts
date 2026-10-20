@@ -73,6 +73,42 @@ describe("WitClash bots on a real server", () => {
     expect(host.state.scoreboard).toHaveLength(4);
   }, 30_000);
 
+  it("plays a whole game with the honor vote on and crowns a winner for the ceremony", async () => {
+    const host = await t.sdk.create<WitClashState>(
+      ROOM,
+      {
+        playerId: "host-Host-0001",
+        totalRounds: 1,
+        revealSeconds: 1,
+        honorVote: true,
+        protocolVersion: PROTOCOL_VERSION,
+      },
+      WitClashState,
+    );
+    await waitUntil(() => host.state.roomCode !== "", "room code");
+    host.send(ClientMessage.SET_NAME, "Host");
+    bots.push(
+      ...(await joinBots({
+        ...witClashKit(),
+        code: host.state.roomCode,
+        count: 3,
+        endpoint: t.endpoint,
+        apiPort,
+        bot: FAST,
+      })),
+    );
+    bots.push(new BotPlayer(host, "host-Host-0001", "Host", witClashBot(), FAST));
+
+    await waitUntil(() => host.state.canStart, "canStart");
+    expect(await host.request(ClientMessage.ACTION, { type: START_GAME })).toEqual({ ok: true });
+    await waitUntil(() => host.state.phase === PHASE.Results, "results", 30_000);
+
+    expect([...host.state.honorWinnerNames].length).toBeGreaterThan(0);
+    const honor = [...host.state.awards].find((award) => award.id === "honor");
+    expect(honor?.title).toBe("Honor award");
+    expect([...(honor?.winnerNames ?? [])]).toEqual([...host.state.honorWinnerNames]);
+  }, 40_000);
+
   it("BotTable seats bots once the human is named, and play with the human, who starts the game", async () => {
     const table = new BotTable({ ...witClashKit(), endpoint: t.endpoint, apiPort, bot: FAST });
     tables.push(table);

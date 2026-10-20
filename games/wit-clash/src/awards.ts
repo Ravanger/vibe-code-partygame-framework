@@ -77,4 +77,13 @@ export function writeAwards(ctx: WitClashContext): void {
     award.detail = detail(score);
     state.awards.push(award);
   }
+  // The honor vote is a player pick, not a log computation; its names are already synced.
+  if (state.honorWinnerNames.length > 0) {
+    const award = new Award();
+    award.id = "honor";
+    award.title = "Honor award";
+    for (const name of state.honorWinnerNames) award.winnerNames.push(name);
+    award.detail = "chosen by the players";
+    state.awards.push(award);
+  }
 }
