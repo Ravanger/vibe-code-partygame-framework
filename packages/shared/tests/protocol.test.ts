@@ -12,6 +12,7 @@ import {
   LOBBY_PHASE,
   MAX_SEATS,
   PlayerIdSchema,
+  PROTOCOL_VERSION,
   ResolveCodeResponseSchema,
   RoomCodeSchema,
   RoomOptionsSchema,
@@ -22,8 +23,18 @@ import {
 } from "../src/index.js";
 
 describe("protocol constants", () => {
+  it("exposes the current protocol version as a positive integer", () => {
+    expect(Number.isInteger(PROTOCOL_VERSION)).toBe(true);
+    expect(PROTOCOL_VERSION).toBeGreaterThan(0);
+    expect(PROTOCOL_VERSION).toBe(1);
+  });
+
   it("exposes message names, lobby phase and start action", () => {
-    expect(ClientMessage).toEqual({ SET_NAME: "SET_NAME", ACTION: "ACTION" });
+    expect(ClientMessage).toEqual({
+      SET_NAME: "SET_NAME",
+      ACTION: "ACTION",
+      EXPORT_REPLAY: "EXPORT_REPLAY",
+    });
     expect(ServerMessage).toEqual({ ERROR: "ERROR" });
     expect(LOBBY_PHASE).toBe("Lobby");
     expect(START_GAME).toBe("START_GAME");
@@ -149,6 +160,11 @@ describe("RoomOptionsSchema", () => {
     expect(RoomOptionsSchema.safeParse({ seats: ids.slice(1) }).success).toBe(true);
     expect(RoomOptionsSchema.safeParse({ seats: ids }).success).toBe(false);
   });
+  it("accepts and preserves an optional protocolVersion, rejecting non-integers", () => {
+    expect(RoomOptionsSchema.parse({ protocolVersion: 1 })).toEqual({ protocolVersion: 1 });
+    expect(RoomOptionsSchema.safeParse({ protocolVersion: 1.5 }).success).toBe(false);
+    expect(RoomOptionsSchema.safeParse({ protocolVersion: "1" }).success).toBe(false);
+  });
 });
 
 describe("JoinOptionsSchema", () => {
@@ -165,6 +181,15 @@ describe("JoinOptionsSchema", () => {
     expect(join("x".repeat(20)).success).toBe(true);
     expect(join("x".repeat(21)).success).toBe(false);
     expect(join("Ada\u0007Bob").success).toBe(false);
+  });
+  it("accepts and preserves an optional protocolVersion, rejecting non-integers", () => {
+    const id = "a".repeat(8);
+    expect(JoinOptionsSchema.parse({ playerId: id, protocolVersion: 1 })).toEqual({
+      playerId: id,
+      protocolVersion: 1,
+    });
+    expect(JoinOptionsSchema.safeParse({ playerId: id, protocolVersion: 2.5 }).success).toBe(false);
+    expect(JoinOptionsSchema.safeParse({ playerId: id, protocolVersion: "1" }).success).toBe(false);
   });
 });
 

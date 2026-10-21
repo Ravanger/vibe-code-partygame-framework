@@ -81,6 +81,19 @@ $effect(() => () => spotlight.destroy());
   <div class="board">
     <Scoreboard rows={vm.scoreboard.rows} />
 
+    {#if vm.awards.length > 0}
+      <section class="ceremony" aria-label="Awards">
+        <h2 class="sticker">Awards</h2>
+        {#each vm.awards as award (award.id)}
+          <div class="award card taped">
+            <span class="award-title">{award.title}</span>
+            <span class="award-winners">{award.winnerNames.join(" & ")}</span>
+            <span class="chip">{award.detail}</span>
+          </div>
+        {/each}
+      </section>
+    {/if}
+
     {#if vm.matchups.length > 0}
       <details class="recap card">
         <summary>Matchup recap</summary>
@@ -201,6 +214,41 @@ $effect(() => () => spotlight.destroy());
   }
 
   .best-meta .chip {
+    background: var(--white);
+  }
+
+  .ceremony {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .ceremony h2 {
+    margin: 0;
+  }
+
+  .award {
+    --tape: var(--tape-mint);
+    width: 100%;
+    margin: 0;
+    background: var(--sun);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .award-title {
+    font-family: var(--font-display);
+    font-size: calc(var(--fs-3) * var(--scale, 1));
+  }
+
+  .award-winners {
+    font-weight: 700;
+  }
+
+  .award .chip {
     background: var(--white);
   }
 

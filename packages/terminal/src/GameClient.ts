@@ -1,6 +1,7 @@
 import { Client, type Room } from "@colyseus/sdk";
 import type { BotKit } from "@partygame/bots";
 import { apiBaseOf, claimName, resolveRoomCode, waitFor } from "@partygame/client-utils";
+import { PROTOCOL_VERSION } from "@partygame/shared";
 import type { BaseGameState } from "@partygame/shared/schema";
 
 export type GameRoomOf<TState extends BaseGameState> = Room<unknown, TState>;
@@ -25,7 +26,7 @@ export class GameClient<TState extends BaseGameState> {
   async create(playerId: string, name: string, options: object = {}): Promise<GameRoomOf<TState>> {
     const room = await this.client.create<TState>(
       this.game.roomName,
-      { playerId, ...options },
+      { playerId, ...options, protocolVersion: PROTOCOL_VERSION },
       this.game.stateClass,
     );
     await claimName(room, playerId, name);
@@ -45,7 +46,11 @@ export class GameClient<TState extends BaseGameState> {
 
   private async enter(code: string, options: object): Promise<GameRoomOf<TState>> {
     const roomId = await resolveRoomCode(this.apiBase, code);
-    const room = await this.client.joinById<TState>(roomId, options, this.game.stateClass);
+    const room = await this.client.joinById<TState>(
+      roomId,
+      { ...options, protocolVersion: PROTOCOL_VERSION },
+      this.game.stateClass,
+    );
     await waitFor(() => room.state.roomCode !== "", "the room state", STEP_TIMEOUT_MS);
     return room;
   }

@@ -1,5 +1,5 @@
 import type { TextFilter } from "@partygame/content/filter";
-import { ErrorCode } from "@partygame/shared";
+import { ErrorCode, PROTOCOL_VERSION } from "@partygame/shared";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
@@ -17,7 +17,7 @@ import {
   textFilterMiddleware,
   timingMiddleware,
 } from "../src/index.js";
-import { replayLog } from "../src/testing/index.js";
+import { replayLog } from "../src/replay/index.js";
 import { TestTable } from "../src/testing/TestTable.js";
 
 interface S extends PhaseState {
@@ -143,6 +143,7 @@ describe("actionLogMiddleware", () => {
       seed: seedFromNumber(0),
       game: "Logged",
       version: "1",
+      protocolVersion: PROTOCOL_VERSION,
       startedAt: 1_000_000,
     });
     expect(log?.entries[0]).toEqual({ seq: 1, t: 1_000_000, phase: "Lobby", kind: "enter" });

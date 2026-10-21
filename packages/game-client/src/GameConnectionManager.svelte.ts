@@ -3,12 +3,13 @@ import { RoomCodeError, resolveRoomCode } from "@partygame/client-utils";
 import {
   type ActionResult,
   CLIENT_MESSAGES,
+  CLOSE_CODES,
   ClientMessage,
-  type CloseCode,
   closeCodeEntry,
   ErrorCode,
   isActionResult,
   isServerError,
+  PROTOCOL_VERSION,
   ROOM_CODE_LENGTH,
   RoomCodeSchema,
   type ServerError,
@@ -127,7 +128,7 @@ export class GameConnectionManager<
         () =>
           this.client.create<TState>(
             this.options.roomName,
-            { ...options, playerId: this.playerId },
+            { ...options, playerId: this.playerId, protocolVersion: PROTOCOL_VERSION },
             this.options.rootSchema,
           ),
         false,
@@ -148,7 +149,7 @@ export class GameConnectionManager<
         async () =>
           this.client.joinById<TState>(
             await resolveRoomCode(this.apiBase, clean),
-            { ...options, playerId: this.playerId },
+            { ...options, playerId: this.playerId, protocolVersion: PROTOCOL_VERSION },
             this.options.rootSchema,
           ),
         spectator,
@@ -395,9 +396,9 @@ export class GameConnectionManager<
       this.fail(error.reason === "not-found" ? ErrorCode.ROOM_NOT_FOUND : ErrorCode.BAD_REPLY);
       return;
     }
-    const entry = this.closeEntryOf(error);
-    if (entry) {
-      this.setLastError({ code: entry.errorCode, message: entry.message });
+    const closeError = this.closeErrorOf(error);
+    if (closeError) {
+      this.setLastError(closeError);
       return;
     }
     if (!current) return;
@@ -405,11 +406,24 @@ export class GameConnectionManager<
     this.fail(ErrorCode.CONNECTION_LOST);
   }
 
-  /** Reads the numeric close code off an SDK rejection with a type guard. */
-  private closeEntryOf(error: unknown): CloseCode | undefined {
+  /**
+   * The client-visible error for a refused connection: the table's fixed message, except
+   * VERSION_MISMATCH, whose template the server fills with both versions and the rejection preserves.
+   */
+  private closeErrorOf(error: unknown): ServerError | undefined {
     if (typeof error !== "object" || error === null || !("code" in error)) return undefined;
     const code = error.code;
-    return typeof code === "number" ? closeCodeEntry(code) : undefined;
+    if (typeof code !== "number") return undefined;
+    const entry = closeCodeEntry(code);
+    if (!entry) return undefined;
+    if (
+      entry === CLOSE_CODES.VERSION_MISMATCH &&
+      "message" in error &&
+      typeof error.message === "string"
+    ) {
+      return { code: entry.errorCode, message: error.message };
+    }
+    return { code: entry.errorCode, message: entry.message };
   }
 
   /** A client-side action failure: the fixed message for `code`, never the raw exception text. */

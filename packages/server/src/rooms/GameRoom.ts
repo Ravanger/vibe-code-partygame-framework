@@ -4,12 +4,15 @@ import type { FilterLevel, TextFilter } from "@partygame/content/filter";
 import {
   type GameDefinition,
   GameRuntime,
+  getActionLog,
   type PlayerInfo,
   type RuntimeHost,
   randomSeed,
+  required,
   type Seed,
   sfc32,
 } from "@partygame/core";
+import { createBundle } from "@partygame/core/replay";
 import {
   type ActionResult,
   CLIENT_MESSAGES,
@@ -17,21 +20,23 @@ import {
   ClientMessage,
   type CloseCode,
   ErrorCode,
+  FRAMEWORK_VERSION,
   JoinOptionsSchema,
   LOBBY_PHASE,
   MAX_OPTIONS_JSON_LENGTH,
+  PROTOCOL_VERSION,
   type ServerError as ProtocolError,
   RoomOptionsSchema,
   ServerMessage,
   SetNameSchema,
 } from "@partygame/shared";
 import type { BaseGameState } from "@partygame/shared/schema";
-import { PlayerSchema } from "@partygame/shared/schema";
+import { PlayerSchema, syncedJsonOf } from "@partygame/shared/schema";
 import type { ZodError } from "zod";
 import type { RoomCodeService } from "../services/RoomCodeService.js";
 
 const SPECTATOR_SLOTS = 32;
-const FRAMEWORK_KEYS = ["playerId", "name", "spectator", "seats"];
+const FRAMEWORK_KEYS = ["playerId", "name", "spectator", "seats", "protocolVersion"];
 const SPECTATOR_ERROR: ProtocolError = {
   code: ErrorCode.UNAUTHORIZED,
   message: CLIENT_MESSAGES.UNAUTHORIZED,
@@ -39,6 +44,10 @@ const SPECTATOR_ERROR: ProtocolError = {
 const ACTION_FAILED: ActionResult = {
   ok: false,
   error: { code: ErrorCode.INTERNAL, message: CLIENT_MESSAGES.INTERNAL },
+};
+const REPLAY_UNAVAILABLE: ProtocolError = {
+  code: ErrorCode.NOT_ALLOWED,
+  message: CLIENT_MESSAGES.NOT_ALLOWED,
 };
 
 export interface GameRoomConfig {
@@ -58,6 +67,8 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
   private readonly playerOf = new Map<string, string>();
   private readonly spectators = new Set<string>();
   private readonly kicked = new Set<string>();
+  /** Synced-state snapshot recorded at every phase transition; exported as a replay bundle. */
+  private readonly snapshots: Array<{ from: string; to: string; state: unknown }> = [];
   private seatList: Set<string> | undefined;
   private readonly views = new Map<string, StateView>();
   private readonly viewRefs = new Map<string, Set<Schema>>();
@@ -68,8 +79,19 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
   /** Seeded PRNG so a room's randomness is reproducible from its log header. */
   private readonly rngFn = sfc32(this.seed);
   /** Builds the Colyseus close `ServerError` for a {@link CLOSE_CODES} entry; the only place one is made. */
-  private readonly closeWith = (entry: CloseCode): ServerError =>
-    new ServerError(entry.code, entry.message);
+  private readonly closeWith = (entry: CloseCode, message?: string): ServerError =>
+    new ServerError(entry.code, message ?? entry.message);
+
+  /** Refuses a create/join whose protocolVersion is missing or different; fills the template from numbers only. */
+  private readonly versionMismatch = (clientVersion?: number): ServerError => {
+    const client = clientVersion === undefined ? "unknown" : String(clientVersion);
+    return this.closeWith(
+      CLOSE_CODES.VERSION_MISMATCH,
+      CLOSE_CODES.VERSION_MISMATCH.message
+        .replace("{client}", client)
+        .replace("{server}", `${PROTOCOL_VERSION}`),
+    );
+  };
 
   constructor(private readonly config: GameRoomConfig) {
     super();
@@ -107,6 +129,9 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     const { definition, stateClass, roomCodeService } = this.config;
     const roomOptions = RoomOptionsSchema.safeParse(options);
     if (!roomOptions.success) throw this.invalidOptions("create", roomOptions.error);
+    if (roomOptions.data.protocolVersion !== PROTOCOL_VERSION) {
+      throw this.versionMismatch(roomOptions.data.protocolVersion);
+    }
     if (roomOptions.data.seats) {
       if (roomOptions.data.seats.length > definition.maxPlayers) {
         throw this.closeWith(CLOSE_CODES.INVALID_OPTIONS);
@@ -156,6 +181,7 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
         const seat = this.seatOf(client);
         return seat ? this.act(seat.id, raw) : { ok: false, error: SPECTATOR_ERROR };
       });
+      this.onMessage(ClientMessage.EXPORT_REPLAY, (client): unknown => this.exportReplay(client));
     } catch (error) {
       roomCodeService.unregister(code);
       throw error;
@@ -165,6 +191,9 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
   private join(client: Client, options?: unknown): void {
     const parsed = JoinOptionsSchema.safeParse(options);
     if (!parsed.success) throw this.invalidOptions("join", parsed.error);
+    if (parsed.data.protocolVersion !== PROTOCOL_VERSION) {
+      throw this.versionMismatch(parsed.data.protocolVersion);
+    }
     const { playerId, name, spectator } = parsed.data;
     if (this.kicked.has(playerId)) throw this.closeWith(CLOSE_CODES.KICKED_REJOIN);
     if (!spectator && this.seatList && !this.seatList.has(playerId)) {
@@ -241,6 +270,11 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     },
     send: (playerId, type, payload) => this.clientFor(playerId)?.send(type, payload),
     broadcast: (type, payload) => this.broadcast(type, payload),
+    notifyTransition: (from, to) => {
+      this.safely(() => {
+        this.snapshots.push({ from, to, state: syncedJsonOf(this.state) });
+      });
+    },
     showTo: (playerId, ref: Schema) => {
       const refs = this.viewRefs.get(playerId) ?? new Set<Schema>();
       this.viewRefs.set(playerId, refs.add(ref));
@@ -337,6 +371,34 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
       return error ? { ok: false, error } : { ok: true };
     } catch (error) {
       logger.error("[GameRoom] action failed", error);
+      return ACTION_FAILED;
+    }
+  }
+
+  /** Host-only `EXPORT_REPLAY`: the room's replay bundle, or a fixed refusal. */
+  private exportReplay(client: Client): unknown {
+    const seat = this.seatBySession(client);
+    if (seat?.role !== "host") return { ok: false, error: SPECTATOR_ERROR };
+    try {
+      const log = getActionLog(this.runtime.priv);
+      if (!log) return { ok: false, error: REPLAY_UNAVAILABLE };
+      const transitions = log.entries.filter((entry) => entry.kind === "transition");
+      if (transitions.length !== this.snapshots.length)
+        return { ok: false, error: REPLAY_UNAVAILABLE };
+      return createBundle({
+        name: this.config.definition.name,
+        frameworkVersion: FRAMEWORK_VERSION,
+        gameVersion: this.config.definition.version,
+        contentHash: this.config.definition.contentHash?.() ?? "",
+        log,
+        snapshots: this.snapshots.map((snap, index) => ({
+          seq: required(transitions[index], "transition entry").seq,
+          phase: snap.from,
+          state: snap.state,
+        })),
+      });
+    } catch (error) {
+      logger.error("[GameRoom] replay export failed", error);
       return ACTION_FAILED;
     }
   }

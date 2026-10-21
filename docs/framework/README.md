@@ -210,6 +210,7 @@ every room and replay table append to one log and one timing store.
 | `seed` | Room RNG `Seed`, four unsigned 32-bit numbers (see Determinism contract) |
 | `game` | Definition name; `replayLog` refuses a log recorded for another game |
 | `version` | Definition version; `replayLog` refuses a log recorded for another version, or one without it (recorded before versioning) |
+| `protocolVersion` | The framework's `PROTOCOL_VERSION` at record time; `replayLog` refuses a log recorded under another one, or one without it (recorded before protocol versioning) |
 | `startedAt` | `ctx.now()` at the first entry (the construction-time Lobby enter) |
 
 **Entries** — one per middleware-visible event, in append order:
@@ -248,9 +249,9 @@ positionally to `p1..pN`, so every recorded sender re-dispatches against the mat
 
 - **RNG.** Rooms draw their randomness from `sfc32`, a PRNG with 128 bits of state; each room gets a
   `Seed` (four unsigned 32-bit numbers) from `crypto.getRandomValues` at creation, recorded in the header,
-  so published ids do not reveal the stream. `FakeHost`/`TestTable` accept a `Seed` or a number (expanded
-  by `seedFromNumber`); an unseeded host is `seedFromNumber(0)`, so even unseeded test rooms are
-  replayable by seed (and their ids from `ctx.newId()` stay unique).
+  so published ids do not reveal the stream. `ReplayHost`, `FakeHost`/`TestTable` accept a `Seed` or a
+  number (expanded by `seedFromNumber`); an unseeded host is `seedFromNumber(0)`, so even unseeded test
+  rooms are replayable by seed (and their ids from `ctx.newId()` stay unique).
 - **Clock.** Replay scripts the fake clock: it advances to each entry's `t` before applying the entry, and
   logged timeouts are authoritative — when replay enters a timed phase, its timer is made to expire at the
   time recorded in the log. A live room's phase timers run on Colyseus's tick-quantized clock (a ~17 ms
@@ -260,14 +261,14 @@ positionally to `p1..pN`, so every recorded sender re-dispatches against the mat
   from the room RNG). `crypto.randomUUID()` breaks replay: re-dispatched payloads reference ids the fresh
   runtime never generated.
 
-**Replay.** `replayLog(definition, log, init)` (from `@partygame/core/testing` — it builds a `TestTable`)
-re-drives a fresh runtime — same definition, RNG seeded from
-the header, clock starting at `header.startedAt`, the recorded roster pre-seated with its flags restored
-(`p1..pN` mapped positionally; for logs without a roster, `init.players` pre-seats that many seats instead)
-— dispatching every logged action in order:
+**Replay.** `replayLog(definition, log, init)` (from `@partygame/core/replay`; `@partygame/core/testing`
+re-exports it for existing test suites) re-drives a fresh runtime on a `ReplayHost` — same definition, RNG
+seeded from the header, clock starting at `header.startedAt`, the recorded roster pre-seated with its flags
+restored (`p1..pN` mapped positionally; a log without a roster — a lobby-only session — needs `init.players`
+instead, which pre-seats that many seats) — dispatching every logged action in order:
 
 ```ts
-import { replayLog } from "@partygame/core/testing";
+import { replayLog } from "@partygame/core/replay";
 
 const { states } = replayLog(ButtonGame, log, {
   state: new State(), // same shape as passed to TestTable
@@ -278,13 +279,15 @@ const { states } = replayLog(ButtonGame, log, {
 ```
 
 `states[0]` is the fresh construction at `header.startedAt`, before any entry; each following element is
-one deep-cloned snapshot per step — every logged `action`, `timeout` or (skipped) lobby `roster-change`
-starts a step, and the transitions and enters that follow from it belong to the same step. It throws when
-the log's shape is malformed — validated up front with named errors: `entries` not an array, an entry
-that is not an object or lacks a known `kind`, numeric `t` and `seq` and a string `phase`, `header`
-missing or lacking a string `game`, a four-number `seed` and number `startedAt`, or a roster entry missing its
-`id`/flags — when the first entry is not the construction-time Lobby enter (every recorded session starts
-with it), when the log's `game` does not match the definition, when its `version` differs from the
+one deep-cloned snapshot per step — every logged `action`, `timeout` or lobby `roster-change` starts a step
+(the roster change re-runs the lobby hook only when it auto-started the session, so the replay performs the
+same start at the same time; any other one advances the clock and nothing else), and the transitions and
+enters that follow from it belong to the same step. It throws when
+the log's shape is malformed — validated up front against `ActionLogSchema` with named errors: `entries`
+not an array, an entry that is not an object or lacks a known `kind`, numeric `t` and `seq` and a string
+`phase`, `header` missing or lacking a string `game`, a four-number `seed` and number `startedAt`, a roster
+entry missing its `id`/flags, or any unknown field anywhere in the log (the schema is strict) — when the
+first entry is not the construction-time Lobby enter (every recorded session starts with it), when the log's `game` does not match the definition, when its `version` differs from the
 definition's or is absent (a log predating versioning), on a mid-game roster change, on out-of-order
 entry times,
 when a re-dispatch rejects an action the log records as accepted or accepts one recorded with
@@ -292,11 +295,60 @@ when a re-dispatch rejects an action the log records as accepted or accepts one 
 when a logged transition or enter contradicts what the replayed runtime actually did — each step asserts
 its own consequence run, so a tampered log throws naming the mismatch.
 
+`ActionLogSchema` (from `@partygame/core`) is the zod schema behind that validation: strict objects over
+the exact log shape. It is also the gate for untrusted logs — replay bundles and spectators (#19) parse
+with it before anything else runs. `ReplayHost` (from `@partygame/core/replay`) is the host `replayLog`
+drives: a minimal `RuntimeHost` with a manual clock (`advance(ms)`), seats and the given seed, and no
+recording or assertion helpers — client traffic is dropped. Build one directly to drive a `GameRuntime`
+over a log yourself.
+
+**Bundles.** A `ReplayBundle` (from `@partygame/core/replay`) is what a finished session is shared as: the
+action log plus `name`, `frameworkVersion`, `gameVersion` and a game-supplied `contentHash`, and
+`snapshots` — one synced-state snapshot per phase transition, for viewing without re-running the runtime.
+The room records each snapshot as it transitions: the runtime calls `RuntimeHost.notifyTransition(from, to)`
+after the transition's middleware event, and the server serializes the state with `syncedJsonOf` (from
+`@partygame/shared/schema`) — plain JSON of the synced state with `.view()` fields dropped at every level, so
+a snapshot never carries `ctx.priv` or per-client data. Each snapshot names the `seq` of the log's
+`transition` entry it belongs to and shows that transition's `from` phase — the final state of the phase
+being left.
+
+The host exports with `room.request(ClientMessage.EXPORT_REPLAY)`; the answer is an `ExportReplayResponse`
+(from `@partygame/shared`) — the bundle, or a refusal shaped like a rejected `ActionResult`: `UNAUTHORIZED`
+for a non-host (including spectators), `NOT_ALLOWED` when the game records no action log or its logged
+transitions do not match the recorded snapshots (a middleware that drops transition events makes export
+impossible), and `INTERNAL` if building the bundle throws. The bundle's `frameworkVersion` is
+`FRAMEWORK_VERSION` from `@partygame/shared`; `contentHash` comes from an optional
+`definition.contentHash()` — a synchronous hash of what the game plays from (WitClash hashes its category
+files), defaulting to `""`.
+
+`createBundle(parts)` stamps the current format version. `parseBundle(json)` validates untrusted bundle
+JSON against `ReplayBundleSchema` (strict objects, snapshot state as JSON) and throws a named error on an
+unknown `bundleVersion` — the common "written by a newer framework" case. `hashBundle(bundle)` is the
+sha-256 hex digest of the bundle's canonical JSON (object keys sorted; arrays keep their order), computed
+with Web Crypto so it runs in browsers, and stable across key order. `verifyBundle(bundle)` checks
+consistency without a runtime — the log header must match the bundle's `name`/`gameVersion`, and snapshot
+`seq`s must be strictly increasing with each naming a `transition`/`enter` entry in the log — returning
+`{ ok: true }` or `{ ok: false, seq, phase, reason }` for the first failure (non-snapshot failures report
+`seq: 0`).
+
+**Viewing.** A bundle is meant to be watched without re-running the runtime: `ReplayViewModel` (from
+`@partygame/game-ui`) takes the bundle file's text, validates it structurally (a wrong `bundleVersion`,
+missing or malformed snapshots set its `error` and leave no snapshots) and steps through the `snapshots` —
+`index`, `current` (the snapshot's synced state as plain JSON) and `phase` are reactive, `next()`/
+`previous()`/`goTo(i)` clamp at the ends, and `play()` auto-advances on an injectable timer.
+`snapshotManager(viewModel, stateClass)` adapts it to the shape screens read from a `GameConnectionManager`:
+`state` is a fresh `stateClass` instance filled from the current snapshot (via `syncedStateFromJson`, the
+inverse of `syncedJsonOf`, from `@partygame/shared/schema`), and `isSpectator` is always true — so a game's
+existing screens render a replay read-only. Snapshots hold synced state only: no private or per-client data,
+and player ids are the live ones (no `p1..pN` remapping).
+
 **Limitations in v1.** Mid-game roster changes are not replayed: `replayLog` throws naming the first such
-entry. Lobby-phase roster changes are skipped — the recorded roster is pre-seated at construction — so a
-game whose `Lobby.onRosterChange` writes synced state may diverge in intermediate states for sessions with
-lobby joins/leaves (final states still match). A sender that is not in the recorded roster (for example a
-joiner of a second session after `returnToLobby`) makes the re-dispatch throw. A log that contains a failed run
+entry. Lobby-phase roster changes are skipped — the table is already seated — except the one that
+auto-started the session, which re-runs so the replay performs the same start at the same time; a game whose
+`Lobby.onRosterChange` writes synced state may diverge in intermediate states for sessions with other lobby
+joins/leaves (final states still match). A sender that is not in the recorded roster (for example a joiner of
+a second session after `returnToLobby`) makes the re-dispatch throw. Synced state that stores seat ids (for
+example a winner) holds the replay seats' `p1..pN` ids, not the live ones — the same seats positionally. A log that contains a failed run
 (a hook threw and the failure policy returned the room to the Lobby: a transition to the Lobby with no
 `returnToLobby` behind it) is not replayable: the re-dispatch fails the same way, and `replayLog` throws
 `replayLog: entry N re-ran into a failed run (...)`. No log cap; party sessions
@@ -320,12 +372,15 @@ outcomes, never state contents.
 | Framework upgrade that changes `GameRuntime` ordering | Yes | Replay runs on the current framework's runtime (transition queue, middleware chain, built-in lobby behavior); if the order of effects changed since recording, the log's consequences no longer match — the step assertions throw, or state diverges |
 
 **What is recorded to detect it.** `header.game` (the definition name) and `header.version` (a free-form
-string the game author bumps; compared by exact equality). The header seed is recorded too, but to reseed
-the runtime, not to compare. Planned: protocol/framework version negotiation (#77); it changes nothing above until it ships.
+string the game author bumps; compared by exact equality). `header.protocolVersion` (the framework's
+`PROTOCOL_VERSION`, bumped with breaking wire or log-format changes — see Protocol versioning) is compared
+by exact equality too: a log recorded under another protocol, or without one, is refused outright. The
+header seed is recorded as well, but to reseed the runtime, not to compare.
 
 **Old logs.** A mismatch surfaces as a named `replayLog:` error — or, for changes that only alter state
 values, as a replay that completes with different states. No migration exists: a log without
-`header.version` (recorded before versioning) is refused outright. The recommended practice is to keep the
+`header.version` (recorded before versioning) or `header.protocolVersion` (recorded before protocol
+versioning) is refused outright. The recommended practice is to keep the
 game at the recorded name and version to replay its log — bump `version` whenever you change anything the
 table above marks "yes".
 
@@ -335,6 +390,69 @@ table above marks "yes".
 Determinism contract above). Middleware contexts additionally expose `ctx.rejectionCount` — the live count
 of rejections (`ctx.reject()` calls and a handler-thrown `FrameworkError`) for the current dispatch, so a middleware can tell after `next()` whether an action's
 handler rejected.
+
+### Awards
+`@partygame/core/awards` lets a game declare awards as data — pure reducers over the session's action log —
+and compute them when the session ends:
+
+```ts
+import { getActionLog } from "@partygame/core";
+import { computeAwards, type AwardDefinition } from "@partygame/core/awards";
+
+const fastestAnswer: AwardDefinition = {
+  id: "fastest-answer",
+  title: "Fastest answer",
+  higherIsBetter: false, // the smallest delta wins
+  reduce(entries) {
+    const scores = new Map<string, number>();
+    let windowStart: number | undefined;
+    let answered = new Set<string>();
+    for (const entry of entries) {
+      if (entry.kind === "enter") {
+        windowStart = entry.t; // a new phase opens a new answer window
+        answered = new Set();
+        continue;
+      }
+      if (entry.kind !== "action" || entry.actionType !== "SUBMIT" || entry.senderId === undefined) continue;
+      if (windowStart !== undefined && !answered.has(entry.senderId)) {
+        scores.set(entry.senderId, entry.t - windowStart); // first answer in the window only
+        answered.add(entry.senderId);
+      }
+    }
+    return scores;
+  },
+};
+
+// Wherever the session ends (e.g. the Results phase):
+const log = getActionLog(ctx.priv);
+if (log) for (const award of computeAwards(log, [fastestAnswer])) { /* award.winners, award.scores */ }
+```
+
+- `AwardDefinition` is `{ id, title, reduce(entries, roster), higherIsBetter? }` (default `true`). `reduce`
+  receives the log's entries — rejected ones (`rejected: true`) are filtered out before any reducer runs,
+  because they changed nothing and score nothing — plus the recorded roster (an empty array when the session
+  never started), and returns a `Map<playerId, number>`. Entries and their payloads are read-only.
+- `computeAwards(log, defs)` returns one `AwardResult` per declaration, in order: `{ id, title, scores,
+  winners }`. `winners` carries the best score(s) — ties share, in the score map's iteration order — and is
+  empty when the reducer returned no data.
+- An award that needs game state at each step (anything not a fact about the log) uses the escape hatch: the
+  game feeds accumulators into its private state as play progresses, then declares the award with a reducer
+  that ignores the log — a closure over the final private data, e.g. `reduce: () => new Map(
+  Object.entries(ctx.priv.fastestTimes))`. There is no framework code for this; it is the game's own
+  bookkeeping.
+
+### Protocol versioning
+`PROTOCOL_VERSION` (from `@partygame/shared`) is an integer identifying the wire and action-log protocol.
+Every first-party client — the browser SDK (`GameConnectionManager`), bots (`joinBots`, `BotTable`,
+`DemoTable`), the terminal client (`GameClient`) and the test helpers (`TestServer.createRoom`/`join`/`joinAs`)
+— sends it as `protocolVersion` in its create/join options. Both option schemas accept an optional integer
+`protocolVersion`. The server enforces it on every create and join, before any seating work: a missing or
+different version is refused with close code 4426 (`CLOSE_CODES.VERSION_MISMATCH`) and the message
+`Protocol version mismatch: client {client}, server {server}` filled from numbers only — a missing client
+version renders as `unknown`. The browser SDK shows that filled text in `lastServerError`; token reconnects
+are not re-checked, since they carry no options. Bump the constant whenever you change anything breaking on
+the wire or in the log format: every first-party client then sends the new number from one place, and a
+mismatch is a close, not a negotiation.
 
 ### Errors at definition time
 `defineGame` throws `GameDefinitionError` listing every problem: empty `name` or `version`, reserved or unknown
@@ -538,7 +656,7 @@ and `createApiHandler(roomCodeService)` is the pure `(Request) => Response` behi
 
 Clients join with `{ playerId, name? }` (`spectator: true` for a TV display: no seat, counted in `spectatorCount`).
 Create a watch-only room with the framework option `seats: string[]` (the playerIds allowed to take a seat): any other non-spectator join is refused with `4404 "This room is watch-only"`, spectators still join. It is not a game option and is not published in `state.options`.
-`SET_NAME` readies a seat (a name another seat has is refused with `NAME_TAKEN`; a join-time `name` that is taken is ignored and the seat joins unnamed). With a `textFilter` on `createGameServer`, names are also checked against it at the level of the game's `filterLevel` over the room's current options (default `"off"`): a join with a filtered name is refused with close code 4405 (`CONTENT_REJECTED`) and a `SET_NAME` with one is refused with `CONTENT_REJECTED` and the filter's reason, keeping the old name; a level raised mid-lobby applies to the next `SET_NAME`, not to names already set. A room is kept alive only by connected seats: once the last one is gone for `emptyRoomGraceMs`, the room is disposed and any spectators are disconnected. `ACTION` carries your actions (`room.send` or `room.request`, see Actions). A dropped connection holds the seat for `reconnectMs`
+`SET_NAME` readies a seat (a name another seat has is refused with `NAME_TAKEN`; a join-time `name` that is taken is ignored and the seat joins unnamed). With a `textFilter` on `createGameServer`, names are also checked against it at the level of the game's `filterLevel` over the room's current options (default `"off"`): a join with a filtered name is refused with close code 4405 (`CONTENT_REJECTED`) and a `SET_NAME` with one is refused with `CONTENT_REJECTED` and the filter's reason, keeping the old name; a level raised mid-lobby applies to the next `SET_NAME`, not to names already set. A room is kept alive only by connected seats: once the last one is gone for `emptyRoomGraceMs`, the room is disposed and any spectators are disconnected. `ACTION` carries your actions (`room.send` or `room.request`, see Actions). `EXPORT_REPLAY` (host only, via `room.request`) answers with the room's replay bundle — see Bundles below; a non-host gets an `UNAUTHORIZED` refusal. A dropped connection holds the seat for `reconnectMs`
 (token reconnect or a new session with the same `playerId`); a mid-game joiner is seated inactive.
 When the host leaves or drops, the role moves to a connected seat that is active and ready, else one that is ready, else any connected seat.
 Spectators get no reconnection window; they simply rejoin.
@@ -612,7 +730,7 @@ const result = await manager.sendAction("PRESS", { power: 3 });
 
 ### Browser-safe state classes
 `BaseGameState` and `PlayerSchema` live in `@partygame/shared/schema` (re-exported by `@partygame/server`). Import them from there in your game's
-`state.ts` so the browser bundle never reaches `@colyseus/core`. `@colyseus/schema` is allowed in `shared/schema` and in a game's `state.ts`; `@colyseus/core` only in `server`.
+`state.ts` so the browser bundle never reaches `@colyseus/core`. `@colyseus/schema` is allowed in `shared/schema` and in a game's `state.ts`; `@colyseus/core` only in `server`. Also there: `syncedJsonOf(state)` — plain JSON of a synced schema state with `.view()` fields dropped at every level (arrays and maps serialized item by item); the server uses it for replay snapshots.
 
 ### Reactivity
 Reading `manager.state` (or anything reached through it) inside `$derived`, `$effect` or a template re-runs on every patch.
@@ -990,7 +1108,7 @@ export { svelteConfig as default } from "@partygame/config/svelte";
 
 | Import | What |
 |---|---|
-| `@partygame/shared` | `NAME_MAX_LENGTH`: the cap `SET_NAME` enforces on player names; `MAX_SEATS`: the most playerIds a room's `seats` option may list; `MAX_OPTIONS_JSON_LENGTH`: the cap on serialized options at room creation and in `SET_OPTIONS`; `ROOM_CODE_LENGTH` and `ROOM_CODE_ALPHABET`: the shape of a room code; `sanitizeRoomCode(raw)`: uppercases, drops other characters and cuts to the code length (for a code input) |
+| `@partygame/shared` | `NAME_MAX_LENGTH`: the cap `SET_NAME` enforces on player names; `MAX_SEATS`: the most playerIds a room's `seats` option may list; `MAX_OPTIONS_JSON_LENGTH`: the cap on serialized options at room creation and in `SET_OPTIONS`; `ROOM_CODE_LENGTH` and `ROOM_CODE_ALPHABET`: the shape of a room code; `sanitizeRoomCode(raw)`: uppercases, drops other characters and cuts to the code length (for a code input); `FRAMEWORK_VERSION`: recorded in exported replay bundles |
 | `@partygame/client-utils` | `Parsed<T>` (`{ ok: true, value } \| { ok: false, error }`) and `between(value, min, max)` for argument parsing; `waitFor(predicate, what, timeoutMs)` poll loop; `resolveRoomCode(apiBase, code)` (rejects with `RoomCodeError`, `reason` `"not-found"` or `"bad-reply"`); `joinUrl(base, code)` / `tvUrl(base, code)` share links; `claimName(room, playerId, name, timeoutMs?)` (type `SeatRoom`), `apiBaseOf(endpoint, apiPort)` |
 | `@partygame/core` | `shuffle(items, rng)`, `required(value, what)`; roster guards: `seatedCount(ctx)` (active and ready seats, counting briefly disconnected ones), `isBelowMinimum(ctx, min)`, `departedIds(ids, ctx)` — they only report; the game writes its own notice and decides to end |
 | `@partygame/core/kits` | Phase kits (`@experimental`). collectResponses: `allResponded(slots, responses, presentIds)` (complete when every present author responded to every slot), `entriesFor(slotId, slots, responses)` (one entry per author, `text` undefined when unanswered); types `Slots`, `Responses`. voteAndTally: `tallyVotes(voterIds, votes)`, `allHaveVoted(voterIds, votes)`, `countVoted(voterIds, votes)`, `eligibleVoters(activeIds, excludedIds)` (an empty exclusion list allows self-vote), `leaders(counts)` → `{ top, ids }` (a tie shows up as `ids.length > 1`). drawPool: `drawPool(items, usedIds, needed)` → `{ items, exhausted }` — the unused items when at least `needed` remain, otherwise all items with their ids cleared from the mutable `usedIds` set |

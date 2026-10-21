@@ -1,6 +1,6 @@
 import { logger, matchMaker, type Room } from "@colyseus/core";
 import { defineGame } from "@partygame/core";
-import { CLOSE_CODES, MAX_OPTIONS_JSON_LENGTH } from "@partygame/shared";
+import { CLOSE_CODES, MAX_OPTIONS_JSON_LENGTH, PROTOCOL_VERSION } from "@partygame/shared";
 import { BaseGameState } from "@partygame/shared/schema";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -98,8 +98,8 @@ describe("GameRoom without an options schema", () => {
     expect((room.state as BaseGameState).options).toBe("{}");
   });
 
-  it("succeeds creating a room with no options at all", async () => {
-    const listing = await matchMaker.createRoom("plain", undefined as never);
+  it("succeeds creating a room with only the protocol version", async () => {
+    const listing = await matchMaker.createRoom("plain", { protocolVersion: PROTOCOL_VERSION });
     const room = matchMaker.getLocalRoomById(listing.roomId) as Room;
     expect((room.state as BaseGameState).options).toBe("{}");
   });

@@ -1,10 +1,12 @@
+import { createHash } from "node:crypto";
 import { createTextFilter } from "@partygame/content/filter";
-import { defineGame, textFilterMiddleware } from "@partygame/core";
+import { actionLogMiddleware, defineGame, textFilterMiddleware } from "@partygame/core";
 import type { CategoryRepository } from "./content/CategoryRepository.js";
 import { META } from "./meta.js";
 import { type WitClashOptions, WitClashOptionsSchema } from "./options.js";
 import { PHASE } from "./phaseNames.js";
 import { CategorySelection } from "./phases/CategorySelection.js";
+import { HonorVote } from "./phases/HonorVote.js";
 import { MatchupReveal } from "./phases/MatchupReveal.js";
 import { MatchupVoting } from "./phases/MatchupVoting.js";
 import { Prompting } from "./phases/Prompting.js";
@@ -27,12 +29,23 @@ export function createWitClashGame({ categories, canon = categories }: WitClashC
   return defineGame<WitClashState, WitClashPrivate, WitClashOptions>({
     name: "WitClash",
     version: "1",
+    contentHash: () =>
+      createHash("sha256")
+        .update(
+          categories
+            .all()
+            .map((category) => JSON.stringify(category))
+            .sort()
+            .join("\n"),
+        )
+        .digest("hex"),
     minPlayers: META.minPlayers,
     maxPlayers: META.maxPlayers,
     startPhase: PHASE.CategorySelection,
     options: WitClashOptionsSchema,
     filterLevel: (options) => options.filterLevel,
     middleware: [
+      actionLogMiddleware(),
       textFilterMiddleware(createTextFilter(), {
         onRejected: (ctx) => {
           const state = ctx.state as WitClashState;
@@ -46,6 +59,7 @@ export function createWitClashGame({ categories, canon = categories }: WitClashC
       [PHASE.Prompting]: Prompting,
       [PHASE.MatchupVoting]: MatchupVoting,
       [PHASE.MatchupReveal]: MatchupReveal,
+      [PHASE.HonorVote]: HonorVote,
       [PHASE.TieBreakerPrompting]: TieBreakerPrompting,
       [PHASE.TieBreakerVoting]: TieBreakerVoting,
       [PHASE.TieBreakerReveal]: TieBreakerReveal,

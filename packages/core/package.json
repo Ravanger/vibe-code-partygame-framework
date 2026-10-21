@@ -9,9 +9,17 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
+    "./awards": {
+      "import": "./dist/awards/index.js",
+      "types": "./dist/awards/index.d.ts"
+    },
     "./kits": {
       "import": "./dist/kits/index.js",
       "types": "./dist/kits/index.d.ts"
+    },
+    "./replay": {
+      "import": "./dist/replay/index.js",
+      "types": "./dist/replay/index.d.ts"
     },
     "./testing": {
       "import": "./dist/testing/index.js",

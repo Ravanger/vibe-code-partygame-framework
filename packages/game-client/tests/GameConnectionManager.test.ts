@@ -1,6 +1,6 @@
 import { Client } from "@colyseus/sdk";
 import { RoomCodeError } from "@partygame/client-utils";
-import { CLIENT_MESSAGES, CLOSE_CODES, ErrorCode } from "@partygame/shared";
+import { CLIENT_MESSAGES, CLOSE_CODES, ErrorCode, PROTOCOL_VERSION } from "@partygame/shared";
 import { BaseGameState, PlayerSchema } from "@partygame/shared/schema";
 import { flushSync } from "svelte";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -818,4 +818,58 @@ describe("resume", () => {
     expect(sessionStorage.getItem(`unit${counter}.reconnectionToken`)).toBeNull();
     expect(manager.status).toBe("disconnected");
   });
+});
+
+describe("protocol versioning", () => {
+  it("sends the current protocol version when creating and joining", async () => {
+    const manager = newManager();
+    const { room } = seated(manager);
+    stubFetchReply({ roomId: "room-1" });
+    const created = vi.spyOn(Client.prototype, "create").mockResolvedValue(room as never);
+    await manager.create();
+    expect(created).toHaveBeenCalledWith(
+      "stub",
+      expect.objectContaining({ protocolVersion: PROTOCOL_VERSION }),
+      undefined,
+    );
+    const joined = vi.spyOn(Client.prototype, "joinById").mockResolvedValue(room as never);
+    await manager.join("WXYZ");
+    expect(joined).toHaveBeenCalledWith(
+      "room-1",
+      expect.objectContaining({ protocolVersion: PROTOCOL_VERSION }),
+      undefined,
+    );
+  });
+
+  it("shows both versions when a join is refused for a protocol mismatch", async () => {
+    const manager = newManager();
+    stubFetchReply({ roomId: "room-1" });
+    vi.spyOn(Client.prototype, "joinById").mockRejectedValue(
+      Object.assign(new Error("Protocol version mismatch: client 9, server 1"), {
+        code: CLOSE_CODES.VERSION_MISMATCH.code,
+      }),
+    );
+    await expect(manager.join("WXYZ")).rejects.toThrow();
+    expect(manager.lastServerError).toEqual({
+      code: ErrorCode.NOT_ALLOWED,
+      message: "Protocol version mismatch: client 9, server 1",
+    });
+  });
+
+  it.each([
+    { code: CLOSE_CODES.VERSION_MISMATCH.code },
+    { code: CLOSE_CODES.VERSION_MISMATCH.code, message: 123 },
+  ])(
+    "falls back to the fixed template when the mismatch text is not a string (%i)",
+    async (error) => {
+      const manager = newManager();
+      stubFetchReply({ roomId: "room-1" });
+      vi.spyOn(Client.prototype, "joinById").mockRejectedValue(error);
+      await expect(manager.join("WXYZ")).rejects.toThrow();
+      expect(manager.lastServerError).toEqual({
+        code: ErrorCode.NOT_ALLOWED,
+        message: CLOSE_CODES.VERSION_MISMATCH.message,
+      });
+    },
+  );
 });

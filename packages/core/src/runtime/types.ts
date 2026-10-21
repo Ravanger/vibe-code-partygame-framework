@@ -204,6 +204,8 @@ export interface GameDefinition<
   name: string;
   /** Bump when a change would alter how a recorded log replays. */
   version: string;
+  /** Hash of the content this game plays from (for example its data files); recorded in exported replay bundles so a viewer can verify it played the same content. Default `""`. */
+  contentHash?: () => string;
   minPlayers: number;
   maxPlayers: number;
   /** Phase entered by `START_GAME`. */
@@ -242,6 +244,8 @@ export interface RuntimeHost {
   benchUnreadyPlayers(): void;
   send(playerId: string, type: string, payload: unknown): void;
   broadcast(type: string, payload: unknown): void;
+  /** Called once per applied phase transition, after the `transition` middleware event; hosts record replay snapshots here. */
+  notifyTransition(from: string, to: string): void;
   showTo(playerId: string, ref: object): void;
   hideFrom(playerId: string, ref: object): void;
   /** Remove the seat and tell the player they were kicked. */

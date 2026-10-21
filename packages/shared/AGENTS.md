@@ -18,7 +18,7 @@ The wire protocol and browser-safe state classes every other package agrees on.
 ## Public entry points
 
 - `.`: protocol (message names, `ErrorCode`, `ActionResult`, zod schemas), limits (`NAME_MAX_LENGTH`).
-- `./schema`: `BaseGameState`, `PlayerSchema`.
+- `./schema`: `BaseGameState`, `PlayerSchema`, `syncedJsonOf`, `syncedStateFromJson`.
 
 ## Tests
 

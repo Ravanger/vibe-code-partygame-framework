@@ -1,10 +1,11 @@
 import { type SchemaType, t as schemaField } from "@colyseus/schema";
+import { Client, type Room } from "@colyseus/sdk";
 import { claimName, resolveRoomCode } from "@partygame/client-utils";
 import { defineGame } from "@partygame/core";
 import { RoomCodeService } from "@partygame/server";
 import { bootTestServer, type TestServer, waitUntil } from "@partygame/server/testing";
-import { LOBBY_PHASE, NAME_MAX_LENGTH, RoomCodeSchema } from "@partygame/shared";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { LOBBY_PHASE, NAME_MAX_LENGTH, PROTOCOL_VERSION, RoomCodeSchema } from "@partygame/shared";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { BotPlayer } from "../src/BotPlayer.js";
 import { BotTable } from "../src/BotTable.js";
 import { DemoTable } from "../src/DemoTable.js";
@@ -84,7 +85,11 @@ afterAll(() => t.shutdown());
 
 async function humanRoom(name: string) {
   const playerId = `human-${name.replace(/\s+/g, "-")}-0001`;
-  const room = await t.sdk.create<TapState>(TAP_ROOM, { playerId }, TapState);
+  const room = await t.sdk.create<TapState>(
+    TAP_ROOM,
+    { playerId, protocolVersion: PROTOCOL_VERSION },
+    TapState,
+  );
   leavers.push({ leave: () => room.leave(true) });
   await claimName(room, playerId, name);
   return room;
@@ -108,7 +113,7 @@ const resolve = (code: string): Promise<string> =>
 const watch = async (code: string) => {
   const room = await t.sdk.joinById<TapState>(
     await resolve(code),
-    { playerId: crypto.randomUUID(), spectator: true },
+    { playerId: crypto.randomUUID(), spectator: true, protocolVersion: PROTOCOL_VERSION },
     TapState,
   );
   leavers.push({ leave: () => room.leave(true) });
@@ -123,7 +128,7 @@ describe("claimName", () => {
     const room = await humanRoom("Ann");
     const other = await t.sdk.joinById<TapState>(
       room.roomId,
-      { playerId: "other-0000001" },
+      { playerId: "other-0000001", protocolVersion: PROTOCOL_VERSION },
       TapState,
     );
     leavers.push({ leave: () => other.leave(true) });
@@ -167,6 +172,19 @@ describe("joinBots", () => {
     await expect(join(room.state.roomCode, 1, { nameFor })).rejects.toThrow();
     await waitUntil(() => room.state.players.size === 1, "bot gone");
   });
+
+  it("sends the current protocol version on join", async () => {
+    const room = await humanRoom("Ann");
+    const spy = vi.spyOn(Client.prototype, "joinById");
+    try {
+      await join(room.state.roomCode, 1);
+      expect(spy.mock.calls.at(-1)?.[1]).toEqual(
+        expect.objectContaining({ protocolVersion: PROTOCOL_VERSION }),
+      );
+    } finally {
+      spy.mockRestore();
+    }
+  });
 });
 
 describe("BotTable", () => {
@@ -177,7 +195,7 @@ describe("BotTable", () => {
     const humanId = "human-zed-0001";
     const room = await t.sdk.joinById<TapState>(
       await resolve(code),
-      { playerId: humanId },
+      { playerId: humanId, protocolVersion: PROTOCOL_VERSION },
       TapState,
     );
     leavers.push({ leave: () => room.leave(true) });
@@ -194,7 +212,7 @@ describe("BotTable", () => {
     const code = await table.open();
     const room = await t.sdk.joinById<TapState>(
       await resolve(code),
-      { playerId: "human-zed-0002" },
+      { playerId: "human-zed-0002", protocolVersion: PROTOCOL_VERSION },
       TapState,
     );
     leavers.push({ leave: () => room.leave(true) });
@@ -208,6 +226,53 @@ describe("BotTable", () => {
     await table.open();
     await expect(table.open()).rejects.toThrow("The table is already open");
   });
+
+  it("stamps created rooms with the current protocol version", async () => {
+    const table = new BotTable({ ...tapper, endpoint: t.endpoint, apiPort, bot: FAST });
+    leavers.push(table);
+    const spy = vi.spyOn(Client.prototype, "create");
+    try {
+      await table.open();
+      expect(spy.mock.calls.at(-1)?.[1]).toEqual(
+        expect.objectContaining({ protocolVersion: PROTOCOL_VERSION }),
+      );
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("open() refuses a synced code that is non-empty but malformed", async () => {
+    // A decode hiccup can leave roomCode non-empty but invalid; open() must not capture it —
+    // fail loudly with its own timeout instead of surfacing the API's "Invalid code format" later.
+    const table = new BotTable({ ...tapper, endpoint: t.endpoint, apiPort });
+    leavers.push(table);
+    const realCreate = Client.prototype.create;
+    const createSpy = vi.spyOn(Client.prototype, "create");
+    try {
+      createSpy.mockImplementation(async function (
+        this: Client,
+        ...args: [string, object?, unknown?]
+      ) {
+        const room = await (
+          realCreate as (
+            roomName: string,
+            options?: object,
+            rootSchema?: unknown,
+          ) => Promise<Room<TapState>>
+        ).call(this, ...args);
+        // Leave the code non-empty but malformed in the first state application.
+        room.onStateChange(() => {
+          if (RoomCodeSchema.safeParse(room.state.roomCode).success) {
+            room.state.roomCode = "ab";
+          }
+        });
+        return room;
+      } as never);
+      await expect(table.open()).rejects.toThrow("Timed out waiting for the room code");
+    } finally {
+      createSpy.mockRestore();
+    }
+  }, 20_000);
 
   it("leaves without hanging once the room is gone", async () => {
     const table = new BotTable({ ...tapper, endpoint: t.endpoint, apiPort });
@@ -225,7 +290,7 @@ describe("BotTable", () => {
     const code = await table.open();
     const room = await t.sdk.joinById<TapState>(
       await resolve(code),
-      { playerId: "human-zed-0003" },
+      { playerId: "human-zed-0003", protocolVersion: PROTOCOL_VERSION },
       TapState,
     );
     await claimName(room, "human-zed-0003", "Zed");
@@ -269,7 +334,7 @@ describe("table overrides", () => {
     const code = await table.open();
     const room = await t.sdk.joinById<TapState>(
       await resolve(code),
-      { playerId: "human-zed-0004" },
+      { playerId: "human-zed-0004", protocolVersion: PROTOCOL_VERSION },
       TapState,
     );
     leavers.push({ leave: () => room.leave(true) });
@@ -303,7 +368,7 @@ describe("table overrides", () => {
     const code = await table.open();
     const room = await t.sdk.joinById<PaddedState>(
       await resolve(code),
-      { playerId: "human-zed-0005" },
+      { playerId: "human-zed-0005", protocolVersion: PROTOCOL_VERSION },
       PaddedState,
     );
     leavers.push({ leave: () => room.leave(true) });
@@ -340,6 +405,54 @@ describe("table overrides", () => {
     await demo.open();
     demo.clobberRoomCode();
     await expect(demo.seatBots()).rejects.toThrow("Timed out waiting for the room state");
+  }, 20_000);
+
+  it("DemoTable keeps a code observed before claimName when state is clobbered mid-open", async () => {
+    // Second CI observation of the padded-state hiccup: the clobber landed while open() was still
+    // inside claimName, so a read taken after it captured "". The capture must be atomic with its
+    // first well-formed observation, before any round trip.
+    const demo = new DemoTable({
+      ...paddedKit,
+      endpoint: t.endpoint,
+      apiPort,
+      bots: 1,
+      timeoutMs: 1,
+      isFinished: () => true,
+    });
+    leavers.push(demo);
+    const realCreate = Client.prototype.create;
+    let clobbered = false;
+    const createSpy = vi.spyOn(Client.prototype, "create");
+    try {
+      createSpy.mockImplementation(async function (
+        this: Client,
+        ...args: [string, object?, unknown?]
+      ) {
+        const room = await (
+          realCreate as (
+            roomName: string,
+            options?: object,
+            rootSchema?: unknown,
+          ) => Promise<Room<PaddedState>>
+        ).call(this, ...args);
+        // Clobber the code in the same state application that accepts the host's name — inside
+        // claimName's wait window, where a late read would capture "".
+        room.onStateChange(() => {
+          if (clobbered) return;
+          const named = [...room.state.players.values()].some((seat) => seat.name !== "");
+          if (named && RoomCodeSchema.safeParse(room.state.roomCode).success) {
+            room.state.roomCode = "";
+            clobbered = true;
+          }
+        });
+        return room;
+      } as never);
+      const code = await demo.open();
+      expect(RoomCodeSchema.safeParse(code).success).toBe(true);
+      await expect(demo.seatBots()).rejects.toThrow("Timed out waiting for the room state");
+    } finally {
+      createSpy.mockRestore();
+    }
   }, 20_000);
 
   it("DemoTable honours a caller's bot.host.expectedPlayers", async () => {
@@ -396,6 +509,27 @@ describe("DemoTable", () => {
     await waitUntil(() => seatedNames(spectator).includes("Boss"), "host named");
     expect(await table.seatBots()).toHaveLength(1);
     await table.leave();
+  });
+
+  it("stamps created rooms with the current protocol version", async () => {
+    const table = new DemoTable({
+      ...tapper,
+      endpoint: t.endpoint,
+      apiPort,
+      bots: 1,
+      roomOptions: {},
+      isFinished: (state) => state.done,
+    });
+    leavers.push(table);
+    const spy = vi.spyOn(Client.prototype, "create");
+    try {
+      await table.open();
+      expect(spy.mock.calls.at(-1)?.[1]).toEqual(
+        expect.objectContaining({ protocolVersion: PROTOCOL_VERSION }),
+      );
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("refuses to open twice", async () => {

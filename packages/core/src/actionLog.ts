@@ -1,3 +1,5 @@
+import { LOBBY_PHASE, PROTOCOL_VERSION } from "@partygame/shared";
+import { z } from "zod";
 import {
   InvalidPrivateStateError,
   type MiddlewareContext,
@@ -65,6 +67,11 @@ export interface ActionLogHeader {
    * (recorded before versioning).
    */
   version?: string;
+  /**
+   * The framework's `PROTOCOL_VERSION` at record time; `replayLog` refuses a log with a different
+   * one, or one without (recorded before protocol versioning).
+   */
+  protocolVersion?: number;
   /** `ctx.now()` at the first entry (the construction-time Lobby enter). */
   startedAt: number;
 }
@@ -93,6 +100,52 @@ export interface ActionLog {
   entries: ActionLogEntry[];
 }
 
+/** One recorded seat: the id plus the flags replay restores when pre-seating. */
+const RosterSeatSchema = z.strictObject({
+  id: z.string(),
+  isConnected: z.boolean(),
+  isReady: z.boolean(),
+  isActive: z.boolean(),
+});
+
+/**
+ * One recorded event. `kind` is declared first and the fields follow the order replay's shape
+ * check has always reported them, so a corrupt entry fails on the same field it used to.
+ */
+const ActionLogEntrySchema = z.strictObject({
+  kind: z.enum(["action", "transition", "enter", "timeout", "roster-change"]),
+  t: z.number(),
+  seq: z.number(),
+  phase: z.string(),
+  actionType: z.string().optional(),
+  senderId: z.string().optional(),
+  payload: z.unknown().optional(),
+  rejected: z.boolean().optional(),
+  redacted: z.boolean().optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
+});
+
+/** The log header, in the order replay's shape check has always reported its fields. */
+const ActionLogHeaderSchema = z.strictObject({
+  game: z.string(),
+  seed: z.tuple([z.number(), z.number(), z.number(), z.number()]),
+  version: z.string().optional(),
+  protocolVersion: z.number().int().optional(),
+  startedAt: z.number(),
+});
+
+/**
+ * The wire shape of an {@link ActionLog}: strict objects, so a hand-edited log with unknown
+ * fields is rejected as well. `replayLog` validates every log against this before reading it;
+ * bundle and spectator code (#19) validates untrusted logs with it too.
+ */
+export const ActionLogSchema = z.strictObject({
+  entries: z.array(ActionLogEntrySchema),
+  header: ActionLogHeaderSchema,
+  roster: z.array(RosterSeatSchema).optional(),
+});
+
 /**
  * Reads the action log recorded for a runtime's private state. Returns the stored object itself —
  * a stable reference across calls — or `undefined` when no event has been recorded yet (or the
@@ -113,6 +166,7 @@ function logOf(ctx: MiddlewareContext<PhaseState, unknown, unknown>): ActionLog 
         seed: ctx.seed,
         game: ctx.gameName,
         version: ctx.gameVersion,
+        protocolVersion: PROTOCOL_VERSION,
         startedAt: ctx.now(),
       },
       entries: [],
@@ -140,6 +194,19 @@ export function actionLogMiddleware(): PhaseMiddleware<PhaseState, unknown, unkn
   return (ctx, next) => {
     const log = logOf(ctx);
     const event = ctx.event;
+    // The seats when the game starts, in seat order — what replay pre-seats. The flags are
+    // recorded too: replay restores them so its bench-on-start matches live's exactly. An
+    // auto-started session has no START_GAME action, so a departure from the Lobby records it.
+    const recordRoster = (): void => {
+      if (log.roster === undefined) {
+        log.roster = ctx.players().map((seat) => ({
+          id: seat.id,
+          isConnected: seat.isConnected,
+          isReady: seat.isReady,
+          isActive: seat.isActive,
+        }));
+      }
+    };
     const entry: ActionLogEntry = {
       seq: log.entries.length + 1,
       t: ctx.now(),
@@ -150,19 +217,11 @@ export function actionLogMiddleware(): PhaseMiddleware<PhaseState, unknown, unkn
       entry.actionType = event.actionType;
       entry.senderId = event.senderId;
       entry.payload = deepFreeze(structuredClone(event.payload));
-      if (event.actionType === "START_GAME" && log.roster === undefined) {
-        // The seats when the game starts, in seat order — what replay pre-seats. The flags are
-        // recorded too: replay restores them so its bench-on-start matches live's exactly.
-        log.roster = ctx.players().map((seat) => ({
-          id: seat.id,
-          isConnected: seat.isConnected,
-          isReady: seat.isReady,
-          isActive: seat.isActive,
-        }));
-      }
+      if (event.actionType === "START_GAME") recordRoster();
     } else if (event.kind === "transition") {
       entry.from = event.from;
       entry.to = event.to;
+      if (event.from === LOBBY_PHASE) recordRoster();
     }
     log.entries.push(entry);
     next();

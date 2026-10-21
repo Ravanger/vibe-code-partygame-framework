@@ -9,6 +9,8 @@ export const TieBreakerReveal: WitClashPhase = {
   onRosterChange: (ctx) => {
     new Round(ctx).endIfTooFewPlayers();
   },
-  onTimeout: (ctx) =>
-    ctx.transition(ctx.priv.tieBreakerPlan ? PHASE.TieBreakerPrompting : PHASE.Results),
+  onTimeout: (ctx) => {
+    if (ctx.priv.tieBreakerPlan) ctx.transition(PHASE.TieBreakerPrompting);
+    else new Round(ctx).toResults();
+  },
 };

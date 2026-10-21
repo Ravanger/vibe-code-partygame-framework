@@ -443,6 +443,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
 
   private observeTransition(from: string, to: string): void {
     this.chain({ kind: "transition", from, to }, () => {});
+    this.host.notifyTransition(from, to);
   }
 
   private apply(next: Pending): void {

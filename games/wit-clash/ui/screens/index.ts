@@ -3,6 +3,7 @@ import type { Component } from "svelte";
 import { PHASE, type PhaseName } from "../../src/phaseNames.js";
 import type { WitClashManager } from "../manager.js";
 import CategoryVote from "./CategoryVote.svelte";
+import HonorVote from "./HonorVote.svelte";
 import MatchupReveal from "./MatchupReveal.svelte";
 import MatchupVote from "./MatchupVote.svelte";
 import Prompting from "./Prompting.svelte";
@@ -44,6 +45,11 @@ export const PHASE_SCREENS = {
     component: MatchupReveal,
     waitingLabel: "The votes are being revealed",
     banner: "",
+  },
+  [PHASE.HonorVote]: {
+    component: HonorVote,
+    waitingLabel: "Everyone is voting for the funniest answer",
+    banner: "HONOR VOTE!",
   },
   [PHASE.TieBreakerPrompting]: {
     component: TieBreakerPrompting,

@@ -12,6 +12,7 @@ import { META } from "../../src/meta.js";
 import { PHASE } from "../../src/phaseNames.js";
 import {
   Answer,
+  BestAnswer,
   CategoryOption,
   Matchup,
   PlayerPrivate,
@@ -246,6 +247,36 @@ describe("witClashBot as a player", () => {
     room.changed();
     clock.flush();
     expect(room.actions()).toEqual([{ answerId: "y2", type: ACTION.CAST_VOTE }]);
+  });
+
+  it("casts an honor vote only while it may vote, never for its own answer", () => {
+    const { room, clock } = setup();
+    room.state.bestAnswers.push(
+      Object.assign(new BestAnswer(), { authorId: ME, authorName: "Bot 1", text: "mine" }),
+      Object.assign(new BestAnswer(), { authorId: "other", authorName: "Other", text: "theirs" }),
+    );
+    const mine = mineOf(room);
+    enter(room, PHASE.HonorVote);
+    room.changed();
+    clock.flush();
+    expect(room.sent).toEqual([]);
+    mine.canVote = true;
+    room.changed();
+    room.changed();
+    clock.flush();
+    expect(room.actions()).toEqual([{ authorId: "other", type: ACTION.VOTE_HONOR }]);
+  });
+
+  it("does not honor-vote when every best answer is its own", () => {
+    const { room, clock } = setup();
+    room.state.bestAnswers.push(
+      Object.assign(new BestAnswer(), { authorId: ME, authorName: "Bot 1", text: "mine" }),
+    );
+    mineOf(room, { canVote: true });
+    enter(room, PHASE.HonorVote);
+    room.changed();
+    clock.flush();
+    expect(room.sent).toEqual([]);
   });
 
   it("logs and reports rejections and failed requests", async () => {

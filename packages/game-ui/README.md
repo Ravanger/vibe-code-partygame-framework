@@ -4,7 +4,7 @@ Svelte 5 viewmodels (no UI code) and reusable components for game screens.
 
 | Import | What |
 |---|---|
-| `@partygame/game-ui` | `createAppRouter`, `AppRouter`, `WelcomeViewModel`, `WaitingRoomViewModel`, `LobbySettingsViewModel`, `OptionsReader`, `PhaseClock`, `TypingReporter`, `GameControlsViewModel`, `NameField`; `OptionFields`, `qrCode`, `playerSticker`, `rankRows`, `podiumSteps` |
+| `@partygame/game-ui` | `createAppRouter`, `AppRouter`, `WelcomeViewModel`, `WaitingRoomViewModel`, `LobbySettingsViewModel`, `OptionsReader`, `PhaseClock`, `TypingReporter`, `GameControlsViewModel`, `NameField`, `ReplayViewModel`, `snapshotManager`; `OptionFields`, `qrCode`, `playerSticker`, `rankRows`, `podiumSteps` |
 | `@partygame/game-ui/components` | Svelte 5 source: `StatusPanel`, `Timer`, `PlayerSticker`, `QrCode`, `ActionBar`, `NameInput`, `LobbySettings`, `GameControls`, `Podium` |
 
 Viewmodels are typed on `GameConnectionManager<TState>` and read its state reactively. Import through the `svelte` export condition (Vite with the Svelte plugin). Build one in a component with `untrack(() => new Vm(manager))`.
@@ -89,6 +89,30 @@ Any viewmodel that needs the published options reads them through `OptionsReader
 `PhaseClock(manager, totalSeconds, announceAt?)` wraps `manager.countdown()`: `secondsLeft`, `isUrgent` (the last ten seconds), `announcement` ("N seconds remaining" at 30/10/5 by default) and your `totalSeconds` getter — e.g. `() => options.current.promptSeconds` from an `OptionsReader`.
 
 `TypingReporter(send, idleMs = 2500)` calls `send(true)` on the first keystroke and `send(false)` after `idleMs` of quiet or on `stop()` — one message per change. Call `keystroke()` per key and `stop()` on submit or teardown.
+
+## Replay viewer
+
+`ReplayViewModel(bundleText, { intervalMs?, timer? })` loads a replay bundle file (the JSON the host exports) and steps through its snapshots as a read-only spectator — no game runtime, no server connection. `snapshots`, `index`, `current` (the snapshot's synced state as plain JSON) and `phase` are reactive; `next()`, `previous()` and `goTo(i)` clamp at the ends. A file that is not valid JSON, not a bundle of the supported format version, or with malformed snapshots sets `error` and leaves no snapshots. `play()`/`pause()` auto-advance every `intervalMs` (default 1000) on an injectable timer, stopping at the last snapshot.
+
+`snapshotManager(viewModel, stateClass)` adapts a viewmodel to the shape screens read from a `GameConnectionManager`: `state` is a fresh `stateClass` instance filled from the current snapshot, and `isSpectator` is always true — so an existing screen can render a replay read-only. Snapshots hold synced state only (never private or per-client data), and the bundle must come from this framework's exporter.
+
+```svelte
+<script lang="ts">
+  import { ReplayViewModel, snapshotManager } from "@partygame/game-ui";
+  import { untrack } from "svelte";
+
+  const vm = untrack(() => new ReplayViewModel(bundleText)); // the bundle file's contents
+  const manager = $derived(snapshotManager(vm, ButtonState));
+</script>
+
+{#if vm.error}
+  <p>{vm.error}</p>
+{:else}
+  <Round {manager} />
+  <button type="button" onclick={() => vm.previous()}>Back</button>
+  <button type="button" onclick={() => vm.next()}>Next</button>
+{/if}
+```
 
 ## Components
 

@@ -33,9 +33,9 @@ content/categories/  host-editable .jsonc categories, at least 3 needed
 
 A game is `totalRounds` rounds. A round is
 
-`CategorySelection -> Prompting -> (MatchupVoting <-> MatchupReveal)* -> [TieBreakerPrompting -> TieBreakerVoting -> TieBreakerReveal]* -> Results`
+`CategorySelection -> Prompting -> (MatchupVoting <-> MatchupReveal)* -> [TieBreakerPrompting -> TieBreakerVoting -> TieBreakerReveal]* -> [HonorVote] -> Results`
 
-The bracketed tie-breaker phases only follow the final round.
+The bracketed tie-breaker phases only follow the final round; `HonorVote` only follows the final round with the `honorVote` option on.
 
 1. **CategorySelection**: three random categories are offered; everyone votes (changing your vote is fine). The phase ends when every
    active player has voted or the timer runs out; ties, and nobody voting, are broken at random among the leaders.
@@ -49,7 +49,8 @@ The bracketed tie-breaker phases only follow the final round.
    Votes can be changed until the reveal and stay hidden until then.
 4. **MatchupReveal**: authors and vote counts are shown, points are awarded, then the next matchup starts.
 5. **Tie-breaker** (final round only): see below.
-6. **Results**: scoreboard. The host sends `NEXT_ROUND` (not after the final round) or `PLAY_AGAIN` (back to the lobby, everything reset).
+6. **HonorVote** (final round only, optional): see below.
+7. **Results**: scoreboard. On the final round it also shows the best answer and the awards ceremony. The host sends `NEXT_ROUND` (not after the final round) or `PLAY_AGAIN` (back to the lobby, everything reset).
 
 ### Scoring
 
@@ -86,6 +87,29 @@ The attempts accumulate in `tieBreakers` (a `Matchup` each, the last is current)
 The answer with the highest vote share in a contested matchup (its votes divided by the votes cast in that matchup), ties broken by raw
 votes. Answers level on both share the award. Forfeits and tie-breaker answers do not count. The history is kept across rounds and
 published as `bestAnswers` when the final round reaches Results; `PLAY_AGAIN` resets it.
+
+### Honor vote
+
+Optional, off by default (`honorVote`). When on, the end of the final round — including after a tie-breaker — goes through
+**HonorVote** (`voteSeconds`) before Results, unless there are no best answers to choose from. The candidates are the unique authors
+of `bestAnswers`, which are published before the phase starts. Every active player votes with `VOTE_HONOR { authorId }` for a
+candidate who is not themselves; a vote for oneself or for a non-candidate is refused, and the one player who is the only candidate
+cannot vote at all. The phase ends when every eligible player has voted or the timer runs out. The winner(s) — ties share — are
+published as `honorWinnerNames`, and an **Honor award** ("chosen by the players") joins the awards ceremony; nobody voting means no
+winner and no award.
+
+### Awards
+
+Two end-of-game awards, computed from the session's action log (see `src/awards.ts`, built on `@partygame/core/awards`) and
+published as `awards` when the final round reaches Results; `PLAY_AGAIN` clears them. An award with no data is omitted:
+
+- **Fastest answer**: the smallest time between a phase enter and one of the player's `SUBMIT_ANSWER`s, across the whole game.
+  The detail line is that delta (`850 ms`, or seconds once it passes a second).
+- **Most votes received**: the total votes each author took across all contested matchups of the game. The log records which answer
+  each vote went to but not who wrote it, so this award reads the game's own `answerHistory` accumulator instead of the log
+  (the documented escape hatch for stateful awards).
+
+Winners share ties; names come from the remembered player names.
 
 ### Typing indicator
 
@@ -139,10 +163,12 @@ who cast them is not.
 | `tieBreakers` | `Matchup[]` | One per tie-breaker attempt; `answers` hide authors and votes until `isRevealed`; `isForfeit` for a lone answer |
 | `tieBreakerContenders` | `string[]` of playerIds | Who is in the current tie-breaker |
 | `bestAnswers` | `BestAnswer[]` `{text,authorId,authorName,promptText,votes}` | Empty until the final Results; several entries when the award is shared |
+| `awards` | `Award[]` `{id,title,winnerNames,detail}` | Empty until the final Results; one entry per award with data (see Awards) |
+| `honorWinnerNames` | `string[]` of names | The honor-vote winner(s); empty until (and unless) an honor vote produces one |
 | `typing` | `map<playerId, boolean>` | Present and `true` while that player is typing an answer |
 | `mine` | `map<playerId, PlayerPrivate>` (`.view()`) | Each entry is visible to its owner only |
 
-`PlayerPrivate`: `prompts` (`{matchupId,promptText,submitted}[]`), `categoryVote`, `matchupVote`, `canVote`, `isOwnMatchup`, `ownAnswerId`
+`PlayerPrivate`: `prompts` (`{matchupId,promptText,submitted}[]`), `categoryVote`, `matchupVote`, `honorVote`, `canVote`, `isOwnMatchup`, `ownAnswerId`
 (during the tie-breaker: `isOwnMatchup` means contender, `ownAnswerId` is your answer to it).
 There are no targeted game-data messages; read `state.mine[playerId]`. Only `ERROR` is sent to a single client.
 
@@ -156,6 +182,7 @@ Names are in `ACTION` (`src/actions.ts`); a new one needs a zod schema there and
 | `SUBMIT_ANSWER` | player | Prompting, TieBreakerPrompting | `{ matchupId, answer }` (1 to 200 chars, trimmed) |
 | `SET_TYPING` | player | Prompting, TieBreakerPrompting | `{ typing }` |
 | `CAST_VOTE` | player | MatchupVoting, TieBreakerVoting | `{ answerId }` |
+| `VOTE_HONOR` | player | HonorVote | `{ authorId }`; refused for a non-candidate or one's own answer |
 | `NEXT_ROUND` | host | Results | none; refused after the final round |
 | `PLAY_AGAIN` | host | Results | none |
 | `END_GAME` | host | every phase except the lobby | none; returns to the lobby with a notice |
@@ -175,6 +202,7 @@ Passed when the room is created or changed by the host in the lobby with `SET_OP
 | `voteSeconds` | 20 | 5 to 120 |
 | `revealSeconds` | 5 | 1 to 30 |
 | `filterLevel` | `moderate` | `off`, `moderate` or `strict` |
+| `honorVote` | `false` | boolean; the optional funniest-answer vote before the final Results |
 
 ### Daily mode
 

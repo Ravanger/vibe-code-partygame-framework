@@ -140,6 +140,7 @@
           "ActionLogEntry": {},
           "ActionLogEntryKind": {},
           "ActionLogHeader": {},
+          "ActionLogSchema": {},
           "GameContext": {},
           "GameDefinition": {},
           "GameDefinitionError": {},
@@ -185,6 +186,17 @@
           "timingMiddleware": {}
         }
       },
+      "./awards": {
+        "target": {
+          "import": "./dist/awards/index.js",
+          "types": "./dist/awards/index.d.ts"
+        },
+        "symbols": {
+          "AwardDefinition": {},
+          "AwardResult": {},
+          "computeAwards": {}
+        }
+      },
       "./kits": {
         "target": {
           "import": "./dist/kits/index.js",
@@ -221,6 +233,27 @@
           "tallyVotes": {
             "experimental": true
           }
+        }
+      },
+      "./replay": {
+        "target": {
+          "import": "./dist/replay/index.js",
+          "types": "./dist/replay/index.d.ts"
+        },
+        "symbols": {
+          "ReplayBundle": {},
+          "ReplayBundleParts": {},
+          "ReplayBundleSchema": {},
+          "ReplayHost": {},
+          "ReplayInit": {},
+          "ReplayResult": {},
+          "ReplaySnapshot": {},
+          "VerifyBundleResult": {},
+          "createBundle": {},
+          "hashBundle": {},
+          "parseBundle": {},
+          "replayLog": {},
+          "verifyBundle": {}
         }
       },
       "./testing": {
@@ -325,9 +358,14 @@
           "PodiumRow": {},
           "PodiumStep": {},
           "QrCode": {},
+          "ReplaySnapshot": {},
+          "ReplayTimer": {},
+          "ReplayViewModel": {},
+          "ReplayViewModelOptions": {},
           "Route": {},
           "RouterScreen": {},
           "STICKER_SHAPES": {},
+          "SnapshotManager": {},
           "StickerShape": {},
           "TypingReporter": {},
           "WaitingRoomViewModel": {},
@@ -337,6 +375,7 @@
           "podiumSteps": {},
           "qrCode": {},
           "rankRows": {},
+          "snapshotManager": {},
           "stickerLetter": {}
         }
       },
@@ -477,6 +516,8 @@
           "CloseCode": {},
           "END_GAME": {},
           "ErrorCode": {},
+          "ExportReplayResponse": {},
+          "FRAMEWORK_VERSION": {},
           "FrameworkError": {},
           "JoinOptionsSchema": {},
           "KICK_PLAYER": {},
@@ -484,6 +525,7 @@
           "MAX_OPTIONS_JSON_LENGTH": {},
           "MAX_SEATS": {},
           "NAME_MAX_LENGTH": {},
+          "PROTOCOL_VERSION": {},
           "PlayerIdSchema": {},
           "ROOM_CODE_ALPHABET": {},
           "ROOM_CODE_LENGTH": {},
@@ -508,7 +550,9 @@
         },
         "symbols": {
           "BaseGameState": {},
-          "PlayerSchema": {}
+          "PlayerSchema": {},
+          "syncedJsonOf": {},
+          "syncedStateFromJson": {}
         }
       }
     },

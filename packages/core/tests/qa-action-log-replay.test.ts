@@ -12,8 +12,8 @@ import {
   seedFromNumber,
   sfc32,
 } from "../src/index.js";
+import { replayLog } from "../src/replay/index.js";
 import { FakeHost } from "../src/testing/FakeHost.js";
-import { replayLog } from "../src/testing/index.js";
 import { TestTable } from "../src/testing/TestTable.js";
 
 /**

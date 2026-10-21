@@ -1,7 +1,8 @@
+import { Client } from "@colyseus/sdk";
 import { waitFor } from "@partygame/client-utils";
 import { type NodeServerHandle, startNodeServer } from "@partygame/server/node";
-import { CLOSE_CODES } from "@partygame/shared";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { CLOSE_CODES, PROTOCOL_VERSION } from "@partygame/shared";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { GameClient } from "../src/GameClient.js";
 import { TAP_ROOM, TapGame, TapState } from "./fixtures/tapGame.js";
 
@@ -45,5 +46,23 @@ describe("GameClient", () => {
 
   it("says when a code does not exist", async () => {
     await expect(client.watch("QQQQ", crypto.randomUUID())).rejects.toThrow();
+  });
+
+  it("sends the current protocol version when creating and joining", async () => {
+    const createSpy = vi.spyOn(Client.prototype, "create");
+    const joinSpy = vi.spyOn(Client.prototype, "joinById");
+    try {
+      const host = await client.create(crypto.randomUUID(), "Ver");
+      expect(createSpy.mock.calls[0]?.[1]).toEqual(
+        expect.objectContaining({ protocolVersion: PROTOCOL_VERSION }),
+      );
+      await client.join(host.state.roomCode, crypto.randomUUID(), "Vic");
+      expect(joinSpy.mock.calls.at(-1)?.[1]).toEqual(
+        expect.objectContaining({ protocolVersion: PROTOCOL_VERSION }),
+      );
+    } finally {
+      createSpy.mockRestore();
+      joinSpy.mockRestore();
+    }
   });
 });

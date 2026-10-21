@@ -1,4 +1,4 @@
-import { actionLogMiddleware, getActionLog } from "@partygame/core";
+import { getActionLog } from "@partygame/core";
 import { replayLog } from "@partygame/core/testing";
 import { describe, expect, it } from "vitest";
 import { categoriesFromArray } from "../../src/content/CategoryRepository.js";
@@ -168,19 +168,15 @@ describe("daily mode", () => {
 
   it("replays a daily game to the same final state", () => {
     const definition = createWitClashGame({ categories: makeCategories(6, 8) });
-    const logging = {
-      ...definition,
-      middleware: [actionLogMiddleware(), ...(definition.middleware ?? [])],
-    };
     const options = WitClashOptionsSchema.parse({ mode: "daily", totalRounds: 1 });
-    const t = new Table({ players: 4, seed: 42, startTime: DAY, options, definition: logging });
+    const t = new Table({ players: 4, seed: 42, startTime: DAY, options, definition });
     t.start();
     playRound(t);
     expect(t.state.phase).toBe("Results");
 
     const log = getActionLog(t.priv);
     if (log === undefined) throw new Error("expected an action log");
-    const replayed = replayLog(logging, log, { state: new WitClashState(), options });
+    const replayed = replayLog(definition, log, { state: new WitClashState(), options });
     const last = replayed.states[replayed.states.length - 1];
     expect(last?.phase).toBe("Results");
     expect(last?.selectedCategory).toBe(t.state.selectedCategory);

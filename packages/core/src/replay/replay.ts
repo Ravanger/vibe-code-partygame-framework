@@ -1,8 +1,14 @@
-import { LOBBY_PHASE, type ServerError } from "@partygame/shared";
-import type { ActionLog, ActionLogEntry } from "../actionLog.js";
-import type { GameDefinition, PhaseDefinition, PhaseState, PlayerInfo } from "../runtime/index.js";
+import { LOBBY_PHASE, PROTOCOL_VERSION, type ServerError } from "@partygame/shared";
+import { type ActionLog, type ActionLogEntry, ActionLogSchema } from "../actionLog.js";
+import {
+  type GameDefinition,
+  GameRuntime,
+  type PhaseDefinition,
+  type PhaseState,
+  type PlayerInfo,
+} from "../runtime/index.js";
 import { required, type Seed } from "../utils.js";
-import { TestTable } from "./TestTable.js";
+import { ReplayHost } from "./ReplayHost.js";
 
 /** Starting values for {@link replayLog}. */
 export interface ReplayInit<TState extends PhaseState, TOptions> {
@@ -48,86 +54,102 @@ function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
-/** The fields every recorded roster entry must carry, and their types. */
-const ROSTER_FIELDS = [
-  ["id", "string"],
-  ["isConnected", "boolean"],
-  ["isReady", "boolean"],
-  ["isActive", "boolean"],
-] as const;
-
 /** The kinds a recorded entry may carry — the set the replay walk dispatches on. */
 const ENTRY_KINDS = ["action", "transition", "enter", "timeout", "roster-change"] as const;
 
-/** The fields every recorded entry must carry besides its kind, and their types. */
-const ENTRY_FIELDS = [
-  ["t", "number"],
-  ["seq", "number"],
-  ["phase", "string"],
-] as const;
+/** The fields of a schema issue this mapper reads. */
+interface ShapeIssue {
+  code: string;
+  path: readonly PropertyKey[];
+}
+
+/** The type text for an entry field in a shape error, mirroring the messages replay has always thrown. */
+function entryFieldType(field: string): string {
+  switch (field) {
+    case "kind":
+      return `one of ${ENTRY_KINDS.join(", ")}`;
+    case "t":
+    case "seq":
+      return "a number";
+    case "rejected":
+    case "redacted":
+      return "a boolean";
+    default:
+      return "a string";
+  }
+}
+
+/** The type text for a header field in a shape error. */
+function headerFieldType(field: string): string {
+  switch (field) {
+    case "seed":
+      return "an array of 4 numbers";
+    case "startedAt":
+      return "a number";
+    default:
+      return "a string";
+  }
+}
+
+/** The type text for a roster field in a shape error. */
+function rosterFieldType(field: string): string {
+  switch (field) {
+    case "id":
+      return "a string";
+    default:
+      return "a boolean";
+  }
+}
+
+/** Describes the first {@link ActionLogSchema} issue as the named `replayLog:` message replay has always thrown. */
+function shapeMessage(issues: readonly ShapeIssue[], log: unknown): string {
+  const issue = required(issues[0], "shape issue");
+  const [section, index, field] = issue.path;
+  if (section === "entries") {
+    if (typeof index !== "number") return "log.entries must be an array";
+    // A path of ["entries", i] means the schema saw an array there, so this cannot miss.
+    const entry = (log as { entries: readonly unknown[] }).entries[index];
+    if (field === undefined) {
+      return issue.code === "unrecognized_keys"
+        ? `malformed log entry ${JSON.stringify(entry)}: has unrecognized fields`
+        : `malformed log entry ${JSON.stringify(entry)}: must be an object`;
+    }
+    return `malformed log entry ${JSON.stringify(entry)}: "${String(field)}" must be ${entryFieldType(String(field))}`;
+  }
+  if (section === "header") {
+    if (index === undefined) {
+      return issue.code === "unrecognized_keys"
+        ? "log.header has unrecognized fields"
+        : "log.header must be an object";
+    }
+    return `log.header.${String(index)} must be ${headerFieldType(String(index))}`;
+  }
+  if (section === "roster") {
+    if (typeof index !== "number") return "log.roster must be an array";
+    // A path of ["roster", i] means the schema saw an array there, so this cannot miss.
+    const seat = (log as { roster: readonly unknown[] }).roster[index];
+    if (field === undefined) {
+      return issue.code === "unrecognized_keys"
+        ? `malformed roster entry ${JSON.stringify(seat)}: has unrecognized fields`
+        : `malformed roster entry ${JSON.stringify(seat)}: "id" must be a string`;
+    }
+    return `malformed roster entry ${JSON.stringify(seat)}: "${String(field)}" must be ${rosterFieldType(String(field))}`;
+  }
+  return issue.code === "unrecognized_keys"
+    ? "log has unrecognized fields"
+    : "log must be an object";
+}
 
 /**
  * Validates the log's shape before `replayLog` reads it: a hand-edited or corrupt log must fail
- * with a named `replayLog:` error, never a raw `TypeError` partway through the walk. Every entry
- * is checked too — an object with a known `kind` and numeric `t` and `seq` plus a string `phase`,
- * the fields the walk reads unconditionally; a kind-less entry would otherwise fall through every
- * branch of the walk, poison the clock with `tick(NaN)` and silence all later ordering checks.
+ * with a named `replayLog:` error, never a raw `TypeError` partway through the walk. The shape is
+ * {@link ActionLogSchema}; its declaration order mirrors the check replay has always reported, so
+ * the messages are unchanged.
  */
 function assertLogShape(log: ActionLog): void {
-  const raw = log as unknown as Record<string, unknown>;
-  if (!Array.isArray(raw.entries)) {
-    throw new Error("replayLog: log.entries must be an array");
-  }
-  for (const entry of raw.entries) {
-    if (typeof entry !== "object" || entry === null) {
-      throw new Error(`replayLog: malformed log entry ${JSON.stringify(entry)}: must be an object`);
-    }
-    const record = entry as Record<string, unknown>;
-    const kind = record.kind;
-    if (typeof kind !== "string" || !(ENTRY_KINDS as readonly string[]).includes(kind)) {
-      throw new Error(
-        `replayLog: malformed log entry ${JSON.stringify(entry)}: "kind" must be one of ${ENTRY_KINDS.join(", ")}`,
-      );
-    }
-    for (const [field, type] of ENTRY_FIELDS) {
-      if (typeof record[field] !== type) {
-        throw new Error(
-          `replayLog: malformed log entry ${JSON.stringify(entry)}: "${field}" must be a ${type}`,
-        );
-      }
-    }
-  }
-  const header = raw.header;
-  if (typeof header !== "object" || header === null) {
-    throw new Error("replayLog: log.header must be an object");
-  }
-  const h = header as Record<string, unknown>;
-  if (typeof h.game !== "string") {
-    throw new Error("replayLog: log.header.game must be a string");
-  }
-  if (
-    !Array.isArray(h.seed) ||
-    h.seed.length !== 4 ||
-    !h.seed.every((v) => typeof v === "number")
-  ) {
-    throw new Error("replayLog: log.header.seed must be an array of 4 numbers");
-  }
-  if (typeof h.startedAt !== "number") {
-    throw new Error("replayLog: log.header.startedAt must be a number");
-  }
-  if (raw.roster !== undefined && !Array.isArray(raw.roster)) {
-    throw new Error("replayLog: log.roster must be an array");
-  }
-  for (const seat of (raw.roster as unknown[] | undefined) ?? []) {
-    const record = seat as Record<string, unknown> | null;
-    for (const [field, type] of ROSTER_FIELDS) {
-      if (typeof record?.[field] !== type) {
-        throw new Error(
-          `replayLog: malformed roster entry ${JSON.stringify(seat)}: "${field}" must be a ${type}`,
-        );
-      }
-    }
-  }
+  const parsed = ActionLogSchema.safeParse(log);
+  if (parsed.success) return;
+  throw new Error(`replayLog: ${shapeMessage(parsed.error.issues, log)}`);
 }
 
 /**
@@ -199,20 +221,25 @@ function authoritativeDurations<TState extends PhaseState, TPrivate, TOptions>(
 /**
  * Re-drives a fresh runtime from an {@link ActionLog} and returns deep-cloned state snapshots.
  * The definition's `name` and `version` must match the log's header: a different game or version
- * throws, as does a log with no recorded version (one predating versioning).
+ * throws, as does a log with no recorded version (one predating versioning). The header's
+ * `protocolVersion` must equal the current `PROTOCOL_VERSION`: a different one, or a log without
+ * it (recorded before protocol versioning), throws too.
  * The log must start with the construction-time Lobby enter (seq 1) — every recorded session does,
  * because the middleware creates the log on its first event — and a different first entry throws.
- * Builds a `TestTable` with the log's seed (or `init.seed`) and start time, then walks the entries
- * in order: transitions and enters are consequences of the step that started them and are skipped;
- * every other entry advances the clock to its `t`, re-dispatches the action (if any) and produces
- * one snapshot. Logged timeouts are authoritative: when the replayed runtime enters a timed phase,
- * its timer is made to expire at the time recorded in the log — a live room's tick-quantized clock
- * can fire a few ms early or late relative to enter + duration — so `phaseEndsAt` in the snapshots
- * reflects that time. The recorded roster (the seats at START_GAME, host first) is pre-seated with
- * its recorded flags — so the replayed bench-on-start and `activePlayers()` reads match live — and
- * its ids are mapped positionally to p1..pN so actions re-dispatch against the matching seats; a log
- * without a roster requires `init.players` instead. Roster changes during the Lobby are skipped —
- * the table is already seated; a mid-game roster change throws, because v1 does not replay it.
+ * Builds a {@link ReplayHost} with the log's seed (or `init.seed`) and start time and drives a
+ * fresh `GameRuntime` on it, then walks the entries in order: transitions and enters are
+ * consequences of the step that started them and are skipped; every other entry advances the clock
+ * to its `t`, re-dispatches the action (if any) and produces one snapshot. Logged timeouts are
+ * authoritative: when the replayed runtime enters a timed phase, its timer is made to expire at
+ * the time recorded in the log — a live room's tick-quantized clock can fire a few ms early or
+ * late relative to enter + duration — so `phaseEndsAt` in the snapshots reflects that time. The
+ * recorded roster (the seats at START_GAME, host first) is pre-seated with its recorded flags — so
+ * the replayed bench-on-start and `activePlayers()` reads match live — and its ids are mapped
+ * positionally to p1..pN so actions re-dispatch against the matching seats; a log without a roster
+ * requires `init.players` instead. Roster changes during the Lobby are skipped — the table is
+ * already seated — except the one an auto-started session records right before its start
+ * transition, which re-runs the lobby hook against the seated table so the replay performs the
+ * same start at the same time; a mid-game roster change throws, because v1 does not replay it.
  * A step whose re-run throws (the live run failed and the failure policy returned the room to the Lobby)
  * throws a `replayLog:` error saying logs with a failed run are not replayable in v1.
  * Entries must be time-ordered; a backwards clock throws. A re-dispatch that rejects where the log
@@ -223,10 +250,11 @@ function authoritativeDurations<TState extends PhaseState, TPrivate, TOptions>(
  * their `t` and they produce a snapshot like any other step. Each step's logged transitions and enters
  * are asserted against the replayed
  * runtime — a log that contradicts what this definition actually does throws, naming the mismatch.
- * The log's shape is validated up front (`entries` an array of objects each with a known `kind`,
- * numeric `t` and `seq` and a string `phase`; `header` with a string `game`, four-number `seed` and
- * number `startedAt`; roster entries carrying `id` plus the seat flags) — a malformed log throws a
- * named error before anything runs. See "Action log and replay" in the framework guide.
+ * The log's shape is validated up front against {@link ActionLogSchema} (strict objects: `entries`
+ * an array of objects each with a known `kind`, numeric `t` and `seq` and a string `phase`;
+ * `header` with a string `game`, four-number `seed` and number `startedAt`; roster entries carrying
+ * `id` plus the seat flags; no unknown fields anywhere) — a malformed log throws a named error
+ * before anything runs. See "Action log and replay" in the framework guide.
  */
 export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
   definition: GameDefinition<TState, TPrivate, TOptions>,
@@ -247,6 +275,16 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
       `replayLog: log was recorded for version "${log.header.version}", not "${definition.version}"`,
     );
   }
+  if (typeof log.header.protocolVersion !== "number") {
+    throw new Error(
+      `replayLog: log.header.protocolVersion is missing (the log predates protocol versioning); expected ${PROTOCOL_VERSION}`,
+    );
+  }
+  if (log.header.protocolVersion !== PROTOCOL_VERSION) {
+    throw new Error(
+      `replayLog: log was recorded with protocol version ${log.header.protocolVersion}, not ${PROTOCOL_VERSION}`,
+    );
+  }
   // The middleware creates the log on its first event, and a runtime's first event is always the
   // construction-time Lobby enter — so any valid log starts with exactly that entry.
   const first = required(log.entries[0], "first log entry");
@@ -262,7 +300,7 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
   const roster = log.roster;
   if (roster !== undefined) {
     seatCount = roster.length;
-    // The live host is the first seat and FakeHost makes the first seated player the host, so a
+    // The live host is the first seat and ReplayHost makes the first seated player the host, so a
     // positional map preserves both identity and order.
     toSeat = new Map(roster.map((seat, index) => [seat.id, `p${index + 1}`] as const));
     // Restore the recorded flags so the replayed bench-on-start and activePlayers() reads match live.
@@ -277,24 +315,37 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
     }
     seatCount = init.players;
   }
-  const table = new TestTable({
+  const host = new ReplayHost(init.seed ?? log.header.seed);
+  for (let i = 0; i < seatCount; ++i) host.seat(`p${i + 1}`, seats?.[i] ?? {});
+  host.time = log.header.startedAt;
+  const runtime = new GameRuntime({
     definition: authoritativeDurations(definition, pairTimeouts(log.entries)),
     state: init.state,
     options: init.options,
-    players: seatCount,
-    ...(seats !== undefined ? { seats } : {}),
-    seed: init.seed ?? log.header.seed,
-    startTime: log.header.startedAt,
+    host,
   });
-  const states: TState[] = [clone(table.state)];
+  const states: TState[] = [clone(init.state)];
+  // An auto-started session records its start transition right after the roster change that
+  // triggered it; those steps re-run the lobby hook against the already-seated table so the
+  // replay performs the same start at the same time. Other lobby roster changes stay skipped.
+  const settleSeqs = new Set<number>();
+  for (let i = 0; i + 1 < log.entries.length; ++i) {
+    const entry = required(log.entries[i], "log entry");
+    if (
+      entry.kind === "roster-change" &&
+      required(log.entries[i + 1], "log entry").kind === "transition"
+    ) {
+      settleSeqs.add(entry.seq);
+    }
+  }
   for (let i = 0; i < log.entries.length; ++i) {
     const entry = required(log.entries[i], "log entry");
     // Transition and enter entries are consequences of the step that caused them; each step asserts
     // its own consequence run below.
     if (entry.kind === "transition" || entry.kind === "enter") continue;
-    if (entry.t < table.host.time) {
+    if (entry.t < host.time) {
       throw new Error(
-        `replayLog: entry ${entry.seq} has t=${entry.t} before the current clock ${table.host.time}; log entries must be time-ordered`,
+        `replayLog: entry ${entry.seq} has t=${entry.t} before the current clock ${host.time}; log entries must be time-ordered`,
       );
     }
     if (entry.kind === "roster-change" && entry.phase !== LOBBY_PHASE) {
@@ -302,18 +353,18 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
         `replayLog: mid-game roster changes are not replayable in v1 (entry ${entry.seq} in phase "${entry.phase}")`,
       );
     }
-    const prePhase = table.phase;
+    const prePhase = init.state.phase;
     const error = failedRunGuard(entry, () => {
-      table.tick(entry.t - table.host.time);
+      host.advance(entry.t - host.time);
+      if (settleSeqs.has(entry.seq)) runtime.rosterChanged();
       // A redacted entry was refused before the handler ran and its payload is not in the log:
       // re-dispatching it is impossible, and skipping it keeps state and RNG in step with live.
       if (entry.kind !== "action" || entry.redacted === true) return undefined;
       const senderId = entry.senderId ?? "";
-      return table.act(
-        toSeat?.get(senderId) ?? senderId,
-        entry.actionType ?? "",
-        (entry.payload ?? {}) as Record<string, unknown>,
-      );
+      return runtime.dispatch(toSeat?.get(senderId) ?? senderId, {
+        type: entry.actionType ?? "",
+        ...((entry.payload ?? {}) as Record<string, unknown>),
+      });
     });
     if (entry.kind === "action" && entry.redacted !== true) {
       if (entry.rejected === true) {
@@ -350,12 +401,12 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
         );
       }
     }
-    if (table.phase !== expected) {
+    if (init.state.phase !== expected) {
       throw new Error(
-        `replayLog: after entry ${entry.seq} the log expects phase "${expected}" but replay is in phase "${table.phase}"`,
+        `replayLog: after entry ${entry.seq} the log expects phase "${expected}" but replay is in phase "${init.state.phase}"`,
       );
     }
-    states.push(clone(table.state));
+    states.push(clone(init.state));
   }
   return { states };
 }

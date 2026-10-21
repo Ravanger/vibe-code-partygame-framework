@@ -33,7 +33,7 @@ export class TieBreakerFlow {
         return;
       }
     }
-    this.ctx.transition(PHASE.Results);
+    this.round.toResults();
   }
 
   current(): Matchup {
@@ -49,7 +49,7 @@ export class TieBreakerFlow {
   endIfNoVoters(): boolean {
     if (this.voterIds().length > 0) return false;
     this.round.clearTyping();
-    this.ctx.transition(PHASE.Results);
+    this.round.toResults();
     return true;
   }
 
@@ -109,7 +109,7 @@ export class TieBreakerFlow {
     });
     for (const answer of shuffle(answers, this.ctx.rng)) matchup.answers.push(answer);
     matchup.isForfeit = answers.length === 1;
-    if (answers.length === 0) this.ctx.transition(PHASE.Results);
+    if (answers.length === 0) this.round.toResults();
     else this.ctx.transition(matchup.isForfeit ? PHASE.TieBreakerReveal : PHASE.TieBreakerVoting);
   }
 
@@ -205,6 +205,6 @@ export class TieBreakerFlow {
     const [only] = remaining;
     if (only !== undefined) this.win(only);
     this.round.clearTyping();
-    this.ctx.transition(PHASE.Results);
+    this.round.toResults();
   }
 }

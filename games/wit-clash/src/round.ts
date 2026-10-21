@@ -3,6 +3,7 @@ import { countVoted } from "@partygame/core/kits";
 import { pickBestAnswers } from "./bestAnswers.js";
 import { eligibleVoterIds } from "./eligibility.js";
 import { META } from "./meta.js";
+import { PHASE } from "./phaseNames.js";
 import type { WitClashContext } from "./private.js";
 import { composeScoreboard } from "./scoreboard.js";
 import { BestAnswer, type Matchup, PlayerPrivate, ScoreEntry } from "./state.js";
@@ -66,6 +67,19 @@ export class Round {
         Object.assign(new BestAnswer(), { text, authorId, authorName, promptText, votes }),
       );
     }
+  }
+
+  /** The end of a round: on the final round, the optional honor vote before Results; otherwise straight to Results. */
+  toResults(): void {
+    const { state } = this.ctx;
+    if (state.roundNumber >= state.totalRounds && this.ctx.options.honorVote) {
+      this.writeBestAnswers();
+      if (state.bestAnswers.length > 0) {
+        this.ctx.transition(PHASE.HonorVote);
+        return;
+      }
+    }
+    this.ctx.transition(PHASE.Results);
   }
 
   activeMatchup(): Matchup {
@@ -148,6 +162,8 @@ export class Round {
     this.clearRound();
     this.ctx.priv.clearGame();
     this.ctx.state.bestAnswers.clear();
+    this.ctx.state.awards.clear();
+    this.ctx.state.honorWinnerNames.clear();
     this.ctx.state.roundNumber = 0;
     this.ctx.state.totalRounds = this.ctx.options.totalRounds;
     this.ctx.state.rejectedTexts = 0;

@@ -1,4 +1,5 @@
 import type { TextFilter } from "@partygame/content/filter";
+import { PROTOCOL_VERSION } from "@partygame/shared";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
@@ -15,7 +16,7 @@ import {
   shuffle,
   textFilterMiddleware,
 } from "../src/index.js";
-import { replayLog } from "../src/testing/index.js";
+import { replayLog } from "../src/replay/index.js";
 import { TestTable } from "../src/testing/TestTable.js";
 
 interface S extends PhaseState {
@@ -202,6 +203,36 @@ describe("replayLog", () => {
     ).toThrow("log.header.version is missing; the log predates versioned logs");
   });
 
+  it("throws when the log was recorded with another protocol version", () => {
+    const live = liveTable();
+    live.start();
+    const log = getActionLog(live.priv) as ActionLog;
+    log.header.protocolVersion = 9;
+    expect(() =>
+      replayLog(definition, log, {
+        state: newState(),
+        options: {},
+        players: 2,
+      }),
+    ).toThrow(`log was recorded with protocol version 9, not ${PROTOCOL_VERSION}`);
+  });
+
+  it("throws when the log predates protocol versioning (no header.protocolVersion)", () => {
+    const live = liveTable();
+    live.start();
+    const log = getActionLog(live.priv) as ActionLog;
+    delete log.header.protocolVersion;
+    expect(() =>
+      replayLog(definition, log, {
+        state: newState(),
+        options: {},
+        players: 2,
+      }),
+    ).toThrow(
+      `log.header.protocolVersion is missing (the log predates protocol versioning); expected ${PROTOCOL_VERSION}`,
+    );
+  });
+
   it("throws when the first entry is not the construction-time Lobby enter (entry removed)", () => {
     const live = liveTable();
     live.start();
@@ -255,6 +286,38 @@ describe("replayLog", () => {
     // roster wins and init.players (3 here) is ignored
     const { states } = replayLog(definition, log, { state: newState(), options: {}, players: 3 });
     expect(states.at(-1)).toEqual({ phase: "Done", phaseEndsAt: 0, canStart: false, taps: 0 });
+  });
+
+  it("replays an auto-started session that recorded no roster to the same final state", () => {
+    const auto = { ...definition, autoStart: true };
+    const live = new TestTable({
+      definition: { ...auto, middleware: [actionLogMiddleware()] },
+      state: newState(),
+      options: {},
+      players: 2,
+      seats: [{}, { isReady: false }],
+    });
+    // p2 is not ready yet: this roster change does not start the game.
+    live.runtime.rosterChanged();
+    expect(live.phase).toBe("Lobby");
+    required(live.host.seats[1], "p2").isReady = true;
+    live.runtime.rosterChanged(); // everyone ready now: auto-start fires
+    expect(live.phase).toBe("Tap");
+    live.act("p2", "TAP", { by: 3 });
+    const log = getActionLog(live.priv);
+    expect(log).toBeDefined();
+    // No START_GAME was dispatched, so the roster is recorded when the session leaves the Lobby.
+    expect((log as ActionLog).roster).toEqual([
+      { id: "p1", isConnected: true, isReady: true, isActive: true },
+      { id: "p2", isConnected: true, isReady: true, isActive: true },
+    ]);
+
+    const { states } = replayLog(auto, log as ActionLog, {
+      state: newState(),
+      options: {},
+      players: 2,
+    });
+    expect(states.at(-1)).toEqual(live.state);
   });
 
   it("throws when entry times go backwards", () => {
@@ -654,6 +717,55 @@ describe("replayLog log-shape validation", () => {
     expect(() =>
       replayLog(definition, withEntry(log, 1, { ...log.entries[1], phase: 42 }), init),
     ).toThrow('"phase" must be a string');
+  });
+
+  it("throws a named error when the log is not an object", () => {
+    const corrupted: unknown = null;
+    expect(() => replayLog(definition, corrupted as ActionLog, init)).toThrow(
+      "replayLog: log must be an object",
+    );
+  });
+
+  it("throws a named error for unrecognized fields anywhere in the log", () => {
+    const raw = JSON.parse(JSON.stringify(liveLog()));
+    expect(() => replayLog(definition, { ...raw, surprise: true } as ActionLog, init)).toThrow(
+      "replayLog: log has unrecognized fields",
+    );
+    expect(() =>
+      replayLog(definition, { ...raw, header: { ...raw.header, surprise: 1 } } as ActionLog, init),
+    ).toThrow("replayLog: log.header has unrecognized fields");
+    const entries = raw.entries.map((entry: object, i: number) =>
+      i === 1 ? { ...entry, bonus: 2 } : entry,
+    );
+    expect(() => replayLog(definition, { ...raw, entries } as ActionLog, init)).toThrow(
+      "has unrecognized fields",
+    );
+    const roster = raw.roster.map((seat: object, i: number) =>
+      i === 0 ? { ...seat, extra: true } : seat,
+    );
+    expect(() => replayLog(definition, { ...raw, roster } as ActionLog, init)).toThrow(
+      "has unrecognized fields",
+    );
+  });
+
+  it("throws a named error for mistyped optional entry and roster fields", () => {
+    const raw = JSON.parse(JSON.stringify(liveLog()));
+    const rejected = raw.entries.map((entry: object, i: number) =>
+      i === 1 ? { ...entry, rejected: "yes" } : entry,
+    );
+    expect(() => replayLog(definition, { ...raw, entries: rejected } as ActionLog, init)).toThrow(
+      '"rejected" must be a boolean',
+    );
+    const redacted = raw.entries.map((entry: object, i: number) =>
+      i === 1 ? { ...entry, redacted: "yes" } : entry,
+    );
+    expect(() => replayLog(definition, { ...raw, entries: redacted } as ActionLog, init)).toThrow(
+      '"redacted" must be a boolean',
+    );
+    const roster = raw.roster.map((seat: object) => ({ ...seat, id: 7 }));
+    expect(() => replayLog(definition, { ...raw, roster } as ActionLog, init)).toThrow(
+      '"id" must be a string',
+    );
   });
 });
 

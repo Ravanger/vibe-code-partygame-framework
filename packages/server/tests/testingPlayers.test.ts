@@ -1,5 +1,6 @@
+import { PROTOCOL_VERSION } from "@partygame/shared";
 import { BaseGameState } from "@partygame/shared/schema";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   bootTestServer,
   joinPlayer,
@@ -95,5 +96,32 @@ describe("stateOf", () => {
   it("throws when the room runs another state class", async () => {
     const plain = await t.createRoom("plain");
     expect(() => stateOf(plain, BuzzerState)).toThrow("Room state is not a BuzzerState");
+  });
+});
+
+describe("TestServer protocol versioning", () => {
+  it("sends the current protocol version on join and joinAs", async () => {
+    const room = await t.createRoom("plain");
+    const spy = vi.spyOn(t.sdk, "joinById").mockResolvedValue(undefined as never);
+    try {
+      await t.join(room, { playerId: "player-0001" });
+      expect(spy).toHaveBeenLastCalledWith(room.roomId, {
+        playerId: "player-0001",
+        protocolVersion: PROTOCOL_VERSION,
+      });
+      await t.joinAs(room, { playerId: "player-0002" }, BaseGameState);
+      expect(spy).toHaveBeenLastCalledWith(
+        room.roomId,
+        { playerId: "player-0002", protocolVersion: PROTOCOL_VERSION },
+        BaseGameState,
+      );
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("stamps created rooms with the current protocol version, not overridable by the caller", async () => {
+    const room = await t.createRoom("plain", { protocolVersion: 9 });
+    expect(stateOf(room, BaseGameState).players.size).toBe(0);
   });
 });

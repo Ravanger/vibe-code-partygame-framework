@@ -8,7 +8,7 @@ import { Client } from "@colyseus/sdk";
 import { type BotKit, DemoTable } from "@partygame/bots";
 import { claimName, resolveRoomCode, waitFor } from "@partygame/client-utils";
 import { freePort, ServerProbe } from "@partygame/server/probe";
-import { ClientMessage } from "@partygame/shared";
+import { ClientMessage, PROTOCOL_VERSION } from "@partygame/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Launcher } from "../src/Launcher.js";
 import { type BrowserSpawner, lanUrls } from "../src/network.js";
@@ -259,7 +259,7 @@ describe("Launcher", () => {
       const playerId = crypto.randomUUID();
       const room = await new Client(`ws://localhost:${ports.game}`).joinById<TapState>(
         roomId,
-        { playerId },
+        { playerId, protocolVersion: PROTOCOL_VERSION },
         TapState,
       );
       leavers.push(() => room.leave(true));
