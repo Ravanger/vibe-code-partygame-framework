@@ -241,6 +241,39 @@ describe("BotTable", () => {
     }
   });
 
+  it("open() refuses a synced code that is non-empty but malformed", async () => {
+    // A decode hiccup can leave roomCode non-empty but invalid; open() must not capture it —
+    // fail loudly with its own timeout instead of surfacing the API's "Invalid code format" later.
+    const table = new BotTable({ ...tapper, endpoint: t.endpoint, apiPort });
+    leavers.push(table);
+    const realCreate = Client.prototype.create;
+    const createSpy = vi.spyOn(Client.prototype, "create");
+    try {
+      createSpy.mockImplementation(async function (
+        this: Client,
+        ...args: [string, object?, unknown?]
+      ) {
+        const room = await (
+          realCreate as (
+            roomName: string,
+            options?: object,
+            rootSchema?: unknown,
+          ) => Promise<Room<TapState>>
+        ).call(this, ...args);
+        // Leave the code non-empty but malformed in the first state application.
+        room.onStateChange(() => {
+          if (RoomCodeSchema.safeParse(room.state.roomCode).success) {
+            room.state.roomCode = "ab";
+          }
+        });
+        return room;
+      } as never);
+      await expect(table.open()).rejects.toThrow("Timed out waiting for the room code");
+    } finally {
+      createSpy.mockRestore();
+    }
+  }, 20_000);
+
   it("leaves without hanging once the room is gone", async () => {
     const table = new BotTable({ ...tapper, endpoint: t.endpoint, apiPort });
     await table.open();

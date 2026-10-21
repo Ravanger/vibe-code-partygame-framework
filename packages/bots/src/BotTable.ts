@@ -1,5 +1,5 @@
 import { Client } from "@colyseus/sdk";
-import { PROTOCOL_VERSION } from "@partygame/shared";
+import { PROTOCOL_VERSION, RoomCodeSchema } from "@partygame/shared";
 import type { BaseGameState } from "@partygame/shared/schema";
 import type { BotPlayer } from "./BotPlayer.js";
 import { type JoinBotsOptions, joinBots } from "./joinBots.js";
@@ -39,8 +39,23 @@ export class BotTable<TState extends BaseGameState> {
     );
     const watch = new RoomWatch(room);
     this.seat = { room, watch, code: "" };
-    await watch.until(() => room.state.roomCode !== "", OPEN_TIMEOUT_MS, "the room code");
-    this.seat.code = room.state.roomCode;
+    // The initial state sync lands after create() resolves, and a wire hiccup can leave the synced
+    // code malformed; capture it atomically at its first well-formed observation instead of any
+    // non-empty value (the API would refuse a garbage code with "Invalid code format").
+    let code = "";
+    await watch.until(
+      () => {
+        const candidate = room.state.roomCode;
+        if (RoomCodeSchema.safeParse(candidate).success) {
+          code = candidate;
+          return true;
+        }
+        return false;
+      },
+      OPEN_TIMEOUT_MS,
+      "the room code",
+    );
+    this.seat.code = code;
     return this.seat.code;
   }
 
