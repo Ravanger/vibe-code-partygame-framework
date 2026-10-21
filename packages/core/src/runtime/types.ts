@@ -235,6 +235,14 @@ export interface GameDefinition<
   onError?(ctx: GameContext<TState, TPrivate, TOptions>, error: unknown): void;
 }
 
+declare const timerBrand: unique symbol;
+/**
+ * Opaque handle for a timer created by {@link RuntimeHost.setTimeout}. A branded
+ * number: hosts brand their numeric id with a single `as`, and a plain number is
+ * still a type error, so no double assertion is needed at any boundary.
+ */
+export type TimerHandle = number & { readonly [timerBrand]: true };
+
 /** Everything the runtime needs from its environment. Implemented by the server; faked in tests. */
 export interface RuntimeHost {
   players(): PlayerInfo[];
@@ -256,6 +264,6 @@ export interface RuntimeHost {
   rng(): number;
   /** The room RNG seed (see `sfc32`); recorded in the action log header. */
   readonly seed: Seed;
-  setTimeout(callback: () => void, ms: number): unknown;
-  clearTimeout(handle: unknown): void;
+  setTimeout(callback: () => void, ms: number): TimerHandle;
+  clearTimeout(handle: TimerHandle): void;
 }

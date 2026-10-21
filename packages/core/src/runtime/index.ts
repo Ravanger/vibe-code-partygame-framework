@@ -14,4 +14,5 @@ export type {
   PlayerRole,
   RejectOptions,
   RuntimeHost,
+  TimerHandle,
 } from "./types.js";

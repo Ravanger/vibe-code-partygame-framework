@@ -25,6 +25,7 @@ import type {
   PhaseState,
   RejectOptions,
   RuntimeHost,
+  TimerHandle,
 } from "./types.js";
 
 const STOPPED_ERROR: ServerError = {
@@ -85,7 +86,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   private phaseName: string = LOBBY_PHASE;
   private duration = 0;
   /** Pending `onTick` timer of the current phase, while it has one. */
-  private tickHandle: unknown = undefined;
+  private tickHandle: TimerHandle | undefined = undefined;
   private stopped = false;
   private hasStarted = false;
   private lobbyReturnFailed = false;
