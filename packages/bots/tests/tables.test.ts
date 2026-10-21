@@ -1,5 +1,5 @@
 import { type SchemaType, t as schemaField } from "@colyseus/schema";
-import { Client } from "@colyseus/sdk";
+import { Client, type Room } from "@colyseus/sdk";
 import { claimName, resolveRoomCode } from "@partygame/client-utils";
 import { defineGame } from "@partygame/core";
 import { RoomCodeService } from "@partygame/server";
@@ -372,6 +372,54 @@ describe("table overrides", () => {
     await demo.open();
     demo.clobberRoomCode();
     await expect(demo.seatBots()).rejects.toThrow("Timed out waiting for the room state");
+  }, 20_000);
+
+  it("DemoTable keeps a code observed before claimName when state is clobbered mid-open", async () => {
+    // Second CI observation of the padded-state hiccup: the clobber landed while open() was still
+    // inside claimName, so a read taken after it captured "". The capture must be atomic with its
+    // first well-formed observation, before any round trip.
+    const demo = new DemoTable({
+      ...paddedKit,
+      endpoint: t.endpoint,
+      apiPort,
+      bots: 1,
+      timeoutMs: 1,
+      isFinished: () => true,
+    });
+    leavers.push(demo);
+    const realCreate = Client.prototype.create;
+    let clobbered = false;
+    const createSpy = vi.spyOn(Client.prototype, "create");
+    try {
+      createSpy.mockImplementation(async function (
+        this: Client,
+        ...args: [string, object?, unknown?]
+      ) {
+        const room = await (
+          realCreate as (
+            roomName: string,
+            options?: object,
+            rootSchema?: unknown,
+          ) => Promise<Room<PaddedState>>
+        ).call(this, ...args);
+        // Clobber the code in the same state application that accepts the host's name — inside
+        // claimName's wait window, where a late read would capture "".
+        room.onStateChange(() => {
+          if (clobbered) return;
+          const named = [...room.state.players.values()].some((seat) => seat.name !== "");
+          if (named && RoomCodeSchema.safeParse(room.state.roomCode).success) {
+            room.state.roomCode = "";
+            clobbered = true;
+          }
+        });
+        return room;
+      } as never);
+      const code = await demo.open();
+      expect(RoomCodeSchema.safeParse(code).success).toBe(true);
+      await expect(demo.seatBots()).rejects.toThrow("Timed out waiting for the room state");
+    } finally {
+      createSpy.mockRestore();
+    }
   }, 20_000);
 
   it("DemoTable honours a caller's bot.host.expectedPlayers", async () => {

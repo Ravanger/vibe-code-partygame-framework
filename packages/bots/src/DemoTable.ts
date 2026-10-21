@@ -1,11 +1,13 @@
 import { Client } from "@colyseus/sdk";
-import { claimName } from "@partygame/client-utils";
-import { PROTOCOL_VERSION } from "@partygame/shared";
+import { claimName, waitFor } from "@partygame/client-utils";
+import { PROTOCOL_VERSION, RoomCodeSchema } from "@partygame/shared";
 import type { BaseGameState } from "@partygame/shared/schema";
 import { BotPlayer } from "./BotPlayer.js";
 import { type JoinBotsOptions, joinBots } from "./joinBots.js";
 import { RoomWatch } from "./RoomWatch.js";
 import type { BotConnection, BotKit, BotRoom } from "./types.js";
+
+const OPEN_TIMEOUT_MS = 5000;
 
 export interface DemoTableOptions<TState extends BaseGameState>
   extends BotConnection,
@@ -48,14 +50,29 @@ export class DemoTable<TState extends BaseGameState> {
       stateClass,
     );
     const watch = new RoomWatch(room);
+    // The initial state sync lands after create() resolves, and a wire hiccup can blank the synced
+    // code at any point after that. Capture it atomically at its first well-formed observation —
+    // before claimName's round trip opens a window in which a late read would capture "".
+    let code = "";
     try {
+      await waitFor(
+        () => {
+          const candidate = room.state.roomCode;
+          if (RoomCodeSchema.safeParse(candidate).success) {
+            code = candidate;
+            return true;
+          }
+          return false;
+        },
+        "the room state",
+        OPEN_TIMEOUT_MS,
+      );
       await claimName(room, this.hostId, hostName);
     } catch (error) {
       await Promise.allSettled([room.leave(true)]);
       throw error;
     }
-    // claimName has observed a non-empty code; keep it — live state can be clobbered later.
-    this.seat = { room, watch, code: room.state.roomCode };
+    this.seat = { room, watch, code };
     this.host = new BotPlayer(room, this.hostId, hostName, strategy, {
       ...bot,
       host: { expectedPlayers: bots + 1, ...bot?.host },
