@@ -1,7 +1,7 @@
 <script lang="ts" generics="TState extends BaseGameState">
-import type { GameControlsViewModel } from "@partygame/game-ui";
 // biome-ignore lint/correctness/noUnusedImports: used by the generics attribute
 import type { BaseGameState } from "@partygame/shared/schema";
+import type { GameControlsViewModel } from "../GameControlsViewModel.svelte.js";
 
 const { vm }: { vm: GameControlsViewModel<TState> } = $props();
 

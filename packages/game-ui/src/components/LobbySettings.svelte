@@ -1,7 +1,7 @@
 <script lang="ts" generics="TState extends BaseGameState">
-import type { LobbySettingsViewModel } from "@partygame/game-ui";
 // biome-ignore lint/correctness/noUnusedImports: used by the generics attribute
 import type { BaseGameState } from "@partygame/shared/schema";
+import type { LobbySettingsViewModel } from "../LobbySettingsViewModel.svelte.js";
 
 const { vm }: { vm: LobbySettingsViewModel<TState> } = $props();
 </script>

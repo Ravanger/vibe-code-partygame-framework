@@ -1,7 +1,7 @@
 <script lang="ts" generics="TRow extends PodiumRow">
-// biome-ignore lint/correctness/noUnusedImports: used by the generics attribute
-import type { PodiumRow, PodiumStep } from "@partygame/game-ui";
 import type { Snippet } from "svelte";
+// biome-ignore lint/correctness/noUnusedImports: used by the generics attribute
+import type { PodiumRow, PodiumStep } from "../ranking.js";
 import PlayerSticker from "./PlayerSticker.svelte";
 
 const { steps, extra }: { steps: PodiumStep<TRow>[]; extra?: Snippet<[TRow]> } = $props();
