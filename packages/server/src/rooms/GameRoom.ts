@@ -11,6 +11,7 @@ import {
   required,
   type Seed,
   sfc32,
+  type TimerHandle,
 } from "@partygame/core";
 import { createBundle } from "@partygame/core/replay";
 import {
@@ -260,6 +261,10 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     if (this.state?.roomCode) this.config.roomCodeService.unregister(this.state.roomCode);
   }
 
+  /** TimerHandle ids handed out by the host, mapped to their Colyseus Delayed. */
+  private timerSeq = 0;
+  private readonly timerByHandle = new Map<number, Delayed>();
+
   private readonly host: RuntimeHost = {
     players: () => [...this.state.players.values()].map((seat) => this.infoOf(seat)),
     activateWaitingPlayers: () => {
@@ -302,8 +307,19 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     now: () => Date.now(),
     rng: () => this.rngFn(),
     seed: this.seed,
-    setTimeout: (callback, ms) => this.clock.setTimeout(() => this.safely(callback), ms),
-    clearTimeout: (handle: Delayed) => handle.clear(),
+    setTimeout: (callback, ms) => {
+      const id = ++this.timerSeq;
+      const delayed = this.clock.setTimeout(() => {
+        this.timerByHandle.delete(id);
+        this.safely(callback);
+      }, ms);
+      this.timerByHandle.set(id, delayed);
+      return id as TimerHandle;
+    },
+    clearTimeout: (handle: TimerHandle) => {
+      this.timerByHandle.get(handle)?.clear();
+      this.timerByHandle.delete(handle);
+    },
   };
 
   private setName(client: Client, raw: unknown): void {

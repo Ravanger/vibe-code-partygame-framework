@@ -1,4 +1,4 @@
-import type { PlayerInfo, RuntimeHost } from "../runtime/types.js";
+import type { PlayerInfo, RuntimeHost, TimerHandle } from "../runtime/types.js";
 import { type Seed, seedFromNumber, sfc32 } from "../utils.js";
 
 interface Timer {
@@ -123,13 +123,13 @@ export class FakeHost implements RuntimeHost {
     return this.rngFn();
   }
 
-  setTimeout(callback: () => void, ms: number): unknown {
+  setTimeout(callback: () => void, ms: number): TimerHandle {
     const id = this.nextId++;
     this.timers.push({ id, at: this.time + ms, callback });
-    return id;
+    return id as TimerHandle;
   }
 
-  clearTimeout(handle: unknown): void {
+  clearTimeout(handle: TimerHandle): void {
     this.timers = this.timers.filter((t) => t.id !== handle);
   }
 }

@@ -1,5 +1,5 @@
 import { type ActionResult, CLIENT_MESSAGES, CLOSE_CODES, ClientMessage } from "@partygame/shared";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { TestServer } from "../src/testing/index.js";
 import { collectMessages, waitUntil } from "../src/testing/index.js";
 import { bootBuzzer, clientState, pid, seat, startedRoom, stateOf } from "./support.js";
@@ -20,6 +20,27 @@ describe("GameRoom actions", () => {
     await waitUntil(() => stateOf(room).phase === "Done", "done");
     expect(stateOf(room).buzzCount).toBe(2);
     expect(stateOf(room).phaseEndsAt).toBe(0);
+  });
+
+  it("a phase timeout cleared by early finish is inactive", async () => {
+    const room = await t.createRoom("buzzer", { buzzMs: 2000 });
+    const setTimeoutSpy = vi.spyOn(room.clock, "setTimeout");
+    try {
+      const p1 = await seat(t, room, 1);
+      const p2 = await seat(t, room, 2);
+      await waitUntil(() => stateOf(room).phase === "Buzz", "game started");
+      p2.client.send("ACTION", { type: "BUZZ" });
+      await waitUntil(() => stateOf(room).winner === pid(2), "winner");
+      p1.client.send("ACTION", { type: "BUZZ" });
+      await waitUntil(() => stateOf(room).phase === "Done", "done");
+      const phaseTimeouts = setTimeoutSpy.mock.results
+        .map((r) => r.value)
+        .filter((delayed) => delayed.time === 2000);
+      expect(phaseTimeouts).toHaveLength(1);
+      expect(phaseTimeouts[0].active).toBe(false);
+    } finally {
+      setTimeoutSpy.mockRestore();
+    }
   });
 
   it("broadcasts game messages to every client and gives the game a random source", async () => {

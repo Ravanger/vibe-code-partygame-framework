@@ -33,6 +33,17 @@ describe("FakeHost", () => {
     expect(host.pendingTimers).toBe(0);
   });
 
+  it("gives each timer a distinct handle, and clearing one leaves the others", () => {
+    const host = new FakeHost();
+    const order: string[] = [];
+    const first = host.setTimeout(() => order.push("first"), 10);
+    const second = host.setTimeout(() => order.push("second"), 10);
+    expect(first).not.toBe(second);
+    host.clearTimeout(first);
+    host.advance(20);
+    expect(order).toEqual(["second"]);
+  });
+
   it("records messages, view changes, kicks, activations and published options", () => {
     const host = new FakeHost();
     host.seat("a");

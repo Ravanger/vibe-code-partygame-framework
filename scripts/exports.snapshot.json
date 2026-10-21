@@ -163,6 +163,7 @@
           "RuntimeHost": {},
           "Seed": {},
           "TextFilterMiddlewareOptions": {},
+          "TimerHandle": {},
           "actionFactory": {},
           "actionLogMiddleware": {},
           "awardPoints": {},
