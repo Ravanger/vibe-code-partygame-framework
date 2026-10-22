@@ -276,9 +276,9 @@
     "game-client": {
       ".": {
         "target": {
-          "types": "./dist/index.d.ts",
+          "types": "./src/index.ts",
           "svelte": "./src/index.ts",
-          "default": "./dist/index.js"
+          "default": "./src/index.ts"
         },
         "symbols": {
           "ConnectionStatus": {},
@@ -289,18 +289,23 @@
           "RoomLike": {},
           "readCodeParam": {},
           "resolveEndpoints": {}
-        }
+        },
+        "source": true
       },
       "./test-setup": {
-        "target": "./test-setup.ts",
+        "target": {
+          "types": "./test-setup.ts",
+          "svelte": "./test-setup.ts",
+          "default": "./test-setup.ts"
+        },
         "symbols": {},
         "source": true
       },
       "./testing": {
         "target": {
-          "types": "./dist/testing.d.ts",
+          "types": "./src/testing.ts",
           "svelte": "./src/testing.ts",
-          "default": "./dist/testing.js"
+          "default": "./src/testing.ts"
         },
         "symbols": {
           "ConnectedClient": {},
@@ -311,7 +316,8 @@
           "addSeat": {},
           "connectedClient": {},
           "fakeFetch": {}
-        }
+        },
+        "source": true
       }
     },
     "game-kit": {
@@ -341,9 +347,9 @@
     "game-ui": {
       ".": {
         "target": {
-          "types": "./dist/index.d.ts",
+          "types": "./src/index.ts",
           "svelte": "./src/index.ts",
-          "default": "./dist/index.js"
+          "default": "./src/index.ts"
         },
         "symbols": {
           "AppRouter": {},
@@ -378,7 +384,8 @@
           "rankRows": {},
           "snapshotManager": {},
           "stickerLetter": {}
-        }
+        },
+        "source": true
       },
       "./components": {
         "target": {

@@ -2,23 +2,26 @@
   "name": "@partygame/game-client",
   "version": "0.1.0",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./src/index.ts",
       "svelte": "./src/index.ts",
-      "default": "./dist/index.js"
+      "default": "./src/index.ts"
     },
-    "./test-setup": "./test-setup.ts",
+    "./test-setup": {
+      "types": "./test-setup.ts",
+      "svelte": "./test-setup.ts",
+      "default": "./test-setup.ts"
+    },
     "./testing": {
-      "types": "./dist/testing.d.ts",
+      "types": "./src/testing.ts",
       "svelte": "./src/testing.ts",
-      "default": "./dist/testing.js"
+      "default": "./src/testing.ts"
     }
   },
   "scripts": {
-    "build": "rm -rf dist && tsc",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.test.json"
   },

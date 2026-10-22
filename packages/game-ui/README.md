@@ -2,6 +2,8 @@
 
 Svelte 5 viewmodels (no UI code) and reusable components for game screens.
 
+Ships Svelte source; consumers need the Svelte plugin — Vite with `@sveltejs/vite-plugin-svelte`, or the vitest preset that aliases to source.
+
 | Import | What |
 |---|---|
 | `@partygame/game-ui` | `createAppRouter`, `AppRouter`, `WelcomeViewModel`, `WaitingRoomViewModel`, `LobbySettingsViewModel`, `OptionsReader`, `PhaseClock`, `TypingReporter`, `GameControlsViewModel`, `NameField`, `ReplayViewModel`, `snapshotManager`; `OptionFields`, `qrCode`, `playerSticker`, `rankRows`, `podiumSteps` |
