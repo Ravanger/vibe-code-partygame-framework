@@ -1074,6 +1074,39 @@ and a terminal it asks (`Pick a game [1-N]:`; empty input or end of input exits 
 `bun run launch my-game --demo`, or `bun run scripts/game.ts launch my-game dev --demo`. A missing entry prints
 `<game> has no <command> entry (<path>)` and exits 2.
 
+## Bundle size
+
+Each game builds its own client with `vite build`; there is no multi-game bundle. The reference game `wit-clash` is measured on every CI run: `bun run check:bundle` rebuilds it and fails when the gzip total of `dist/**/*.{js,css}` exceeds the budget in `scripts/bundle-budget.json`. The budget is the measured gzip total rounded up to the next 1 kB (1024 B), plus 10% — currently **130,905 → 131,072 → 144,180 bytes**. When a change legitimately grows the bundle, update `scripts/bundle-budget.json` and the numbers below in the same PR.
+
+Measured with `bun run --cwd games/wit-clash build && bun run scripts/bundleSizeCli.ts wit-clash`:
+
+| File | Raw | Gzip |
+|---|---:|---:|
+| `assets/index-*.js` | 386,060 B | 118,591 B |
+| `assets/index-*.css` | 47,996 B | 12,314 B |
+| **Total (JS + CSS)** | **434,056 B** | **130,905 B** |
+
+(Fonts and `index.html` are emitted too but excluded from the budget.) Top modules by pre-minify size, from a one-off `rollup-plugin-visualizer` run:
+
+| Module | Raw | Gzip |
+|---|---:|---:|
+| `@colyseus/schema/build/index.mjs` | 174,915 B | 36,213 B |
+| `zod/v4/core/schemas.js` | 40,120 B | 8,244 B |
+| `msgpackr/pack.js` | 34,319 B | 7,691 B |
+| `msgpackr/unpack.js` | 32,145 B | 7,404 B |
+| `zod/v4/core/json-schema-processors.js` | 23,809 B | 5,419 B |
+| `zod/v4/classic/schemas.js` | 23,379 B | 4,258 B |
+| `uqr/dist/index.mjs` (QR codes for room links) | 19,394 B | 5,316 B |
+| `svelte/src/internal/client/reactivity/batch.js` | 17,282 B | 4,303 B |
+| `zod/v4/core/to-json-schema.js` | 15,595 B | 4,386 B |
+| `zod/v4/core/util.js` | 15,191 B | 4,402 B |
+
+By package: `@colyseus/schema` 22.5%, `zod` 21.2%, `svelte` 18.2%, wit-clash source 11.1%, `@colyseus/sdk` 8.5%, `msgpackr` 8.4%, framework packages (`game-client`, `game-ui`, `shared`) 7.5%, `uqr` 2.4%. No server-only code reaches the client bundle: `@colyseus/core`, `xstate` and `@partygame/core` are all absent; `@colyseus/schema` is present because the client SDK deserializes schema state (it is a shared wire-format library, not server code).
+
+`@partygame/shared`, `@partygame/game-client` and `@partygame/game-ui` declare `"sideEffects": false` — verified by scanning their sources: no top-level calls, no global writes, no CSS imports; the only initializer expressions are pure object constructions (`new RegExp`, schema objects). For wit-clash this changed nothing (byte-identical output): it uses every exported component, so there was no unused module to drop. The field still lets a future game that imports a subset tree-shake the rest.
+
+Follow-ups for later work (not done here): `@colyseus/schema` is a single 174,915 B module — about 45% of the final JS — and `zod` totals 21.2%; both are candidates for slimming (e.g. dropping zod's JSON-schema processors from the client path).
+
 ## Config presets
 
 `@partygame/config` (add it as a devDependency) holds the build and test config so a game's config files are one-liners. It is built to `dist/`; `vite`, `vitest`, `svelte` and `@sveltejs/vite-plugin-svelte` are peer dependencies.

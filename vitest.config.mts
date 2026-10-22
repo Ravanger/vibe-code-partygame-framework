@@ -36,6 +36,7 @@ export default defineConfig({
         "packages/game-kit/src/io.ts",
         "games/*/launch.ts",
         "scripts/game.ts",
+        "scripts/bundleSizeCli.ts",
         "scripts/checkAgentsFilesCli.ts",
         "scripts/checkBoundariesCli.ts",
         "scripts/checkExportsCli.ts",
