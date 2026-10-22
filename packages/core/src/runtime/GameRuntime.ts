@@ -9,7 +9,7 @@ import {
   ServerMessage,
 } from "@partygame/shared";
 import { createActor } from "xstate";
-import { newId } from "../utils.js";
+import { deepFreeze, newId } from "../utils.js";
 import { DispatchPipeline } from "./DispatchPipeline.js";
 import { Lobby } from "./lobby.js";
 import { buildPhaseMachine } from "./machineFactory.js";
@@ -95,7 +95,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     this.spec = config.definition;
     this.state = config.state;
     this.host = config.host;
-    this.options = config.options;
+    this.options = deepFreeze(config.options) as TOptions;
     const priv = this.spec.createPrivateState();
     if (typeof priv !== "object" || priv === null) throw new InvalidPrivateStateError();
     this.priv = priv;
@@ -105,7 +105,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       options: {
         get: () => this.options,
         set: (next) => {
-          this.options = next;
+          this.options = deepFreeze(next) as TOptions;
         },
       },
       hasStarted: () => this.hasStarted,

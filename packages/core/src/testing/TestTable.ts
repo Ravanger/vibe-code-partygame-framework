@@ -1,4 +1,4 @@
-import { isServerError, type ServerError } from "@partygame/shared";
+import { isServerError, type ServerError, START_GAME } from "@partygame/shared";
 import {
   type GameDefinition,
   GameRuntime,
@@ -78,7 +78,7 @@ export class TestTable<TState extends PhaseState, TPrivate, TOptions> {
 
   /** The first seat sends `START_GAME`. */
   start(): ServerError | undefined {
-    return this.act("p1", "START_GAME");
+    return this.act("p1", START_GAME);
   }
 
   /** Removes the seat. */

@@ -210,6 +210,57 @@ describe("construction", () => {
     expect(seen).toEqual([{ rounds: 9 }]);
   });
 
+  it("freezes ctx.options so handlers cannot mutate it, and SET_OPTIONS still updates it", () => {
+    interface FrozenOpts {
+      rounds: number;
+      tags: string[];
+    }
+    let directError: unknown;
+    let nestedError: unknown;
+    let frozenAtEnter: boolean | undefined;
+    const spec = defineGame<S, P, FrozenOpts>({
+      name: "FrozenOptions",
+      version: "1",
+      minPlayers: 2,
+      maxPlayers: 4,
+      startPhase: "Play",
+      options: z.object({ rounds: z.number(), tags: z.array(z.string()) }),
+      createPrivateState: () => ({ secret: 7 }),
+      phases: {
+        Play: {
+          onEnter: (ctx) => {
+            frozenAtEnter = Object.isFrozen(ctx.options);
+            try {
+              ctx.options.rounds = 99;
+            } catch (e) {
+              directError = e;
+            }
+            try {
+              ctx.options.tags.push("x");
+            } catch (e) {
+              nestedError = e;
+            }
+          },
+        },
+      },
+    });
+    const host = new FakeHost();
+    host.seat("p1");
+    host.seat("p2");
+    const runtime = new GameRuntime({
+      definition: spec,
+      state: newState(),
+      host,
+      options: { rounds: 3, tags: ["a"] },
+    });
+    runtime.dispatch("p1", { type: "SET_OPTIONS", rounds: 5, tags: ["b"] });
+    expect(host.published).toEqual([{ rounds: 5, tags: ["b"] }]);
+    runtime.dispatch("p1", { type: "START_GAME" });
+    expect(frozenAtEnter).toBe(true);
+    expect(directError).toBeInstanceOf(TypeError);
+    expect(nestedError).toBeInstanceOf(TypeError);
+  });
+
   it("throws InvalidPrivateStateError when createPrivateState returns a primitive or null", () => {
     for (const bad of [42, "nope", null]) {
       const spec = makeSpec({
