@@ -50,14 +50,15 @@ export class DemoTable<TState extends BaseGameState> {
       stateClass,
     );
     const watch = new RoomWatch(room);
-    // The initial state sync lands after create() resolves, and a wire hiccup can blank the synced
-    // code at any point after that. Capture it atomically at its first well-formed observation —
-    // before claimName's round trip opens a window in which a late read would capture "".
+    // The initial state sync lands after create() resolves (room.state is undefined until then),
+    // and a wire hiccup can blank the synced code at any point after that. Capture it atomically
+    // at its first well-formed observation — before claimName's round trip opens a window in
+    // which a late read would capture "".
     let code = "";
     try {
       await waitFor(
         () => {
-          const candidate = room.state.roomCode;
+          const candidate = room.state?.roomCode ?? "";
           if (RoomCodeSchema.safeParse(candidate).success) {
             code = candidate;
             return true;

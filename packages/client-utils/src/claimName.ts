@@ -11,14 +11,17 @@ export interface SeatRoom {
   send(type: string, payload?: unknown): void;
 }
 
-/** Sends `SET_NAME` and waits until the seat carries it; throws the server's reason when refused. */
+/**
+ * Waits for the initial state sync (the SDK leaves `room.state` undefined until it lands), sends
+ * `SET_NAME`, and waits until the seat carries it; throws the server's reason when refused.
+ */
 export async function claimName(
   room: SeatRoom,
   playerId: string,
   name: string,
   timeoutMs = STEP_TIMEOUT_MS,
 ): Promise<void> {
-  await waitFor(() => room.state.roomCode !== "", "the room state", timeoutMs);
+  await waitFor(() => (room.state?.roomCode ?? "") !== "", "the room state", timeoutMs);
   let refusal = "";
   const unsubscribe = room.onMessage(ServerMessage.ERROR, (payload: unknown) => {
     if (isServerError(payload)) refusal = payload.message;

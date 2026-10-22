@@ -39,13 +39,14 @@ export class BotTable<TState extends BaseGameState> {
     );
     const watch = new RoomWatch(room);
     this.seat = { room, watch, code: "" };
-    // The initial state sync lands after create() resolves, and a wire hiccup can leave the synced
-    // code malformed; capture it atomically at its first well-formed observation instead of any
-    // non-empty value (the API would refuse a garbage code with "Invalid code format").
+    // The initial state sync lands after create() resolves (room.state is undefined until then),
+    // and a wire hiccup can leave the synced code malformed; capture it atomically at its first
+    // well-formed observation instead of any non-empty value (the API would refuse a garbage code
+    // with "Invalid code format").
     let code = "";
     await watch.until(
       () => {
-        const candidate = room.state.roomCode;
+        const candidate = room.state?.roomCode ?? "";
         if (RoomCodeSchema.safeParse(candidate).success) {
           code = candidate;
           return true;

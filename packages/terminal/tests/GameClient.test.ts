@@ -48,6 +48,33 @@ describe("GameClient", () => {
     await expect(client.watch("QQQQ", crypto.randomUUID())).rejects.toThrow();
   });
 
+  it("waits for the initial state sync when joining", async () => {
+    // The SDK resolves joinById before the first state sync; room.state is undefined until it lands.
+    const host = await client.create(crypto.randomUUID(), "Ann");
+    const code = host.state.roomCode;
+    const state = new TapState();
+    let synced = false;
+    setTimeout(() => {
+      state.roomCode = code;
+      synced = true;
+    }, 30);
+    const fakeRoom = {
+      get state() {
+        return synced ? state : undefined;
+      },
+      leave: async () => 0,
+    };
+    const spy = vi.spyOn(Client.prototype, "joinById");
+    try {
+      spy.mockImplementation(async () => fakeRoom as never);
+      const watcher = await client.watch(code, crypto.randomUUID());
+      expect(watcher.state.roomCode).toBe(code);
+    } finally {
+      spy.mockRestore();
+      await host.leave(true);
+    }
+  });
+
   it("sends the current protocol version when creating and joining", async () => {
     const createSpy = vi.spyOn(Client.prototype, "create");
     const joinSpy = vi.spyOn(Client.prototype, "joinById");
