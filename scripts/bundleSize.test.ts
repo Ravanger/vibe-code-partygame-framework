@@ -1,4 +1,5 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { formatTable, readBundle, summarize, withinBudget } from "./bundleSize.js";
@@ -34,7 +35,7 @@ describe("formatTable", () => {
 });
 
 describe("readBundle", () => {
-  const dir = mkdtempSync("/tmp/opencode/bundle-");
+  const dir = mkdtempSync(join(tmpdir(), "bundle-"));
 
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
@@ -61,7 +62,7 @@ describe("readBundle", () => {
   });
 
   it("is empty for an empty directory", () => {
-    const empty = mkdtempSync("/tmp/opencode/bundle-empty-");
+    const empty = mkdtempSync(join(tmpdir(), "bundle-empty-"));
     try {
       expect(readBundle(empty)).toEqual([]);
     } finally {
