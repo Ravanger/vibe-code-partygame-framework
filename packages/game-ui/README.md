@@ -145,6 +145,6 @@ No stylesheet ships; the components read your CSS.
 - Custom properties: `--ink`, `--ink-soft`, `--white`, `--paper`, `--pink`, `--sun`, `--mint`, `--sky`, `--disabled`, `--tape-sky`, `--tape-mint`, `--fs-1` to `--fs-5`, `--font-display`, `--outline`, `--radius-card`, `--radius-btn`, `--scrap-shadow`; optional `--scale` (default 1) and `--timer-size` (default 96px).
 - Global classes: `card`, `taped`, `sticker`, `hand`, `sr-only`, `btn` (`btn--ghost`, `btn--danger`); `action-bar` is rendered by `ActionBar`, which styles nothing.
 
-Depends on: `@partygame/game-client`, `@partygame/shared`
+Depends on: `@partygame/game-client`, `@partygame/shared`, `svelte`, `uqr`, `zod`
 
 Guide: [docs/framework/README.md#game-ui-viewmodels](../../docs/framework/README.md#game-ui-viewmodels) ([Components](../../docs/framework/README.md#components))

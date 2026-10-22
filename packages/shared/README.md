@@ -47,6 +47,8 @@ Other codes: `INVALID_ACTION`, `UNKNOWN_ACTION`, `WRONG_PHASE`, `UNAUTHORIZED`, 
 
 `LOBBY_PHASE`, `START_GAME`, `KICK_PLAYER`, `END_GAME` and `SET_OPTIONS` name the built-ins. `NAME_MAX_LENGTH` caps player names; `MAX_SEATS` caps the `seats` room option; `MAX_OPTIONS_JSON_LENGTH` caps serialized options at room creation and in `SET_OPTIONS`. `ROOM_CODE_LENGTH` and `ROOM_CODE_ALPHABET` define the room-code format that `RoomCodeSchema` enforces; `sanitizeRoomCode` cleans user input to it.
 
+`ACTION_NAME_PATTERN` validates custom action names (SCREAMING_SNAKE_CASE, at most 64 characters); `ActionEnvelopeSchema` is the minimal envelope every client message passes before the phase's own payload schema; `RoomOptionsSchema` covers the framework keys a client may pass when creating a room (`seats` makes the room watch-only for everyone else: only the listed playerIds can take a seat, spectators still join).
+
 Depends on: `@colyseus/schema`, `zod`
 
 Guide: [docs/framework/README.md#client-sdk](../../docs/framework/README.md#client-sdk)
