@@ -569,7 +569,7 @@ runtime.stop();                          // on room dispose: clears timers
 
 `options` are the room options, already parsed with `definition.options` (the host does this once, before building the runtime).
 `host` is a `RuntimeHost`: seat list, `send`, `broadcast`, `showTo`/`hideFrom`, `kick`, `publishOptions`, `now`, `rng`,
-`activateWaitingPlayers`, and `setTimeout`/`clearTimeout` (the runtime's XState actor uses these as its clock).
+`activateWaitingPlayers`, and `setTimeout`/`clearTimeout`, which pass a branded `TimerHandle` (a number) between them (the runtime's XState actor uses these as its clock).
 The Colyseus server implements it; tests use `FakeHost` from `@partygame/core/testing`.
 
 ### Unit-testing phases without a server
