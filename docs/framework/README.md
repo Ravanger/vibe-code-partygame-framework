@@ -1152,3 +1152,78 @@ export { svelteConfig as default } from "@partygame/config/svelte";
 | `@partygame/game-client` | `resolveEndpoints(overrides, pageHost)`, `readCodeParam(search, "code" \| "tv")` |
 | `@partygame/game-client/test-setup` | vitest `setupFiles` entry for jsdom: storage shims, SDK on `ws` (repo-internal, raw `.ts`) |
 | `@partygame/game-kit` | types: `GameMeta` (`roomName`, `minPlayers`, `maxPlayers`), `ServeOptions` (`games`, `port?`, `apiPort?`), `GameDemoOptions` (the declaration's `demo` field, see All-bot demo run) |
+
+## Security checklist for game authors
+
+The framework validates everything that crosses the wire, but the rules are yours. Eight habits keep a game safe; each example is taken from `games/wit-clash` and cited.
+
+1. **Declare options with a bounded zod schema, and read them only through `ctx.options`.** The host changes options via the built-in `SET_OPTIONS`, which merges the update and re-parses it against your schema — out-of-range values are rejected, not clamped.
+   ```ts
+   export const WitClashOptionsSchema = z.object({
+     totalRounds: z.number().int().min(1).max(10).default(3),
+     promptSeconds: z.number().int().min(15).max(600).default(90),
+   });
+   ```
+   (`games/wit-clash/src/options.ts`)
+
+2. **Per-player secrets go in `ctx.priv` or a `.view()` field — never a plain synced field.** Plain fields are broadcast to every client; `.view()` entries reach only the players you reveal them to, and the room re-applies views on reconnect, so hide before you delete.
+   ```ts
+   const created = new PlayerPrivate();
+   this.ctx.state.mine.set(playerId, created);
+   this.ctx.showTo(playerId, created);
+   // ... later, in pruneDeparted:
+   this.ctx.hideFrom(playerId, entry);
+   state.mine.delete(playerId);
+   ```
+   (`games/wit-clash/src/round.ts`, `mineOf` and `pruneDeparted`; see also `packages/server/README.md`, Private views)
+
+3. **Every action has a payload schema with length and range limits; handlers use the parsed `ctx.payload`, never the raw message.** A message that fails validation is rejected before your handler runs.
+   ```ts
+   export const SubmitAnswerSchema = z.object({
+     matchupId: z.string().min(1).max(64),
+     answer: z.string().trim().min(1).max(ANSWER_MAX_LENGTH),
+   });
+   // in the handler:
+   const { matchupId, answer } = ctx.payload;
+   ```
+   (`games/wit-clash/src/actions.ts`, `games/wit-clash/src/phases/answering.ts`)
+
+4. **Do not mutate `payload` or shared state objects you did not create — copy first.** Synced entries are shared with every other code path, so pass copies into helpers and keep your scratch edits private.
+   ```ts
+   const options = [...ctx.state.categoryOptions].map((o) => ({ id: o.id, votes: o.votes }));
+   const winner = resolveCategoryVote(options, ctx.rng);
+   ```
+   (`games/wit-clash/src/phases/CategorySelection.ts`, `resolve`)
+
+5. **Use `ctx.rng()` and `ctx.newId()` in rule code — never `Math.random()` or `crypto.randomUUID()`.** The room RNG is seeded per room and id counters are logged, so replays reproduce your shuffles and ids exactly (Determinism contract).
+   ```ts
+   answer.id = ctx.newId();
+   // ...
+   const winner = resolveCategoryVote(options, ctx.rng);
+   ```
+   (`games/wit-clash/src/phases/Prompting.ts`, `games/wit-clash/src/phases/CategorySelection.ts`)
+
+6. **Treat every player-typed string (names, answers) as untrusted: render with Svelte text interpolation, never `{@html}`; cap its length; do not log it.** Text interpolation escapes automatically — no screen in this repo uses `{@html}` for player content.
+   ```svelte
+   <figcaption class="best-prompt">{best.promptText}</figcaption>
+   <blockquote class="best-text">{best.text}</blockquote>
+   <span class="best-author">{`by ${best.authorName}${best.isMine ? " (you)" : ""}`}</span>
+   ```
+   (`games/wit-clash/ui/screens/Results.svelte`; caps: `NAME_MAX_LENGTH`, `ANSWER_MAX_LENGTH`)
+
+7. **Check the sender.** Every handler verifies the acting player may do this in this phase, and rejects with a client-safe message. The host-only built-ins are `START_GAME`, `KICK_PLAYER`, `SET_OPTIONS` and `END_GAME`; everything else is yours to gate.
+   ```ts
+   const assigned = ctx.priv.assignments.get(ctx.playerId);
+   if (!assigned?.includes(matchupId)) {
+     ctx.reject(ErrorCode.NOT_ALLOWED, "That prompt was not assigned to you");
+     return;
+   }
+   ```
+   (`games/wit-clash/src/phases/answering.ts`)
+
+8. **Know the limits.** `playerId` is the only seat credential: a client can send any action, but the server acts on `ctx.playerId`, which it assigned itself. There is no built-in rate limiting; the threat model that spells this out is planned work (#89).
+   ```ts
+   const drafts = ctx.priv.drafts.get(ctx.playerId) ?? new Map<string, string>();
+   ctx.priv.drafts.set(ctx.playerId, drafts.set(matchupId, answer));
+   ```
+   (`games/wit-clash/src/phases/answering.ts`; caps in `packages/shared/src/limits.ts`)
