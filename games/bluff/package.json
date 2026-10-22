@@ -1,6 +1,8 @@
 {
   "name": "@partygame/bluff",
   "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
   "type": "module",
   "dependencies": {
     "@colyseus/schema": "^5.0.35",
