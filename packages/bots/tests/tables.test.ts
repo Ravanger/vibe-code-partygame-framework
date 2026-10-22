@@ -4,7 +4,14 @@ import { claimName, resolveRoomCode } from "@partygame/client-utils";
 import { defineGame } from "@partygame/core";
 import { RoomCodeService } from "@partygame/server";
 import { bootTestServer, type TestServer, waitUntil } from "@partygame/server/testing";
-import { LOBBY_PHASE, NAME_MAX_LENGTH, PROTOCOL_VERSION, RoomCodeSchema } from "@partygame/shared";
+import {
+  ClientMessage,
+  LOBBY_PHASE,
+  NAME_MAX_LENGTH,
+  PROTOCOL_VERSION,
+  RoomCodeSchema,
+} from "@partygame/shared";
+import { PlayerSchema } from "@partygame/shared/schema";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { BotPlayer } from "../src/BotPlayer.js";
 import { BotTable } from "../src/BotTable.js";
@@ -185,6 +192,21 @@ describe("joinBots", () => {
       spy.mockRestore();
     }
   });
+
+  it("times out when the initial state has not arrived", async () => {
+    // The SDK resolves joinById before the first state sync; room.state is undefined until it lands.
+    const room = await humanRoom("Ann");
+    const fakeRoom = { state: undefined, leave: async () => 0 };
+    const spy = vi.spyOn(Client.prototype, "joinById");
+    try {
+      spy.mockImplementation(async () => fakeRoom as never);
+      await expect(join(room.state.roomCode, 1, { timeoutMs: 1 })).rejects.toThrow(
+        "Timed out waiting for the room state",
+      );
+    } finally {
+      spy.mockRestore();
+    }
+  });
 });
 
 describe("BotTable", () => {
@@ -273,6 +295,32 @@ describe("BotTable", () => {
       createSpy.mockRestore();
     }
   }, 20_000);
+
+  it("open() waits for the initial state sync before reading the code", async () => {
+    // The SDK resolves create() before the first state sync; room.state is undefined until it lands.
+    const table = new BotTable({ ...tapper, endpoint: t.endpoint, apiPort });
+    leavers.push(table);
+    const state = new TapState();
+    let synced = false;
+    setTimeout(() => {
+      state.roomCode = "WXYZ";
+      synced = true;
+    }, 30);
+    const fakeRoom = {
+      get state() {
+        return synced ? state : undefined;
+      },
+      onLeave: () => undefined,
+      leave: async () => 0,
+    };
+    const spy = vi.spyOn(Client.prototype, "create");
+    try {
+      spy.mockImplementation(async () => fakeRoom as never);
+      await expect(table.open()).resolves.toBe("WXYZ");
+    } finally {
+      spy.mockRestore();
+    }
+  });
 
   it("leaves without hanging once the room is gone", async () => {
     const table = new BotTable({ ...tapper, endpoint: t.endpoint, apiPort });
@@ -527,6 +575,54 @@ describe("DemoTable", () => {
       expect(spy.mock.calls.at(-1)?.[1]).toEqual(
         expect.objectContaining({ protocolVersion: PROTOCOL_VERSION }),
       );
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("open() waits for the initial state sync before reading the code", async () => {
+    // The SDK resolves create() before the first state sync; room.state is undefined until it lands.
+    const table = new DemoTable({
+      ...tapper,
+      endpoint: t.endpoint,
+      apiPort,
+      bots: 0,
+      isFinished: () => true,
+    });
+    leavers.push(table);
+    const state = new TapState();
+    let hostId = "";
+    let synced = false;
+    setTimeout(() => {
+      state.roomCode = "ABCD";
+      synced = true;
+    }, 30);
+    const fakeRoom = {
+      get state() {
+        return synced ? state : undefined;
+      },
+      onLeave: () => undefined,
+      onStateChange: () => undefined,
+      onMessage: () => () => undefined,
+      send: (type: string, name?: unknown) => {
+        if (type !== ClientMessage.SET_NAME || typeof name !== "string") return;
+        setTimeout(() => {
+          const seat = new PlayerSchema();
+          seat.id = hostId;
+          seat.name = name;
+          state.players.set(hostId, seat);
+        }, 10);
+      },
+      request: async () => ({ ok: true }),
+      leave: async () => 0,
+    };
+    const spy = vi.spyOn(Client.prototype, "create");
+    try {
+      spy.mockImplementation(async function (this: Client, ...args: [string, object?, unknown?]) {
+        hostId = (args[1] as { playerId?: string } | undefined)?.playerId ?? "";
+        return fakeRoom;
+      } as never);
+      await expect(table.open()).resolves.toBe("ABCD");
     } finally {
       spy.mockRestore();
     }

@@ -49,7 +49,8 @@ class BotJoiner<TState extends BaseGameState> {
       stateClass,
     );
     try {
-      await waitFor(() => room.state.roomCode !== "", "the room state", timeoutMs);
+      // The SDK leaves room.state undefined until the first sync lands; poll it as if absent.
+      await waitFor(() => (room.state?.roomCode ?? "") !== "", "the room state", timeoutMs);
       const name = this.freeName(room.state);
       await claimName(room, playerId, name, timeoutMs);
       return new BotPlayer(room, playerId, name, strategy, bot);

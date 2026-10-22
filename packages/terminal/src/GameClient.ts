@@ -51,7 +51,8 @@ export class GameClient<TState extends BaseGameState> {
       { ...options, protocolVersion: PROTOCOL_VERSION },
       this.game.stateClass,
     );
-    await waitFor(() => room.state.roomCode !== "", "the room state", STEP_TIMEOUT_MS);
+    // The SDK leaves room.state undefined until the first sync lands; poll it as if absent.
+    await waitFor(() => (room.state?.roomCode ?? "") !== "", "the room state", STEP_TIMEOUT_MS);
     return room;
   }
 }
