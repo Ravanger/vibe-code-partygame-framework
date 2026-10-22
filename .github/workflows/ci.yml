@@ -92,6 +92,16 @@ jobs:
       - run: bun run smoke:template
       - run: git diff --exit-code bun.lock
 
+  bundle:
+    name: bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: bun run build
+      - run: bun run check:bundle
+
   mutation:
     name: mutation
     if: github.event_name == 'pull_request'

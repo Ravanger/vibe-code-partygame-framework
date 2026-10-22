@@ -35,7 +35,7 @@ export function defineGame<
     problems.push("minPlayers must be an integer >= 1");
   }
   if (spec.maxPlayers < spec.minPlayers) problems.push("maxPlayers must be >= minPlayers");
-  if (!(spec.startPhase in spec.phases)) {
+  if (!Object.hasOwn(spec.phases, spec.startPhase)) {
     problems.push(`startPhase "${spec.startPhase}" is not a declared phase`);
   }
   for (const [name, phase] of Object.entries(spec.phases)) {

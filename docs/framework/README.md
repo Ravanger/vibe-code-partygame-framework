@@ -569,7 +569,7 @@ runtime.stop();                          // on room dispose: clears timers
 
 `options` are the room options, already parsed with `definition.options` (the host does this once, before building the runtime).
 `host` is a `RuntimeHost`: seat list, `send`, `broadcast`, `showTo`/`hideFrom`, `kick`, `publishOptions`, `now`, `rng`,
-`activateWaitingPlayers`, and `setTimeout`/`clearTimeout` (the runtime's XState actor uses these as its clock).
+`activateWaitingPlayers`, and `setTimeout`/`clearTimeout`, which pass a branded `TimerHandle` (a number) between them (the runtime's XState actor uses these as its clock).
 The Colyseus server implements it; tests use `FakeHost` from `@partygame/core/testing`.
 
 ### Unit-testing phases without a server
@@ -1074,6 +1074,39 @@ and a terminal it asks (`Pick a game [1-N]:`; empty input or end of input exits 
 `bun run launch my-game --demo`, or `bun run scripts/game.ts launch my-game dev --demo`. A missing entry prints
 `<game> has no <command> entry (<path>)` and exits 2.
 
+## Bundle size
+
+Each game builds its own client with `vite build`; there is no multi-game bundle. The reference game `wit-clash` is measured on every CI run: `bun run check:bundle` rebuilds it and fails when the gzip total of `dist/**/*.{js,css}` exceeds the budget in `scripts/bundle-budget.json`. The budget is the measured gzip total rounded up to the next 1 kB (1024 B), plus 10% — currently **130,905 → 131,072 → 144,180 bytes**. When a change legitimately grows the bundle, update `scripts/bundle-budget.json` and the numbers below in the same PR.
+
+Measured with `bun run --cwd games/wit-clash build && bun run scripts/bundleSizeCli.ts wit-clash`:
+
+| File | Raw | Gzip |
+|---|---:|---:|
+| `assets/index-*.js` | 386,060 B | 118,591 B |
+| `assets/index-*.css` | 47,996 B | 12,314 B |
+| **Total (JS + CSS)** | **434,056 B** | **130,905 B** |
+
+(Fonts and `index.html` are emitted too but excluded from the budget.) Top modules by pre-minify size, from a one-off `rollup-plugin-visualizer` run:
+
+| Module | Raw | Gzip |
+|---|---:|---:|
+| `@colyseus/schema/build/index.mjs` | 174,915 B | 36,213 B |
+| `zod/v4/core/schemas.js` | 40,120 B | 8,244 B |
+| `msgpackr/pack.js` | 34,319 B | 7,691 B |
+| `msgpackr/unpack.js` | 32,145 B | 7,404 B |
+| `zod/v4/core/json-schema-processors.js` | 23,809 B | 5,419 B |
+| `zod/v4/classic/schemas.js` | 23,379 B | 4,258 B |
+| `uqr/dist/index.mjs` (QR codes for room links) | 19,394 B | 5,316 B |
+| `svelte/src/internal/client/reactivity/batch.js` | 17,282 B | 4,303 B |
+| `zod/v4/core/to-json-schema.js` | 15,595 B | 4,386 B |
+| `zod/v4/core/util.js` | 15,191 B | 4,402 B |
+
+By package: `@colyseus/schema` 22.5%, `zod` 21.2%, `svelte` 18.2%, wit-clash source 11.1%, `@colyseus/sdk` 8.5%, `msgpackr` 8.4%, framework packages (`game-client`, `game-ui`, `shared`) 7.5%, `uqr` 2.4%. No server-only code reaches the client bundle: `@colyseus/core`, `xstate` and `@partygame/core` are all absent; `@colyseus/schema` is present because the client SDK deserializes schema state (it is a shared wire-format library, not server code).
+
+`@partygame/shared`, `@partygame/game-client` and `@partygame/game-ui` declare `"sideEffects": false` — verified by scanning their sources: no top-level calls, no global writes, no CSS imports; the only initializer expressions are pure object constructions (`new RegExp`, schema objects). For wit-clash this changed nothing (byte-identical output): it uses every exported component, so there was no unused module to drop. The field still lets a future game that imports a subset tree-shake the rest.
+
+Follow-ups for later work (not done here): `@colyseus/schema` is a single 174,915 B module — about 45% of the final JS — and `zod` totals 21.2%; both are candidates for slimming (e.g. dropping zod's JSON-schema processors from the client path).
+
 ## Config presets
 
 `@partygame/config` (add it as a devDependency) holds the build and test config so a game's config files are one-liners. It is built to `dist/`; `vite`, `vitest`, `svelte` and `@sveltejs/vite-plugin-svelte` are peer dependencies.
@@ -1119,3 +1152,78 @@ export { svelteConfig as default } from "@partygame/config/svelte";
 | `@partygame/game-client` | `resolveEndpoints(overrides, pageHost)`, `readCodeParam(search, "code" \| "tv")` |
 | `@partygame/game-client/test-setup` | vitest `setupFiles` entry for jsdom: storage shims, SDK on `ws` (repo-internal, raw `.ts`) |
 | `@partygame/game-kit` | types: `GameMeta` (`roomName`, `minPlayers`, `maxPlayers`), `ServeOptions` (`games`, `port?`, `apiPort?`), `GameDemoOptions` (the declaration's `demo` field, see All-bot demo run) |
+
+## Security checklist for game authors
+
+The framework validates everything that crosses the wire, but the rules are yours. Eight habits keep a game safe; each example is taken from `games/wit-clash` and cited.
+
+1. **Declare options with a bounded zod schema, and read them only through `ctx.options`.** The host changes options via the built-in `SET_OPTIONS`, which merges the update and re-parses it against your schema — out-of-range values are rejected, not clamped.
+   ```ts
+   export const WitClashOptionsSchema = z.object({
+     totalRounds: z.number().int().min(1).max(10).default(3),
+     promptSeconds: z.number().int().min(15).max(600).default(90),
+   });
+   ```
+   (`games/wit-clash/src/options.ts`)
+
+2. **Per-player secrets go in `ctx.priv` or a `.view()` field — never a plain synced field.** Plain fields are broadcast to every client; `.view()` entries reach only the players you reveal them to, and the room re-applies views on reconnect, so hide before you delete.
+   ```ts
+   const created = new PlayerPrivate();
+   this.ctx.state.mine.set(playerId, created);
+   this.ctx.showTo(playerId, created);
+   // ... later, in pruneDeparted:
+   this.ctx.hideFrom(playerId, entry);
+   state.mine.delete(playerId);
+   ```
+   (`games/wit-clash/src/round.ts`, `mineOf` and `pruneDeparted`; see also `packages/server/README.md`, Private views)
+
+3. **Every action has a payload schema with length and range limits; handlers use the parsed `ctx.payload`, never the raw message.** A message that fails validation is rejected before your handler runs.
+   ```ts
+   export const SubmitAnswerSchema = z.object({
+     matchupId: z.string().min(1).max(64),
+     answer: z.string().trim().min(1).max(ANSWER_MAX_LENGTH),
+   });
+   // in the handler:
+   const { matchupId, answer } = ctx.payload;
+   ```
+   (`games/wit-clash/src/actions.ts`, `games/wit-clash/src/phases/answering.ts`)
+
+4. **Do not mutate `payload` or shared state objects you did not create — copy first.** Synced entries are shared with every other code path, so pass copies into helpers and keep your scratch edits private.
+   ```ts
+   const options = [...ctx.state.categoryOptions].map((o) => ({ id: o.id, votes: o.votes }));
+   const winner = resolveCategoryVote(options, ctx.rng);
+   ```
+   (`games/wit-clash/src/phases/CategorySelection.ts`, `resolve`)
+
+5. **Use `ctx.rng()` and `ctx.newId()` in rule code — never `Math.random()` or `crypto.randomUUID()`.** The room RNG is seeded per room and id counters are logged, so replays reproduce your shuffles and ids exactly (Determinism contract).
+   ```ts
+   answer.id = ctx.newId();
+   // ...
+   const winner = resolveCategoryVote(options, ctx.rng);
+   ```
+   (`games/wit-clash/src/phases/Prompting.ts`, `games/wit-clash/src/phases/CategorySelection.ts`)
+
+6. **Treat every player-typed string (names, answers) as untrusted: render with Svelte text interpolation, never `{@html}`; cap its length; do not log it.** Text interpolation escapes automatically — no screen in this repo uses `{@html}` for player content.
+   ```svelte
+   <figcaption class="best-prompt">{best.promptText}</figcaption>
+   <blockquote class="best-text">{best.text}</blockquote>
+   <span class="best-author">{`by ${best.authorName}${best.isMine ? " (you)" : ""}`}</span>
+   ```
+   (`games/wit-clash/ui/screens/Results.svelte`; caps: `NAME_MAX_LENGTH`, `ANSWER_MAX_LENGTH`)
+
+7. **Check the sender.** Every handler verifies the acting player may do this in this phase, and rejects with a client-safe message. The host-only built-ins are `START_GAME`, `KICK_PLAYER`, `SET_OPTIONS` and `END_GAME`; everything else is yours to gate.
+   ```ts
+   const assigned = ctx.priv.assignments.get(ctx.playerId);
+   if (!assigned?.includes(matchupId)) {
+     ctx.reject(ErrorCode.NOT_ALLOWED, "That prompt was not assigned to you");
+     return;
+   }
+   ```
+   (`games/wit-clash/src/phases/answering.ts`)
+
+8. **Know the limits.** `playerId` is the only seat credential: a client can send any action, but the server acts on `ctx.playerId`, which it assigned itself. There is no built-in rate limiting; the threat model that spells this out is planned work (#89).
+   ```ts
+   const drafts = ctx.priv.drafts.get(ctx.playerId) ?? new Map<string, string>();
+   ctx.priv.drafts.set(ctx.playerId, drafts.set(matchupId, answer));
+   ```
+   (`games/wit-clash/src/phases/answering.ts`; caps in `packages/shared/src/limits.ts`)

@@ -1,11 +1,5 @@
 {
-  "knownViolations": [
-    {
-      "package": "core",
-      "rule": "types-first",
-      "issue": 115
-    }
-  ],
+  "knownViolations": [],
   "packages": {
     "bots": {
       ".": {
@@ -65,7 +59,8 @@
       "./svelte": {
         "target": {
           "types": "./dist/svelte.d.ts",
-          "import": "./dist/svelte.js"
+          "import": "./dist/svelte.js",
+          "default": "./dist/svelte.js"
         },
         "symbols": {
           "svelteConfig": {}
@@ -82,7 +77,8 @@
       "./vite": {
         "target": {
           "types": "./dist/vite.d.ts",
-          "import": "./dist/vite.js"
+          "import": "./dist/vite.js",
+          "default": "./dist/vite.js"
         },
         "symbols": {
           "GameViteOptions": {},
@@ -92,7 +88,8 @@
       "./vitest": {
         "target": {
           "types": "./dist/vitest.d.ts",
-          "import": "./dist/vitest.js"
+          "import": "./dist/vitest.js",
+          "default": "./dist/vitest.js"
         },
         "symbols": {
           "TestPresetOptions": {},
@@ -130,8 +127,9 @@
     "core": {
       ".": {
         "target": {
+          "types": "./dist/index.d.ts",
           "import": "./dist/index.js",
-          "types": "./dist/index.d.ts"
+          "default": "./dist/index.js"
         },
         "symbols": {
           "ActionContext": {},
@@ -189,8 +187,9 @@
       },
       "./awards": {
         "target": {
+          "types": "./dist/awards/index.d.ts",
           "import": "./dist/awards/index.js",
-          "types": "./dist/awards/index.d.ts"
+          "default": "./dist/awards/index.js"
         },
         "symbols": {
           "AwardDefinition": {},
@@ -200,8 +199,9 @@
       },
       "./kits": {
         "target": {
+          "types": "./dist/kits/index.d.ts",
           "import": "./dist/kits/index.js",
-          "types": "./dist/kits/index.d.ts"
+          "default": "./dist/kits/index.js"
         },
         "symbols": {
           "Responses": {
@@ -238,8 +238,9 @@
       },
       "./replay": {
         "target": {
+          "types": "./dist/replay/index.d.ts",
           "import": "./dist/replay/index.js",
-          "types": "./dist/replay/index.d.ts"
+          "default": "./dist/replay/index.js"
         },
         "symbols": {
           "ReplayBundle": {},
@@ -259,8 +260,9 @@
       },
       "./testing": {
         "target": {
+          "types": "./dist/testing/index.d.ts",
           "import": "./dist/testing/index.js",
-          "types": "./dist/testing/index.d.ts"
+          "default": "./dist/testing/index.js"
         },
         "symbols": {
           "FakeHost": {},
@@ -276,9 +278,9 @@
     "game-client": {
       ".": {
         "target": {
-          "types": "./dist/index.d.ts",
+          "types": "./src/index.ts",
           "svelte": "./src/index.ts",
-          "default": "./dist/index.js"
+          "default": "./src/index.ts"
         },
         "symbols": {
           "ConnectionStatus": {},
@@ -289,18 +291,23 @@
           "RoomLike": {},
           "readCodeParam": {},
           "resolveEndpoints": {}
-        }
+        },
+        "source": true
       },
       "./test-setup": {
-        "target": "./test-setup.ts",
+        "target": {
+          "types": "./test-setup.ts",
+          "svelte": "./test-setup.ts",
+          "default": "./test-setup.ts"
+        },
         "symbols": {},
         "source": true
       },
       "./testing": {
         "target": {
-          "types": "./dist/testing.d.ts",
+          "types": "./src/testing.ts",
           "svelte": "./src/testing.ts",
-          "default": "./dist/testing.js"
+          "default": "./src/testing.ts"
         },
         "symbols": {
           "ConnectedClient": {},
@@ -311,7 +318,8 @@
           "addSeat": {},
           "connectedClient": {},
           "fakeFetch": {}
-        }
+        },
+        "source": true
       }
     },
     "game-kit": {
@@ -341,9 +349,9 @@
     "game-ui": {
       ".": {
         "target": {
-          "types": "./dist/index.d.ts",
+          "types": "./src/index.ts",
           "svelte": "./src/index.ts",
-          "default": "./dist/index.js"
+          "default": "./src/index.ts"
         },
         "symbols": {
           "AppRouter": {},
@@ -378,7 +386,8 @@
           "rankRows": {},
           "snapshotManager": {},
           "stickerLetter": {}
-        }
+        },
+        "source": true
       },
       "./components": {
         "target": {
@@ -494,7 +503,6 @@
           "collectMessages": {},
           "joinPlayer": {},
           "seatPlayers": {},
-          "sleep": {},
           "stateOf": {},
           "testPlayerId": {},
           "waitUntil": {}

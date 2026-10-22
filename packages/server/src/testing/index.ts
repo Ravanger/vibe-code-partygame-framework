@@ -8,8 +8,6 @@ import { serveApi as serveApiOnNode } from "../node.js";
 import { closeHttpServer, freePort } from "../probe.js";
 import { RoomCodeService } from "../services/RoomCodeService.js";
 
-export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
 /** Poll until `predicate` holds. A patch tick is not a barrier; wait on the condition you care about. */
 export function waitUntil(
   predicate: () => boolean,
@@ -34,6 +32,9 @@ export interface TestJoinOptions {
   name?: string;
   spectator?: boolean;
 }
+
+/** Servers booted by {@link bootTestServer} that have not been shut down yet. */
+const liveTestServers = new Set<TestServer>();
 
 /** A game server on a free port, plus an SDK to talk to it. Always `shutdown()` in `afterAll`. */
 export class TestServer {
@@ -87,6 +88,7 @@ export class TestServer {
   }
 
   async shutdown(): Promise<void> {
+    liveTestServers.delete(this);
     await Promise.all(
       this.apis.map((api) => {
         api.closeAllConnections();
@@ -97,10 +99,15 @@ export class TestServer {
   }
 }
 
-/** Boot a server for `options.games` with no transport override. Defaults are short so tests stay fast. */
+/** Boot a server for `options.games` with no transport override. Defaults are short so tests stay fast. Only one may be live per process. */
 export async function bootTestServer(
   options: Omit<GameServerOptions, "transport">,
 ): Promise<TestServer> {
+  if (liveTestServers.size > 0) {
+    throw new Error(
+      "bootTestServer: only one test server may be live per process; call shutdown() first",
+    );
+  }
   const roomCodeService = options.roomCodeService ?? new RoomCodeService();
   const server = createGameServer({
     reconnectMs: 1000,
@@ -111,7 +118,9 @@ export async function bootTestServer(
   const port = await freePort();
   await server.listen(port);
   const endpoint = `ws://127.0.0.1:${port}`;
-  return new TestServer(server, new ColyseusSDK(endpoint), roomCodeService, endpoint);
+  const testServer = new TestServer(server, new ColyseusSDK(endpoint), roomCodeService, endpoint);
+  liveTestServers.add(testServer);
+  return testServer;
 }
 
 export {

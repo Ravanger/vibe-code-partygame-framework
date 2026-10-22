@@ -54,6 +54,15 @@ export function seedFromNumber(n: number): Seed {
   return [word(), word(), word(), word()];
 }
 
+/** Recursively freezes an object graph (in place) and returns it; non-objects pass through unchanged. */
+export function deepFreeze(value: unknown): unknown {
+  if (value !== null && typeof value === "object") {
+    for (const child of Object.values(value)) deepFreeze(child);
+    Object.freeze(value);
+  }
+  return value;
+}
+
 /** Fisher-Yates over a copy; pass a seeded `rng` in tests. */
 export function shuffle<T>(items: readonly T[], rng: () => number): T[] {
   const a = [...items];

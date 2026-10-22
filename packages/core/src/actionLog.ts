@@ -1,4 +1,4 @@
-import { LOBBY_PHASE, PROTOCOL_VERSION } from "@partygame/shared";
+import { LOBBY_PHASE, PROTOCOL_VERSION, START_GAME } from "@partygame/shared";
 import { z } from "zod";
 import {
   InvalidPrivateStateError,
@@ -6,18 +6,10 @@ import {
   type PhaseMiddleware,
   type PhaseState,
 } from "./runtime/index.js";
-import type { Seed } from "./utils.js";
+import { deepFreeze, type Seed } from "./utils.js";
 
 /** One log per `ctx.priv` object; the priv itself never gains a framework key. */
 const logs = new WeakMap<object, ActionLog>();
-
-const deepFreeze = (value: unknown): unknown => {
-  if (value !== null && typeof value === "object") {
-    for (const child of Object.values(value)) deepFreeze(child);
-    Object.freeze(value);
-  }
-  return value;
-};
 
 /** The kind of event an {@link ActionLogEntry} records. */
 export type ActionLogEntryKind = "action" | "transition" | "enter" | "timeout" | "roster-change";
@@ -217,7 +209,7 @@ export function actionLogMiddleware(): PhaseMiddleware<PhaseState, unknown, unkn
       entry.actionType = event.actionType;
       entry.senderId = event.senderId;
       entry.payload = deepFreeze(structuredClone(event.payload));
-      if (event.actionType === "START_GAME") recordRoster();
+      if (event.actionType === START_GAME) recordRoster();
     } else if (event.kind === "transition") {
       entry.from = event.from;
       entry.to = event.to;

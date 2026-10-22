@@ -2,6 +2,8 @@
 
 Svelte 5 SDK: connect to a game, manage state, send actions. No game-specific code.
 
+Ships source (`.ts`/`.svelte.ts`); consumers need the Svelte plugin — Vite with `@sveltejs/vite-plugin-svelte`, or the vitest preset that aliases to source.
+
 | Import | What |
 |---|---|
 | `@partygame/game-client` | `GameConnectionManager<TState>`: connect, sync, send actions; `Countdown`, `resolveEndpoints`, `readCodeParam` |

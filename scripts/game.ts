@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
@@ -87,16 +87,16 @@ if (process.env.PARTYGAME_SKIP_BUILD !== "1") {
   }
 }
 
-const child = spawn(process.execPath, [entry, ...rest], { cwd: root, stdio: "inherit" });
-if (process.platform === "win32") {
-  process.on("SIGINT", () => undefined);
-  process.on("SIGTERM", () => undefined);
-} else {
-  process.on("SIGINT", () => child.kill("SIGINT"));
-  process.on("SIGTERM", () => child.kill("SIGTERM"));
-}
-child.on("error", (error) => {
-  console.error(error.message);
+const { ProcessGroup } = await import("../packages/launcher/src/ProcessGroup.js");
+const group = new ProcessGroup((message) => {
+  console.error(message);
+  group.stop();
   process.exit(1);
 });
-child.on("exit", (code) => process.exit(code ?? 1));
+group.start(command, [process.execPath, entry, ...rest], root);
+for (const signal of ["SIGINT", "SIGTERM"] as const) {
+  process.on(signal, () => {
+    group.stop();
+    process.exit(0);
+  });
+}

@@ -61,6 +61,13 @@ describe("defineGame", () => {
     expect(errorsOf({ ...valid(), startPhase: "Nope" })).toContain("startPhase");
   });
 
+  it("rejects startPhase names inherited from Object.prototype", () => {
+    expect(errorsOf({ ...valid(), startPhase: "constructor" })).toContain(
+      'startPhase "constructor"',
+    );
+    expect(errorsOf({ ...valid(), startPhase: "toString" })).toContain('startPhase "toString"');
+  });
+
   it("requires onTimeout with a duration", () => {
     expect(errorsOf({ ...valid(), phases: { Play: { duration: 100 } } })).toContain("onTimeout");
     expect(errorsOf({ ...valid(), phases: { Play: { duration: () => 100 } } })).toContain(

@@ -1,6 +1,8 @@
 {
   "name": "@partygame/config",
   "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
   "type": "module",
   "files": [
     "dist",
@@ -11,16 +13,19 @@
   "exports": {
     "./vite": {
       "types": "./dist/vite.d.ts",
-      "import": "./dist/vite.js"
+      "import": "./dist/vite.js",
+      "default": "./dist/vite.js"
     },
     "./vitest": {
       "types": "./dist/vitest.d.ts",
-      "import": "./dist/vitest.js"
+      "import": "./dist/vitest.js",
+      "default": "./dist/vitest.js"
     },
     "./node-test-setup": "./node-test-setup.ts",
     "./svelte": {
       "types": "./dist/svelte.d.ts",
-      "import": "./dist/svelte.js"
+      "import": "./dist/svelte.js",
+      "default": "./dist/svelte.js"
     },
     "./tsconfig.base.json": "./tsconfig.base.json",
     "./tsconfig.game.json": "./tsconfig.game.json"

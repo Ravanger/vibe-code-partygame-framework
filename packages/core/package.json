@@ -1,29 +1,36 @@
 {
   "name": "@partygame/core",
   "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "default": "./dist/index.js"
     },
     "./awards": {
+      "types": "./dist/awards/index.d.ts",
       "import": "./dist/awards/index.js",
-      "types": "./dist/awards/index.d.ts"
+      "default": "./dist/awards/index.js"
     },
     "./kits": {
+      "types": "./dist/kits/index.d.ts",
       "import": "./dist/kits/index.js",
-      "types": "./dist/kits/index.d.ts"
+      "default": "./dist/kits/index.js"
     },
     "./replay": {
+      "types": "./dist/replay/index.d.ts",
       "import": "./dist/replay/index.js",
-      "types": "./dist/replay/index.d.ts"
+      "default": "./dist/replay/index.js"
     },
     "./testing": {
+      "types": "./dist/testing/index.d.ts",
       "import": "./dist/testing/index.js",
-      "types": "./dist/testing/index.d.ts"
+      "default": "./dist/testing/index.js"
     }
   },
   "scripts": {

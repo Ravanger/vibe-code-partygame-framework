@@ -5,13 +5,13 @@ import {
   bootTestServer,
   joinPlayer,
   seatPlayers,
-  sleep,
   stateOf,
   type TestServer,
   testPlayerId,
   waitUntil,
 } from "../src/testing/index.js";
 import { BuzzerGame, BuzzerState, PlainGame } from "./fixtures/buzzer.js";
+import { sleep } from "./support.js";
 
 let t: TestServer;
 

@@ -2,8 +2,8 @@ import { CloseCode } from "@colyseus/core";
 import { CLOSE_CODES } from "@partygame/shared";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import type { TestServer } from "../src/testing/index.js";
-import { sleep, waitUntil } from "../src/testing/index.js";
-import { bootBuzzer, clientState, pid, seat, startedRoom, stateOf } from "./support.js";
+import { waitUntil } from "../src/testing/index.js";
+import { bootBuzzer, clientState, pid, seat, sleep, startedRoom, stateOf } from "./support.js";
 
 const RECONNECT_MS = 500;
 let t: TestServer;
