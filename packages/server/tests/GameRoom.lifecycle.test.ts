@@ -5,8 +5,8 @@ import { BaseGameState } from "@partygame/shared/schema";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RoomCodeService } from "../src/services/RoomCodeService.js";
 import type { TestServer } from "../src/testing/index.js";
-import { sleep, waitUntil } from "../src/testing/index.js";
-import { bootBuzzer, pid, stateOf } from "./support.js";
+import { waitUntil } from "../src/testing/index.js";
+import { bootBuzzer, pid, sleep, stateOf } from "./support.js";
 
 let t: TestServer | undefined;
 afterEach(async () => {

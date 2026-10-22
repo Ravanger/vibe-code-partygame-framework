@@ -21,18 +21,7 @@ class ThrowingState extends BuzzerState {
   }
 }
 
-let t: TestServer;
-beforeAll(async () => {
-  t = await bootTestServer({
-    roomCodeService: new ThrowingCodes(),
-    games: [
-      { roomName: "nocode", definition: BuzzerGame, stateClass: BuzzerState },
-      { roomName: "nostate", definition: BuzzerGame, stateClass: ThrowingState },
-    ],
-  });
-});
 afterEach(() => vi.restoreAllMocks());
-afterAll(() => t.shutdown());
 
 const expectFixed = (error: unknown): void => {
   expect(error).toMatchObject({
@@ -44,6 +33,18 @@ const expectFixed = (error: unknown): void => {
 };
 
 describe("unexpected failures reach the client as one fixed message", () => {
+  let t: TestServer;
+  beforeAll(async () => {
+    t = await bootTestServer({
+      roomCodeService: new ThrowingCodes(),
+      games: [
+        { roomName: "nocode", definition: BuzzerGame, stateClass: BuzzerState },
+        { roomName: "nostate", definition: BuzzerGame, stateClass: ThrowingState },
+      ],
+    });
+  });
+  afterAll(() => t.shutdown());
+
   it("a throwing room code service on create", async () => {
     const error = vi.spyOn(logger, "error").mockImplementation(() => {});
     await expect(t.createRoom("nocode")).rejects.toSatisfy((e) => {

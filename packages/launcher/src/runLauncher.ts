@@ -10,17 +10,21 @@ import type { LaunchConfig } from "./types.js";
 export async function runLauncher<TState extends BaseGameState>(
   config: LaunchConfig<TState>,
   argv: string[],
+  /** Injectable process exit for tests; defaults to `process.exit`. */
+  deps: { exit?: (code: number) => void } = {},
 ): Promise<void> {
+  const exitProcess = deps.exit ?? process.exit;
   const parsed = parseLaunchArgs(argv, config);
   if (!parsed.ok) {
     console.error(parsed.error);
-    process.exit(2);
+    exitProcess(2);
+    return;
   }
   let exiting = false;
   const exit = (code: number): void => {
     if (exiting) return;
     exiting = true;
-    launcher.stop().finally(() => process.exit(code));
+    launcher.stop().finally(() => exitProcess(code));
   };
   const fail = (message: string): void => {
     console.error(`[Launch] ${message}`);

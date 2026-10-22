@@ -503,7 +503,6 @@
           "collectMessages": {},
           "joinPlayer": {},
           "seatPlayers": {},
-          "sleep": {},
           "stateOf": {},
           "testPlayerId": {},
           "waitUntil": {}

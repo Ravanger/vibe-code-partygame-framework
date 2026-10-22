@@ -3,7 +3,6 @@ import {
   bootTestServer,
   joinPlayer,
   seatPlayers,
-  sleep,
   stateOf,
   type TestPlayer,
   type TestServer,
@@ -14,6 +13,9 @@ import { createWitClashGame } from "../../src/game.js";
 import { META } from "../../src/meta.js";
 import { WitClashState } from "../../src/state.js";
 import { makeCategories } from "./support.js";
+
+/** Fixed settle window after the final vote; there is no observable condition to wait on. */
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const ROOM = META.roomName;
 export { testPlayerId as pid };

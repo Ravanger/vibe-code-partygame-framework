@@ -25,24 +25,20 @@ const FilteredGame = defineGame<BaseGameState, Record<string, never>, FilteredOp
   phases: { Play: {} },
 });
 
-let filtered: TestServer;
-let unfiltered: TestServer;
-beforeAll(async () => {
-  filtered = await bootTestServer({
-    games: [
-      { roomName: "filtered", definition: FilteredGame, stateClass: BaseGameState },
-      { roomName: "plain", definition: PlainGame, stateClass: BaseGameState },
-    ],
-    textFilter: createTextFilter(),
-  });
-  unfiltered = await bootTestServer({
-    games: [{ roomName: "unfiltered", definition: PlainGame, stateClass: BaseGameState }],
-  });
-});
-afterEach(() => Promise.all([filtered.cleanup(), unfiltered.cleanup()]));
-afterAll(() => Promise.all([filtered.shutdown(), unfiltered.shutdown()]));
-
 describe("GameRoom name filtering", () => {
+  let filtered: TestServer;
+  beforeAll(async () => {
+    filtered = await bootTestServer({
+      games: [
+        { roomName: "filtered", definition: FilteredGame, stateClass: BaseGameState },
+        { roomName: "plain", definition: PlainGame, stateClass: BaseGameState },
+      ],
+      textFilter: createTextFilter(),
+    });
+  });
+  afterEach(() => filtered.cleanup());
+  afterAll(() => filtered.shutdown());
+
   it("refuses a join with a filtered name at moderate and seats no one", async () => {
     const room = await filtered.createRoom("filtered");
     await expect(filtered.join(room, { playerId: pid(1), name: "fuck" })).rejects.toMatchObject({
@@ -106,12 +102,21 @@ describe("GameRoom name filtering", () => {
     client.send("SET_NAME", "what the fuck");
     await waitUntil(() => stateOf(room).players.get(pid(1))?.name === "what the fuck", "renamed");
   });
+});
 
-  it("keeps join and SET_NAME unchanged without a configured filter", async () => {
-    const room = await unfiltered.createRoom("unfiltered");
-    const client = await unfiltered.join(room, { playerId: pid(1), name: "fuck" });
-    expect(stateOf(room).players.get(pid(1))?.name).toBe("fuck");
-    client.send("SET_NAME", "what the fuck");
-    await waitUntil(() => stateOf(room).players.get(pid(1))?.name === "what the fuck", "renamed");
+describe("a server without a configured filter", () => {
+  it("keeps join and SET_NAME unchanged", async () => {
+    const unfiltered = await bootTestServer({
+      games: [{ roomName: "unfiltered", definition: PlainGame, stateClass: BaseGameState }],
+    });
+    try {
+      const room = await unfiltered.createRoom("unfiltered");
+      const client = await unfiltered.join(room, { playerId: pid(1), name: "fuck" });
+      expect(stateOf(room).players.get(pid(1))?.name).toBe("fuck");
+      client.send("SET_NAME", "what the fuck");
+      await waitUntil(() => stateOf(room).players.get(pid(1))?.name === "what the fuck", "renamed");
+    } finally {
+      await unfiltered.shutdown();
+    }
   });
 });

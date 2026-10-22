@@ -9,6 +9,10 @@ import {
 } from "../src/testing/index.js";
 import { BuzzerGame, BuzzerState } from "./fixtures/buzzer.js";
 
+/** Waits a fixed time; only for timing windows with no observable condition — prefer `waitUntil`. */
+export const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
 export const GAMES = [{ roomName: "buzzer", definition: BuzzerGame, stateClass: BuzzerState }];
 
 export const bootBuzzer = (options: Partial<GameServerOptions> = {}): Promise<TestServer> =>

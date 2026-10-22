@@ -15,7 +15,6 @@ Every server and game integration test runs a **real Colyseus server on a free p
 | `t.cleanup()`, `t.shutdown()` | `matchMaker.disconnectAll()` between tests; `gracefullyShutdown(false)` in `afterAll`. |
 | `waitUntil(predicate, label, timeoutMs?, stepMs?)` | Polling barrier. **Use it instead of waiting for a patch**: a patch fires on the 50 ms tick whether or not your message was processed. |
 | `collectMessages(clientRoom, type)` | Records every message of `type` the client receives. |
-| `sleep(ms)` | Only for "nothing happened" assertions. |
 
 Request/response is tested with `await client.request<Payload, ActionResult>("ACTION", { ... })` (`GameRoom.game.test.ts`). Client-side continuity across the SDK's automatic reconnect is tested by setting `client.reconnection.minUptime = 0` and closing the socket with `CloseCode.MAY_TRY_RECONNECT` (`GameRoom.reconnect.test.ts`).
 

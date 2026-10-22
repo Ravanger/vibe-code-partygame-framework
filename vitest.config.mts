@@ -33,7 +33,6 @@ export default defineConfig({
         "games/*/bots/cli.ts",
         "games/*/terminal/demo.ts",
         "games/*/terminal/play.ts",
-        "packages/launcher/src/runLauncher.ts",
         "packages/game-kit/src/io.ts",
         "games/*/launch.ts",
         "scripts/game.ts",
