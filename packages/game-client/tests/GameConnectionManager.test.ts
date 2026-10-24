@@ -192,13 +192,25 @@ describe("sendAction", () => {
     const manager = newManager();
     const { room } = seated(manager);
     manager.attach(room);
-    expect(await manager.sendAction("PRESS", { power: 3, type: "SPOOF" })).toEqual({ ok: true });
+    expect(await manager.sendAction("PRESS", { power: 3 })).toEqual({ ok: true });
     expect(await manager.sendAction("PASS")).toEqual({ ok: true });
     expect(room.requests).toEqual([
       { type: "ACTION", payload: { power: 3, type: "PRESS" } },
       { type: "ACTION", payload: { type: "PASS" } },
     ]);
     expect(manager.lastServerError).toBeUndefined();
+  });
+
+  it("refuses a payload that names the reserved type field without sending", async () => {
+    const manager = newManager();
+    const { room } = seated(manager);
+    manager.attach(room);
+    expect(await manager.sendAction("PRESS", { power: 3, type: "SPOOF" })).toEqual({
+      ok: false,
+      error: { code: ErrorCode.INVALID_ACTION, message: CLIENT_MESSAGES.INVALID_ACTION },
+    });
+    expect(manager.lastServerError?.code).toBe(ErrorCode.INVALID_ACTION);
+    expect(room.requests).toEqual([]);
   });
 
   it("returns and records a rejection", async () => {

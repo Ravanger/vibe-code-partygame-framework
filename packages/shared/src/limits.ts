@@ -7,6 +7,9 @@ export const MAX_SEATS = 64;
 /** Longest `JSON.stringify` of a room's options, checked at room creation and in `SET_OPTIONS`. */
 export const MAX_OPTIONS_JSON_LENGTH = 4096;
 
+/** Most top-level keys an action envelope may carry (including `type`); more is `INVALID_ACTION`. */
+export const MAX_ENVELOPE_KEYS = 32;
+
 /** How many letters a room code has. */
 export const ROOM_CODE_LENGTH = 4;
 

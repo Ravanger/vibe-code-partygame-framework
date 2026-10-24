@@ -49,11 +49,16 @@ Transitioning to the current phase re-enters it and restarts its timer.
 An action is a client message `{ type: "SCREAMING_SNAKE_CASE", ...fields }`.
 Declare it in the phase that accepts it: `from` (`"host"` or `"player"`, where `"player"` means any active player including the host),
 a zod `payload` schema that validates the whole action object, and a `handler`.
+The envelope is flat and capped at 32 top-level keys (more is `INVALID_ACTION`). `type` is reserved for the
+action name: do not declare it in a payload schema, and `sendAction` refuses to send a payload that carries a
+`type` field. Write payload schemas that keep unknown keys out of your handler: plain `z.object` strips them
+(the default — dispatch parses the whole envelope, so a strict schema would also reject the reserved `type`),
+while `z.looseObject` passes them through and should be avoided.
 Every rejection is sent only to the sender as `ERROR { code, message, action }`:
 
 | Code | Cause |
 |---|---|
-| `INVALID_ACTION` | malformed envelope, or payload failed its zod schema |
+| `INVALID_ACTION` | malformed envelope (including more than 32 keys), or payload failed its zod schema |
 | `UNKNOWN_ACTION` | no such action in any phase |
 | `WRONG_PHASE` | action exists, but not in the current phase |
 | `UNAUTHORIZED` | role check failed (for example a guest sent a host action) |

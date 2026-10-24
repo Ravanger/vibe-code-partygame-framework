@@ -122,6 +122,17 @@ describe("DispatchPipeline", () => {
     ]);
   });
 
+  it("rejects an envelope with more than 32 keys before looking anything up", () => {
+    const h = makePipeline();
+    const big: Record<string, unknown> = { type: "NOPE" };
+    for (let i = 0; i < 32; ++i) big[`k${i}`] = i;
+    h.pipeline.run("p1", big);
+    expect(h.sent).toEqual([
+      { code: ErrorCode.INVALID_ACTION, message: CLIENT_MESSAGES.INVALID_ACTION },
+    ]);
+    expect(h.events).toEqual([]);
+  });
+
   it("throws a FrameworkError for an undeclared action", () => {
     const h = makePipeline();
     const error = frameworkError(() => h.pipeline.run("p1", { type: "NOPE" }));

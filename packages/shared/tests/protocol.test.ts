@@ -90,6 +90,16 @@ describe("ActionEnvelopeSchema", () => {
   it("rejects a missing type", () => {
     expect(ActionEnvelopeSchema.safeParse({}).success).toBe(false);
   });
+
+  it("accepts exactly 32 keys and rejects more", () => {
+    const envelope = (extraKeys: number): Record<string, unknown> => {
+      const obj: Record<string, unknown> = { type: "CAST_VOTE" };
+      for (let i = 0; i < extraKeys; ++i) obj[`k${i}`] = i;
+      return obj;
+    };
+    expect(ActionEnvelopeSchema.safeParse(envelope(31)).success).toBe(true);
+    expect(ActionEnvelopeSchema.safeParse(envelope(32)).success).toBe(false);
+  });
 });
 
 describe("SetNameSchema", () => {
