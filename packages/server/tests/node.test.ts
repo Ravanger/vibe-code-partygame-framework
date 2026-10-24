@@ -83,6 +83,25 @@ describe("serveApi", () => {
     expect(other.headers.get("Access-Control-Allow-Origin")).toBeNull();
   });
 
+  it("throttles /api/resolve-code per remote address with 429 and Retry-After", async () => {
+    const port = await freePort();
+    const codes = new RoomCodeService();
+    codes.register("ABCD", "room-1");
+    servers.push(
+      await serveApi(codes, {
+        port,
+        host: "127.0.0.1",
+        rateLimits: { resolveCode: { rate: 0, burst: 3 } },
+      }),
+    );
+    const url = `http://127.0.0.1:${port}/api/resolve-code?code=ABCD`;
+    for (let i = 0; i < 3; ++i) expect((await fetch(url)).status).toBe(200);
+    const refused = await fetch(url);
+    expect(refused.status).toBe(429);
+    expect(await refused.json()).toEqual({ error: "Too many requests" });
+    expect(refused.headers.get("Retry-After")).toBe("1");
+  });
+
   it("forwards multi-value headers such as Set-Cookie as separate values", async () => {
     const port = await freePort();
     const seen: string[][] = [];
@@ -147,6 +166,19 @@ describe("startNodeServer", () => {
   it("binds the code API to the given interface", async () => {
     const handle = await start({ games: GAMES, host: "127.0.0.1" });
     expect(await probe.canConnect(handle.apiPort, "127.0.0.1")).toBe(true);
+  });
+
+  it("throttles /api/resolve-code with the given rate limits", async () => {
+    const handle = await start({
+      games: GAMES,
+      host: "127.0.0.1",
+      rateLimits: { resolveCode: { rate: 0, burst: 1 } },
+    });
+    const url = `http://127.0.0.1:${handle.apiPort}/api/resolve-code?code=ABCD`;
+    expect((await fetch(url)).status).toBe(404); // the bucket allows one request
+    const refused = await fetch(url);
+    expect(refused.status).toBe(429);
+    expect(refused.headers.get("Retry-After")).toBe("1");
   });
 
   it("refuses one port for both servers", async () => {

@@ -42,7 +42,8 @@ export interface GameServerOptions {
   textFilter?: TextFilter;
   /**
    * Per-player and per-address rate limits ({@link RateLimits}). Every room enforces the action and
-   * SET_NAME buckets through one shared limiter; `resolveCode` is resolved but not applied yet.
+   * SET_NAME buckets through one shared limiter; the HTTP entries enforce `resolveCode` on
+   * `/api/resolve-code` (429 with `Retry-After`).
    */
   rateLimits?: RateLimits;
 }
@@ -73,6 +74,21 @@ export function resolveRateLimits(options?: RateLimits): ResolvedRateLimits {
 /** Reports one observed (not enforced) limit hit; the observe-mode `onObserve` of {@link createGameServer}. */
 export function warnRateLimit(key: string): void {
   console.warn(`[rate-limit] ${key} is over its limit`);
+}
+
+/** The limiter and resolved bucket the HTTP entries use to throttle `/api/resolve-code`. */
+export function createResolveCodeThrottle(rateLimits?: RateLimits): {
+  limiter: RateLimiter;
+  bucket: TokenBucket;
+} {
+  const resolved = resolveRateLimits(rateLimits);
+  return {
+    limiter: new RateLimiter({
+      mode: resolved.mode,
+      ...(resolved.mode === "observe" ? { onObserve: warnRateLimit } : {}),
+    }),
+    bucket: resolved.resolveCode,
+  };
 }
 
 /** Colyseus server with one {@link GameRoom} per game. */

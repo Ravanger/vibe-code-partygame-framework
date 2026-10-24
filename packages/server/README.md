@@ -36,7 +36,7 @@ const server = await startNodeServer({ games, port: 2567, apiPort: 3001 }); // f
 await server.stop();
 ```
 
-Share one `RoomCodeService` between `createGameServer({ games, roomCodeService })` and `createApiHandler(roomCodeService)` (a pure `(Request) => Response`) when wiring your own HTTP layer.
+Share one `RoomCodeService` between `createGameServer({ games, roomCodeService })` and `createApiHandler(roomCodeService, { allowedOrigins?, limiter?, resolveCode? })` (a pure `(request, info?) => Response`: CORS headers go out only for allowed origins, and a `limiter` throttles per remote address with 429 + `Retry-After`) when wiring your own HTTP layer.
 
 Content-directory loading (`loadJsoncDir`) lives in [`@partygame/content`](../content/README.md).
 

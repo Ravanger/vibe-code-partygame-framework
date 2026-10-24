@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createApiHandler } from "../src/api/createApiHandler.js";
+import { RateLimiter } from "../src/RateLimiter.js";
 import { RoomCodeService } from "../src/services/RoomCodeService.js";
 
 const codes = new RoomCodeService();
@@ -109,6 +110,88 @@ describe("createApiHandler", () => {
         }),
       );
       expect(otherPort.headers.get("Access-Control-Allow-Origin")).toBeNull();
+    });
+  });
+
+  describe("resolve-code throttle", () => {
+    const ask = (handler: ReturnType<typeof createApiHandler>, remoteAddress?: string): Response =>
+      handler(new Request("http://x/api/resolve-code?code=ABCD"), {
+        ...(remoteAddress !== undefined ? { remoteAddress } : {}),
+      });
+
+    it("allows the burst and then answers 429 with Retry-After", async () => {
+      const limiter = new RateLimiter({ clock: () => 0 });
+      const throttled = createApiHandler(codes, { limiter });
+      for (let i = 0; i < 10; ++i) expect(ask(throttled, "10.0.0.1").status).toBe(200);
+      const refused = ask(throttled, "10.0.0.1");
+      expect(refused.status).toBe(429);
+      expect(await refused.json()).toEqual({ error: "Too many requests" });
+      expect(refused.headers.get("Retry-After")).toBe("1"); // default 1/s -> the next token in one second
+    });
+
+    it("throttles per remote address", () => {
+      const limiter = new RateLimiter({ clock: () => 0 });
+      const throttled = createApiHandler(codes, { limiter });
+      for (let i = 0; i < 10; ++i) ask(throttled, "10.0.0.1");
+      expect(ask(throttled, "10.0.0.1").status).toBe(429);
+      expect(ask(throttled, "10.0.0.2").status).toBe(200); // a different address has its own bucket
+    });
+
+    it("refills as the clock advances", () => {
+      let now = 0;
+      const limiter = new RateLimiter({ clock: () => now });
+      const throttled = createApiHandler(codes, { limiter });
+      for (let i = 0; i < 10; ++i) ask(throttled, "10.0.0.1");
+      expect(ask(throttled, "10.0.0.1").status).toBe(429);
+      now += 1_000; // one token at the default 1/s
+      expect(ask(throttled, "10.0.0.1").status).toBe(200);
+    });
+
+    it("never refuses in observe mode and reports the address", () => {
+      const seen: string[] = [];
+      const limiter = new RateLimiter({
+        clock: () => 0,
+        mode: "observe",
+        onObserve: (key) => {
+          seen.push(key);
+        },
+      });
+      const throttled = createApiHandler(codes, { limiter });
+      for (let i = 0; i < 11; ++i) expect(ask(throttled, "10.0.0.1").status).toBe(200);
+      expect(seen).toEqual(["10.0.0.1"]);
+    });
+
+    it("buckets requests without a remote address under one shared key", () => {
+      const limiter = new RateLimiter({ clock: () => 0 });
+      const throttled = createApiHandler(codes, { limiter, resolveCode: { rate: 0, burst: 2 } });
+      expect(ask(throttled).status).toBe(200);
+      expect(ask(throttled).status).toBe(200);
+      expect(ask(throttled).status).toBe(429); // the third addressless request shares their bucket
+      expect(ask(throttled, "10.0.0.1").status).toBe(200); // an addressed caller still gets a fresh bucket
+    });
+
+    it("answers 429 with Retry-After 1 when the bucket never refills", () => {
+      const limiter = new RateLimiter({ clock: () => 0 });
+      const throttled = createApiHandler(codes, { limiter, resolveCode: { rate: 0, burst: 1 } });
+      expect(ask(throttled, "10.0.0.1").status).toBe(200);
+      const refused = ask(throttled, "10.0.0.1");
+      expect(refused.status).toBe(429);
+      expect(refused.headers.get("Retry-After")).toBe("1");
+    });
+
+    it("carries the allowed origin's CORS headers on the refusal", () => {
+      const limiter = new RateLimiter({ clock: () => 0 });
+      const throttled = createApiHandler(codes, { limiter });
+      for (let i = 0; i < 10; ++i) ask(throttled, "10.0.0.1");
+      const refused = throttled(
+        new Request("http://x/api/resolve-code?code=ABCD", {
+          headers: { Origin: "http://localhost:5173" },
+        }),
+        { remoteAddress: "10.0.0.1" },
+      );
+      expect(refused.status).toBe(429);
+      expect(refused.headers.get("Access-Control-Allow-Origin")).toBe("http://localhost:5173");
+      expect(refused.headers.get("Vary")).toBe("Origin");
     });
   });
 });

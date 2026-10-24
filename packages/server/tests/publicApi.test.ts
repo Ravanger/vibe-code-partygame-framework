@@ -18,6 +18,7 @@ describe("public API", () => {
       "RoomCodeService",
       "createApiHandler",
       "createGameServer",
+      "createResolveCodeThrottle",
     ]);
   });
 });

@@ -2,8 +2,13 @@ import { createServer as createHttpServer, type Server as HttpServer } from "nod
 import { createServer as createSocketServer } from "node:net";
 import type { Server } from "@colyseus/core";
 import { type ApiRequestInfo, createApiHandler } from "./api/createApiHandler.js";
-import { createGameServer, type GameServerOptions } from "./createGameServer.js";
+import {
+  createGameServer,
+  createResolveCodeThrottle,
+  type GameServerOptions,
+} from "./createGameServer.js";
 import { closeHttpServer, freePort } from "./probe.js";
+import type { RateLimits } from "./RateLimiter.js";
 import { RoomCodeService } from "./services/RoomCodeService.js";
 
 export interface ServeApiOptions {
@@ -12,6 +17,8 @@ export interface ServeApiOptions {
   host?: string;
   /** Origins allowed to read the API; loopback only when omitted. */
   allowedOrigins?: string[] | "*";
+  /** Throttle `/api/resolve-code` per remote address with these limits (429 + `Retry-After`). */
+  rateLimits?: RateLimits;
   /** Test seam: replaces the default handler. */
   handler?: (req: Request, info?: ApiRequestInfo) => Response;
 }
@@ -21,9 +28,14 @@ export async function serveApi(
   codes: RoomCodeService,
   options: ServeApiOptions,
 ): Promise<HttpServer> {
-  const apiOptions =
-    options.allowedOrigins === undefined ? {} : { allowedOrigins: options.allowedOrigins };
-  const handler = options.handler ?? createApiHandler(codes, apiOptions);
+  const { limiter, bucket } = createResolveCodeThrottle(options.rateLimits);
+  const handler =
+    options.handler ??
+    createApiHandler(codes, {
+      ...(options.allowedOrigins !== undefined ? { allowedOrigins: options.allowedOrigins } : {}),
+      limiter,
+      resolveCode: bucket,
+    });
   const api = createHttpServer(async (req, res) => {
     // Node's parser never leaves a present header value undefined; the assertion drops it from the type.
     const rawHeaders = req.headers as Record<string, string | string[]>;
@@ -122,10 +134,11 @@ export async function startNodeServer(
     let server: Server | undefined;
     try {
       await claimPort(port);
-      api = await serveApi(
-        roomCodeService,
-        host === undefined ? { port: apiPort } : { port: apiPort, host },
-      );
+      api = await serveApi(roomCodeService, {
+        port: apiPort,
+        ...(host !== undefined ? { host } : {}),
+        ...(options.rateLimits !== undefined ? { rateLimits: options.rateLimits } : {}),
+      });
       server = createGameServer({ ...serverOptions, roomCodeService });
       await server.listen(port);
       return new NodeServerHandle(server, api, roomCodeService, port, apiPort);

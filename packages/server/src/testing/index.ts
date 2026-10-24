@@ -78,7 +78,14 @@ export class TestServer {
   /** Start the `/api/resolve-code` HTTP API for this server's rooms on a free port; stopped by `shutdown()`. */
   async serveApi(): Promise<number> {
     const port = await freePort();
-    this.apis.push(await serveApiOnNode(this.roomCodeService, { port, host: "127.0.0.1" }));
+    this.apis.push(
+      await serveApiOnNode(this.roomCodeService, {
+        port,
+        host: "127.0.0.1",
+        // Suites resolve codes rapidly from one address; keep the production throttle from tripping.
+        rateLimits: { resolveCode: { rate: 100, burst: 1000 } },
+      }),
+    );
     return port;
   }
 

@@ -459,7 +459,8 @@
           "RoomCodeService": {},
           "TokenBucket": {},
           "createApiHandler": {},
-          "createGameServer": {}
+          "createGameServer": {},
+          "createResolveCodeThrottle": {}
         }
       },
       "./bun": {

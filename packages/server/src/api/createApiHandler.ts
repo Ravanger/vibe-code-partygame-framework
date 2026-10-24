@@ -1,8 +1,13 @@
 import { RoomCodeSchema } from "@partygame/shared";
+import { DEFAULT_RESOLVE_CODE_BUCKET } from "../createGameServer.js";
+import type { RateLimiter, TokenBucket } from "../RateLimiter.js";
 import type { RoomCodeService } from "../services/RoomCodeService.js";
 
 /** Origins allowed to read the API by default: loopback on any port (the dev client). */
 const DEFAULT_ALLOWED_ORIGINS = ["http://localhost:*", "http://127.0.0.1:*", "http://[::1]:*"];
+
+/** Throttle key for callers whose remote address is unknown; they share one bucket, not none. */
+const NO_ADDRESS_KEY = "unknown";
 
 /** CORS headers shared by every response that carries them. */
 const CORS_METHODS_HEADERS = {
@@ -54,6 +59,14 @@ export interface ApiHandlerOptions {
    * Defaults to loopback only. A disallowed origin gets no CORS headers (the browser blocks it).
    */
   allowedOrigins?: string[] | "*";
+  /**
+   * When set, every request takes one token for the caller's remote address before anything else;
+   * an exhausted bucket answers 429 with `Retry-After`. Callers without a known address share one
+   * bucket. Observe-mode limiters never refuse.
+   */
+  limiter?: RateLimiter;
+  /** The bucket those tokens come from. Default {@link DEFAULT_RESOLVE_CODE_BUCKET}. */
+  resolveCode?: TokenBucket;
 }
 
 /** `GET /api/resolve-code?code=ABCD` -> `{ roomId }`. Everything else is 404/405; CORS headers go out only for allowed origins. */
@@ -62,8 +75,26 @@ export function createApiHandler(
   options: ApiHandlerOptions = {},
 ): (req: Request, info?: ApiRequestInfo) => Response {
   const allowedOrigins = options.allowedOrigins ?? DEFAULT_ALLOWED_ORIGINS;
-  return (req) => {
+  const limiter = options.limiter;
+  const bucket = options.resolveCode ?? DEFAULT_RESOLVE_CODE_BUCKET;
+  return (req, info) => {
     const corsHeaders = corsHeadersFor(req.headers.get("origin"), allowedOrigins);
+    if (limiter !== undefined) {
+      const key = info?.remoteAddress ?? NO_ADDRESS_KEY;
+      if (!limiter.take(key, bucket)) {
+        const waitMs = limiter.waitMs(key, bucket);
+        // A rate-0 bucket never refills; there is no honest retry time, so send the minimum.
+        const retryAfter = Number.isFinite(waitMs) ? Math.max(1, Math.ceil(waitMs / 1000)) : 1;
+        return json(
+          429,
+          { error: "Too many requests" },
+          {
+            ...corsHeaders,
+            "Retry-After": String(retryAfter),
+          },
+        );
+      }
+    }
     if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
     const url = new URL(req.url);
     if (url.pathname !== "/api/resolve-code") return json(404, { error: "Not found" }, corsHeaders);

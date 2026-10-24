@@ -80,6 +80,24 @@ export class RateLimiter {
     return false;
   }
 
+  /**
+   * Milliseconds until `key` holds at least one token under `bucket`, counting the refill that has
+   * already happened: 0 when it already does or has never been seen, Infinity for an exhausted
+   * rate-0 bucket. Does not consume a token.
+   */
+  waitMs(key: string, bucket: TokenBucket): number {
+    const state = this.buckets.get(key);
+    if (state === undefined) return 0;
+    const now = this.clock();
+    const tokens = Math.min(
+      bucket.burst,
+      state.tokens + ((now - state.lastSeen) * bucket.rate) / 1000,
+    );
+    if (tokens >= 1) return 0;
+    if (bucket.rate <= 0) return Number.POSITIVE_INFINITY;
+    return Math.ceil(((1 - tokens) * 1000) / bucket.rate);
+  }
+
   /** Forget every key starting with `prefix` (e.g. all of a room's keys when it is disposed). */
   drop(prefix: string): void {
     for (const key of this.buckets.keys()) {

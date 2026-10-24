@@ -80,4 +80,38 @@ describe("RateLimiter", () => {
     expect(limiter.take("a", once)).toBe(true);
     expect(limiter.take("a", once)).toBe(false); // enforce by default
   });
+
+  describe("waitMs", () => {
+    it("is 0 for a key that has never been seen", () => {
+      const limiter = new RateLimiter({ clock: () => 1_000 });
+      expect(limiter.waitMs("a", bucket)).toBe(0); // a fresh key starts full
+    });
+
+    it("is 0 while the key still holds a token", () => {
+      const now = 1_000;
+      const limiter = new RateLimiter({ clock: () => now });
+      expect(limiter.take("a", bucket)).toBe(true); // burst of two -> one left
+      expect(limiter.waitMs("a", bucket)).toBe(0);
+    });
+
+    it("counts to the next token once exhausted, and shrinks as time passes", () => {
+      let now = 1_000;
+      const limiter = new RateLimiter({ clock: () => now });
+      expect(limiter.take("a", bucket)).toBe(true);
+      expect(limiter.take("a", bucket)).toBe(true);
+      expect(limiter.take("a", bucket)).toBe(false); // exhausted at t=1000
+      expect(limiter.waitMs("a", bucket)).toBe(100); // 10/s -> one token in 100 ms
+      now += 50;
+      expect(limiter.waitMs("a", bucket)).toBe(50); // half a token has refilled
+      now += 500;
+      expect(limiter.waitMs("a", bucket)).toBe(0); // refilled in the meantime
+    });
+
+    it("is Infinity for an exhausted rate-0 bucket", () => {
+      const limiter = new RateLimiter({ clock: () => 1_000 });
+      const dry = { rate: 0, burst: 1 };
+      expect(limiter.take("a", dry)).toBe(true);
+      expect(limiter.waitMs("a", dry)).toBe(Number.POSITIVE_INFINITY);
+    });
+  });
 });

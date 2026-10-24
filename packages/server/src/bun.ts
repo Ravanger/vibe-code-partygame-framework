@@ -4,6 +4,7 @@ import { serve } from "bun";
 import { createApiHandler } from "./api/createApiHandler.js";
 import {
   createGameServer,
+  createResolveCodeThrottle,
   DEFAULT_MAX_PAYLOAD_BYTES,
   type GameServerOptions,
 } from "./createGameServer.js";
@@ -25,8 +26,12 @@ export async function startServer(options: StartServerOptions) {
       maxPayloadLength: options.maxPayloadBytes ?? DEFAULT_MAX_PAYLOAD_BYTES,
     }),
   });
-  const apiOptions = allowedOrigins === undefined ? {} : { allowedOrigins };
-  const handler = createApiHandler(roomCodeService, apiOptions);
+  const { limiter, bucket } = createResolveCodeThrottle(options.rateLimits);
+  const handler = createApiHandler(roomCodeService, {
+    ...(allowedOrigins !== undefined ? { allowedOrigins } : {}),
+    limiter,
+    resolveCode: bucket,
+  });
   let api: ReturnType<typeof serve>;
   api = serve({
     port: apiPort,

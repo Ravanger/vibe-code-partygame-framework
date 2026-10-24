@@ -3,6 +3,7 @@ import { RoomCodeSchema } from "@partygame/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createGameServer,
+  createResolveCodeThrottle,
   DEFAULT_MAX_PAYLOAD_BYTES,
   resolveRateLimits,
   warnRateLimit,
@@ -118,5 +119,28 @@ describe("rate limits", () => {
     t = await bootBuzzer({ rateLimits: { mode: "observe" } });
     const room = await t.createRoom("buzzer");
     expect(room).toBeDefined();
+  });
+
+  it("builds the code API throttle from rateLimits", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const defaults = createResolveCodeThrottle();
+      expect(defaults.bucket).toEqual({ rate: 1, burst: 10 });
+      for (let i = 0; i < 10; ++i) {
+        expect(defaults.limiter.take("1.2.3.4", defaults.bucket)).toBe(true);
+      }
+      expect(defaults.limiter.take("1.2.3.4", defaults.bucket)).toBe(false); // enforce by default
+
+      const observed = createResolveCodeThrottle({
+        resolveCode: { rate: 3, burst: 1 },
+        mode: "observe",
+      });
+      expect(observed.bucket).toEqual({ rate: 3, burst: 1 });
+      expect(observed.limiter.take("5.6.7.8", observed.bucket)).toBe(true);
+      expect(observed.limiter.take("5.6.7.8", observed.bucket)).toBe(true); // observed, not refused
+      expect(warn).toHaveBeenCalledWith("[rate-limit] 5.6.7.8 is over its limit");
+    } finally {
+      warn.mockRestore();
+    }
   });
 });
