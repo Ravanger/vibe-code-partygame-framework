@@ -8,6 +8,11 @@ describe("share links", () => {
     expect(joinUrl("http://host:5173/", "ABCD")).toBe("http://host:5173/?code=ABCD");
     expect(tvUrl("http://host:5173/", "ABCD")).toBe("http://host:5173/?tv=ABCD");
   });
+
+  it("encodes the code in both links", () => {
+    expect(joinUrl("http://host:5173/", "AB&x=")).toBe("http://host:5173/?code=AB%26x%3D");
+    expect(tvUrl("http://host:5173/", "AB&x=")).toBe("http://host:5173/?tv=AB%26x%3D");
+  });
 });
 
 describe("resolveRoomCode", () => {
@@ -44,6 +49,79 @@ describe("resolveRoomCode", () => {
     reply({ nope: true });
     await expect(resolveRoomCode("http://h:3001", "ABCD")).rejects.toThrow(
       "Unexpected reply from the game server",
+    );
+  });
+
+  it("rejects an invalid code without calling fetch", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(resolveRoomCode("http://h:3001", "AB&x=")).rejects.toThrow("Invalid room code");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a non-2xx reply with its status", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ error: "boom" }), { status: 500 })),
+    );
+    await expect(resolveRoomCode("http://h:3001", "ABCD")).rejects.toThrow(
+      "The game server answered 500",
+    );
+  });
+
+  it("keeps the API's reason on a 404 JSON reply", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () => new Response(JSON.stringify({ error: "Game code not found" }), { status: 404 }),
+      ),
+    );
+    await expect(resolveRoomCode("http://h:3001", "ABCD")).rejects.toMatchObject({
+      name: "RoomCodeError",
+      reason: "not-found",
+      message: "Game code not found",
+    });
+  });
+
+  it("reports the status when a 404 reply is not a JSON error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("<html>nope</html>", { status: 404 })),
+    );
+    await expect(resolveRoomCode("http://h:3001", "ABCD")).rejects.toThrow(
+      "The game server answered 404",
+    );
+  });
+
+  it("reports the status when a 404 reply carries no error text", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ roomId: "r1" }), { status: 404 })),
+    );
+    await expect(resolveRoomCode("http://h:3001", "ABCD")).rejects.toThrow(
+      "The game server answered 404",
+    );
+  });
+
+  it("rejects a non-JSON reply as a bad reply, not a SyntaxError", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("<html>oops</html>")),
+    );
+    await expect(resolveRoomCode("http://h:3001", "ABCD")).rejects.toMatchObject({
+      name: "RoomCodeError",
+      reason: "bad-reply",
+      message: "Unexpected reply from the game server",
+    });
+  });
+
+  it("rejects a network failure with a safe message", async () => {
+    const fail = async (): Promise<never> => {
+      throw new TypeError("fetch failed");
+    };
+    vi.stubGlobal("fetch", fail);
+    await expect(resolveRoomCode("http://h:3001", "ABCD")).rejects.toThrow(
+      "Could not reach the game server",
     );
   });
 });

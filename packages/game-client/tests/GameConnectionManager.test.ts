@@ -356,7 +356,7 @@ describe("refused joins", () => {
   it("records an unreachable API as CONNECTION_LOST", async () => {
     const manager = newManager();
     stubFetchReply(new Error("fetch failed"));
-    await expect(manager.join("WXYZ")).rejects.toThrow("fetch failed");
+    await expect(manager.join("WXYZ")).rejects.toThrow("Could not reach the game server");
     expect(manager.lastServerError?.code).toBe(ErrorCode.CONNECTION_LOST);
   });
 
