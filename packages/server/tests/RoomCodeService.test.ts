@@ -1,4 +1,4 @@
-import { RoomCodeSchema } from "@partygame/shared";
+import { ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH, RoomCodeSchema } from "@partygame/shared";
 import { beforeEach, describe, expect, it } from "vitest";
 import { RoomCodeService } from "../src/services/RoomCodeService.js";
 
@@ -46,21 +46,28 @@ describe("RoomCodeService", () => {
   });
 
   it("should retry on duplicate code collision", () => {
-    const originalRandom = Math.random;
-    try {
-      Math.random = () => 0;
-      const codeA = service.generateCode();
-      expect(codeA).toBe("AAAA");
-      service.register(codeA, "room-1");
-      let callCount = 0;
-      Math.random = () => {
-        ++callCount;
-        return callCount < 4 ? 0 : 0.5;
-      };
-      const codeB = service.generateCode();
-      expect(codeB).not.toBe(codeA);
-    } finally {
-      Math.random = originalRandom;
+    let calls = 0;
+    const retryService = new RoomCodeService(() => {
+      ++calls;
+      return calls <= 4 ? 0 : 13;
+    });
+    retryService.register("AAAA", "room-1");
+    // First attempt draws AAAA (a collision); the retry draws NNNN.
+    expect(retryService.generateCode()).toBe("NNNN");
+  });
+
+  it("draws every letter from the alphabet with an even distribution by default", () => {
+    const counts = new Array<number>(ROOM_CODE_ALPHABET.length).fill(0);
+    for (let n = 0; n < 5000; ++n) {
+      for (const letter of service.generateCode()) {
+        const index = ROOM_CODE_ALPHABET.indexOf(letter);
+        counts[index] = (counts[index] ?? 0) + 1;
+      }
+    }
+    const expected = (5000 * ROOM_CODE_LENGTH) / ROOM_CODE_ALPHABET.length;
+    for (const count of counts) {
+      expect(count).toBeGreaterThan(0);
+      expect(count).toBeLessThanOrEqual(expected * 2);
     }
   });
 
@@ -78,31 +85,20 @@ describe("RoomCodeService", () => {
   });
 
   it("succeeds when only the tenth attempt is free", () => {
-    const originalRandom = Math.random;
-    try {
-      Math.random = () => 0;
-      service.register("AAAA", "room-1");
-      let calls = 0;
-      Math.random = () => {
-        ++calls;
-        return calls <= 9 * 4 ? 0 : 0.5;
-      };
-      expect(service.generateCode()).toBe("NNNN");
-    } finally {
-      Math.random = originalRandom;
-    }
+    let calls = 0;
+    const lastFreeService = new RoomCodeService(() => {
+      ++calls;
+      return calls <= 9 * 4 ? 0 : 13;
+    });
+    lastFreeService.register("AAAA", "room-1");
+    expect(lastFreeService.generateCode()).toBe("NNNN");
   });
 
-  it("should throw after max attempts", () => {
-    const originalRandom = Math.random;
-    try {
-      Math.random = () => 0;
-      service.register("AAAA", "room-1");
-      expect(() => service.generateCode()).toThrow(
-        "Failed to generate unique room code after maximum attempts",
-      );
-    } finally {
-      Math.random = originalRandom;
-    }
+  it("throws an actionable error when every attempt collides", () => {
+    const exhaustedService = new RoomCodeService(() => 0);
+    exhaustedService.register("AAAA", "room-1");
+    expect(() => exhaustedService.generateCode()).toThrow(
+      "Could not generate a unique room code after 10 attempts; too many open rooms",
+    );
   });
 });
