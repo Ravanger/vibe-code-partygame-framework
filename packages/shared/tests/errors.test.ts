@@ -102,4 +102,8 @@ describe("CLIENT_MESSAGES", () => {
   it("has a fixed message for CONTENT_REJECTED", () => {
     expect(CLIENT_MESSAGES.CONTENT_REJECTED).toBe("That text was not allowed");
   });
+
+  it("has a fixed message for RATE_LIMITED", () => {
+    expect(CLIENT_MESSAGES.RATE_LIMITED).toBe("You are sending actions too quickly");
+  });
 });

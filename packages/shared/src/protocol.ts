@@ -37,6 +37,8 @@ export const ErrorCode = {
   KICKED: "KICKED",
   /** The server failed while handling the action. Only ever a request's answer, never pushed. */
   INTERNAL: "INTERNAL",
+  /** The player sent more messages than their rate limit allows; the message was dropped. */
+  RATE_LIMITED: "RATE_LIMITED",
   /** Client-side only: an action was sent with no room joined. Never sent by the server. */
   NOT_CONNECTED: "NOT_CONNECTED",
   /** Client-side only: the request failed in transit (network drop, timeout). Never sent by the server. */

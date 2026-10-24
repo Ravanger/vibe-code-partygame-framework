@@ -78,6 +78,7 @@ export const CLIENT_MESSAGES: Record<ErrorCode, string> = {
   NAME_TAKEN: "That name is already taken",
   KICKED: "Removed by the host",
   INTERNAL: "The action failed on the server",
+  RATE_LIMITED: "You are sending actions too quickly",
   NOT_CONNECTED: "You are not connected to a room",
   CONNECTION_LOST: "The connection to the server was lost",
   BAD_REPLY: "The server sent an unexpected reply",

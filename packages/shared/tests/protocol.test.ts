@@ -58,6 +58,7 @@ describe("protocol constants", () => {
         "NOT_ALLOWED",
         "NOT_CONNECTED",
         "NOT_ENOUGH_PLAYERS",
+        "RATE_LIMITED",
         "ROOM_NOT_FOUND",
         "UNAUTHORIZED",
         "UNKNOWN_ACTION",
@@ -207,6 +208,7 @@ describe("isServerError", () => {
   it("accepts a code and message, with or without an action", () => {
     expect(isServerError({ code: "WRONG_PHASE", message: "no" })).toBe(true);
     expect(isServerError({ code: "KICKED", message: "bye", action: "X" })).toBe(true);
+    expect(isServerError({ code: "RATE_LIMITED", message: "slow down" })).toBe(true);
   });
   it("rejects anything else", () => {
     for (const bad of [

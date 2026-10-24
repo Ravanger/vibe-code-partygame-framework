@@ -1,7 +1,12 @@
 import { WebSocketTransport } from "@colyseus/ws-transport";
 import { RoomCodeSchema } from "@partygame/shared";
-import { afterEach, describe, expect, it } from "vitest";
-import { createGameServer, DEFAULT_MAX_PAYLOAD_BYTES } from "../src/createGameServer.js";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  createGameServer,
+  DEFAULT_MAX_PAYLOAD_BYTES,
+  resolveRateLimits,
+  warnRateLimit,
+} from "../src/createGameServer.js";
 import { RoomCodeService } from "../src/services/RoomCodeService.js";
 import { bootTestServer, type TestServer, waitUntil } from "../src/testing/index.js";
 import { bootBuzzer, GAMES, startedRoom, stateOf } from "./support.js";
@@ -81,5 +86,37 @@ describe("websocket payload limit", () => {
     t = await bootBuzzer({ maxPayloadBytes: 65_536 });
     const code = await rawFrameCloseCode(`${t.endpoint}/buzzer`, 10 * 1024);
     expect(code).not.toBe(1009); // under the raised limit, so it is not rejected as too big
+  });
+});
+
+describe("rate limits", () => {
+  it("resolves the documented defaults and keeps explicit overrides", () => {
+    expect(resolveRateLimits()).toEqual({
+      action: { rate: 10, burst: 20 },
+      setName: { rate: 2, burst: 2 },
+      resolveCode: { rate: 1, burst: 10 },
+      mode: "enforce",
+    });
+    expect(resolveRateLimits({ action: { rate: 1, burst: 1 }, mode: "observe" })).toEqual({
+      ...resolveRateLimits(),
+      action: { rate: 1, burst: 1 },
+      mode: "observe",
+    });
+  });
+
+  it("reports an observed limit hit through console.warn", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      warnRateLimit("room-1:player-1:ACTION");
+      expect(warn).toHaveBeenCalledWith("[rate-limit] room-1:player-1:ACTION is over its limit");
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("boots a server in observe mode", async () => {
+    t = await bootBuzzer({ rateLimits: { mode: "observe" } });
+    const room = await t.createRoom("buzzer");
+    expect(room).toBeDefined();
   });
 });

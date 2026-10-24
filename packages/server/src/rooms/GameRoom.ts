@@ -34,6 +34,7 @@ import {
 import type { BaseGameState } from "@partygame/shared/schema";
 import { PlayerSchema, syncedJsonOf } from "@partygame/shared/schema";
 import type { ZodError } from "zod";
+import type { RateLimiter, ResolvedRateLimits } from "../RateLimiter.js";
 import type { RoomCodeService } from "../services/RoomCodeService.js";
 
 const SPECTATOR_SLOTS = 32;
@@ -59,6 +60,10 @@ export interface GameRoomConfig {
   emptyRoomGraceMs: number;
   /** When set, player names are checked against it at join and on `SET_NAME`. */
   textFilter?: TextFilter;
+  /** Shared per-player limiter (buckets keyed with the room id); wired in, enforcement lands in a follow-up. */
+  rateLimiter: RateLimiter;
+  /** The resolved limits behind `rateLimiter`, one bucket per message type. */
+  rateLimits: ResolvedRateLimits;
 }
 
 /** Generic Colyseus room: seats, roster, reconnection and per-player views around a core `GameRuntime`. */
