@@ -36,8 +36,8 @@ export interface GameServerOptions {
   /** When set, player names are checked against it at join and on `SET_NAME`, at the level of each game's `filterLevel`. */
   textFilter?: TextFilter;
   /**
-   * Per-player and per-address rate limits ({@link RateLimits}). The resolved limits and one shared
-   * limiter are wired into every room; enforcement of actions and SET_NAME lands in a follow-up.
+   * Per-player and per-address rate limits ({@link RateLimits}). Every room enforces the action and
+   * SET_NAME buckets through one shared limiter; `resolveCode` is resolved but not applied yet.
    */
   rateLimits?: RateLimits;
 }

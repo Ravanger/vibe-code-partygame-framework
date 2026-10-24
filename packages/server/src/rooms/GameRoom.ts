@@ -34,7 +34,7 @@ import {
 import type { BaseGameState } from "@partygame/shared/schema";
 import { PlayerSchema, syncedJsonOf } from "@partygame/shared/schema";
 import type { ZodError } from "zod";
-import type { RateLimiter, ResolvedRateLimits } from "../RateLimiter.js";
+import type { RateLimiter, ResolvedRateLimits, TokenBucket } from "../RateLimiter.js";
 import type { RoomCodeService } from "../services/RoomCodeService.js";
 
 const SPECTATOR_SLOTS = 32;
@@ -51,6 +51,10 @@ const REPLAY_UNAVAILABLE: ProtocolError = {
   code: ErrorCode.NOT_ALLOWED,
   message: CLIENT_MESSAGES.NOT_ALLOWED,
 };
+const RATE_LIMITED_ERROR: ProtocolError = {
+  code: ErrorCode.RATE_LIMITED,
+  message: CLIENT_MESSAGES.RATE_LIMITED,
+};
 
 export interface GameRoomConfig {
   definition: GameDefinition<BaseGameState, unknown, unknown>;
@@ -60,7 +64,7 @@ export interface GameRoomConfig {
   emptyRoomGraceMs: number;
   /** When set, player names are checked against it at join and on `SET_NAME`. */
   textFilter?: TextFilter;
-  /** Shared per-player limiter (buckets keyed with the room id); wired in, enforcement lands in a follow-up. */
+  /** Shared per-player limiter; buckets are keyed `(roomId, playerId, messageType)` so a reconnect cannot reset them. */
   rateLimiter: RateLimiter;
   /** The resolved limits behind `rateLimiter`, one bucket per message type. */
   rateLimits: ResolvedRateLimits;
@@ -185,7 +189,12 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
       this.onMessage(ClientMessage.SET_NAME, (client, raw: unknown) => this.setName(client, raw));
       this.onMessage(ClientMessage.ACTION, (client, raw: unknown): ActionResult => {
         const seat = this.seatOf(client);
-        return seat ? this.act(seat.id, raw) : { ok: false, error: SPECTATOR_ERROR };
+        if (!seat) return { ok: false, error: SPECTATOR_ERROR };
+        if (!this.limited(seat.id, ClientMessage.ACTION, this.config.rateLimits.action)) {
+          client.send(ServerMessage.ERROR, RATE_LIMITED_ERROR);
+          return { ok: false, error: RATE_LIMITED_ERROR };
+        }
+        return this.act(seat.id, raw);
       });
       this.onMessage(ClientMessage.EXPORT_REPLAY, (client): unknown => this.exportReplay(client));
     } catch (error) {
@@ -264,6 +273,7 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
   onDispose(): void {
     this.runtime?.stop();
     if (this.state?.roomCode) this.config.roomCodeService.unregister(this.state.roomCode);
+    this.config.rateLimiter.drop(`${this.roomId}:`);
   }
 
   /** TimerHandle ids handed out by the host, mapped to their Colyseus Delayed. */
@@ -330,6 +340,10 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
   private setName(client: Client, raw: unknown): void {
     const seat = this.seatOf(client);
     if (!seat) return;
+    if (!this.limited(seat.id, ClientMessage.SET_NAME, this.config.rateLimits.setName)) {
+      client.send(ServerMessage.ERROR, RATE_LIMITED_ERROR);
+      return;
+    }
     const name = SetNameSchema.safeParse(raw);
     if (!name.success) {
       client.send(ServerMessage.ERROR, {
@@ -384,6 +398,11 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     const seat = this.seatBySession(client);
     if (!seat) client.send(ServerMessage.ERROR, SPECTATOR_ERROR);
     return seat;
+  }
+
+  /** Takes one token from `playerId`'s bucket for `messageType`; false when refused in enforce mode. */
+  private limited(playerId: string, messageType: string, bucket: TokenBucket): boolean {
+    return this.config.rateLimiter.take(`${this.roomId}:${playerId}:${messageType}`, bucket);
   }
 
   private act(playerId: string, raw: unknown): ActionResult {
@@ -461,6 +480,7 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     this.state.players.delete(playerId);
     this.viewRefs.delete(playerId);
     this.unbind(playerId);
+    this.config.rateLimiter.drop(`${this.roomId}:${playerId}:`);
   }
 
   private unbind(playerId: string): void {
