@@ -13,7 +13,10 @@ export type StartServerOptions = Omit<GameServerOptions, "transport"> & StartPor
 
 /** Bun entry point: WebSocket game server plus the code-resolution API. */
 export async function startServer(options: StartServerOptions) {
-  const { port, apiPort, roomCodeService } = resolveStartOptions(options, process.env);
+  const { port, apiPort, roomCodeService, allowedOrigins } = resolveStartOptions(
+    options,
+    process.env,
+  );
   const server = createGameServer({
     ...options,
     roomCodeService,
@@ -22,7 +25,16 @@ export async function startServer(options: StartServerOptions) {
       maxPayloadLength: options.maxPayloadBytes ?? DEFAULT_MAX_PAYLOAD_BYTES,
     }),
   });
-  const api = serve({ port: apiPort, fetch: createApiHandler(roomCodeService) });
+  const apiOptions = allowedOrigins === undefined ? {} : { allowedOrigins };
+  const handler = createApiHandler(roomCodeService, apiOptions);
+  let api: ReturnType<typeof serve>;
+  api = serve({
+    port: apiPort,
+    fetch: (req: Request) => {
+      const remoteAddress = api?.requestIP(req)?.address;
+      return handler(req, remoteAddress === undefined ? {} : { remoteAddress });
+    },
+  });
   await server.listen(port);
   return { server, api };
 }

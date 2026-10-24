@@ -8,6 +8,13 @@ describe("resolveStartOptions", () => {
     expect(resolved.port).toBe(2567);
     expect(resolved.apiPort).toBe(3001);
     expect(resolved.roomCodeService).toBeInstanceOf(RoomCodeService);
+    expect(resolved.allowedOrigins).toBeUndefined();
+  });
+
+  it("passes allowedOrigins through", () => {
+    expect(
+      resolveStartOptions({ allowedOrigins: ["http://party.example"] }, {}).allowedOrigins,
+    ).toEqual(["http://party.example"]);
   });
 
   it("reads PORT and API_PORT from the environment", () => {

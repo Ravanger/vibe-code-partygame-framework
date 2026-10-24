@@ -1,7 +1,7 @@
 import { createServer as createHttpServer, type Server as HttpServer } from "node:http";
 import { createServer as createSocketServer } from "node:net";
 import type { Server } from "@colyseus/core";
-import { createApiHandler } from "./api/createApiHandler.js";
+import { type ApiRequestInfo, createApiHandler } from "./api/createApiHandler.js";
 import { createGameServer, type GameServerOptions } from "./createGameServer.js";
 import { closeHttpServer, freePort } from "./probe.js";
 import { RoomCodeService } from "./services/RoomCodeService.js";
@@ -10,6 +10,10 @@ export interface ServeApiOptions {
   port: number;
   /** Interface to bind; every interface when omitted. */
   host?: string;
+  /** Origins allowed to read the API; loopback only when omitted. */
+  allowedOrigins?: string[] | "*";
+  /** Test seam: replaces the default handler. */
+  handler?: (req: Request, info?: ApiRequestInfo) => Response;
 }
 
 /** Serves `/api/resolve-code` for `codes` on Node's `http` (the Bun entry has its own). Close the returned server to stop it. */
@@ -17,9 +21,26 @@ export async function serveApi(
   codes: RoomCodeService,
   options: ServeApiOptions,
 ): Promise<HttpServer> {
-  const handler = createApiHandler(codes);
+  const apiOptions =
+    options.allowedOrigins === undefined ? {} : { allowedOrigins: options.allowedOrigins };
+  const handler = options.handler ?? createApiHandler(codes, apiOptions);
   const api = createHttpServer(async (req, res) => {
-    const response = handler(new Request(`http://127.0.0.1${req.url}`));
+    // Node's parser never leaves a present header value undefined; the assertion drops it from the type.
+    const rawHeaders = req.headers as Record<string, string | string[]>;
+    const headers = new Headers();
+    for (const [name, value] of Object.entries(rawHeaders)) {
+      if (Array.isArray(value)) {
+        for (const one of value) headers.append(name, one);
+      } else {
+        headers.set(name, value);
+      }
+    }
+    // A connection that reached this handler has a peer address and a request method; the assertions keep those branches out of coverage.
+    const remoteAddress = req.socket.remoteAddress as string;
+    const response = handler(
+      new Request(`http://127.0.0.1${req.url}`, { method: req.method as string, headers }),
+      { remoteAddress },
+    );
     res.writeHead(response.status, Object.fromEntries(response.headers));
     res.end(await response.text());
   });

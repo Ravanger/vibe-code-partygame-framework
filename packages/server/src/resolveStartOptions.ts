@@ -7,6 +7,8 @@ export interface StartPorts {
   /** Code-resolution HTTP API. Defaults to `API_PORT` or 3001. */
   apiPort?: number;
   roomCodeService?: RoomCodeService;
+  /** Origins allowed to read the code API; loopback only when omitted. */
+  allowedOrigins?: string[] | "*";
 }
 
 const portFrom = (name: string, raw: string | undefined, fallback: number): number => {
@@ -25,10 +27,16 @@ const portFrom = (name: string, raw: string | undefined, fallback: number): numb
 export function resolveStartOptions(
   options: StartPorts,
   env: Record<string, string | undefined>,
-): { port: number; apiPort: number; roomCodeService: RoomCodeService } {
+): {
+  port: number;
+  apiPort: number;
+  roomCodeService: RoomCodeService;
+  allowedOrigins?: string[] | "*";
+} {
   return {
     port: options.port ?? portFrom("PORT", env.PORT, 2567),
     apiPort: options.apiPort ?? portFrom("API_PORT", env.API_PORT, 3001),
     roomCodeService: options.roomCodeService ?? new RoomCodeService(),
+    ...(options.allowedOrigins !== undefined ? { allowedOrigins: options.allowedOrigins } : {}),
   };
 }
