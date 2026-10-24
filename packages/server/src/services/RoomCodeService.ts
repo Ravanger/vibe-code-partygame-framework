@@ -44,6 +44,11 @@ export class RoomCodeService {
     this.codeToRoomId.delete(code);
   }
 
+  /** The number of rooms currently registered. */
+  get size(): number {
+    return this.codeToRoomId.size;
+  }
+
   resolve(code: string): string | undefined {
     return this.codeToRoomId.get(code);
   }

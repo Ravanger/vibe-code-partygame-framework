@@ -62,6 +62,8 @@ export interface GameRoomConfig {
   roomCodeService: RoomCodeService;
   reconnectMs: number;
   emptyRoomGraceMs: number;
+  /** Maximum concurrent rooms across all games; a create beyond it closes with `SERVER_FULL` (4429). */
+  maxRooms: number;
   /** When set, player names are checked against it at join and on `SET_NAME`. */
   textFilter?: TextFilter;
   /** Shared per-player limiter; buckets are keyed `(roomId, playerId, messageType)` so a reconnect cannot reset them. */
@@ -137,6 +139,7 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
 
   private create(options: Record<string, unknown>): void {
     const { definition, stateClass, roomCodeService } = this.config;
+    if (roomCodeService.size >= this.config.maxRooms) throw this.closeWith(CLOSE_CODES.SERVER_FULL);
     const roomOptions = RoomOptionsSchema.safeParse(options);
     if (!roomOptions.success) throw this.invalidOptions("create", roomOptions.error);
     if (roomOptions.data.protocolVersion !== PROTOCOL_VERSION) {

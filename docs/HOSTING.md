@@ -117,6 +117,8 @@ The server refuses to start with fewer than 3 categories.
 | `API_PORT` | `3001` | Room-code lookup API port |
 | `WITCLASH_CONTENT_DIR` | `games/wit-clash/content/categories` | Directory holding the category files |
 
+Other server limits are set as options of `createGameServer` (see the [framework README](framework/README.md)), not environment variables: for example `maxRooms` caps the number of concurrent rooms (default 100); a create beyond the cap is refused with "Server is full".
+
 ### Client
 
 Read by Vite at dev or build time.

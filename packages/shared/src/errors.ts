@@ -25,9 +25,9 @@ export interface CloseCode {
 }
 
 /**
- * Join/create close codes (4400-4405, 4426, 4500), each mapped to an {@link ErrorCode} and a fixed
- * message. `VERSION_MISMATCH`'s message is a template the server fills with both versions (numbers
- * only; a missing client version renders as `unknown`) before closing.
+ * Join/create close codes (4400-4405, 4426, 4429, 4500), each mapped to an {@link ErrorCode} and a
+ * fixed message. `VERSION_MISMATCH`'s message is a template the server fills with both versions
+ * (numbers only; a missing client version renders as `unknown`) before closing.
  */
 export const CLOSE_CODES = {
   INVALID_OPTIONS: {
@@ -53,6 +53,8 @@ export const CLOSE_CODES = {
     errorCode: ErrorCode.NOT_ALLOWED,
     message: "Protocol version mismatch: client {client}, server {server}",
   },
+  /** A create refused because the server already hosts `maxRooms` rooms. */
+  SERVER_FULL: { code: 4429, errorCode: ErrorCode.NOT_ALLOWED, message: "Server is full" },
   INTERNAL: {
     code: 4500,
     errorCode: ErrorCode.INTERNAL,

@@ -37,6 +37,17 @@ describe("RoomCodeService", () => {
     expect(service.resolve(code)).toBeUndefined();
   });
 
+  it("exposes the number of registered rooms as size and drops it after unregister", () => {
+    expect(service.size).toBe(0);
+    const code1 = service.generateCode();
+    const code2 = service.generateCode();
+    service.register(code1, "room-1");
+    service.register(code2, "room-2");
+    expect(service.size).toBe(2);
+    service.unregister(code1);
+    expect(service.size).toBe(1);
+  });
+
   it("should generate non-colliding codes", () => {
     const code1 = service.generateAndRegister("room-1");
     const code2 = service.generateAndRegister("room-2");

@@ -29,6 +29,11 @@ export interface GameServerOptions {
    * connection (code 1009) and leave the room untouched. Default {@link DEFAULT_MAX_PAYLOAD_BYTES}.
    */
   maxPayloadBytes?: number;
+  /**
+   * Maximum number of concurrent rooms across all games; a create beyond it closes with the
+   * `SERVER_FULL` code (4429). Default {@link DEFAULT_MAX_ROOMS}; `Infinity` removes the cap.
+   */
+  maxRooms?: number;
   /** How long a dropped player's seat is held. Default 60 s. */
   reconnectMs?: number;
   /** How long an empty room lives before it is disposed. Default 120 s. */
@@ -44,6 +49,8 @@ export interface GameServerOptions {
 
 export const DEFAULT_RECONNECT_MS = 60_000;
 export const DEFAULT_EMPTY_ROOM_GRACE_MS = 120_000;
+/** Default maximum number of concurrent rooms across all games. */
+export const DEFAULT_MAX_ROOMS = 100;
 /** Default largest accepted WebSocket frame (bytes); the transports' own default, now made explicit. */
 export const DEFAULT_MAX_PAYLOAD_BYTES = 4096;
 /** Default action limit per player: 10/s, burst 20. */
@@ -89,6 +96,7 @@ export function createGameServer(options: GameServerOptions): Server {
       roomCodeService,
       reconnectMs: options.reconnectMs ?? DEFAULT_RECONNECT_MS,
       emptyRoomGraceMs: options.emptyRoomGraceMs ?? DEFAULT_EMPTY_ROOM_GRACE_MS,
+      maxRooms: options.maxRooms ?? DEFAULT_MAX_ROOMS,
       ...(options.textFilter ? { textFilter: options.textFilter } : {}),
       rateLimiter,
       rateLimits,
