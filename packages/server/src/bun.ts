@@ -2,7 +2,11 @@ import { BunWebSockets } from "@colyseus/bun-websockets";
 // @ts-expect-error - Bun ships no TypeScript declarations in this repo
 import { serve } from "bun";
 import { createApiHandler } from "./api/createApiHandler.js";
-import { createGameServer, type GameServerOptions } from "./createGameServer.js";
+import {
+  createGameServer,
+  DEFAULT_MAX_PAYLOAD_BYTES,
+  type GameServerOptions,
+} from "./createGameServer.js";
 import { resolveStartOptions, type StartPorts } from "./resolveStartOptions.js";
 
 export type StartServerOptions = Omit<GameServerOptions, "transport"> & StartPorts;
@@ -13,7 +17,10 @@ export async function startServer(options: StartServerOptions) {
   const server = createGameServer({
     ...options,
     roomCodeService,
-    transport: new BunWebSockets({ path: "/" }),
+    transport: new BunWebSockets({
+      path: "/",
+      maxPayloadLength: options.maxPayloadBytes ?? DEFAULT_MAX_PAYLOAD_BYTES,
+    }),
   });
   const api = serve({ port: apiPort, fetch: createApiHandler(roomCodeService) });
   await server.listen(port);

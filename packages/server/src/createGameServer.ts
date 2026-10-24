@@ -1,4 +1,4 @@
-import { Server, type Transport } from "@colyseus/core";
+import { Server, type ServerOptions, type Transport } from "@colyseus/core";
 import type { TextFilter } from "@partygame/content/filter";
 import type { GameDefinition } from "@partygame/core";
 import type { BaseGameState } from "@partygame/shared/schema";
@@ -18,6 +18,11 @@ export interface GameServerOptions {
   roomCodeService?: RoomCodeService;
   /** Omit under Node/Vitest to use Colyseus' bundled WebSocket transport. */
   transport?: Transport;
+  /**
+   * Largest WebSocket frame the server accepts, in bytes. Frames above it close only that
+   * connection (code 1009) and leave the room untouched. Default {@link DEFAULT_MAX_PAYLOAD_BYTES}.
+   */
+  maxPayloadBytes?: number;
   /** How long a dropped player's seat is held. Default 60 s. */
   reconnectMs?: number;
   /** How long an empty room lives before it is disposed. Default 120 s. */
@@ -28,11 +33,18 @@ export interface GameServerOptions {
 
 export const DEFAULT_RECONNECT_MS = 60_000;
 export const DEFAULT_EMPTY_ROOM_GRACE_MS = 120_000;
+/** Default largest accepted WebSocket frame (bytes); the transports' own default, now made explicit. */
+export const DEFAULT_MAX_PAYLOAD_BYTES = 4096;
 
 /** Colyseus server with one {@link GameRoom} per game. */
 export function createGameServer(options: GameServerOptions): Server {
   const roomCodeService = options.roomCodeService ?? new RoomCodeService();
-  const server = new Server(options.transport ? { transport: options.transport } : undefined);
+  const defaultTransportOptions: ServerOptions & { maxPayload?: number } = {
+    maxPayload: options.maxPayloadBytes ?? DEFAULT_MAX_PAYLOAD_BYTES,
+  };
+  const server = new Server(
+    options.transport ? { transport: options.transport } : defaultTransportOptions,
+  );
   for (const game of options.games) {
     const config: GameRoomConfig = {
       definition: game.definition,

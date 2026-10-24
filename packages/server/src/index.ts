@@ -3,6 +3,7 @@ export { createApiHandler } from "./api/createApiHandler.js";
 export {
   createGameServer,
   DEFAULT_EMPTY_ROOM_GRACE_MS,
+  DEFAULT_MAX_PAYLOAD_BYTES,
   DEFAULT_RECONNECT_MS,
   type GameServerOptions,
   type HostedGame,

@@ -443,6 +443,7 @@
         "symbols": {
           "BaseGameState": {},
           "DEFAULT_EMPTY_ROOM_GRACE_MS": {},
+          "DEFAULT_MAX_PAYLOAD_BYTES": {},
           "DEFAULT_RECONNECT_MS": {},
           "GameRoom": {},
           "GameRoomConfig": {},

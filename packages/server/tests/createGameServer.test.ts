@@ -1,10 +1,10 @@
 import { WebSocketTransport } from "@colyseus/ws-transport";
 import { RoomCodeSchema } from "@partygame/shared";
 import { afterEach, describe, expect, it } from "vitest";
-import { createGameServer } from "../src/createGameServer.js";
+import { createGameServer, DEFAULT_MAX_PAYLOAD_BYTES } from "../src/createGameServer.js";
 import { RoomCodeService } from "../src/services/RoomCodeService.js";
-import { bootTestServer, type TestServer } from "../src/testing/index.js";
-import { GAMES, stateOf } from "./support.js";
+import { bootTestServer, type TestServer, waitUntil } from "../src/testing/index.js";
+import { bootBuzzer, GAMES, startedRoom, stateOf } from "./support.js";
 
 let t: TestServer | undefined;
 afterEach(async () => {
@@ -35,5 +35,51 @@ describe("createGameServer", () => {
     const roomCodeService = new RoomCodeService();
     t = await bootTestServer({ games: GAMES, roomCodeService });
     expect(t.roomCodeService).toBe(roomCodeService);
+  });
+});
+
+/** Opens a raw WebSocket to `url`, sends one binary frame of `size` bytes, and resolves with the server's close code. */
+const rawFrameCloseCode = (url: string, size: number): Promise<number> =>
+  new Promise((resolve, reject) => {
+    const socket = new WebSocket(url);
+    const timer = setTimeout(
+      () => reject(new Error(`raw frame to ${url} did not close within 3s`)),
+      3000,
+    );
+    socket.onopen = () => {
+      socket.send(new Uint8Array(size));
+    };
+    socket.onclose = (event) => {
+      clearTimeout(timer);
+      resolve(event.code);
+    };
+  });
+
+describe("websocket payload limit", () => {
+  it("defaults to an explicit 4 KiB limit", () => {
+    expect(DEFAULT_MAX_PAYLOAD_BYTES).toBe(4096);
+  });
+
+  it("closes an oversized frame with 1009 without harming the room", async () => {
+    t = await bootBuzzer(); // default 4 KiB limit
+    const { room, p1 } = await startedRoom(t);
+    expect(stateOf(room).buzzCount).toBe(0);
+
+    const code = await rawFrameCloseCode(`${t.endpoint}/buzzer`, 5_000);
+    expect(code).toBe(1009);
+
+    // the oversized frame never reached the room
+    expect(stateOf(room).buzzCount).toBe(0);
+    expect(stateOf(room).winner).toBe("");
+
+    // the other player can still act
+    p1.client.send("ACTION", { type: "BUZZ" });
+    await waitUntil(() => stateOf(room).buzzCount === 1, "p1 could still buzz");
+  });
+
+  it("accepts a frame above the default when maxPayloadBytes is raised", async () => {
+    t = await bootBuzzer({ maxPayloadBytes: 65_536 });
+    const code = await rawFrameCloseCode(`${t.endpoint}/buzzer`, 10 * 1024);
+    expect(code).not.toBe(1009); // under the raised limit, so it is not rejected as too big
   });
 });
