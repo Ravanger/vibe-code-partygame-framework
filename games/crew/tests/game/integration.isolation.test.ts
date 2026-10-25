@@ -8,12 +8,19 @@ import {
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createCrewGame } from "../../src/game.js";
 import { META } from "../../src/meta.js";
-import { CrewState } from "../../src/state.js";
+import { CREW_PUBLIC_FIELDS, CrewState } from "../../src/state.js";
 
 let t: TestServer;
 beforeAll(async () => {
   t = await bootTestServer({
-    games: [{ roomName: META.roomName, definition: createCrewGame(), stateClass: CrewState }],
+    games: [
+      {
+        roomName: META.roomName,
+        definition: createCrewGame(),
+        stateClass: CrewState,
+        publicFields: CREW_PUBLIC_FIELDS,
+      },
+    ],
   });
 });
 afterAll(async () => {

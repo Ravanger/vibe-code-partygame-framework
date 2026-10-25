@@ -45,7 +45,11 @@ class BotJoiner<TState extends BaseGameState> {
     const playerId = playerIds?.[index] ?? crypto.randomUUID();
     const room = await this.client.joinById<TState>(
       roomId,
-      { playerId, protocolVersion: PROTOCOL_VERSION },
+      {
+        playerId,
+        seatSecret: crypto.randomUUID() + crypto.randomUUID(),
+        protocolVersion: PROTOCOL_VERSION,
+      },
       stateClass,
     );
     try {

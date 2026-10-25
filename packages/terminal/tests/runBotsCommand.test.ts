@@ -4,7 +4,7 @@ import { type NodeServerHandle, startNodeServer } from "@partygame/server/node";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { GameClient } from "../src/GameClient.js";
 import { runBotsCommand } from "../src/runBotsCommand.js";
-import { TAP_ROOM, TapGame, TapState } from "./fixtures/tapGame.js";
+import { TAP_PUBLIC_FIELDS, TAP_ROOM, TapGame, TapState } from "./fixtures/tapGame.js";
 
 const kit: BotKit<TapState> = {
   roomName: TAP_ROOM,
@@ -17,7 +17,14 @@ const USAGE = "Usage: bots CODE";
 let handle: NodeServerHandle;
 beforeAll(async () => {
   handle = await startNodeServer({
-    games: [{ roomName: TAP_ROOM, definition: TapGame, stateClass: TapState }],
+    games: [
+      {
+        roomName: TAP_ROOM,
+        definition: TapGame,
+        stateClass: TapState,
+        publicFields: TAP_PUBLIC_FIELDS,
+      },
+    ],
   });
 });
 afterAll(() => handle.stop());

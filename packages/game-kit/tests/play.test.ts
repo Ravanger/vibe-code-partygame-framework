@@ -5,7 +5,7 @@ import { ScriptedIo } from "@partygame/terminal/testing";
 import { describe, expect, it, vi } from "vitest";
 import { defineGamePackage, hostedGame, play } from "../src/index.js";
 import { fakeIo } from "./fixtures/fakeIo.js";
-import { TAP_ROOM, TapGame, TapState, tapKit } from "./fixtures/tapGame.js";
+import { TAP_PUBLIC_FIELDS, TAP_ROOM, TapGame, TapState, tapKit } from "./fixtures/tapGame.js";
 
 const tapTerminal = (): TerminalStrategy<TapState> => ({
   play: async (turn) => {
@@ -19,6 +19,7 @@ const pkg = defineGamePackage({
   meta: { roomName: TAP_ROOM, minPlayers: 2, maxPlayers: 6 },
   definition: () => TapGame,
   stateClass: TapState,
+  publicFields: TAP_PUBLIC_FIELDS,
   isFinished: (state) => state.done,
   botKit: tapKit(),
   terminal: tapTerminal,
@@ -28,6 +29,7 @@ const bare = defineGamePackage({
   meta: { roomName: TAP_ROOM, minPlayers: 2, maxPlayers: 6 },
   definition: () => TapGame,
   stateClass: TapState,
+  publicFields: TAP_PUBLIC_FIELDS,
   isFinished: (state) => state.done,
   botKit: tapKit(),
 });
@@ -103,6 +105,7 @@ describe("play", () => {
       },
       definition: () => TapGame,
       stateClass: TapState,
+      publicFields: TAP_PUBLIC_FIELDS,
       isFinished: (state) => state.done,
       botKit: tapKit(),
       terminal: tapTerminal,

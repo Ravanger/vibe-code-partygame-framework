@@ -39,6 +39,7 @@ describe("WitClash bots on a real server", () => {
       ROOM,
       {
         playerId: "host-Host-0001",
+        seatSecret: t.seatSecretFor("host-Host-0001"),
         totalRounds: 1,
         revealSeconds: 1,
         protocolVersion: PROTOCOL_VERSION,
@@ -78,6 +79,7 @@ describe("WitClash bots on a real server", () => {
       ROOM,
       {
         playerId: "host-Host-0001",
+        seatSecret: t.seatSecretFor("host-Host-0001"),
         totalRounds: 1,
         revealSeconds: 1,
         honorVote: true,
@@ -118,7 +120,11 @@ describe("WitClash bots on a real server", () => {
     if (!("roomId" in body)) throw new Error(body.error);
     const human: Room<WitClashState> = await t.sdk.joinById<WitClashState>(
       body.roomId,
-      { playerId: "human-0001", protocolVersion: PROTOCOL_VERSION },
+      {
+        playerId: "human-0001",
+        seatSecret: t.seatSecretFor("human-0001"),
+        protocolVersion: PROTOCOL_VERSION,
+      },
       WitClashState,
     );
     await waitUntil(() => human.state.roomCode !== "", "room state");

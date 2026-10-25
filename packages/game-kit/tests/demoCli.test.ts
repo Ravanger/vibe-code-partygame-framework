@@ -2,7 +2,7 @@ import { ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH } from "@partygame/shared";
 import { describe, expect, it } from "vitest";
 import { demoCli } from "../src/index.js";
 import { fakeIo } from "./fixtures/fakeIo.js";
-import { TAP_ROOM, TapGame, TapState, tapKit } from "./fixtures/tapGame.js";
+import { TAP_PUBLIC_FIELDS, TAP_ROOM, TapGame, TapState, tapKit } from "./fixtures/tapGame.js";
 
 const roomLine = (players: number) =>
   new RegExp(`^Room [${ROOM_CODE_ALPHABET}]` + `{${ROOM_CODE_LENGTH}}: ${players} players$`);
@@ -11,6 +11,7 @@ const base = {
   meta: { roomName: TAP_ROOM, minPlayers: 2, maxPlayers: 6 },
   definition: () => TapGame,
   stateClass: TapState,
+  publicFields: TAP_PUBLIC_FIELDS,
   isFinished: (state: TapState): boolean => state.done,
 };
 

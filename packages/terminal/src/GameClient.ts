@@ -26,7 +26,12 @@ export class GameClient<TState extends BaseGameState> {
   async create(playerId: string, name: string, options: object = {}): Promise<GameRoomOf<TState>> {
     const room = await this.client.create<TState>(
       this.game.roomName,
-      { playerId, ...options, protocolVersion: PROTOCOL_VERSION },
+      {
+        playerId,
+        ...options,
+        seatSecret: crypto.randomUUID() + crypto.randomUUID(),
+        protocolVersion: PROTOCOL_VERSION,
+      },
       this.game.stateClass,
     );
     await claimName(room, playerId, name);
@@ -48,7 +53,11 @@ export class GameClient<TState extends BaseGameState> {
     const roomId = await resolveRoomCode(this.apiBase, code);
     const room = await this.client.joinById<TState>(
       roomId,
-      { ...options, protocolVersion: PROTOCOL_VERSION },
+      {
+        ...options,
+        seatSecret: crypto.randomUUID() + crypto.randomUUID(),
+        protocolVersion: PROTOCOL_VERSION,
+      },
       this.game.stateClass,
     );
     // The SDK leaves room.state undefined until the first sync lands; poll it as if absent.

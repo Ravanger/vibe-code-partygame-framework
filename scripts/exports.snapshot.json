@@ -139,6 +139,9 @@
           "ActionLogEntryKind": {},
           "ActionLogHeader": {},
           "ActionLogSchema": {},
+          "AudienceActionContext": {},
+          "AudienceActionDefinition": {},
+          "AudienceScope": {},
           "GameContext": {},
           "GameDefinition": {},
           "GameDefinitionError": {},
@@ -150,6 +153,7 @@
           "LoggingMiddlewareOptions": {},
           "MiddlewareContext": {},
           "MiddlewareEvent": {},
+          "PhaseAction": {},
           "PhaseDefinition": {},
           "PhaseMiddleware": {},
           "PhaseState": {},
@@ -442,16 +446,26 @@
         },
         "symbols": {
           "BaseGameState": {},
+          "DEFAULT_ACTION_BUCKET": {},
+          "DEFAULT_AUDIENCE_SLOTS": {},
           "DEFAULT_EMPTY_ROOM_GRACE_MS": {},
+          "DEFAULT_MAX_PAYLOAD_BYTES": {},
+          "DEFAULT_MAX_ROOMS": {},
           "DEFAULT_RECONNECT_MS": {},
+          "DEFAULT_RESOLVE_CODE_BUCKET": {},
+          "DEFAULT_SET_NAME_BUCKET": {},
           "GameRoom": {},
           "GameRoomConfig": {},
           "GameServerOptions": {},
           "HostedGame": {},
           "PlayerSchema": {},
+          "RateLimiter": {},
+          "RateLimits": {},
           "RoomCodeService": {},
+          "TokenBucket": {},
           "createApiHandler": {},
-          "createGameServer": {}
+          "createGameServer": {},
+          "createResolveCodeThrottle": {}
         }
       },
       "./bun": {
@@ -531,6 +545,7 @@
           "JoinOptionsSchema": {},
           "KICK_PLAYER": {},
           "LOBBY_PHASE": {},
+          "MAX_ENVELOPE_KEYS": {},
           "MAX_OPTIONS_JSON_LENGTH": {},
           "MAX_SEATS": {},
           "NAME_MAX_LENGTH": {},
@@ -560,6 +575,7 @@
         "symbols": {
           "BaseGameState": {},
           "PlayerSchema": {},
+          "assertSyncedFields": {},
           "syncedJsonOf": {},
           "syncedStateFromJson": {}
         }

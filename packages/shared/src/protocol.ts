@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { MAX_SEATS, NAME_MAX_LENGTH, ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH } from "./limits.js";
+import {
+  MAX_ENVELOPE_KEYS,
+  MAX_SEATS,
+  NAME_MAX_LENGTH,
+  ROOM_CODE_ALPHABET,
+  ROOM_CODE_LENGTH,
+} from "./limits.js";
 
 /** Message names a client may send to the room. */
 export const ClientMessage = {
@@ -31,6 +37,8 @@ export const ErrorCode = {
   KICKED: "KICKED",
   /** The server failed while handling the action. Only ever a request's answer, never pushed. */
   INTERNAL: "INTERNAL",
+  /** The player sent more messages than their rate limit allows; the message was dropped. */
+  RATE_LIMITED: "RATE_LIMITED",
   /** Client-side only: an action was sent with no room joined. Never sent by the server. */
   NOT_CONNECTED: "NOT_CONNECTED",
   /** Client-side only: the request failed in transit (network drop, timeout). Never sent by the server. */
@@ -109,10 +117,21 @@ export const SET_OPTIONS = "SET_OPTIONS";
 /** Valid action names: SCREAMING_SNAKE_CASE, at most 64 characters. */
 export const ACTION_NAME_PATTERN = /^[A-Z][A-Z0-9_]{0,63}$/;
 
-/** Minimal shape of any action: a SCREAMING_SNAKE_CASE `type`; other fields pass through for the phase's own schema. */
+/**
+ * Minimal shape of any action: a SCREAMING_SNAKE_CASE `type`, at most {@link MAX_ENVELOPE_KEYS} keys
+ * in total; other fields pass through for the phase's own schema.
+ */
 export const ActionEnvelopeSchema = z
   .object({ type: z.string().regex(ACTION_NAME_PATTERN) })
-  .passthrough();
+  .passthrough()
+  .superRefine((envelope, ctx) => {
+    if (Object.keys(envelope).length > MAX_ENVELOPE_KEYS) {
+      ctx.addIssue({
+        code: "custom",
+        message: `An action envelope has at most ${MAX_ENVELOPE_KEYS} keys`,
+      });
+    }
+  });
 
 /** Payload of `SET_NAME`: trimmed, 1 to {@link NAME_MAX_LENGTH} characters, no control characters. */
 export const SetNameSchema = z
@@ -147,6 +166,8 @@ export const JoinOptionsSchema = z.object({
   playerId: PlayerIdSchema,
   name: SetNameSchema.optional(),
   spectator: z.boolean().optional(),
+  /** The client's per-seat credential; one per session for browsers, one per join for bots and terminal clients. Optional so a missing one gets the server's own refusal, not an invalid-options error. */
+  seatSecret: z.string().min(16).max(128).optional(),
   /** The protocol version the client speaks; optional so a missing one gets the version-mismatch close, not an invalid-options error. */
   protocolVersion: z.number().int().optional(),
 });

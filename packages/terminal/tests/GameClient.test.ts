@@ -4,14 +4,21 @@ import { type NodeServerHandle, startNodeServer } from "@partygame/server/node";
 import { CLOSE_CODES, PROTOCOL_VERSION } from "@partygame/shared";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { GameClient } from "../src/GameClient.js";
-import { TAP_ROOM, TapGame, TapState } from "./fixtures/tapGame.js";
+import { TAP_PUBLIC_FIELDS, TAP_ROOM, TapGame, TapState } from "./fixtures/tapGame.js";
 
 let handle: NodeServerHandle;
 let client: GameClient<TapState>;
 
 beforeAll(async () => {
   handle = await startNodeServer({
-    games: [{ roomName: TAP_ROOM, definition: TapGame, stateClass: TapState }],
+    games: [
+      {
+        roomName: TAP_ROOM,
+        definition: TapGame,
+        stateClass: TapState,
+        publicFields: TAP_PUBLIC_FIELDS,
+      },
+    ],
   });
   client = new GameClient(handle.endpoint, handle.apiPort, {
     roomName: TAP_ROOM,
@@ -90,6 +97,32 @@ describe("GameClient", () => {
     } finally {
       createSpy.mockRestore();
       joinSpy.mockRestore();
+    }
+  });
+
+  it("sends a fresh seat secret on every join", async () => {
+    const host = await client.create(crypto.randomUUID(), "Ann");
+    const joinSpy = vi.spyOn(Client.prototype, "joinById");
+    try {
+      const bob = await client.join(host.state.roomCode, crypto.randomUUID(), "Bob");
+      expect(joinSpy).toHaveBeenLastCalledWith(
+        expect.any(String),
+        expect.objectContaining({ seatSecret: expect.stringMatching(/^[0-9a-f-]{72}$/) }),
+        TapState,
+      );
+      const bobSecret = joinSpy.mock.calls.at(-1)?.[1].seatSecret;
+      const carol = await client.join(host.state.roomCode, crypto.randomUUID(), "Carol");
+      expect(joinSpy).toHaveBeenLastCalledWith(
+        expect.any(String),
+        expect.objectContaining({ seatSecret: expect.stringMatching(/^[0-9a-f-]{72}$/) }),
+        TapState,
+      );
+      expect(joinSpy.mock.calls.at(-1)?.[1].seatSecret).not.toBe(bobSecret);
+      await bob.leave(true);
+      await carol.leave(true);
+    } finally {
+      joinSpy.mockRestore();
+      await host.leave(true);
     }
   });
 });

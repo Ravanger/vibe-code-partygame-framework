@@ -5,7 +5,7 @@ import { createWitClashGame } from "./src/game.js";
 import { isGameOver } from "./src/isGameOver.js";
 import { contentDir, loadCanonContent, loadContent } from "./src/loadContent.js";
 import { META } from "./src/meta.js";
-import { WitClashState } from "./src/state.js";
+import { WITCLASH_PUBLIC_FIELDS, WitClashState } from "./src/state.js";
 import { Narrator } from "./terminal/Narrator.js";
 import { witClashTerminal } from "./terminal/witClashTerminal.js";
 
@@ -22,6 +22,7 @@ export const gamePackage = defineGamePackage({
   definition: ({ categories, canon }) => createWitClashGame({ categories, canon }),
   textFilter: createTextFilter(),
   stateClass: WitClashState,
+  publicFields: WITCLASH_PUBLIC_FIELDS,
   isFinished: isGameOver,
   botKit: witClashKit(),
   terminal: witClashTerminal,

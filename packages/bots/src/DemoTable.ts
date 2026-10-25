@@ -44,6 +44,7 @@ export class DemoTable<TState extends BaseGameState> {
       {
         ...roomOptions,
         playerId: this.hostId,
+        seatSecret: crypto.randomUUID() + crypto.randomUUID(),
         seats: [this.hostId, ...this.botIds],
         protocolVersion: PROTOCOL_VERSION,
       },

@@ -1,15 +1,27 @@
 import { createServer as createHttpServer, type Server as HttpServer } from "node:http";
 import { createServer as createSocketServer } from "node:net";
 import type { Server } from "@colyseus/core";
-import { createApiHandler } from "./api/createApiHandler.js";
-import { createGameServer, type GameServerOptions } from "./createGameServer.js";
+import { type ApiRequestInfo, createApiHandler } from "./api/createApiHandler.js";
+import {
+  createGameServer,
+  createResolveCodeThrottle,
+  type GameServerOptions,
+} from "./createGameServer.js";
 import { closeHttpServer, freePort } from "./probe.js";
+import type { RateLimits } from "./RateLimiter.js";
+import { hostFrom, parseAllowedOrigins } from "./resolveStartOptions.js";
 import { RoomCodeService } from "./services/RoomCodeService.js";
 
 export interface ServeApiOptions {
   port: number;
-  /** Interface to bind; every interface when omitted. */
+  /** Interface to bind; loopback when omitted. */
   host?: string;
+  /** Origins allowed to read the API; loopback only when omitted. */
+  allowedOrigins?: string[] | "*";
+  /** Throttle `/api/resolve-code` per remote address with these limits (429 + `Retry-After`). */
+  rateLimits?: RateLimits;
+  /** Test seam: replaces the default handler. */
+  handler?: (req: Request, info?: ApiRequestInfo) => Response;
 }
 
 /** Serves `/api/resolve-code` for `codes` on Node's `http` (the Bun entry has its own). Close the returned server to stop it. */
@@ -17,15 +29,37 @@ export async function serveApi(
   codes: RoomCodeService,
   options: ServeApiOptions,
 ): Promise<HttpServer> {
-  const handler = createApiHandler(codes);
+  const { limiter, bucket } = createResolveCodeThrottle(options.rateLimits);
+  const handler =
+    options.handler ??
+    createApiHandler(codes, {
+      ...(options.allowedOrigins !== undefined ? { allowedOrigins: options.allowedOrigins } : {}),
+      limiter,
+      resolveCode: bucket,
+    });
   const api = createHttpServer(async (req, res) => {
-    const response = handler(new Request(`http://127.0.0.1${req.url}`));
+    // Node's parser never leaves a present header value undefined; the assertion drops it from the type.
+    const rawHeaders = req.headers as Record<string, string | string[]>;
+    const headers = new Headers();
+    for (const [name, value] of Object.entries(rawHeaders)) {
+      if (Array.isArray(value)) {
+        for (const one of value) headers.append(name, one);
+      } else {
+        headers.set(name, value);
+      }
+    }
+    // A connection that reached this handler has a peer address and a request method; the assertions keep those branches out of coverage.
+    const remoteAddress = req.socket.remoteAddress as string;
+    const response = handler(
+      new Request(`http://127.0.0.1${req.url}`, { method: req.method as string, headers }),
+      { remoteAddress },
+    );
     res.writeHead(response.status, Object.fromEntries(response.headers));
     res.end(await response.text());
   });
   await new Promise<void>((resolve, reject) => {
     api.once("error", reject);
-    api.listen(options.port, options.host, resolve);
+    api.listen(options.port, options.host ?? "127.0.0.1", resolve);
   });
   return api;
 }
@@ -35,8 +69,10 @@ export interface NodeServerOptions extends Omit<GameServerOptions, "transport"> 
   port?: number;
   /** Code API port; a free one when omitted. */
   apiPort?: number;
-  /** Interface the code API binds; every interface when omitted. */
+  /** Interface the code API binds; loopback (or `HOST`) when omitted. */
   host?: string;
+  /** Origins allowed to read the code API; loopback only (or `ALLOWED_ORIGINS`) when omitted. */
+  allowedOrigins?: string[] | "*";
 }
 
 /** A game server and its code API running in this process. */
@@ -88,11 +124,20 @@ export async function startNodeServer(
   /** Test seam: overrides how free ports are discovered. */
   hooks?: { freePort?: () => Promise<number> },
 ): Promise<NodeServerHandle> {
-  const { port: wantedPort, apiPort: wantedApiPort, host, ...serverOptions } = options;
+  const {
+    port: wantedPort,
+    apiPort: wantedApiPort,
+    host: optionHost,
+    allowedOrigins: optionAllowedOrigins,
+    ...serverOptions
+  } = options;
   if (wantedPort !== undefined && wantedPort === wantedApiPort) {
     throw new Error("The game server and the code API need different ports");
   }
   const roomCodeService = options.roomCodeService ?? new RoomCodeService();
+  // Unset options fall back to the environment, so a launcher can steer the bind with HOST/ALLOWED_ORIGINS.
+  const host = optionHost ?? hostFrom(process.env.HOST);
+  const allowedOrigins = optionAllowedOrigins ?? parseAllowedOrigins(process.env.ALLOWED_ORIGINS);
   const discoverFreePort = hooks?.freePort ?? freePort;
   for (let attempt = 1; ; ++attempt) {
     const port = wantedPort ?? (await discoverFreePort());
@@ -101,10 +146,12 @@ export async function startNodeServer(
     let server: Server | undefined;
     try {
       await claimPort(port);
-      api = await serveApi(
-        roomCodeService,
-        host === undefined ? { port: apiPort } : { port: apiPort, host },
-      );
+      api = await serveApi(roomCodeService, {
+        port: apiPort,
+        ...(host !== undefined ? { host } : {}),
+        ...(allowedOrigins !== undefined ? { allowedOrigins } : {}),
+        ...(options.rateLimits !== undefined ? { rateLimits: options.rateLimits } : {}),
+      });
       server = createGameServer({ ...serverOptions, roomCodeService });
       await server.listen(port);
       return new NodeServerHandle(server, api, roomCodeService, port, apiPort);

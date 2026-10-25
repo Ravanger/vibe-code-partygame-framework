@@ -260,6 +260,7 @@ describe("GameRoom protocol versioning", () => {
     const room = await t.createRoom("buzzer");
     const client = await t.sdk.joinById(room.roomId, {
       playerId: pid(1),
+      seatSecret: t.seatSecretFor(pid(1)),
       protocolVersion: PROTOCOL_VERSION,
     });
     expect(stateOf(room).players.get(pid(1))).toMatchObject({ id: pid(1) });

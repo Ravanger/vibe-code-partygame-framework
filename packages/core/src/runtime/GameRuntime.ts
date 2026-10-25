@@ -126,6 +126,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       players: () => this.host.players(),
       contextFactory: () => this.context(),
       filterLevel: () => this.spec.filterLevel?.(this.options) ?? "off",
+      audienceOnce: (audienceKey, scope) => this.host.audienceOnce(audienceKey, scope),
       reject: (playerId, action, code, message) => this.reject(playerId, action, code, message),
       chain: (event, inner) => this.chain(event, () => this.rejectThrown(event, inner)),
     });
@@ -175,6 +176,25 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     } catch (error) {
       if (!(error instanceof FrameworkError)) throw error;
       return this.recordFrameworkError(playerId, error);
+    }
+    return this.rejections[0];
+  }
+
+  /**
+   * Handle an audience `ACTION` from a seatless sender identified by the opaque `audienceKey`.
+   * Only actions declared `from: "audience"` are accepted; everything else is refused. Rejections
+   * are sent to the key as `ERROR`, exactly like {@link GameRuntime.dispatch}. After
+   * {@link GameRuntime.stop} every action fails with `NOT_ALLOWED`.
+   */
+  dispatchAudience(audienceKey: string, rawAction: unknown): ServerError | undefined {
+    if (this.stopped) return STOPPED_ERROR;
+    this.rejections.length = 0;
+    this.redactedRejections = 0;
+    try {
+      this.run(() => this.handleAudience(audienceKey, rawAction), true);
+    } catch (error) {
+      if (!(error instanceof FrameworkError)) throw error;
+      return this.recordFrameworkError(audienceKey, error);
     }
     return this.rejections[0];
   }
@@ -467,6 +487,10 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
 
   private handle(playerId: string, rawAction: unknown): void {
     this.pipeline.run(playerId, rawAction);
+  }
+
+  private handleAudience(audienceKey: string, rawAction: unknown): void {
+    this.pipeline.runAudience(audienceKey, rawAction);
   }
 
   /** Inside the chain, so middleware sees a handler-thrown FrameworkError as a rejection. */

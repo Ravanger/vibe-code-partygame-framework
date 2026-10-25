@@ -1,9 +1,16 @@
-import type { Server } from "node:http";
+import { request as httpRequest, type Server } from "node:http";
+import { networkInterfaces } from "node:os";
 import { afterEach, describe, expect, it } from "vitest";
 import { type NodeServerHandle, serveApi, startNodeServer } from "../src/node.js";
 import { freePort, ServerProbe } from "../src/probe.js";
 import { RoomCodeService } from "../src/services/RoomCodeService.js";
 import { GAMES } from "./support.js";
+
+/** The first external IPv4 address of this machine; binding tests skip their LAN half without one. */
+const lanAddress = (): string | undefined =>
+  Object.values(networkInterfaces())
+    .flatMap((addresses) => addresses ?? [])
+    .find((address) => address.family === "IPv4" && !address.internal)?.address;
 
 const servers: Server[] = [];
 const handles: NodeServerHandle[] = [];
@@ -34,6 +41,122 @@ describe("serveApi", () => {
     const port = await freePort();
     servers.push(await serveApi(new RoomCodeService(), { port, host: "127.0.0.1" }));
     await expect(serveApi(new RoomCodeService(), { port, host: "127.0.0.1" })).rejects.toThrow();
+  });
+
+  it("binds loopback when no host is given", async () => {
+    const port = await freePort();
+    servers.push(await serveApi(new RoomCodeService(), { port }));
+    expect(await new ServerProbe().canConnect(port, "127.0.0.1")).toBe(true);
+    const lan = lanAddress();
+    if (lan !== undefined) expect(await new ServerProbe().canConnect(port, lan)).toBe(false);
+  });
+
+  it("binds the given non-loopback interface and no other", async () => {
+    const lan = lanAddress();
+    if (lan === undefined) return;
+    const port = await freePort();
+    servers.push(await serveApi(new RoomCodeService(), { port, host: lan }));
+    expect(await new ServerProbe().canConnect(port, lan)).toBe(true);
+    expect(await new ServerProbe().canConnect(port, "127.0.0.1")).toBe(false);
+  });
+
+  it("forwards request headers so the handler sees Origin", async () => {
+    const port = await freePort();
+    servers.push(await serveApi(new RoomCodeService(), { port, host: "127.0.0.1" }));
+    const response = await fetch(`http://127.0.0.1:${port}/api/resolve-code?code=ZZZZ`, {
+      headers: { Origin: "http://localhost:5173" },
+    });
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBe("http://localhost:5173");
+  });
+
+  it("passes the remote address as the second handler argument", async () => {
+    const port = await freePort();
+    const seen: Array<{ origin: string | null; remoteAddress?: string | undefined }> = [];
+    servers.push(
+      await serveApi(new RoomCodeService(), {
+        port,
+        host: "127.0.0.1",
+        handler: (req, info) => {
+          seen.push({ origin: req.headers.get("origin"), remoteAddress: info?.remoteAddress });
+          return new Response(null, { status: 204 });
+        },
+      }),
+    );
+    await fetch(`http://127.0.0.1:${port}/api/resolve-code?code=ABCD`, {
+      headers: { Origin: "http://localhost:5173" },
+    });
+    expect(seen).toEqual([{ origin: "http://localhost:5173", remoteAddress: "127.0.0.1" }]);
+  });
+
+  it("applies allowedOrigins to the default handler", async () => {
+    const port = await freePort();
+    servers.push(
+      await serveApi(new RoomCodeService(), {
+        port,
+        host: "127.0.0.1",
+        allowedOrigins: ["http://party.example"],
+      }),
+    );
+    const allowed = await fetch(`http://127.0.0.1:${port}/api/resolve-code?code=ZZZZ`, {
+      headers: { Origin: "http://party.example" },
+    });
+    expect(allowed.headers.get("Access-Control-Allow-Origin")).toBe("http://party.example");
+    const other = await fetch(`http://127.0.0.1:${port}/api/resolve-code?code=ZZZZ`, {
+      headers: { Origin: "http://elsewhere.example" },
+    });
+    expect(other.headers.get("Access-Control-Allow-Origin")).toBeNull();
+  });
+
+  it("throttles /api/resolve-code per remote address with 429 and Retry-After", async () => {
+    const port = await freePort();
+    const codes = new RoomCodeService();
+    codes.register("ABCD", "room-1");
+    servers.push(
+      await serveApi(codes, {
+        port,
+        host: "127.0.0.1",
+        rateLimits: { resolveCode: { rate: 0, burst: 3 } },
+      }),
+    );
+    const url = `http://127.0.0.1:${port}/api/resolve-code?code=ABCD`;
+    for (let i = 0; i < 3; ++i) expect((await fetch(url)).status).toBe(200);
+    const refused = await fetch(url);
+    expect(refused.status).toBe(429);
+    expect(await refused.json()).toEqual({ error: "Too many requests" });
+    expect(refused.headers.get("Retry-After")).toBe("1");
+  });
+
+  it("forwards multi-value headers such as Set-Cookie as separate values", async () => {
+    const port = await freePort();
+    const seen: string[][] = [];
+    servers.push(
+      await serveApi(new RoomCodeService(), {
+        port,
+        host: "127.0.0.1",
+        handler: (req) => {
+          seen.push(req.headers.getSetCookie());
+          return new Response(null, { status: 204 });
+        },
+      }),
+    );
+    // fetch joins repeated header lines; a raw client sends one line per value
+    await new Promise<void>((resolve, reject) => {
+      const request = httpRequest(
+        {
+          host: "127.0.0.1",
+          port,
+          path: "/api/resolve-code?code=ABCD",
+          headers: { "set-cookie": ["a=1", "b=2"] },
+        },
+        (res) => {
+          res.resume();
+          res.on("end", resolve);
+        },
+      );
+      request.on("error", reject);
+      request.end();
+    });
+    expect(seen).toEqual([["a=1", "b=2"]]);
   });
 });
 
@@ -67,6 +190,45 @@ describe("startNodeServer", () => {
   it("binds the code API to the given interface", async () => {
     const handle = await start({ games: GAMES, host: "127.0.0.1" });
     expect(await probe.canConnect(handle.apiPort, "127.0.0.1")).toBe(true);
+  });
+
+  it("binds the code API to loopback by default", async () => {
+    const handle = await start({ games: GAMES });
+    expect(await probe.canConnect(handle.apiPort, "127.0.0.1")).toBe(true);
+    const lan = lanAddress();
+    if (lan !== undefined) expect(await probe.canConnect(handle.apiPort, lan)).toBe(false);
+  });
+
+  it("reads HOST and ALLOWED_ORIGINS from the environment", async () => {
+    const lan = lanAddress();
+    if (lan === undefined) return;
+    process.env.HOST = lan;
+    process.env.ALLOWED_ORIGINS = "*";
+    try {
+      const handle = await start({ games: GAMES });
+      expect(await probe.canConnect(handle.apiPort, lan)).toBe(true);
+      expect(await probe.canConnect(handle.apiPort, "127.0.0.1")).toBe(false);
+      const response = await fetch(`http://${lan}:${handle.apiPort}/api/resolve-code?code=ABCD`, {
+        headers: { Origin: "http://party.example" },
+      });
+      expect(response.headers.get("Access-Control-Allow-Origin")).toBe("*");
+    } finally {
+      delete process.env.HOST;
+      delete process.env.ALLOWED_ORIGINS;
+    }
+  });
+
+  it("throttles /api/resolve-code with the given rate limits", async () => {
+    const handle = await start({
+      games: GAMES,
+      host: "127.0.0.1",
+      rateLimits: { resolveCode: { rate: 0, burst: 1 } },
+    });
+    const url = `http://127.0.0.1:${handle.apiPort}/api/resolve-code?code=ABCD`;
+    expect((await fetch(url)).status).toBe(404); // the bucket allows one request
+    const refused = await fetch(url);
+    expect(refused.status).toBe(429);
+    expect(refused.headers.get("Retry-After")).toBe("1");
   });
 
   it("refuses one port for both servers", async () => {

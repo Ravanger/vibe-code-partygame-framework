@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { witClashKit } from "../../bots/witClashBot.js";
 import { gamePackage } from "../../gamePackage.js";
 import { META } from "../../src/meta.js";
-import { WitClashState } from "../../src/state.js";
+import { WITCLASH_PUBLIC_FIELDS, WitClashState } from "../../src/state.js";
 import { witClashTerminal } from "../../terminal/witClashTerminal.js";
 import { makeCategories } from "../game/support.js";
 import { freePort } from "./support.js";
@@ -34,6 +34,7 @@ const options = async (): Promise<PlaySessionOptions<WitClashState>> => ({
         canon: makeCategories(4, 8, 2),
       }),
       stateClass: WitClashState,
+      publicFields: WITCLASH_PUBLIC_FIELDS,
     },
   ],
   player: (room, playerId, io) => new TerminalPlayer(room, playerId, io, witClashTerminal()),

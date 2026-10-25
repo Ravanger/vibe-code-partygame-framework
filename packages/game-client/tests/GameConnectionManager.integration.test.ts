@@ -183,7 +183,11 @@ describe("dropped connections", () => {
     const guest = newManager();
     const sdkRoom = await t.sdk.joinById(
       room.roomId,
-      { playerId: guest.playerId, protocolVersion: PROTOCOL_VERSION },
+      {
+        playerId: guest.playerId,
+        seatSecret: t.seatSecretFor(guest.playerId),
+        protocolVersion: PROTOCOL_VERSION,
+      },
       PressState,
     );
     sdkRoom.reconnection.minUptime = 0;

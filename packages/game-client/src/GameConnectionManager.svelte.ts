@@ -128,7 +128,12 @@ export class GameConnectionManager<
         () =>
           this.client.create<TState>(
             this.options.roomName,
-            { ...options, playerId: this.playerId, protocolVersion: PROTOCOL_VERSION },
+            {
+              ...options,
+              playerId: this.playerId,
+              seatSecret: this.session.seatSecret,
+              protocolVersion: PROTOCOL_VERSION,
+            },
             this.options.rootSchema,
           ),
         false,
@@ -149,7 +154,12 @@ export class GameConnectionManager<
         async () =>
           this.client.joinById<TState>(
             await resolveRoomCode(this.apiBase, clean),
-            { ...options, playerId: this.playerId, protocolVersion: PROTOCOL_VERSION },
+            {
+              ...options,
+              playerId: this.playerId,
+              seatSecret: this.session.seatSecret,
+              protocolVersion: PROTOCOL_VERSION,
+            },
             this.options.rootSchema,
           ),
         spectator,
@@ -208,9 +218,15 @@ export class GameConnectionManager<
     this.room?.send(ClientMessage.SET_NAME, name);
   }
 
-  /** Sends a game action and resolves with the server's verdict. Failures are also kept in `lastServerError`. */
+  /**
+   * Sends a game action and resolves with the server's verdict. Failures are also kept in
+   * `lastServerError`. The payload may not carry a `type` field (reserved for the action name);
+   * such a call fails locally with `INVALID_ACTION` without sending.
+   */
   async sendAction(type: string, payload: object = {}): Promise<ActionResult> {
     if (!this.room) return this.fail(ErrorCode.NOT_CONNECTED);
+    // `type` is reserved for the action name; a payload field by that name would be silently replaced.
+    if ("type" in payload) return this.fail(ErrorCode.INVALID_ACTION);
     try {
       const result = await this.room.request(ClientMessage.ACTION, { ...payload, type });
       if (!isActionResult(result)) return this.fail(ErrorCode.BAD_REPLY);

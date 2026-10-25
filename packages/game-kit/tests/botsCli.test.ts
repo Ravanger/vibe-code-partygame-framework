@@ -3,12 +3,13 @@ import { GameClient } from "@partygame/terminal";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { botsCli, defineGamePackage, hostedGame } from "../src/index.js";
 import { fakeIo } from "./fixtures/fakeIo.js";
-import { TAP_ROOM, TapGame, TapState, tapKit } from "./fixtures/tapGame.js";
+import { TAP_PUBLIC_FIELDS, TAP_ROOM, TapGame, TapState, tapKit } from "./fixtures/tapGame.js";
 
 const pkg = defineGamePackage({
   meta: { roomName: TAP_ROOM, minPlayers: 2, maxPlayers: 6 },
   definition: () => TapGame,
   stateClass: TapState,
+  publicFields: TAP_PUBLIC_FIELDS,
   isFinished: (state) => state.done,
   botKit: tapKit(),
 });

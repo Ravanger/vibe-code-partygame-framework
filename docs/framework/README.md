@@ -7,6 +7,8 @@ Dependency direction: `games/* -> @partygame/server -> @partygame/core -> @party
 
 Known traps (build, coverage, reconnects, Schema 5): [troubleshooting.md](troubleshooting.md).
 
+**Security:** What the framework protects and what it does not: [threat model](security/threat-model.md).
+
 **Design:** Six architecture decisions that explain why the framework is shaped this way: [ADRs](../adr/).
 
 ## Scaffolding a new game
@@ -49,11 +51,16 @@ Transitioning to the current phase re-enters it and restarts its timer.
 An action is a client message `{ type: "SCREAMING_SNAKE_CASE", ...fields }`.
 Declare it in the phase that accepts it: `from` (`"host"` or `"player"`, where `"player"` means any active player including the host),
 a zod `payload` schema that validates the whole action object, and a `handler`.
+The envelope is flat and capped at 32 top-level keys (more is `INVALID_ACTION`). `type` is reserved for the
+action name: do not declare it in a payload schema, and `sendAction` refuses to send a payload that carries a
+`type` field. Write payload schemas that keep unknown keys out of your handler: plain `z.object` strips them
+(the default — dispatch parses the whole envelope, so a strict schema would also reject the reserved `type`),
+while `z.looseObject` passes them through and should be avoided.
 Every rejection is sent only to the sender as `ERROR { code, message, action }`:
 
 | Code | Cause |
 |---|---|
-| `INVALID_ACTION` | malformed envelope, or payload failed its zod schema |
+| `INVALID_ACTION` | malformed envelope (including more than 32 keys), or payload failed its zod schema |
 | `UNKNOWN_ACTION` | no such action in any phase |
 | `WRONG_PHASE` | action exists, but not in the current phase |
 | `UNAUTHORIZED` | role check failed (for example a guest sent a host action) |
@@ -94,11 +101,35 @@ ready, active ones, and `ctx.player(id)` one seat.
 `PlayerInfo` and every `ctx.players()` list cover seated players only. Spectators (join option `spectator: true`) never count
 towards `minPlayers`, `maxPlayers` or auto-start.
 
+### Audience
+An action can be declared `from: "audience"` instead of a role: it is sent by a seatless sender identified by an opaque
+`audienceKey` string and dispatched through `runtime.dispatchAudience(audienceKey, raw)` rather than `dispatch`. The key only
+identifies the sender — to middleware, rejections and the action log (`senderId`) — and is never persisted; audience identity
+lives in memory for the room's lifetime.
+
+The handler receives an `AudienceActionContext`: like `ActionContext` without `playerId`, plus `audience: AudienceScope` with a
+single method, `once(scope)`. It returns `true` the first time that key uses that scope and `false` afterwards — count one vote per
+audience member per option without any per-member state (write the counts into synced state as plain counters). The host clears
+every scope when the phase changes (`RuntimeHost.audienceOnce`, cleared in `notifyTransition`), so a new round accepts fresh votes.
+
+Refusals mirror the player path: a seated player who sends an audience action gets `NOT_ALLOWED`; an audience key that sends
+anything but an audience action gets `UNAUTHORIZED`. Payload validation, middleware and the failure policy are identical to
+`dispatch`. In replay, an entry whose sender is not in the recorded roster is re-dispatched through `dispatchAudience` (legacy
+logs without a roster keep player dispatch).
+
+On the server, spectators are the audience. A seatless connection may send `ACTION` only for an action declared
+`from: "audience"` in the current phase; anything else (a player action, a built-in, an action of another phase) gets the
+same `UNAUTHORIZED` spectator refusal as before audience actions existed. The audience key is the spectator's join
+`playerId`: once-scopes survive that connection dropping and reconnecting within the phase, and are cleared on a phase
+change, not on disconnect. Spectator actions draw from the same ACTION rate-limit bucket, keyed per connection and freed
+when the spectator leaves. Audience identity is in-memory and unauthenticated — a client that rotates its join `playerId`
+gets fresh scopes — so audience votes count participation, not commitments.
+
 ### Host controls
 The runtime handles these host-only actions for you; do not declare them (`defineGame` rejects the names):
 
 - `START_GAME` (Lobby), see Lobby below.
-- `KICK_PLAYER { playerId }`: any phase, not yourself. The host implementation removes the seat, then `onRosterChange` runs. The ban is per `playerId`: a client that regenerates its id can rejoin.
+- `KICK_PLAYER { playerId }`: any phase, not yourself. The host implementation removes the seat, then `onRosterChange` runs. The ban is per `playerId` and per the kicked seat's secret hash: a kicked client that rejoins with a fresh id but its stored secret is refused with `KICKED_REJOIN` too (IPs are not used — they are shared on a LAN). A player who leaves normally can rejoin.
 - `SET_OPTIONS { ...partial }`: Lobby only. If the game declares no `definition.options` schema, it rejects any key but `type` (`INVALID_ACTION`); a room for such a game also refuses create options. Otherwise the partial is merged into the current options and validated, then published; a failed parse or a result whose JSON is longer than `MAX_OPTIONS_JSON_LENGTH` is `INVALID_ACTION` and keeps the previous options. `ctx.options` reflects the new value.
 - `END_GAME`: any phase but the Lobby (`WRONG_PHASE` there). It runs `onEndGame(ctx)`, where a game can set a notice for the players, and then returns everyone to the Lobby as `ctx.returnToLobby()` does (`onReturnToLobby` runs, waiting joiners are let in). The hook cannot veto it.
 
@@ -495,6 +526,8 @@ Client-visible error strings are fixed and table-driven; raw Zod or exception te
   | 4402 | `SEAT_REMOVED` | `KICKED` | Your seat was removed |
   | 4403 | `KICKED_REJOIN` | `KICKED` | Removed by the host |
   | 4404 | `WATCH_ONLY` | `NOT_ALLOWED` | This room is watch-only |
+  | 4406 | `SEAT_TAKEN` | `UNAUTHORIZED` | Seat is taken |
+  | 4409 | `SEAT_TAKEN_OVER` | `KICKED` | Your seat was opened on another device |
   | 4500 | `INTERNAL` | `INTERNAL` | The server could not handle the request |
 
 - Invalid create or join options are `safeParse`d and refused with the close code above, so a bad option never
@@ -651,20 +684,32 @@ import { startServer } from "@partygame/server/bun";
 await startServer({ games });   // WebSocket on PORT (2567) + /api/resolve-code on API_PORT (3001)
 ```
 
-Elsewhere: `createGameServer({ games, roomCodeService?, transport?, reconnectMs?, emptyRoomGraceMs?, textFilter? })` returns the Colyseus `Server`,
-and `createApiHandler(roomCodeService)` is the pure `(Request) => Response` behind `/api/resolve-code`.
+Elsewhere: `createGameServer({ games, roomCodeService?, transport?, maxPayloadBytes?, maxRooms?, reconnectMs?, emptyRoomGraceMs?, audienceSlots?, textFilter? })` returns the Colyseus `Server`,
+and `createApiHandler(roomCodeService, { allowedOrigins? })` is the pure `(request, info?) => Response` behind `/api/resolve-code`: it answers with CORS headers only for origins in `allowedOrigins` (exact origins or `scheme://host:*` patterns; `"*"` for all) — by default loopback on any port, the dev client — echoing the origin with `Vary: Origin`; a disallowed origin gets no CORS headers, so the browser blocks it while non-browser callers still get the answer. The HTTP entries (`serveApi`, the Bun `startServer`) forward the request's method and headers and pass `{ remoteAddress }` as the second argument, and they bind the code API to loopback by default: `host` (or env `HOST`) picks another interface, and `allowedOrigins` (or env `ALLOWED_ORIGINS`, comma-separated, `*` for all) widens who may read it.
+The largest accepted WebSocket frame is `maxPayloadBytes` (default `DEFAULT_MAX_PAYLOAD_BYTES`, 4096), enforced on both transports; a bigger frame closes only that connection (code 1009) and leaves the room and its other players untouched.
+The number of concurrent rooms across all games is capped by `maxRooms` (default `DEFAULT_MAX_ROOMS`, 100; `Infinity` removes the cap): a create beyond the cap is refused with close code 4429 (`SERVER_FULL`, "Server is full") and existing rooms keep working; a slot frees again when one of the rooms is disposed.
+Rate limits are configured with `rateLimits`: actions per player (default 10/s, burst 20), `SET_NAME` per player (default 2/s, burst 2) and `/api/resolve-code` per remote address (default 1/s, burst 10), plus `mode: "observe" | "enforce"` (default `"enforce"`). Actions and `SET_NAME` are enforced in every room through one shared limiter: buckets are keyed by room, player and message type, so a reconnect cannot reset them, and they are freed when a seat leaves or the room is disposed. An over-limit message is refused with `RATE_LIMITED` — pushed as `ERROR` and returned in the `ActionResult` of a request — without touching other players; the refusal happens before the runtime, so it is not logged and replay is unaffected. The code API enforces its bucket in the HTTP entries: an exhausted address gets 429 with `Retry-After` (seconds until the next token) and the CORS headers of its origin, and callers whose remote address is unknown share one bucket instead of getting unlimited access. In observe mode an over-limit message or request is logged through `console.warn` instead of being refused.
 
-Clients join with `{ playerId, name? }` (`spectator: true` for a TV display: no seat, counted in `spectatorCount`).
+Clients join with `{ playerId, name?, seatSecret? }` (`spectator: true` for a TV display: no seat, counted in `spectatorCount`; spectators need no secret).
 Create a watch-only room with the framework option `seats: string[]` (the playerIds allowed to take a seat): any other non-spectator join is refused with `4404 "This room is watch-only"`, spectators still join. It is not a game option and is not published in `state.options`.
-`SET_NAME` readies a seat (a name another seat has is refused with `NAME_TAKEN`; a join-time `name` that is taken is ignored and the seat joins unnamed). With a `textFilter` on `createGameServer`, names are also checked against it at the level of the game's `filterLevel` over the room's current options (default `"off"`): a join with a filtered name is refused with close code 4405 (`CONTENT_REJECTED`) and a `SET_NAME` with one is refused with `CONTENT_REJECTED` and the filter's reason, keeping the old name; a level raised mid-lobby applies to the next `SET_NAME`, not to names already set. A room is kept alive only by connected seats: once the last one is gone for `emptyRoomGraceMs`, the room is disposed and any spectators are disconnected. `ACTION` carries your actions (`room.send` or `room.request`, see Actions). `EXPORT_REPLAY` (host only, via `room.request`) answers with the room's replay bundle — see Bundles below; a non-host gets an `UNAUTHORIZED` refusal. A dropped connection holds the seat for `reconnectMs`
-(token reconnect or a new session with the same `playerId`); a mid-game joiner is seated inactive.
+`SET_NAME` readies a seat (a name another seat has is refused with `NAME_TAKEN`; a join-time `name` that is taken is ignored and the seat joins unnamed). With a `textFilter` on `createGameServer`, names are also checked against it at the level of the game's `filterLevel` over the room's current options (default `"off"`): a join with a filtered name is refused with close code 4405 (`CONTENT_REJECTED`) and a `SET_NAME` with one is refused with `CONTENT_REJECTED` and the filter's reason, keeping the old name; a level raised mid-lobby applies to the next `SET_NAME`, not to names already set. A room is kept alive only by connected seats: once the last one is gone for `emptyRoomGraceMs`, the room is disposed and any spectators are disconnected. `ACTION` carries your actions (`room.send` or `room.request`, see Actions). `EXPORT_REPLAY` (host only, via `room.request`) answers with the room's replay bundle — see Bundles below; a non-host gets an `UNAUTHORIZED` refusal. A dropped connection holds the seat for `reconnectMs`: a token reconnect, or a new session presenting the same `playerId` and that seat's `seatSecret`, resumes it.
+Every non-spectator join must present a `seatSecret`: the server stores its sha256 per seat (never in synced state) and refuses a missing or wrong one with `4406 "Seat is taken"` — including the first join of a new player, so there is no migration for secretless clients.
+A matching secret takes the seat over even while the old owner is still connected: the new session binds to it and the old one is closed with `4409 "Your seat was opened on another device"`.
+A mid-game joiner is seated inactive.
 When the host leaves or drops, the role moves to a connected seat that is active and ready, else one that is ready, else any connected seat.
 Spectators get no reconnection window; they simply rejoin.
+A room admits at most `maxPlayers + audienceSlots` connections in total (default 32 audience slots, `DEFAULT_AUDIENCE_SLOTS`; set `audienceSlots` on `createGameServer`). Once the total is reached Colyseus locks the room's listing and further joins are refused at matchmaking time: the client gets a matchmake error (`"room … is locked"`, code 522), not a join close code.
 
 ### Private state with StateView
 Tag a synced field `.view()`, put per-player entries in it, and reveal each with `ctx.showTo(playerId, entry)`;
 `ctx.hideFrom` revokes. The room remembers what each player may see and re-applies it on every reconnect, so nothing is resent.
 Call `hideFrom` before you delete an entry, or the room will try to re-add it on reconnect.
+
+The boundary is enforced mechanically at startup: `createGameServer` checks every hosted state class and fails loudly —
+naming the class and every offending field — if a field is neither tagged `.view()` nor listed in the game's
+`publicFields` (fields of `BaseGameState` are always allowed; nested schema classes inherit their holding field's
+visibility). Declare the list on `HostedGame.publicFields`, or on the game-kit declaration's `publicFields`, which is
+handed to the server. A state class with no own fields beyond `BaseGameState` needs no list.
 
 ### Testing a game
 ```ts
@@ -689,6 +734,7 @@ ann.client.state.winner;                               // the client's own typed
 bob.errors;                                            // every well-formed ERROR bob received
 ```
 `joinPlayer(t, room, n, stateClass)` joins one player without a name; `TestPlayer.setName(name?)` readies it.
+Every join sends a seat secret: `t.seatSecretFor(playerId)` returns the stable per-player-id value, so a test reconnect presents the same one.
 A runnable example is the fixture in `packages/server/tests/fixtures/buzzer.ts`.
 
 ## Client SDK
@@ -718,6 +764,7 @@ const result = await manager.sendAction("PRESS", { power: 3 });
 |---|---|
 | `status` | `"idle" \| "connecting" \| "connected" \| "reconnecting" \| "disconnected"` (`$state`) |
 | `playerId` | stable UUID kept in `localStorage` under `${storagePrefix}.playerId` |
+| seat secret | sent on every `join`: two UUIDs joined, generated once per session and kept in `localStorage` under `${storagePrefix}.seatSecret`. Cleared with the rest of the session when leaving, so a re-join gets a fresh one |
 | `state` | the room's state, or `undefined` outside a room; reactive (below) |
 | `roomCode`, `isHost`, `isSpectator`, `me()` | from `state`; `me()` is your `PlayerSchema` seat (`undefined` for spectators); `isSpectator` is true in a room without a seat |
 | `create(opts?)`, `join(code, opts?)`, `joinAsSpectator(code)`, `resume()`, `leave()` | connect and disconnect. `create`/`join`/`resume` resolve once the first state has arrived. `join` throws with the server's reason for an unknown code. The newest connect wins: an older one still in flight rejects with "Connection cancelled", as does one interrupted by `leave()`/`dispose()`. A first state that never arrives rejects with a timeout |

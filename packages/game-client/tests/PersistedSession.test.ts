@@ -35,6 +35,17 @@ describe("PersistedSession", () => {
     expect(localStorage.getItem("g.playerId")).toBe(id);
   });
 
+  it("keeps one seat secret per session: stable across reloads, fresh after clear", () => {
+    const session = new PersistedSession("g");
+    const secret = session.seatSecret;
+    expect(secret).toMatch(/^[0-9a-f-]{72}$/); // two UUIDs joined
+    expect(session.seatSecret).toBe(secret);
+    expect(new PersistedSession("g").seatSecret).toBe(secret); // a reload resumes with the same one
+    session.clear();
+    expect(localStorage.getItem("g.seatSecret")).toBeNull();
+    expect(session.seatSecret).not.toBe(secret); // leaving forgets it; the next join gets a new one
+  });
+
   it("remembers a spectator join until cleared", () => {
     const session = new PersistedSession("g");
     expect(session.spectator).toBe(false);

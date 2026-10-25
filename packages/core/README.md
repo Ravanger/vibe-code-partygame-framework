@@ -55,7 +55,7 @@ export const ButtonGame = defineGame<ButtonState, Priv>({
 
 ## Actions
 
-`from` is `"host"` or `"player"`. `payload` is a zod schema for the whole action object, read in the handler as `ctx.payload`. `ctx.reject` sends the actor an `ERROR` but does not stop the handler, so return after it.
+`from` is `"host"`, `"player"` or `"audience"`. An audience action is dispatched seatless through `runtime.dispatchAudience(audienceKey, raw)`: its handler gets no `playerId`, but an `audience.once(scope)` check that returns `true` once per key and scope (cleared on every phase change). See the framework guide's Audience section. `payload` is a zod schema for the whole action object, read in the handler as `ctx.payload`. `ctx.reject` sends the actor an `ERROR` but does not stop the handler, so return after it.
 
 ```ts
 import { ErrorCode } from "@partygame/shared";

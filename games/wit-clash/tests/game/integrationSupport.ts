@@ -11,7 +11,7 @@ import {
 } from "@partygame/server/testing";
 import { createWitClashGame } from "../../src/game.js";
 import { META } from "../../src/meta.js";
-import { WitClashState } from "../../src/state.js";
+import { WITCLASH_PUBLIC_FIELDS, WitClashState } from "../../src/state.js";
 import { makeCategories } from "./support.js";
 
 /** Fixed settle window after the final vote; there is no observable condition to wait on. */
@@ -29,6 +29,7 @@ export const bootWitClash = (reconnectMs = 1000): Promise<TestServer> =>
         roomName: ROOM,
         definition: createWitClashGame({ categories: makeCategories() }),
         stateClass: WitClashState,
+        publicFields: WITCLASH_PUBLIC_FIELDS,
       },
     ],
     reconnectMs,

@@ -20,6 +20,7 @@ export const gamePackage = defineGamePackage({
   displayName: __DisplayNameJson__,
   definition: () => create__PascalName__Game(),
   stateClass: __PascalName__State,
+  publicFields: ["waves", "winnerName", "winnerWaves"],
   isFinished: isGameOver,
   botKit: __camelName__Kit(),
   terminal: __camelName__Terminal,

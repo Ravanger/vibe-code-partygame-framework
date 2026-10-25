@@ -11,5 +11,6 @@ export function hostedGame<TState extends BaseGameState, TContent>(
     roomName: pkg.meta.roomName,
     definition: pkg.definition(content as TContent),
     stateClass: pkg.stateClass,
+    ...(pkg.publicFields ? { publicFields: pkg.publicFields } : {}),
   };
 }

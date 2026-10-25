@@ -4,7 +4,7 @@ import { ErrorCode, KICK_PLAYER } from "@partygame/shared";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { createWitClashGame } from "../src/game.js";
 import { META } from "../src/meta.js";
-import { WitClashState } from "../src/state.js";
+import { WITCLASH_PUBLIC_FIELDS, WitClashState } from "../src/state.js";
 import { AppViewModel } from "../ui/viewmodels/AppViewModel.js";
 import { CategoryVoteViewModel } from "../ui/viewmodels/CategoryVoteViewModel.js";
 import { JoinNextRoundViewModel } from "../ui/viewmodels/JoinNextRoundViewModel.js";
@@ -29,6 +29,7 @@ beforeAll(async () => {
         roomName: META.roomName,
         definition: createWitClashGame({ categories: makeCategories() }),
         stateClass: WitClashState,
+        publicFields: WITCLASH_PUBLIC_FIELDS,
       },
     ],
   });

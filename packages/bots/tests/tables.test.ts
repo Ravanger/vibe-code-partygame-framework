@@ -18,7 +18,7 @@ import { BotTable } from "../src/BotTable.js";
 import { DemoTable } from "../src/DemoTable.js";
 import { joinBots } from "../src/joinBots.js";
 import type { BotKit } from "../src/types.js";
-import { TAP_ROOM, TapGame, TapState } from "./fixtures/tapGame.js";
+import { TAP_PUBLIC_FIELDS, TAP_ROOM, TapGame, TapState } from "./fixtures/tapGame.js";
 
 class RecordingCodes extends RoomCodeService {
   readonly codes: string[] = [];
@@ -78,8 +78,18 @@ beforeAll(async () => {
   t = await bootTestServer({
     roomCodeService: codes,
     games: [
-      { roomName: TAP_ROOM, definition: TapGame, stateClass: TapState },
-      { roomName: PAD_ROOM, definition: PaddedGame, stateClass: PaddedState },
+      {
+        roomName: TAP_ROOM,
+        definition: TapGame,
+        stateClass: TapState,
+        publicFields: TAP_PUBLIC_FIELDS,
+      },
+      {
+        roomName: PAD_ROOM,
+        definition: PaddedGame,
+        stateClass: PaddedState,
+        publicFields: [...TAP_PUBLIC_FIELDS, "pad"],
+      },
     ],
   });
   apiPort = await t.serveApi();
@@ -94,7 +104,7 @@ async function humanRoom(name: string) {
   const playerId = `human-${name.replace(/\s+/g, "-")}-0001`;
   const room = await t.sdk.create<TapState>(
     TAP_ROOM,
-    { playerId, protocolVersion: PROTOCOL_VERSION },
+    { playerId, seatSecret: t.seatSecretFor(playerId), protocolVersion: PROTOCOL_VERSION },
     TapState,
   );
   leavers.push({ leave: () => room.leave(true) });
@@ -135,7 +145,11 @@ describe("claimName", () => {
     const room = await humanRoom("Ann");
     const other = await t.sdk.joinById<TapState>(
       room.roomId,
-      { playerId: "other-0000001", protocolVersion: PROTOCOL_VERSION },
+      {
+        playerId: "other-0000001",
+        seatSecret: t.seatSecretFor("other-0000001"),
+        protocolVersion: PROTOCOL_VERSION,
+      },
       TapState,
     );
     leavers.push({ leave: () => other.leave(true) });
@@ -193,6 +207,25 @@ describe("joinBots", () => {
     }
   });
 
+  it("sends a fresh seat secret on every bot join", async () => {
+    const room = await humanRoom("Ann");
+    const spy = vi.spyOn(Client.prototype, "joinById");
+    try {
+      const bots = await join(room.state.roomCode, 2);
+      expect(spy.mock.calls.length).toBe(2);
+      for (const call of spy.mock.calls) {
+        expect(call[1]).toEqual(
+          expect.objectContaining({ seatSecret: expect.stringMatching(/^[0-9a-f-]{72}$/) }),
+        );
+      }
+      expect(bots.map((bot) => bot.playerId)).toEqual(
+        spy.mock.calls.map((call) => call[1].playerId),
+      );
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("times out when the initial state has not arrived", async () => {
     // The SDK resolves joinById before the first state sync; room.state is undefined until it lands.
     const room = await humanRoom("Ann");
@@ -217,7 +250,11 @@ describe("BotTable", () => {
     const humanId = "human-zed-0001";
     const room = await t.sdk.joinById<TapState>(
       await resolve(code),
-      { playerId: humanId, protocolVersion: PROTOCOL_VERSION },
+      {
+        playerId: humanId,
+        seatSecret: t.seatSecretFor(humanId),
+        protocolVersion: PROTOCOL_VERSION,
+      },
       TapState,
     );
     leavers.push({ leave: () => room.leave(true) });
@@ -234,7 +271,11 @@ describe("BotTable", () => {
     const code = await table.open();
     const room = await t.sdk.joinById<TapState>(
       await resolve(code),
-      { playerId: "human-zed-0002", protocolVersion: PROTOCOL_VERSION },
+      {
+        playerId: "human-zed-0002",
+        seatSecret: t.seatSecretFor("human-zed-0002"),
+        protocolVersion: PROTOCOL_VERSION,
+      },
       TapState,
     );
     leavers.push({ leave: () => room.leave(true) });
@@ -338,7 +379,11 @@ describe("BotTable", () => {
     const code = await table.open();
     const room = await t.sdk.joinById<TapState>(
       await resolve(code),
-      { playerId: "human-zed-0003", protocolVersion: PROTOCOL_VERSION },
+      {
+        playerId: "human-zed-0003",
+        seatSecret: t.seatSecretFor("human-zed-0003"),
+        protocolVersion: PROTOCOL_VERSION,
+      },
       TapState,
     );
     await claimName(room, "human-zed-0003", "Zed");
@@ -382,7 +427,11 @@ describe("table overrides", () => {
     const code = await table.open();
     const room = await t.sdk.joinById<TapState>(
       await resolve(code),
-      { playerId: "human-zed-0004", protocolVersion: PROTOCOL_VERSION },
+      {
+        playerId: "human-zed-0004",
+        seatSecret: t.seatSecretFor("human-zed-0004"),
+        protocolVersion: PROTOCOL_VERSION,
+      },
       TapState,
     );
     leavers.push({ leave: () => room.leave(true) });
@@ -416,7 +465,11 @@ describe("table overrides", () => {
     const code = await table.open();
     const room = await t.sdk.joinById<PaddedState>(
       await resolve(code),
-      { playerId: "human-zed-0005", protocolVersion: PROTOCOL_VERSION },
+      {
+        playerId: "human-zed-0005",
+        seatSecret: t.seatSecretFor("human-zed-0005"),
+        protocolVersion: PROTOCOL_VERSION,
+      },
       PaddedState,
     );
     leavers.push({ leave: () => room.leave(true) });

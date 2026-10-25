@@ -82,6 +82,18 @@ export interface ActionContext<TState extends PhaseState, TPrivate, TOptions, TP
   reject(code: ErrorCode, message: string): void;
 }
 
+/** The once-per-scope check audience handlers use for votes and reactions. */
+export interface AudienceScope {
+  /** True the first time this sender uses `scope`; false afterwards until the host clears the scopes (on a phase change). */
+  once(scope: string): boolean;
+}
+
+/** Context of an audience action handler: the sender is seatless, so there is no `playerId`. */
+export interface AudienceActionContext<TState extends PhaseState, TPrivate, TOptions, TPayload>
+  extends Omit<ActionContext<TState, TPrivate, TOptions, TPayload>, "playerId"> {
+  readonly audience: AudienceScope;
+}
+
 /** What a middleware observes or wraps. */
 export type MiddlewareEvent =
   | { kind: "enter" }
@@ -160,6 +172,19 @@ export interface ActionDefinition<TState extends PhaseState, TPrivate, TOptions,
   handler(ctx: ActionContext<TState, TPrivate, TOptions, TPayload>): void;
 }
 
+/** An audience action accepted by a phase: dispatched seatless through `GameRuntime.dispatchAudience`, refused from seats. */
+export interface AudienceActionDefinition<TState extends PhaseState, TPrivate, TOptions, TPayload> {
+  readonly from: "audience";
+  /** Validates the whole action object (`type` plus flat fields). */
+  payload: z.ZodType<TPayload>;
+  handler(ctx: AudienceActionContext<TState, TPrivate, TOptions, TPayload>): void;
+}
+
+/** One entry of a phase's `actions` table: a seated player's action or an audience one. */
+export type PhaseAction<TState extends PhaseState, TPrivate, TOptions> =
+  | ActionDefinition<TState, TPrivate, TOptions, unknown>
+  | AudienceActionDefinition<TState, TPrivate, TOptions, unknown>;
+
 /**
  * Method syntax keeps the context parameter bivariant, so definitions for different states stay
  * assignable to an erased `GameDefinition<PhaseState, unknown, unknown>`.
@@ -192,7 +217,7 @@ export interface PhaseDefinition<TState extends PhaseState, TPrivate, TOptions> 
   onTimeout?(ctx: GameContext<TState, TPrivate, TOptions>): void;
   /** Any join, leave, connect, disconnect or ready change while in this phase. */
   onRosterChange?(ctx: GameContext<TState, TPrivate, TOptions>): void;
-  actions?: Record<string, ActionDefinition<TState, TPrivate, TOptions, unknown>>;
+  actions?: Record<string, PhaseAction<TState, TPrivate, TOptions>>;
 }
 
 /** A complete game, as written by a game author. */
@@ -252,8 +277,14 @@ export interface RuntimeHost {
   benchUnreadyPlayers(): void;
   send(playerId: string, type: string, payload: unknown): void;
   broadcast(type: string, payload: unknown): void;
-  /** Called once per applied phase transition, after the `transition` middleware event; hosts record replay snapshots here. */
+  /** Called once per applied phase transition, after the `transition` middleware event; hosts record replay snapshots here and clear every {@link RuntimeHost.audienceOnce} scope. */
   notifyTransition(from: string, to: string): void;
+  /**
+   * True the first time `audienceKey` votes in `scope`, false afterwards; hosts clear every scope
+   * when the phase changes (see {@link RuntimeHost.notifyTransition}). Backs `ctx.audience.once`
+   * for audience actions. In-memory only — audience identity is never persisted.
+   */
+  audienceOnce(audienceKey: string, scope: string): boolean;
   showTo(playerId: string, ref: object): void;
   hideFrom(playerId: string, ref: object): void;
   /** Remove the seat and tell the player they were kicked. */

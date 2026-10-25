@@ -58,6 +58,7 @@ describe("protocol constants", () => {
         "NOT_ALLOWED",
         "NOT_CONNECTED",
         "NOT_ENOUGH_PLAYERS",
+        "RATE_LIMITED",
         "ROOM_NOT_FOUND",
         "UNAUTHORIZED",
         "UNKNOWN_ACTION",
@@ -89,6 +90,16 @@ describe("ActionEnvelopeSchema", () => {
 
   it("rejects a missing type", () => {
     expect(ActionEnvelopeSchema.safeParse({}).success).toBe(false);
+  });
+
+  it("accepts exactly 32 keys and rejects more", () => {
+    const envelope = (extraKeys: number): Record<string, unknown> => {
+      const obj: Record<string, unknown> = { type: "CAST_VOTE" };
+      for (let i = 0; i < extraKeys; ++i) obj[`k${i}`] = i;
+      return obj;
+    };
+    expect(ActionEnvelopeSchema.safeParse(envelope(31)).success).toBe(true);
+    expect(ActionEnvelopeSchema.safeParse(envelope(32)).success).toBe(false);
   });
 });
 
@@ -191,12 +202,30 @@ describe("JoinOptionsSchema", () => {
     expect(JoinOptionsSchema.safeParse({ playerId: id, protocolVersion: 2.5 }).success).toBe(false);
     expect(JoinOptionsSchema.safeParse({ playerId: id, protocolVersion: "1" }).success).toBe(false);
   });
+
+  it("accepts an optional seatSecret of 16 to 128 characters", () => {
+    const id = "a".repeat(8);
+    expect(JoinOptionsSchema.safeParse({ playerId: id, seatSecret: "x".repeat(15) }).success).toBe(
+      false,
+    );
+    expect(JoinOptionsSchema.parse({ playerId: id, seatSecret: "x".repeat(16) })).toEqual({
+      playerId: id,
+      seatSecret: "x".repeat(16),
+    });
+    expect(JoinOptionsSchema.safeParse({ playerId: id, seatSecret: "x".repeat(128) }).success).toBe(
+      true,
+    );
+    expect(JoinOptionsSchema.safeParse({ playerId: id, seatSecret: "x".repeat(129) }).success).toBe(
+      false,
+    );
+  });
 });
 
 describe("isServerError", () => {
   it("accepts a code and message, with or without an action", () => {
     expect(isServerError({ code: "WRONG_PHASE", message: "no" })).toBe(true);
     expect(isServerError({ code: "KICKED", message: "bye", action: "X" })).toBe(true);
+    expect(isServerError({ code: "RATE_LIMITED", message: "slow down" })).toBe(true);
   });
   it("rejects anything else", () => {
     for (const bad of [

@@ -17,6 +17,9 @@ export const BuzzerState = BaseGameState.extend(
 );
 export type BuzzerState = SchemaType<typeof BuzzerState>;
 
+/** The BuzzerState fields every client may see; `secrets` is `.view()`-only. */
+export const BUZZER_PUBLIC_FIELDS = ["winner", "buzzCount", "syncCount", "lucky"] as const;
+
 export interface BuzzerPrivate {
   buzzed: Set<string>;
 }

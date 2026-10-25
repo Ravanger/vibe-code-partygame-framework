@@ -19,7 +19,7 @@ describe("FrameworkError", () => {
 });
 
 describe("CLOSE_CODES", () => {
-  it("maps the eight join/create close codes to error codes and fixed messages", () => {
+  it("maps the eleven join/create close codes to error codes and fixed messages", () => {
     expect(Object.keys(CLOSE_CODES).sort()).toEqual([
       "CONTENT_REJECTED",
       "INTERNAL",
@@ -27,6 +27,9 @@ describe("CLOSE_CODES", () => {
       "KICKED_REJOIN",
       "ROOM_FULL",
       "SEAT_REMOVED",
+      "SEAT_TAKEN",
+      "SEAT_TAKEN_OVER",
+      "SERVER_FULL",
       "VERSION_MISMATCH",
       "WATCH_ONLY",
     ]);
@@ -36,7 +39,12 @@ describe("CLOSE_CODES", () => {
     expect(CLOSE_CODES.KICKED_REJOIN.code).toBe(4403);
     expect(CLOSE_CODES.WATCH_ONLY.code).toBe(4404);
     expect(CLOSE_CODES.CONTENT_REJECTED.code).toBe(4405);
+    expect(CLOSE_CODES.SEAT_TAKEN.code).toBe(4406);
+    expect(CLOSE_CODES.SEAT_TAKEN.errorCode).toBe(ErrorCode.UNAUTHORIZED);
+    expect(CLOSE_CODES.SEAT_TAKEN_OVER.code).toBe(4409);
+    expect(CLOSE_CODES.SEAT_TAKEN_OVER.errorCode).toBe(ErrorCode.KICKED);
     expect(CLOSE_CODES.CONTENT_REJECTED.errorCode).toBe(ErrorCode.CONTENT_REJECTED);
+    expect(CLOSE_CODES.SERVER_FULL.code).toBe(4429);
     expect(CLOSE_CODES.VERSION_MISMATCH.code).toBe(4426);
     expect(CLOSE_CODES.VERSION_MISMATCH.errorCode).toBe(ErrorCode.NOT_ALLOWED);
     expect(CLOSE_CODES.INTERNAL.code).toBe(4500);
@@ -59,12 +67,16 @@ describe("CLOSE_CODES", () => {
     expect(CLOSE_CODES.KICKED_REJOIN.message).toBe(CLIENT_MESSAGES.KICKED);
     expect(CLOSE_CODES.WATCH_ONLY.message).toBe("This room is watch-only");
     expect(CLOSE_CODES.CONTENT_REJECTED.message).toBe(CLIENT_MESSAGES.CONTENT_REJECTED);
+    expect(CLOSE_CODES.SEAT_TAKEN.message).toBe("Seat is taken");
+    expect(CLOSE_CODES.SEAT_TAKEN_OVER.message).toBe("Your seat was opened on another device");
+    expect(CLOSE_CODES.SERVER_FULL.message).toBe("Server is full");
     expect(CLOSE_CODES.VERSION_MISMATCH.message).toBe(
       "Protocol version mismatch: client {client}, server {server}",
     );
     expect(CLOSE_CODES.INTERNAL.message).toBe("The server could not handle the request");
     expect(CLOSE_CODES.KICKED_REJOIN.errorCode).toBe(ErrorCode.KICKED);
     expect(CLOSE_CODES.WATCH_ONLY.errorCode).toBe(ErrorCode.NOT_ALLOWED);
+    expect(CLOSE_CODES.SERVER_FULL.errorCode).toBe(ErrorCode.NOT_ALLOWED);
   });
 });
 
@@ -78,7 +90,7 @@ describe("closeCodeEntry", () => {
 
   it("returns undefined for unknown numbers", () => {
     expect(closeCodeEntry(2000)).toBeUndefined();
-    expect(closeCodeEntry(4406)).toBeUndefined();
+    expect(closeCodeEntry(4407)).toBeUndefined();
     expect(closeCodeEntry(-1)).toBeUndefined();
   });
 });
@@ -101,5 +113,9 @@ describe("CLIENT_MESSAGES", () => {
 
   it("has a fixed message for CONTENT_REJECTED", () => {
     expect(CLIENT_MESSAGES.CONTENT_REJECTED).toBe("That text was not allowed");
+  });
+
+  it("has a fixed message for RATE_LIMITED", () => {
+    expect(CLIENT_MESSAGES.RATE_LIMITED).toBe("You are sending actions too quickly");
   });
 });

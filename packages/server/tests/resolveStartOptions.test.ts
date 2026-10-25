@@ -8,6 +8,13 @@ describe("resolveStartOptions", () => {
     expect(resolved.port).toBe(2567);
     expect(resolved.apiPort).toBe(3001);
     expect(resolved.roomCodeService).toBeInstanceOf(RoomCodeService);
+    expect(resolved.allowedOrigins).toBeUndefined();
+  });
+
+  it("passes allowedOrigins through", () => {
+    expect(
+      resolveStartOptions({ allowedOrigins: ["http://party.example"] }, {}).allowedOrigins,
+    ).toEqual(["http://party.example"]);
   });
 
   it("reads PORT and API_PORT from the environment", () => {
@@ -51,5 +58,32 @@ describe("resolveStartOptions", () => {
     expect(
       resolveStartOptions({ port: 5, apiPort: 6 }, { PORT: "abc", API_PORT: "x" }),
     ).toMatchObject({ port: 5, apiPort: 6 });
+  });
+
+  it("reads HOST from the environment and ignores an empty one", () => {
+    expect(resolveStartOptions({}, { HOST: "0.0.0.0" }).host).toBe("0.0.0.0");
+    expect(resolveStartOptions({}, { HOST: "" }).host).toBeUndefined();
+  });
+
+  it.each([
+    ["*", "*"],
+    ["http://a.example", ["http://a.example"]],
+    [" http://a.example , http://b.example ", ["http://a.example", "http://b.example"]],
+  ])("parses ALLOWED_ORIGINS=%j into %j", (raw, expected) => {
+    expect(resolveStartOptions({}, { ALLOWED_ORIGINS: raw }).allowedOrigins).toEqual(expected);
+  });
+
+  it("ignores an empty ALLOWED_ORIGINS and keeps explicit host and origins over the environment", () => {
+    const origins = ["http://a.example"];
+    expect(resolveStartOptions({}, { ALLOWED_ORIGINS: "" }).allowedOrigins).toBeUndefined();
+    expect(
+      resolveStartOptions(
+        { allowedOrigins: origins, host: "1.2.3.4" },
+        {
+          HOST: "0.0.0.0",
+          ALLOWED_ORIGINS: "*",
+        },
+      ),
+    ).toMatchObject({ allowedOrigins: origins, host: "1.2.3.4" });
   });
 });

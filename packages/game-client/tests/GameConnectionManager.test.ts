@@ -192,13 +192,32 @@ describe("sendAction", () => {
     const manager = newManager();
     const { room } = seated(manager);
     manager.attach(room);
-    expect(await manager.sendAction("PRESS", { power: 3, type: "SPOOF" })).toEqual({ ok: true });
+    expect(await manager.sendAction("PRESS", { power: 3 })).toEqual({ ok: true });
     expect(await manager.sendAction("PASS")).toEqual({ ok: true });
     expect(room.requests).toEqual([
       { type: "ACTION", payload: { power: 3, type: "PRESS" } },
       { type: "ACTION", payload: { type: "PASS" } },
     ]);
     expect(manager.lastServerError).toBeUndefined();
+  });
+
+  it("needs no new API for a spectator: an attached seatless room can send actions", async () => {
+    const manager = newManager();
+    manager.attach(new StubRoom(new BaseGameState()));
+    expect(manager.isSpectator).toBe(true);
+    expect(await manager.sendAction("PRESS")).toEqual({ ok: true });
+  });
+
+  it("refuses a payload that names the reserved type field without sending", async () => {
+    const manager = newManager();
+    const { room } = seated(manager);
+    manager.attach(room);
+    expect(await manager.sendAction("PRESS", { power: 3, type: "SPOOF" })).toEqual({
+      ok: false,
+      error: { code: ErrorCode.INVALID_ACTION, message: CLIENT_MESSAGES.INVALID_ACTION },
+    });
+    expect(manager.lastServerError?.code).toBe(ErrorCode.INVALID_ACTION);
+    expect(room.requests).toEqual([]);
   });
 
   it("returns and records a rejection", async () => {
@@ -356,7 +375,7 @@ describe("refused joins", () => {
   it("records an unreachable API as CONNECTION_LOST", async () => {
     const manager = newManager();
     stubFetchReply(new Error("fetch failed"));
-    await expect(manager.join("WXYZ")).rejects.toThrow("fetch failed");
+    await expect(manager.join("WXYZ")).rejects.toThrow("Could not reach the game server");
     expect(manager.lastServerError?.code).toBe(ErrorCode.CONNECTION_LOST);
   });
 
@@ -839,6 +858,27 @@ describe("protocol versioning", () => {
       expect.objectContaining({ protocolVersion: PROTOCOL_VERSION }),
       undefined,
     );
+  });
+
+  it("sends the persisted seat secret when creating and joining", async () => {
+    const manager = newManager();
+    const { room } = seated(manager);
+    stubFetchReply({ roomId: "room-1" });
+    const created = vi.spyOn(Client.prototype, "create").mockResolvedValue(room as never);
+    await manager.create();
+    expect(created).toHaveBeenCalledWith(
+      "stub",
+      expect.objectContaining({ seatSecret: expect.stringMatching(/^[0-9a-f-]{72}$/) }),
+      undefined,
+    );
+    const joined = vi.spyOn(Client.prototype, "joinById").mockResolvedValue(room as never);
+    await manager.join("WXYZ");
+    expect(joined).toHaveBeenCalledWith(
+      "room-1",
+      expect.objectContaining({ seatSecret: expect.stringMatching(/^[0-9a-f-]{72}$/) }),
+      undefined,
+    );
+    expect(localStorage.getItem(`unit${counter}.seatSecret`)).toMatch(/^[0-9a-f-]{72}$/);
   });
 
   it("shows both versions when a join is refused for a protocol mismatch", async () => {

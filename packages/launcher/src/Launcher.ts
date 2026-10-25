@@ -4,7 +4,7 @@ import { type BotConnection, BotTable, type DemoTable } from "@partygame/bots";
 import { joinUrl, tvUrl } from "@partygame/client-utils";
 import { ServerProbe } from "@partygame/server/probe";
 import type { BaseGameState } from "@partygame/shared/schema";
-import type { LaunchArgs } from "./LaunchArgs.js";
+import type { LaunchArgs, LaunchMode } from "./LaunchArgs.js";
 import { type BrowserSpawner, lanUrls, openBrowser } from "./network.js";
 import { ProcessGroup } from "./ProcessGroup.js";
 import { StaticSite } from "./StaticSite.js";
@@ -77,7 +77,7 @@ export class Launcher<TState extends BaseGameState> {
       this.log("Building client...");
       await this.processes.run("Building client", this.commands.build, this.config.gameDir);
     }
-    await this.startGameServer();
+    await this.startGameServer(mode);
     if (mode === "prod") await this.serveProduction(clientPort);
     else await this.startClientDev();
 
@@ -158,11 +158,13 @@ export class Launcher<TState extends BaseGameState> {
     this.log(`${label} is ready`);
   }
 
-  private async startGameServer(): Promise<void> {
+  private async startGameServer(mode: LaunchMode): Promise<void> {
     this.log("Starting game server...");
     this.processes.start("game server", this.commands.server, this.config.gameDir, {
       PORT: String(this.ports.game),
       API_PORT: String(this.ports.api),
+      // Host mode serves guests over the LAN; their browsers must reach and read the code API too.
+      ...(mode === "host" ? { HOST: "0.0.0.0", ALLOWED_ORIGINS: "*" } : {}),
     });
     await this.waitUntilReady("Game server", () =>
       this.probe.isGameServer(this.ports.game, this.ports.api),
