@@ -143,6 +143,11 @@ an unnamed seat stays waiting, and in the Lobby a seat that sets its name is act
 A seat that joined the Lobby is active, but when the game leaves the Lobby (`START_GAME` or auto-start) every seat that is still unnamed is benched (`RuntimeHost.benchUnreadyPlayers`) and waits for the next activation.
 After a player reconnects, `onPlayerSync(ctx, playerId)` runs so you can resend their private messages.
 
+### Join control
+A game declares an optional synchronous `canJoin(input): CanJoinResult` on the definition to gate every join — including spectators and creation joins (there is no separate `canCreate`; creating a room joins through `onJoin`). The input carries `playerId`, the proposed `name`, the `spectator` flag, the client's `joinData` (string/number/boolean values) and the current `roster`. Return `{ ok: true }` to admit, or `{ ok: false, code, message }` to refuse with a game-authored message (for example `code: "ROOM_LOCKED"`); the refusal is not an `ErrorCode`, it is shown to the joining client as-is. The hook must be synchronous — core stays deterministic and Colyseus-free, so external auth stays out of it.
+
+The runtime evaluates it through the pure `evaluateJoin(definition, input)`: no hook accepts; a refusal message is trimmed and capped at 200 characters; a throwing hook yields the generic refusal `{ ok: false, code: "JOIN_REFUSED", message: "You cannot join this room." }` instead of crashing the join.
+
 ### Timers
 `duration` is milliseconds, or a function of the context. The timer restarts on every entry (including re-entry).
 `onTimeout` is required whenever `duration` is set, fires once, and never fires after the phase was left.
