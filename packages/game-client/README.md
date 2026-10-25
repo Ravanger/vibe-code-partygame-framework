@@ -93,6 +93,19 @@ const clock = manager.countdown();
 clock.secondsLeft; clock.isUrgent; clock.isExpired; // reactive
 ```
 
+## Localisation
+
+Every client-owned message comes from `defaultClientStrings` (exported here): an `errors` table with one English text per `ErrorCode` (mirroring `CLIENT_MESSAGES`) plus the manager's own messages (`invalidRoomCode`, `disconnectedBeforeState`, `syncTimeout`). Pass a partial table to replace any of them:
+
+```ts
+const manager = new GameConnectionManager<ButtonState>({
+  // ...
+  strings: { errors: { NOT_CONNECTED: "Nicht verbunden" } },
+});
+```
+
+For client-side failures the table replaces the fixed text; for an error that came from the server (pushed `ERROR`, rejected action, close code) it replaces `lastServerError.message` only when it names that code — otherwise the server's own message is kept.
+
 ## Test UI without a server
 
 `connectedClient` builds a manager attached to a `StubRoom` around a real state object (`setup(state)` fills it first). Mutate the state, then `patch()` as Colyseus would. Add `"@partygame/game-client/test-setup"` to the vitest `setupFiles` (the `@partygame/config` UI preset does).

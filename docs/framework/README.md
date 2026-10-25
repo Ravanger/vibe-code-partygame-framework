@@ -828,6 +828,26 @@ Integration tests boot a real server with `bootTestServer` from `@partygame/serv
 (`t.endpoint`, and `await t.serveApi()` for the code-resolution API) and use real managers. Add `"@partygame/game-client/test-setup"` to the
 vitest `setupFiles`: it shims the storages and makes the SDK use `ws` under jsdom.
 
+### Localisation
+
+The manager's client-owned text comes from `defaultClientStrings` (exported by `@partygame/game-client`): an `errors` table with one English
+message per `ErrorCode` (mirroring `CLIENT_MESSAGES`) plus the messages it builds itself (`invalidRoomCode`, `disconnectedBeforeState`,
+`syncTimeout`). Pass a partial table to replace any of them:
+
+```ts
+const manager = new GameConnectionManager<ButtonState>({
+  // ...
+  strings: {
+    errors: { NOT_CONNECTED: "Nicht verbunden" }, // per ErrorCode; unspecified codes keep the English default
+    invalidRoomCode: "Der Code braucht vier Buchstaben",
+  },
+});
+```
+
+For a client-side failure (`NOT_CONNECTED`, `CONNECTION_LOST`, `BAD_REPLY`) the table replaces the fixed text. For an error that came from the
+server (a pushed `ERROR`, a rejected action, a close code) the table replaces `lastServerError.message` when it names that code; otherwise the
+server's own message is kept — so game-authored `ctx.reject` text still shows through for codes you do not translate.
+
 ## Game UI viewmodels
 
 `@partygame/game-ui` holds the generic client viewmodels (Svelte 5 runes, no components), typed on `GameConnectionManager<TState extends BaseGameState>`. Import it through the `svelte` export condition (Vite with the Svelte plugin), like `game-client`.

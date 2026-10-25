@@ -10,7 +10,6 @@ import {
   isActionResult,
   isServerError,
   PROTOCOL_VERSION,
-  ROOM_CODE_LENGTH,
   RoomCodeSchema,
   type ServerError,
   ServerMessage,
@@ -22,6 +21,7 @@ import { CANCELLED, JoinCoordinator } from "./JoinCoordinator.js";
 import { MessageBus } from "./MessageBus.js";
 import { PersistedSession } from "./PersistedSession.js";
 import type { RoomLike } from "./RoomLike.js";
+import { type ClientStrings, defaultClientStrings } from "./strings.js";
 
 export type ConnectionStatus =
   | "idle"
@@ -45,6 +45,8 @@ export interface GameConnectionOptions<TState> {
   syncTimeoutMs?: number;
   /** Receives the exception behind a local action failure, never shown to the UI. Default `console.warn`. */
   logger?: (message: string, error: unknown) => void;
+  /** Replaces the client-owned messages and, per code, the server's error text; see {@link ClientStrings}. */
+  strings?: Partial<ClientStrings>;
 }
 
 const DEFAULT_API_PORT = 3001;
@@ -66,6 +68,9 @@ export class GameConnectionManager<
   private readonly client: Client;
   private readonly session: PersistedSession;
   private readonly apiBase: string;
+  private readonly strings: ClientStrings;
+  /** Only the codes a game actually replaced; everything else keeps its received message. */
+  private readonly errorText: Partial<Record<ErrorCode, string>> | undefined;
   private readonly bus = new MessageBus<TState>();
   private readonly coordinator = new JoinCoordinator();
   private spectating = false;
@@ -87,6 +92,8 @@ export class GameConnectionManager<
     const url = new URL(options.endpoint);
     const port = options.apiPort ?? DEFAULT_API_PORT;
     this.apiBase = `${url.protocol.replace("ws", "http")}//${url.hostname}:${port}`;
+    this.strings = { ...defaultClientStrings, ...options.strings };
+    this.errorText = options.strings?.errors;
     this.onMessage(ServerMessage.ERROR, (payload) => this.serverErrorReceived(payload));
   }
 
@@ -145,7 +152,7 @@ export class GameConnectionManager<
   async join(code: string, options: Record<string, unknown> = {}): Promise<void> {
     const clean = code.trim().toUpperCase();
     if (!RoomCodeSchema.safeParse(clean).success) {
-      throw new Error(`Game code must be ${ROOM_CODE_LENGTH} letters (A-Z)`);
+      throw new Error(this.strings.invalidRoomCode);
     }
     const spectator = options.spectator === true;
     if (this.room && this.roomCode === clean && this.spectating === spectator) return;
@@ -330,12 +337,12 @@ export class GameConnectionManager<
       // `settle` removes this listener, so it can only fire while the wait is still open.
       const onLeave = (): void => {
         settle();
-        reject(new Error("Disconnected before the game state arrived"));
+        reject(new Error(this.strings.disconnectedBeforeState));
       };
       const timer = setTimeout(() => {
         settle();
         this.leaveQuietly(room);
-        reject(new Error("Timed out waiting for the game state"));
+        reject(new Error(this.strings.syncTimeout));
       }, this.options.syncTimeoutMs ?? DEFAULT_SYNC_TIMEOUT_MS);
       room.onStateChange(check);
       room.onLeave(onLeave);
@@ -394,7 +401,13 @@ export class GameConnectionManager<
 
   /** The single writer for `lastServerError`: server ERROR payloads, failed actions and close codes all land here. */
   private setLastError(error: ServerError | undefined): void {
-    this.lastServerError = error;
+    this.lastServerError = error === undefined ? undefined : this.withText(error);
+  }
+
+  /** Swaps in the game's text when its table names the code; otherwise keeps the received message. */
+  private withText(error: ServerError): ServerError {
+    const replacement = this.errorText?.[error.code];
+    return replacement === undefined ? error : { ...error, message: replacement };
   }
 
   /** Records a numeric close code when it is in CLOSE_CODES; unknown codes leave `lastServerError` untouched. */
@@ -442,9 +455,9 @@ export class GameConnectionManager<
     return { code: entry.errorCode, message: entry.message };
   }
 
-  /** A client-side action failure: the fixed message for `code`, never the raw exception text. */
+  /** A client-side action failure: the fixed message for `code` (or the game's text), never the raw exception text. */
   private fail(code: ErrorCode): ActionResult {
-    const error: ServerError = { code, message: CLIENT_MESSAGES[code] };
+    const error = this.withText({ code, message: CLIENT_MESSAGES[code] });
     this.setLastError(error);
     return { ok: false, error };
   }

@@ -287,12 +287,14 @@
           "default": "./src/index.ts"
         },
         "symbols": {
+          "ClientStrings": {},
           "ConnectionStatus": {},
           "Countdown": {},
           "EndpointOverrides": {},
           "GameConnectionManager": {},
           "GameConnectionOptions": {},
           "RoomLike": {},
+          "defaultClientStrings": {},
           "readCodeParam": {},
           "resolveEndpoints": {}
         },
