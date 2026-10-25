@@ -4,6 +4,7 @@ import { type Room as ClientRoom, ColyseusSDK } from "@colyseus/sdk";
 import { waitFor } from "@partygame/client-utils";
 import { PROTOCOL_VERSION } from "@partygame/shared";
 import { createGameServer, type GameServerOptions } from "../createGameServer.js";
+import { listenGameServer } from "../gameTransport.js";
 import { serveApi as serveApiOnNode } from "../node.js";
 import { closeHttpServer, freePort } from "../probe.js";
 import { RoomCodeService } from "../services/RoomCodeService.js";
@@ -136,14 +137,15 @@ export async function bootTestServer(
     );
   }
   const roomCodeService = options.roomCodeService ?? new RoomCodeService();
+  // As startNodeServer: race Colyseus' listen against the bind error, which its own listen swallows.
+  const port = await freePort();
   const server = createGameServer({
     reconnectMs: 1000,
     emptyRoomGraceMs: 30_000,
     ...options,
     roomCodeService,
   });
-  const port = await freePort();
-  await server.listen(port);
+  await listenGameServer(server, port);
   const endpoint = `ws://127.0.0.1:${port}`;
   const testServer = new TestServer(server, new ColyseusSDK(endpoint), roomCodeService, endpoint);
   liveTestServers.add(testServer);
