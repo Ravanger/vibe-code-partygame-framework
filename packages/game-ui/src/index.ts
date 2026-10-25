@@ -29,6 +29,11 @@ export {
   podiumSteps,
   rankRows,
 } from "./ranking.js";
+export {
+  defaultUiStrings,
+  setStrings,
+  type UiStrings,
+} from "./strings.js";
 export { TypingReporter } from "./TypingReporter.js";
 export { type LobbyPlayer, WaitingRoomViewModel } from "./WaitingRoomViewModel.svelte.js";
 export { WelcomeViewModel } from "./WelcomeViewModel.svelte.js";

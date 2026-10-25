@@ -848,6 +848,11 @@ For a client-side failure (`NOT_CONNECTED`, `CONNECTION_LOST`, `BAD_REPLY`) the 
 server (a pushed `ERROR`, a rejected action, a close code) the table replaces `lastServerError.message` when it names that code; otherwise the
 server's own message is kept — so game-authored `ctx.reject` text still shows through for codes you do not translate.
 
+The generic `@partygame/game-ui` components read their labels from one more table, `defaultUiStrings`, set with `setStrings(partial)` at the app
+root (GameControls menu and dialog, LobbySettings summary, NameInput, Podium, QrCode, and the `PhaseClock` announcement through its
+`secondsRemaining(n)` function entry). The table carries a `clientStrings` field: pass the same object to both the manager's `strings` option and
+`setStrings`, and one table localises both layers.
+
 ## Game UI viewmodels
 
 `@partygame/game-ui` holds the generic client viewmodels (Svelte 5 runes, no components), typed on `GameConnectionManager<TState extends BaseGameState>`. Import it through the `svelte` export condition (Vite with the Svelte plugin), like `game-client`.

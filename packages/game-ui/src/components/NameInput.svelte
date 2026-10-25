@@ -1,8 +1,10 @@
 <script lang="ts">
 import type { NameField } from "@partygame/game-ui";
 import { NAME_MAX_LENGTH } from "@partygame/shared";
+import { getStrings } from "../strings.js";
 
 const { field, focus = false }: { field: NameField; focus?: boolean } = $props();
+const strings = getStrings();
 
 function takeFocus(node: HTMLInputElement): void {
   if (focus) node.focus();
@@ -10,11 +12,11 @@ function takeFocus(node: HTMLInputElement): void {
 </script>
 
 <div class="your-name card taped">
-  <label for="playerName">Your name</label>
+  <label for="playerName">{strings.yourName}</label>
   <input
     id="playerName"
     type="text"
-    placeholder="Enter your name"
+    placeholder={strings.enterYourName}
     maxlength={NAME_MAX_LENGTH}
     autocomplete="nickname"
     value={field.draft}

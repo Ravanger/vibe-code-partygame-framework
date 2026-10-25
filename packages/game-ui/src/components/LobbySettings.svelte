@@ -2,12 +2,14 @@
 import type { LobbySettingsViewModel } from "@partygame/game-ui";
 // biome-ignore lint/correctness/noUnusedImports: used by the generics attribute
 import type { BaseGameState } from "@partygame/shared/schema";
+import { getStrings } from "../strings.js";
 
 const { vm }: { vm: LobbySettingsViewModel<TState> } = $props();
+const strings = getStrings();
 </script>
 
 <details class="settings card" open={vm.startsOpen}>
-  <summary class="summary-with-marker">Game settings</summary>
+  <summary class="summary-with-marker">{strings.gameSettings}</summary>
   <dl>
     {#each vm.fields as field (field.key)}
       <div class="setting">

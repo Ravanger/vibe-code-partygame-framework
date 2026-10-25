@@ -6,6 +6,7 @@ import {
   sanitizeRoomCode,
 } from "@partygame/shared";
 import type { BaseGameState } from "@partygame/shared/schema";
+import { errorText } from "./strings.js";
 
 const CODE_INVALID = `Game code must be ${ROOM_CODE_LENGTH} letters (A-Z)`;
 
@@ -73,7 +74,10 @@ export class WelcomeViewModel<TState extends BaseGameState> {
     try {
       await connect();
     } catch {
-      this.localError = this.manager.lastServerError?.message ?? CLIENT_MESSAGES.CONNECTION_LOST;
+      const error = this.manager.lastServerError;
+      this.localError = error
+        ? errorText(error.code, error.message)
+        : CLIENT_MESSAGES.CONNECTION_LOST;
       this.manager.dismissError();
     }
   }

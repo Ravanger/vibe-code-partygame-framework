@@ -2,8 +2,10 @@
 import type { GameControlsViewModel } from "@partygame/game-ui";
 // biome-ignore lint/correctness/noUnusedImports: used by the generics attribute
 import type { BaseGameState } from "@partygame/shared/schema";
+import { getStrings } from "../strings.js";
 
 const { vm }: { vm: GameControlsViewModel<TState> } = $props();
+const strings = getStrings();
 
 let root = $state<HTMLElement>();
 
@@ -21,12 +23,14 @@ function closeOnEscape(event: KeyboardEvent): void {
 {#if vm.isVisible}
   <div class="game-controls" bind:this={root}>
     {#if vm.isSpectator}
-      <button type="button" class="btn btn--ghost leave-small" onclick={() => vm.leave()}>Leave game</button>
+      <button type="button" class="btn btn--ghost leave-small" onclick={() => vm.leave()}>
+        {strings.leaveGame}
+      </button>
     {:else}
       <button
         type="button"
         class="btn menu-btn"
-        aria-label="Game menu"
+        aria-label={strings.gameMenu}
         aria-haspopup="true"
         aria-expanded={vm.menuOpen}
         onclick={() => vm.toggleMenu()}
@@ -35,16 +39,20 @@ function closeOnEscape(event: KeyboardEvent): void {
         <div class="popover card">
           {#if vm.canEndGame}
             {#if vm.confirmingEnd}
-              <p class="confirm">End the game for everyone?</p>
+              <p class="confirm">{strings.confirmEndGame}</p>
               <div class="confirm-actions">
-                <button type="button" class="btn btn--danger" onclick={() => vm.confirmEnd()}>Yes</button>
-                <button type="button" class="btn" onclick={() => vm.cancelEnd()}>No</button>
+                <button type="button" class="btn btn--danger" onclick={() => vm.confirmEnd()}>
+                  {strings.yes}
+                </button>
+                <button type="button" class="btn" onclick={() => vm.cancelEnd()}>{strings.no}</button>
               </div>
             {:else}
-              <button type="button" class="btn btn--danger" onclick={() => vm.askEnd()}>End game</button>
+              <button type="button" class="btn btn--danger" onclick={() => vm.askEnd()}>
+                {strings.endGame}
+              </button>
             {/if}
           {/if}
-          <button type="button" class="btn" onclick={() => vm.leave()}>Leave game</button>
+          <button type="button" class="btn" onclick={() => vm.leave()}>{strings.leaveGame}</button>
         </div>
       {/if}
     {/if}
