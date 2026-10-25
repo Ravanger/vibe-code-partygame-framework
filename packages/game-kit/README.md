@@ -38,6 +38,7 @@ export const gamePackage = defineGamePackage({
 | `definition(content)` | builds the `defineGame` result for the loaded content |
 | `textFilter?` | the room's `TextFilter` (`@partygame/content/filter`); `serve` hands it to the server starter, which checks player names and the game's filtered actions |
 | `stateClass` | the synced state class (a `BaseGameState` subclass) |
+| `publicFields?` | the state's public fields, handed to the server as `HostedGame.publicFields`; a field neither listed here nor tagged `.view()` (fields of `BaseGameState` excepted) fails the server at startup |
 | `isFinished(state)` | true once the game is over; the demo tables and the demo run watch for it |
 | `botKit` | the game's `BotKit` (`roomName`, `stateClass`, `strategy`) |
 | `terminal?` | `() => TerminalStrategy`; without it `play` prints "This game has no terminal strategy." and exits 1 |
@@ -59,7 +60,7 @@ Each entry file is a stub; only `launch` takes `gameDir`, the directory of the s
 
 ### `hostedGame(pkg, content)`
 
-The `HostedGame` a server hosts: `meta.roomName`, `definition(content)` and `stateClass`.
+The `HostedGame` a server hosts: `meta.roomName`, `definition(content)`, `stateClass` and, when declared, `publicFields`.
 
 ### `buildLaunchConfig(pkg, { gameDir })` / `demoTableOptions(pkg, connection)`
 

@@ -51,3 +51,15 @@ export const CrewState = BaseGameState.extend(
   "CrewState",
 );
 export type CrewState = SchemaType<typeof CrewState>;
+
+/** The CrewState fields every client may see; `mine` is `.view()`-only. */
+export const CREW_PUBLIC_FIELDS = [
+  "round",
+  "totalRounds",
+  "roles",
+  "reveals",
+  "choices",
+  "guesses",
+  "outcome",
+  "target",
+] as const;

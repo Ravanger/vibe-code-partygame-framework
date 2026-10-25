@@ -9,6 +9,9 @@ export const TapState = BaseGameState.extend(
 );
 export type TapState = SchemaType<typeof TapState>;
 
+/** The TapState fields every client may see. */
+export const TAP_PUBLIC_FIELDS = ["taps", "done"] as const;
+
 interface TapPrivate {
   tapped: Set<string>;
 }

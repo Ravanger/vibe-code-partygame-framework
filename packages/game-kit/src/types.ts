@@ -42,6 +42,12 @@ export interface GameDeclaration<TState extends BaseGameState, TContent = undefi
   /** The room's text filter (player names and the game's filtered actions); `serve` hands it to the server starter. */
   textFilter?: TextFilter;
   stateClass: new () => TState;
+  /**
+   * The state's public fields, handed to the server as `HostedGame.publicFields`. Every field of
+   * `stateClass` that is neither listed here nor tagged `.view()` (fields of `BaseGameState`
+   * excepted) fails the server at startup.
+   */
+  publicFields?: readonly string[];
   /** True once the game is over; the demo tables watch for it. */
   isFinished(state: TState): boolean;
   botKit: BotKit<TState>;

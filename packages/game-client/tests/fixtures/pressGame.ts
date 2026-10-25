@@ -38,4 +38,6 @@ const PressGame = defineGame<PressState, Record<string, never>, Record<string, n
   },
 });
 
-export const GAMES = [{ roomName: ROOM, definition: PressGame, stateClass: PressState }];
+export const GAMES = [
+  { roomName: ROOM, definition: PressGame, stateClass: PressState, publicFields: ["presses"] },
+];

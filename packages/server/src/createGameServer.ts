@@ -1,7 +1,7 @@
 import { Server, type ServerOptions, type Transport } from "@colyseus/core";
 import type { TextFilter } from "@partygame/content/filter";
 import type { GameDefinition } from "@partygame/core";
-import type { BaseGameState } from "@partygame/shared/schema";
+import { assertSyncedFields, type BaseGameState } from "@partygame/shared/schema";
 import {
   RateLimiter,
   type RateLimits,
@@ -16,6 +16,11 @@ export interface HostedGame {
   roomName: string;
   definition: GameDefinition<BaseGameState, unknown, unknown>;
   stateClass: new () => BaseGameState;
+  /**
+   * The state's public fields. Every field of `stateClass` that is neither listed here nor tagged
+   * `.view()` (fields of `BaseGameState` excepted) fails startup in {@link createGameServer}.
+   */
+  publicFields?: readonly string[];
 }
 
 export interface GameServerOptions {
@@ -114,6 +119,7 @@ export function createGameServer(options: GameServerOptions): Server {
     ...(rateLimits.mode === "observe" ? { onObserve: warnRateLimit } : {}),
   });
   for (const game of options.games) {
+    assertSyncedFields(game.stateClass, game.publicFields ?? []);
     const config: GameRoomConfig = {
       definition: game.definition,
       stateClass: game.stateClass,

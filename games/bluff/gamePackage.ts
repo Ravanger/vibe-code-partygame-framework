@@ -5,7 +5,7 @@ import { isGameOver } from "./src/isGameOver.js";
 import { contentDir, loadContent } from "./src/loadContent.js";
 import { META } from "./src/meta.js";
 import { PHASE } from "./src/phaseNames.js";
-import { BluffState } from "./src/state.js";
+import { BLUFF_PUBLIC_FIELDS, BluffState } from "./src/state.js";
 
 /** The bluff game declared once: content loads from `content/`, the entry files are stubs over this. */
 export const gamePackage = defineGamePackage({
@@ -14,6 +14,7 @@ export const gamePackage = defineGamePackage({
   load: (env) => loadContent(contentDir(env, import.meta.url)),
   definition: (prompts) => createBluffGame({ prompts }),
   stateClass: BluffState,
+  publicFields: BLUFF_PUBLIC_FIELDS,
   isFinished: isGameOver,
   botKit: bluffKit(),
   demo: {

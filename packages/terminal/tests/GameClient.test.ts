@@ -4,14 +4,21 @@ import { type NodeServerHandle, startNodeServer } from "@partygame/server/node";
 import { CLOSE_CODES, PROTOCOL_VERSION } from "@partygame/shared";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { GameClient } from "../src/GameClient.js";
-import { TAP_ROOM, TapGame, TapState } from "./fixtures/tapGame.js";
+import { TAP_PUBLIC_FIELDS, TAP_ROOM, TapGame, TapState } from "./fixtures/tapGame.js";
 
 let handle: NodeServerHandle;
 let client: GameClient<TapState>;
 
 beforeAll(async () => {
   handle = await startNodeServer({
-    games: [{ roomName: TAP_ROOM, definition: TapGame, stateClass: TapState }],
+    games: [
+      {
+        roomName: TAP_ROOM,
+        definition: TapGame,
+        stateClass: TapState,
+        publicFields: TAP_PUBLIC_FIELDS,
+      },
+    ],
   });
   client = new GameClient(handle.endpoint, handle.apiPort, {
     roomName: TAP_ROOM,

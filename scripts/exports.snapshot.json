@@ -575,6 +575,7 @@
         "symbols": {
           "BaseGameState": {},
           "PlayerSchema": {},
+          "assertSyncedFields": {},
           "syncedJsonOf": {},
           "syncedStateFromJson": {}
         }

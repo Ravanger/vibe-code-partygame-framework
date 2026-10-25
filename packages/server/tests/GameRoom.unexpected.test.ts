@@ -3,7 +3,7 @@ import { CLOSE_CODES } from "@partygame/shared";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { RoomCodeService } from "../src/services/RoomCodeService.js";
 import { bootTestServer, type TestServer } from "../src/testing/index.js";
-import { BuzzerGame, BuzzerState } from "./fixtures/buzzer.js";
+import { BUZZER_PUBLIC_FIELDS, BuzzerGame, BuzzerState } from "./fixtures/buzzer.js";
 import { pid, stateOf } from "./support.js";
 
 const SECRET = "secret-internal-detail";
@@ -38,8 +38,18 @@ describe("unexpected failures reach the client as one fixed message", () => {
     t = await bootTestServer({
       roomCodeService: new ThrowingCodes(),
       games: [
-        { roomName: "nocode", definition: BuzzerGame, stateClass: BuzzerState },
-        { roomName: "nostate", definition: BuzzerGame, stateClass: ThrowingState },
+        {
+          roomName: "nocode",
+          definition: BuzzerGame,
+          stateClass: BuzzerState,
+          publicFields: BUZZER_PUBLIC_FIELDS,
+        },
+        {
+          roomName: "nostate",
+          definition: BuzzerGame,
+          stateClass: ThrowingState,
+          publicFields: BUZZER_PUBLIC_FIELDS,
+        },
       ],
     });
   });
@@ -66,7 +76,14 @@ describe("unexpected failures reach the client as one fixed message", () => {
 describe("an unexpected throw inside onJoin", () => {
   it("answers the fixed message and keeps serving", async () => {
     const server = await bootTestServer({
-      games: [{ roomName: "buzzer", definition: BuzzerGame, stateClass: BuzzerState }],
+      games: [
+        {
+          roomName: "buzzer",
+          definition: BuzzerGame,
+          stateClass: BuzzerState,
+          publicFields: BUZZER_PUBLIC_FIELDS,
+        },
+      ],
     });
     try {
       vi.spyOn(logger, "error").mockImplementation(() => {});

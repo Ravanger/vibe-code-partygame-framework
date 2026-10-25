@@ -1,5 +1,7 @@
+import { t as schemaField } from "@colyseus/schema";
 import { WebSocketTransport } from "@colyseus/ws-transport";
 import { RoomCodeSchema } from "@partygame/shared";
+import { BaseGameState } from "@partygame/shared/schema";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createGameServer,
@@ -10,6 +12,7 @@ import {
 } from "../src/createGameServer.js";
 import { RoomCodeService } from "../src/services/RoomCodeService.js";
 import { bootTestServer, type TestServer, waitUntil } from "../src/testing/index.js";
+import { PlainGame } from "./fixtures/buzzer.js";
 import { bootBuzzer, GAMES, startedRoom, stateOf } from "./support.js";
 
 let t: TestServer | undefined;
@@ -41,6 +44,37 @@ describe("createGameServer", () => {
     const roomCodeService = new RoomCodeService();
     t = await bootTestServer({ games: GAMES, roomCodeService });
     expect(t.roomCodeService).toBe(roomCodeService);
+  });
+
+  it("refuses to host a state class with a field that is neither listed nor .view()-tagged", () => {
+    const LeakingState = BaseGameState.extend(
+      { leaky: schemaField.number().default(0) },
+      "LeakingState",
+    );
+    expect(() =>
+      createGameServer({
+        games: [{ roomName: "leak", definition: PlainGame, stateClass: LeakingState }],
+      }),
+    ).toThrow(/LeakingState[\s\S]*leaky/);
+  });
+
+  it("hosts a state class whose fields are all listed or .view()-tagged", () => {
+    const CleanState = BaseGameState.extend(
+      { open: schemaField.number().default(0), mine: schemaField.number().default(0).view() },
+      "CleanState",
+    );
+    expect(
+      createGameServer({
+        games: [
+          {
+            roomName: "clean",
+            definition: PlainGame,
+            stateClass: CleanState,
+            publicFields: ["open"],
+          },
+        ],
+      }),
+    ).toBeDefined();
   });
 });
 

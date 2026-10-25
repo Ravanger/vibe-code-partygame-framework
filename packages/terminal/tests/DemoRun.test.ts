@@ -3,7 +3,7 @@ import { ServerProbe } from "@partygame/server/probe";
 import { ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH } from "@partygame/shared";
 import { describe, expect, it } from "vitest";
 import { DemoRun, type DemoRunOptions } from "../src/DemoRun.js";
-import { TAP_ROOM, TapGame, TapState } from "./fixtures/tapGame.js";
+import { TAP_PUBLIC_FIELDS, TAP_ROOM, TapGame, TapState } from "./fixtures/tapGame.js";
 
 const tapStrategy: BotStrategy<TapState> = {
   play: (turn) => {
@@ -23,7 +23,14 @@ const bogusStrategy: BotStrategy<TapState> = {
 const setup = (over: Partial<DemoRunOptions<TapState>> = {}) => {
   const lines: string[] = [];
   const options: DemoRunOptions<TapState> = {
-    games: [{ roomName: TAP_ROOM, definition: TapGame, stateClass: TapState }],
+    games: [
+      {
+        roomName: TAP_ROOM,
+        definition: TapGame,
+        stateClass: TapState,
+        publicFields: TAP_PUBLIC_FIELDS,
+      },
+    ],
     kit: { roomName: TAP_ROOM, stateClass: TapState, strategy: tapStrategy },
     bots: 2,
     bot: { thinkMs: [0, 20], reactMs: [0, 20] },

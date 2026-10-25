@@ -4,7 +4,7 @@ import { freePort, ServerProbe } from "@partygame/server/probe";
 import { describe, expect, it } from "vitest";
 import { defineGamePackage, type GameKitIo, type ServeOptions, serve } from "../src/index.js";
 import { fakeIo } from "./fixtures/fakeIo.js";
-import { TAP_ROOM, TapGame, TapState, tapKit } from "./fixtures/tapGame.js";
+import { TAP_PUBLIC_FIELDS, TAP_ROOM, TapGame, TapState, tapKit } from "./fixtures/tapGame.js";
 
 const ioWith = (
   env: NodeJS.ProcessEnv,
@@ -36,6 +36,7 @@ describe("serve", () => {
         return TapGame;
       },
       stateClass: TapState,
+      publicFields: TAP_PUBLIC_FIELDS,
       isFinished: () => true,
       botKit: tapKit(),
     });
@@ -66,6 +67,7 @@ describe("serve", () => {
       meta: { roomName: TAP_ROOM, minPlayers: 2, maxPlayers: 6 },
       definition: () => TapGame,
       stateClass: TapState,
+      publicFields: TAP_PUBLIC_FIELDS,
       isFinished: () => true,
       botKit: tapKit(),
       textFilter: filter,
@@ -95,6 +97,7 @@ describe("serve", () => {
         return TapGame;
       },
       stateClass: TapState,
+      publicFields: TAP_PUBLIC_FIELDS,
       isFinished: () => true,
       botKit: tapKit(),
     });
@@ -124,6 +127,7 @@ describe("serve", () => {
       },
       definition: () => TapGame,
       stateClass: TapState,
+      publicFields: TAP_PUBLIC_FIELDS,
       isFinished: () => true,
       botKit: tapKit(),
     });
@@ -138,6 +142,7 @@ describe("serve", () => {
       meta: { roomName: TAP_ROOM, minPlayers: 2, maxPlayers: 6 },
       definition: () => TapGame,
       stateClass: TapState,
+      publicFields: TAP_PUBLIC_FIELDS,
       isFinished: () => true,
       botKit: tapKit(),
     });
@@ -154,6 +159,7 @@ describe("serve", () => {
       meta: { roomName: TAP_ROOM, minPlayers: 2, maxPlayers: 6 },
       definition: () => TapGame,
       stateClass: TapState,
+      publicFields: TAP_PUBLIC_FIELDS,
       isFinished: () => true,
       botKit: tapKit(),
     });

@@ -19,5 +19,22 @@ describe("hostedGame", () => {
     expect(hosted.stateClass).toBe(TapState);
     expect(hosted.definition).toBe(TapGame);
     expect(definition).toHaveBeenCalledWith("content");
+    expect(hosted.publicFields).toBeUndefined();
+  });
+
+  it("passes the declaration's publicFields through to the hosted game", () => {
+    const definition = vi.fn(() => TapGame);
+    const hosted = hostedGame(
+      {
+        meta: { roomName: TAP_ROOM, minPlayers: 2, maxPlayers: 6 },
+        definition,
+        stateClass: TapState,
+        publicFields: ["taps", "done"],
+        isFinished: () => true,
+        botKit: tapKit(),
+      },
+      undefined,
+    );
+    expect(hosted.publicFields).toEqual(["taps", "done"]);
   });
 });

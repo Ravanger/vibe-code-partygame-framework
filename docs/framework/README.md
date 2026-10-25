@@ -703,6 +703,12 @@ Tag a synced field `.view()`, put per-player entries in it, and reveal each with
 `ctx.hideFrom` revokes. The room remembers what each player may see and re-applies it on every reconnect, so nothing is resent.
 Call `hideFrom` before you delete an entry, or the room will try to re-add it on reconnect.
 
+The boundary is enforced mechanically at startup: `createGameServer` checks every hosted state class and fails loudly —
+naming the class and every offending field — if a field is neither tagged `.view()` nor listed in the game's
+`publicFields` (fields of `BaseGameState` are always allowed; nested schema classes inherit their holding field's
+visibility). Declare the list on `HostedGame.publicFields`, or on the game-kit declaration's `publicFields`, which is
+handed to the server. A state class with no own fields beyond `BaseGameState` needs no list.
+
 ### Testing a game
 ```ts
 import { bootTestServer, waitUntil, collectMessages, seatPlayers, stateOf } from "@partygame/server/testing";

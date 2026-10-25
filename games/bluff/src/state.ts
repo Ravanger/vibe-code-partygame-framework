@@ -55,3 +55,17 @@ export const BluffState = BaseGameState.extend(
   "BluffState",
 );
 export type BluffState = SchemaType<typeof BluffState>;
+
+/** The BluffState fields every client may see; `mine` is `.view()`-only. */
+export const BLUFF_PUBLIC_FIELDS = [
+  "promptText",
+  "roundNumber",
+  "totalRounds",
+  "choices",
+  "truthRevealedId",
+  "votesCast",
+  "votesExpected",
+  "progress",
+  "results",
+  "scoreboard",
+] as const;

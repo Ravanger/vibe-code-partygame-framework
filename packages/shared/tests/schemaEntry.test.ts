@@ -6,6 +6,7 @@ describe("@partygame/shared/schema", () => {
     expect(Object.keys(entry).sort()).toEqual([
       "BaseGameState",
       "PlayerSchema",
+      "assertSyncedFields",
       "syncedJsonOf",
       "syncedStateFromJson",
     ]);

@@ -10,7 +10,7 @@ import {
   testPlayerId,
   waitUntil,
 } from "../src/testing/index.js";
-import { BuzzerGame, BuzzerState, PlainGame } from "./fixtures/buzzer.js";
+import { BUZZER_PUBLIC_FIELDS, BuzzerGame, BuzzerState, PlainGame } from "./fixtures/buzzer.js";
 import { sleep } from "./support.js";
 
 let t: TestServer;
@@ -18,7 +18,12 @@ let t: TestServer;
 beforeAll(async () => {
   t = await bootTestServer({
     games: [
-      { roomName: "buzzer", definition: BuzzerGame, stateClass: BuzzerState },
+      {
+        roomName: "buzzer",
+        definition: BuzzerGame,
+        stateClass: BuzzerState,
+        publicFields: BUZZER_PUBLIC_FIELDS,
+      },
       { roomName: "plain", definition: PlainGame, stateClass: BaseGameState },
     ],
   });

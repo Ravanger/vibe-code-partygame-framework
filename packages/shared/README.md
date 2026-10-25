@@ -5,7 +5,7 @@ Wire protocol (message names, error codes, zod schemas), limits and browser-safe
 | Import | What |
 |---|---|
 | `@partygame/shared` | `ClientMessage`, `ServerMessage`, `ErrorCode`, `ActionResult`, `ServerError`, `isActionResult`, `isServerError`, `LOBBY_PHASE`, `PROTOCOL_VERSION`, zod schemas (`PlayerIdSchema`, `RoomCodeSchema`, `JoinOptionsSchema`, ...), `NAME_MAX_LENGTH`, `MAX_SEATS`, `MAX_OPTIONS_JSON_LENGTH`, `ROOM_CODE_LENGTH`, `ROOM_CODE_ALPHABET`, `sanitizeRoomCode`, error model (`FrameworkError`, `CLOSE_CODES`, `closeCodeEntry`, `CLIENT_MESSAGES`) |
-| `@partygame/shared/schema` | `BaseGameState`, `PlayerSchema`: extend these in your game state; `syncedJsonOf` (plain JSON of a synced state, `.view()` fields dropped) and its inverse `syncedStateFromJson` (a fresh instance filled from that JSON) |
+| `@partygame/shared/schema` | `BaseGameState`, `PlayerSchema`: extend these in your game state; `assertSyncedFields(stateClass, allow)` (fail loudly when a state field is neither allow-listed nor `.view()`-tagged); `syncedJsonOf` (plain JSON of a synced state, `.view()` fields dropped) and its inverse `syncedStateFromJson` (a fresh instance filled from that JSON) |
 
 Client helpers (polling, room-code resolution, share links, argument parsing) live in [`@partygame/client-utils`](../client-utils/README.md).
 

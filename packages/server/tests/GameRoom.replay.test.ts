@@ -11,7 +11,13 @@ import { BaseGameState } from "@partygame/shared/schema";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import type { TestServer } from "../src/testing/index.js";
 import { bootTestServer, waitUntil } from "../src/testing/index.js";
-import { BuzzerGame, type BuzzerOptions, BuzzerState, PlainGame } from "./fixtures/buzzer.js";
+import {
+  BUZZER_PUBLIC_FIELDS,
+  BuzzerGame,
+  type BuzzerOptions,
+  BuzzerState,
+  PlainGame,
+} from "./fixtures/buzzer.js";
 import { pid, type Seated, seat, stateOf } from "./support.js";
 
 const LOGGED_BUZZER: typeof BuzzerGame = { ...BuzzerGame, middleware: [actionLogMiddleware()] };
@@ -35,10 +41,25 @@ const BOOM_HASH_BUZZER = {
 };
 
 const GAMES = [
-  { roomName: "buzzer", definition: LOGGED_BUZZER, stateClass: BuzzerState },
+  {
+    roomName: "buzzer",
+    definition: LOGGED_BUZZER,
+    stateClass: BuzzerState,
+    publicFields: BUZZER_PUBLIC_FIELDS,
+  },
   { roomName: "plain", definition: PlainGame, stateClass: BaseGameState },
-  { roomName: "dropping", definition: DROPPING_BUZZER, stateClass: BuzzerState },
-  { roomName: "boomhash", definition: BOOM_HASH_BUZZER, stateClass: BuzzerState },
+  {
+    roomName: "dropping",
+    definition: DROPPING_BUZZER,
+    stateClass: BuzzerState,
+    publicFields: BUZZER_PUBLIC_FIELDS,
+  },
+  {
+    roomName: "boomhash",
+    definition: BOOM_HASH_BUZZER,
+    stateClass: BuzzerState,
+    publicFields: BUZZER_PUBLIC_FIELDS,
+  },
 ];
 
 let t: TestServer;

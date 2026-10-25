@@ -12,7 +12,9 @@ Generic Colyseus server: host any game defined with `@partygame/core`.
 
 ## Host a game
 
-A hosted game is a room name, your `defineGame` definition and your state class (extending `BaseGameState`). `startServer` is the Bun entry point; it serves the game on `port` (env `PORT`, default 2567; a non-integer or out-of-range value throws `PORT must be a whole number from 1 to 65535`) and `/api/resolve-code` on `apiPort` (env `API_PORT`, default 3001).
+A hosted game is a room name, your `defineGame` definition, your state class (extending `BaseGameState`) and your
+`publicFields`: every state field that is neither listed there nor tagged `.view()` (fields of `BaseGameState` excepted)
+fails `createGameServer` at startup, naming the class and each offending field. `startServer` is the Bun entry point; it serves the game on `port` (env `PORT`, default 2567; a non-integer or out-of-range value throws `PORT must be a whole number from 1 to 65535`) and `/api/resolve-code` on `apiPort` (env `API_PORT`, default 3001).
 
 ```ts
 // server.ts
@@ -20,7 +22,11 @@ import { startServer } from "@partygame/server/bun";
 import { ButtonGame } from "./src/game.js";
 import { ButtonState } from "./src/state.js";
 
-await startServer({ games: [{ roomName: "button", definition: ButtonGame, stateClass: ButtonState }] });
+await startServer({
+  games: [
+    { roomName: "button", definition: ButtonGame, stateClass: ButtonState, publicFields: ["winner"] },
+  ],
+});
 ```
 
 Clients join with `{ playerId, name? }`; `spectator: true` gives a TV display with no seat. A dropped player keeps the seat for `reconnectMs` (default 60 s); an empty room lives `emptyRoomGraceMs` (default 120 s). A room admits at most `maxPlayers + audienceSlots` connections (default 32, `DEFAULT_AUDIENCE_SLOTS`). With a `textFilter`, names are checked at join and on `SET_NAME` at the game's `filterLevel` option (default `"off"`); a refused join closes with code 4405.

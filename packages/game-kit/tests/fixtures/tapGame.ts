@@ -48,6 +48,9 @@ export const TapGame = defineGame<TapState, TapPrivate, Record<string, never>>({
 
 export const TAP_ROOM = "tap";
 
+/** The TapState fields every client may see. */
+export const TAP_PUBLIC_FIELDS = ["taps", "done"] as const;
+
 /** Taps once when the tap phase is live. */
 const tapStrategy: BotStrategy<TapState> = {
   play: (turn) => {

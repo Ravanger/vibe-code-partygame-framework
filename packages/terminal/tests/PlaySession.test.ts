@@ -8,9 +8,14 @@ import { afterEach, describe, expect, it } from "vitest";
 import { GameClient } from "../src/GameClient.js";
 import { PlaySession, type PlaySessionOptions, type SessionPlayer } from "../src/PlaySession.js";
 import { ScriptedIo } from "../src/testing.js";
-import { TAP_ROOM, TapGame, TapState } from "./fixtures/tapGame.js";
+import { TAP_PUBLIC_FIELDS, TAP_ROOM, TapGame, TapState } from "./fixtures/tapGame.js";
 
-const game = { roomName: TAP_ROOM, definition: TapGame, stateClass: TapState };
+const game = {
+  roomName: TAP_ROOM,
+  definition: TapGame,
+  stateClass: TapState,
+  publicFields: TAP_PUBLIC_FIELDS,
+};
 const kit: BotKit<TapState> = {
   roomName: TAP_ROOM,
   stateClass: TapState,

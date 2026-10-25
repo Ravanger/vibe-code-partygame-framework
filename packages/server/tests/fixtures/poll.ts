@@ -14,6 +14,9 @@ export const PollState = BaseGameState.extend(
 );
 export type PollState = SchemaType<typeof PollState>;
 
+/** The PollState fields every client may see. */
+export const POLL_PUBLIC_FIELDS = ["taps", "votesA", "votesB"] as const;
+
 const action = actionFactory<PollState, Record<string, never>, Record<string, unknown>>();
 
 /** A single-seat game that starts directly in `Play`: the audience votes, the seat tallies. */

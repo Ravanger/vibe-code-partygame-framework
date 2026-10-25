@@ -18,7 +18,7 @@ import { BotTable } from "../src/BotTable.js";
 import { DemoTable } from "../src/DemoTable.js";
 import { joinBots } from "../src/joinBots.js";
 import type { BotKit } from "../src/types.js";
-import { TAP_ROOM, TapGame, TapState } from "./fixtures/tapGame.js";
+import { TAP_PUBLIC_FIELDS, TAP_ROOM, TapGame, TapState } from "./fixtures/tapGame.js";
 
 class RecordingCodes extends RoomCodeService {
   readonly codes: string[] = [];
@@ -78,8 +78,18 @@ beforeAll(async () => {
   t = await bootTestServer({
     roomCodeService: codes,
     games: [
-      { roomName: TAP_ROOM, definition: TapGame, stateClass: TapState },
-      { roomName: PAD_ROOM, definition: PaddedGame, stateClass: PaddedState },
+      {
+        roomName: TAP_ROOM,
+        definition: TapGame,
+        stateClass: TapState,
+        publicFields: TAP_PUBLIC_FIELDS,
+      },
+      {
+        roomName: PAD_ROOM,
+        definition: PaddedGame,
+        stateClass: PaddedState,
+        publicFields: [...TAP_PUBLIC_FIELDS, "pad"],
+      },
     ],
   });
   apiPort = await t.serveApi();

@@ -130,3 +130,26 @@ export const WitClashState = BaseGameState.extend(
   "WitClashState",
 );
 export type WitClashState = SchemaType<typeof WitClashState>;
+
+/** The WitClashState fields every client may see; `mine` is `.view()`-only. */
+export const WITCLASH_PUBLIC_FIELDS = [
+  "categoryOptions",
+  "selectedCategory",
+  "roundNumber",
+  "totalRounds",
+  "isFinalRound",
+  "matchups",
+  "activeMatchupIndex",
+  "votesCast",
+  "votesExpected",
+  "progress",
+  "answersPerPlayer",
+  "rejectedTexts",
+  "scoreboard",
+  "tieBreakers",
+  "tieBreakerContenders",
+  "bestAnswers",
+  "awards",
+  "honorWinnerNames",
+  "typing",
+] as const;

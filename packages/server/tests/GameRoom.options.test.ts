@@ -5,7 +5,7 @@ import { BaseGameState } from "@partygame/shared/schema";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { bootTestServer, type TestServer } from "../src/testing/index.js";
-import { BuzzerGame, BuzzerState, PlainGame } from "./fixtures/buzzer.js";
+import { BUZZER_PUBLIC_FIELDS, BuzzerGame, BuzzerState, PlainGame } from "./fixtures/buzzer.js";
 
 const LargeOptionsSchema = z.object({ data: z.string().optional() });
 const LargeOptionsGame = defineGame<
@@ -28,7 +28,12 @@ beforeAll(async () => {
   t = await bootTestServer({
     games: [
       { roomName: "plain", definition: PlainGame, stateClass: BaseGameState },
-      { roomName: "buzzer", definition: BuzzerGame, stateClass: BuzzerState },
+      {
+        roomName: "buzzer",
+        definition: BuzzerGame,
+        stateClass: BuzzerState,
+        publicFields: BUZZER_PUBLIC_FIELDS,
+      },
       { roomName: "large", definition: LargeOptionsGame, stateClass: BaseGameState },
     ],
   });
