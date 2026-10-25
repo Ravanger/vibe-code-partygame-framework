@@ -853,6 +853,21 @@ root (GameControls menu and dialog, LobbySettings summary, NameInput, Podium, Qr
 `secondsRemaining(n)` function entry). The table carries a `clientStrings` field: pass the same object to both the manager's `strings` option and
 `setStrings`, and one table localises both layers.
 
+On the server side, every message the core runtime owns (the lobby built-ins' refusals, the failure notice in `state.notice`, the stopped-runtime
+error, and the runtime's refusal log messages) comes from `defaultCoreStrings` (`@partygame/core`). Pass a partial table as the definition's
+`strings` field — it lives on the game definition, so replays and tests see it; `defineGame` fills in the defaults:
+
+```ts
+const game = defineGame<ButtonState, Priv>({
+  // ...
+  strings: { cannotKickSelf: "Du kannst dich nicht selbst rausschmeißen", needAtLeast: (n) => `Noch ${n - 1} Spieler fehlen` },
+});
+```
+
+Function entries receive their arguments (`needAtLeast(minPlayers)`, `notAllowedToSend(action)`). The client-visible entries reach players in
+`ERROR` payloads or `state.notice`; the log-only ones are `FrameworkError` messages, where clients see the fixed `CLIENT_MESSAGES` text for the
+code. Your own game-authored `ctx.reject` text is not part of this table.
+
 ## Game UI viewmodels
 
 `@partygame/game-ui` holds the generic client viewmodels (Svelte 5 runes, no components), typed on `GameConnectionManager<TState extends BaseGameState>`. Import it through the `svelte` export condition (Vite with the Svelte plugin), like `game-client`.

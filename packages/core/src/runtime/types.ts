@@ -2,6 +2,7 @@ import type { FilterLevel } from "@partygame/content/filter";
 import type { ErrorCode } from "@partygame/shared";
 import type { z } from "zod";
 import type { Seed } from "../utils.js";
+import type { CoreStrings } from "./strings.js";
 
 /** `"host"` is the room owner; everyone else is a `"player"`. */
 export type PlayerRole = "host" | "player";
@@ -241,6 +242,8 @@ export interface GameDefinition<
   options?: z.ZodType<TOptions>;
   /** The room's text-filter level, from the parsed options (e.g. a host-picked lobby option). Default `"off"`. */
   filterLevel?(options: TOptions): FilterLevel;
+  /** Replaces the core-owned messages (lobby built-ins, runtime refusals); see {@link CoreStrings}. `defineGame` fills in the defaults. */
+  strings?: Partial<CoreStrings>;
   /** Called once per room (and per replay table); must return a fresh object each call, never a shared one: the action log and phase timings are keyed by it. */
   createPrivateState(): TPrivate;
   /** `"Lobby"` is reserved and built in. */
