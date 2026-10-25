@@ -146,6 +146,8 @@ After a player reconnects, `onPlayerSync(ctx, playerId)` runs so you can resend 
 ### Join control
 A game declares an optional synchronous `canJoin(input): CanJoinResult` on the definition to gate every join — including spectators and creation joins (there is no separate `canCreate`; creating a room joins through `onJoin`). The input carries `playerId`, the proposed `name`, the `spectator` flag, the client's `joinData` (string/number/boolean values) and the current `roster`. Return `{ ok: true }` to admit, or `{ ok: false, code, message }` to refuse with a game-authored message (for example `code: "ROOM_LOCKED"`); the refusal is not an `ErrorCode`, it is shown to the joining client as-is. The hook must be synchronous — core stays deterministic and Colyseus-free, so external auth stays out of it.
 
+The client sends `joinData` with `manager.join(code, { joinData })`: at most 8 keys, keys up to 32 characters, string values up to 256 characters (numbers and booleans unbounded) — enforced by `JoinOptionsSchema`. It is a one-shot per join: the framework never stores or logs it (it may hold a password), so it is not resent when a client resumes after a reload.
+
 The runtime evaluates it through the pure `evaluateJoin(definition, input)`: no hook accepts; a refusal message is trimmed and capped at 200 characters; a throwing hook yields the generic refusal `{ ok: false, code: "JOIN_REFUSED", message: "You cannot join this room." }` instead of crashing the join.
 
 ### Timers

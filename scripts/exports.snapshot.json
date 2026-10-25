@@ -296,6 +296,7 @@
           "EndpointOverrides": {},
           "GameConnectionManager": {},
           "GameConnectionOptions": {},
+          "JoinOptions": {},
           "RoomLike": {},
           "readCodeParam": {},
           "resolveEndpoints": {}
@@ -546,6 +547,9 @@
           "ExportReplayResponse": {},
           "FRAMEWORK_VERSION": {},
           "FrameworkError": {},
+          "JOIN_DATA_KEY_MAX_LENGTH": {},
+          "JOIN_DATA_MAX_KEYS": {},
+          "JOIN_DATA_VALUE_MAX_LENGTH": {},
           "JoinOptionsSchema": {},
           "KICK_PLAYER": {},
           "LOBBY_PHASE": {},

@@ -1,5 +1,8 @@
 import { z } from "zod";
 import {
+  JOIN_DATA_KEY_MAX_LENGTH,
+  JOIN_DATA_MAX_KEYS,
+  JOIN_DATA_VALUE_MAX_LENGTH,
   MAX_ENVELOPE_KEYS,
   MAX_SEATS,
   NAME_MAX_LENGTH,
@@ -161,6 +164,15 @@ export const PlayerIdSchema = z
  */
 export const PROTOCOL_VERSION = 1;
 
+/**
+ * The bounded data map a client may send with a join (an invite code or password). It reaches the
+ * game's `canJoin` hook and is never logged or stored by the framework.
+ */
+const JoinDataSchema = z.record(
+  z.string().min(1).max(JOIN_DATA_KEY_MAX_LENGTH),
+  z.union([z.string().max(JOIN_DATA_VALUE_MAX_LENGTH), z.number(), z.boolean()]),
+);
+
 /** Options a client passes when joining a room. `spectator` joins without taking a seat. */
 export const JoinOptionsSchema = z.object({
   playerId: PlayerIdSchema,
@@ -170,6 +182,10 @@ export const JoinOptionsSchema = z.object({
   seatSecret: z.string().min(16).max(128).optional(),
   /** The protocol version the client speaks; optional so a missing one gets the version-mismatch close, not an invalid-options error. */
   protocolVersion: z.number().int().optional(),
+  /** Bounded data for the game's `canJoin` hook (string/number/boolean values); at most `JOIN_DATA_MAX_KEYS` keys. */
+  joinData: JoinDataSchema.refine(
+    (data) => Object.keys(data).length <= JOIN_DATA_MAX_KEYS,
+  ).optional(),
 });
 
 /**

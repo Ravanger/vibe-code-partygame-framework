@@ -913,3 +913,20 @@ describe("protocol versioning", () => {
     },
   );
 });
+
+describe("joinData", () => {
+  it("sends joinData with the join and never stores it", async () => {
+    const manager = newManager();
+    const { room } = seated(manager);
+    stubFetchReply({ roomId: "room-1" });
+    const joined = vi.spyOn(Client.prototype, "joinById").mockResolvedValue(room as never);
+    await manager.join("WXYZ", { joinData: { invite: "s3cret", seats: 4, vip: true } });
+    expect(joined).toHaveBeenCalledWith(
+      "room-1",
+      expect.objectContaining({ joinData: { invite: "s3cret", seats: 4, vip: true } }),
+      undefined,
+    );
+    const stored = [...Object.values(localStorage), ...Object.values(sessionStorage)].join("\n");
+    expect(stored).not.toContain("s3cret");
+  });
+});

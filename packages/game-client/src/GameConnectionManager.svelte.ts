@@ -47,6 +47,16 @@ export interface GameConnectionOptions<TState> {
   logger?: (message: string, error: unknown) => void;
 }
 
+/** Options for {@link GameConnectionManager.join}; the manager adds `playerId`, `seatSecret` and `protocolVersion` itself. */
+export interface JoinOptions {
+  /** The name to join with; validated like `SET_NAME`. */
+  name?: string;
+  /** Join without a seat, as a TV display does. */
+  spectator?: boolean;
+  /** Bounded data for the game's `canJoin` hook (an invite code or password); sent once per join, never stored or logged. */
+  joinData?: Record<string, string | number | boolean>;
+}
+
 const DEFAULT_API_PORT = 3001;
 const DEFAULT_SYNC_TIMEOUT_MS = 10_000;
 
@@ -142,7 +152,8 @@ export class GameConnectionManager<
     );
   }
 
-  async join(code: string, options: Record<string, unknown> = {}): Promise<void> {
+  /** Joins the room for `code` by its code; throws with the server's reason. */
+  async join(code: string, options: JoinOptions = {}): Promise<void> {
     const clean = code.trim().toUpperCase();
     if (!RoomCodeSchema.safeParse(clean).success) {
       throw new Error(`Game code must be ${ROOM_CODE_LENGTH} letters (A-Z)`);
