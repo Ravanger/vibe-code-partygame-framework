@@ -107,12 +107,17 @@ describe("TestServer protocol versioning", () => {
       await t.join(room, { playerId: "player-0001" });
       expect(spy).toHaveBeenLastCalledWith(room.roomId, {
         playerId: "player-0001",
+        seatSecret: t.seatSecretFor("player-0001"),
         protocolVersion: PROTOCOL_VERSION,
       });
       await t.joinAs(room, { playerId: "player-0002" }, BaseGameState);
       expect(spy).toHaveBeenLastCalledWith(
         room.roomId,
-        { playerId: "player-0002", protocolVersion: PROTOCOL_VERSION },
+        {
+          playerId: "player-0002",
+          seatSecret: t.seatSecretFor("player-0002"),
+          protocolVersion: PROTOCOL_VERSION,
+        },
         BaseGameState,
       );
     } finally {
@@ -123,5 +128,34 @@ describe("TestServer protocol versioning", () => {
   it("stamps created rooms with the current protocol version, not overridable by the caller", async () => {
     const room = await t.createRoom("plain", { protocolVersion: 9 });
     expect(stateOf(room, BaseGameState).players.size).toBe(0);
+  });
+});
+
+describe("TestServer seat secrets", () => {
+  it("is stable per player id and distinct across ids", () => {
+    const first = t.seatSecretFor("player-0010");
+    expect(first).toMatch(/^[0-9a-f-]{72}$/);
+    expect(t.seatSecretFor("player-0010")).toBe(first);
+    expect(t.seatSecretFor("player-0011")).not.toBe(first);
+  });
+
+  it("joins with the player's stable secret", async () => {
+    const room = await t.createRoom("plain");
+    // No mock implementation: the real join lands, and the spy records its options.
+    const spy = vi.spyOn(t.sdk, "joinById");
+    try {
+      await joinPlayer(t, room, 3, BaseGameState);
+      expect(spy).toHaveBeenLastCalledWith(
+        room.roomId,
+        {
+          playerId: "player-0003",
+          seatSecret: t.seatSecretFor("player-0003"),
+          protocolVersion: PROTOCOL_VERSION,
+        },
+        BaseGameState,
+      );
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

@@ -853,6 +853,20 @@ describe("protocol versioning", () => {
     );
   });
 
+  it("sends the persisted seat secret when joining", async () => {
+    const manager = newManager();
+    const { room } = seated(manager);
+    stubFetchReply({ roomId: "room-1" });
+    const joined = vi.spyOn(Client.prototype, "joinById").mockResolvedValue(room as never);
+    await manager.join("WXYZ");
+    expect(joined).toHaveBeenCalledWith(
+      "room-1",
+      expect.objectContaining({ seatSecret: expect.stringMatching(/^[0-9a-f-]{72}$/) }),
+      undefined,
+    );
+    expect(localStorage.getItem(`unit${counter}.seatSecret`)).toMatch(/^[0-9a-f-]{72}$/);
+  });
+
   it("shows both versions when a join is refused for a protocol mismatch", async () => {
     const manager = newManager();
     stubFetchReply({ roomId: "room-1" });

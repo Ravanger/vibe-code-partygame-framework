@@ -149,7 +149,12 @@ export class GameConnectionManager<
         async () =>
           this.client.joinById<TState>(
             await resolveRoomCode(this.apiBase, clean),
-            { ...options, playerId: this.playerId, protocolVersion: PROTOCOL_VERSION },
+            {
+              ...options,
+              playerId: this.playerId,
+              seatSecret: this.session.seatSecret,
+              protocolVersion: PROTOCOL_VERSION,
+            },
             this.options.rootSchema,
           ),
         spectator,

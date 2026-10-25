@@ -48,7 +48,11 @@ export class GameClient<TState extends BaseGameState> {
     const roomId = await resolveRoomCode(this.apiBase, code);
     const room = await this.client.joinById<TState>(
       roomId,
-      { ...options, protocolVersion: PROTOCOL_VERSION },
+      {
+        ...options,
+        seatSecret: crypto.randomUUID() + crypto.randomUUID(),
+        protocolVersion: PROTOCOL_VERSION,
+      },
       this.game.stateClass,
     );
     // The SDK leaves room.state undefined until the first sync lands; poll it as if absent.

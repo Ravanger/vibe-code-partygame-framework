@@ -1,8 +1,9 @@
 const KINDS = { local: "localStorage", session: "sessionStorage" } as const;
 
-/** What survives a page reload: a stable player id, the room code, whether it was joined as a spectator, and the current reconnection token. */
+/** What survives a page reload: a stable player id, the seat secret, the room code, whether it was joined as a spectator, and the current reconnection token. */
 export class PersistedSession {
   private id: string | undefined;
+  private seatSecretCache: string | undefined;
 
   constructor(private readonly prefix: string) {}
 
@@ -10,6 +11,14 @@ export class PersistedSession {
     this.id ??=
       this.read("local", "playerId") ?? this.write("local", "playerId", crypto.randomUUID());
     return this.id;
+  }
+
+  /** The client's per-seat credential: two UUIDs joined, generated once per session and kept until {@link clear}. */
+  get seatSecret(): string {
+    this.seatSecretCache ??=
+      this.read("local", "seatSecret") ??
+      this.write("local", "seatSecret", crypto.randomUUID() + crypto.randomUUID());
+    return this.seatSecretCache;
   }
 
   get token(): string | undefined {
@@ -39,6 +48,8 @@ export class PersistedSession {
 
   clear(): void {
     this.remove("local", "roomCode");
+    this.remove("local", "seatSecret");
+    this.seatSecretCache = undefined;
     this.remove("local", "spectator");
     this.remove("session", "reconnectionToken");
   }

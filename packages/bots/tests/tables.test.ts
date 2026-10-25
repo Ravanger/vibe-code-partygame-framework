@@ -193,6 +193,25 @@ describe("joinBots", () => {
     }
   });
 
+  it("sends a fresh seat secret on every bot join", async () => {
+    const room = await humanRoom("Ann");
+    const spy = vi.spyOn(Client.prototype, "joinById");
+    try {
+      const bots = await join(room.state.roomCode, 2);
+      expect(spy.mock.calls.length).toBe(2);
+      for (const call of spy.mock.calls) {
+        expect(call[1]).toEqual(
+          expect.objectContaining({ seatSecret: expect.stringMatching(/^[0-9a-f-]{72}$/) }),
+        );
+      }
+      expect(bots.map((bot) => bot.playerId)).toEqual(
+        spy.mock.calls.map((call) => call[1].playerId),
+      );
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("times out when the initial state has not arrived", async () => {
     // The SDK resolves joinById before the first state sync; room.state is undefined until it lands.
     const room = await humanRoom("Ann");

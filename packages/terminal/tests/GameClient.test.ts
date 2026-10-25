@@ -92,4 +92,30 @@ describe("GameClient", () => {
       joinSpy.mockRestore();
     }
   });
+
+  it("sends a fresh seat secret on every join", async () => {
+    const host = await client.create(crypto.randomUUID(), "Ann");
+    const joinSpy = vi.spyOn(Client.prototype, "joinById");
+    try {
+      const bob = await client.join(host.state.roomCode, crypto.randomUUID(), "Bob");
+      expect(joinSpy).toHaveBeenLastCalledWith(
+        expect.any(String),
+        expect.objectContaining({ seatSecret: expect.stringMatching(/^[0-9a-f-]{72}$/) }),
+        TapState,
+      );
+      const bobSecret = joinSpy.mock.calls.at(-1)?.[1].seatSecret;
+      const carol = await client.join(host.state.roomCode, crypto.randomUUID(), "Carol");
+      expect(joinSpy).toHaveBeenLastCalledWith(
+        expect.any(String),
+        expect.objectContaining({ seatSecret: expect.stringMatching(/^[0-9a-f-]{72}$/) }),
+        TapState,
+      );
+      expect(joinSpy.mock.calls.at(-1)?.[1].seatSecret).not.toBe(bobSecret);
+      await bob.leave(true);
+      await carol.leave(true);
+    } finally {
+      joinSpy.mockRestore();
+      await host.leave(true);
+    }
+  });
 });

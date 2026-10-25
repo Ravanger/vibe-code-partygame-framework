@@ -166,6 +166,8 @@ export const JoinOptionsSchema = z.object({
   playerId: PlayerIdSchema,
   name: SetNameSchema.optional(),
   spectator: z.boolean().optional(),
+  /** The client's per-seat credential; one per session for browsers, one per join for bots and terminal clients. Optional so a missing one gets the server's own refusal, not an invalid-options error. */
+  seatSecret: z.string().min(16).max(128).optional(),
   /** The protocol version the client speaks; optional so a missing one gets the version-mismatch close, not an invalid-options error. */
   protocolVersion: z.number().int().optional(),
 });

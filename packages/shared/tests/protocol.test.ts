@@ -202,6 +202,23 @@ describe("JoinOptionsSchema", () => {
     expect(JoinOptionsSchema.safeParse({ playerId: id, protocolVersion: 2.5 }).success).toBe(false);
     expect(JoinOptionsSchema.safeParse({ playerId: id, protocolVersion: "1" }).success).toBe(false);
   });
+
+  it("accepts an optional seatSecret of 16 to 128 characters", () => {
+    const id = "a".repeat(8);
+    expect(JoinOptionsSchema.safeParse({ playerId: id, seatSecret: "x".repeat(15) }).success).toBe(
+      false,
+    );
+    expect(JoinOptionsSchema.parse({ playerId: id, seatSecret: "x".repeat(16) })).toEqual({
+      playerId: id,
+      seatSecret: "x".repeat(16),
+    });
+    expect(JoinOptionsSchema.safeParse({ playerId: id, seatSecret: "x".repeat(128) }).success).toBe(
+      true,
+    );
+    expect(JoinOptionsSchema.safeParse({ playerId: id, seatSecret: "x".repeat(129) }).success).toBe(
+      false,
+    );
+  });
 });
 
 describe("isServerError", () => {

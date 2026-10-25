@@ -48,6 +48,18 @@ export class TestServer {
     readonly endpoint: string,
   ) {}
 
+  private readonly seatSecrets = new Map<string, string>();
+
+  /** The stable per-playerId seat secret this server's joins send; a test reconnect reuses it. */
+  seatSecretFor(playerId: string): string {
+    let secret = this.seatSecrets.get(playerId);
+    if (secret === undefined) {
+      secret = crypto.randomUUID() + crypto.randomUUID();
+      this.seatSecrets.set(playerId, secret);
+    }
+    return secret;
+  }
+
   /** Create a room server-side; resolves with the live room object for state inspection. */
   async createRoom(roomName: string, options: Record<string, unknown> = {}): Promise<Room> {
     const listing = await matchMaker.createRoom(roomName, {
@@ -59,7 +71,11 @@ export class TestServer {
 
   /** Join `room` as a player (or a spectator). Send `SET_NAME` yourself to become ready. */
   join(room: Room, options: TestJoinOptions): Promise<ClientRoom> {
-    return this.sdk.joinById(room.roomId, { ...options, protocolVersion: PROTOCOL_VERSION });
+    return this.sdk.joinById(room.roomId, {
+      ...options,
+      seatSecret: this.seatSecretFor(options.playerId),
+      protocolVersion: PROTOCOL_VERSION,
+    });
   }
 
   /** Like {@link TestServer.join}, with the client state typed as `stateClass`. */
@@ -70,7 +86,11 @@ export class TestServer {
   ): Promise<ClientRoom<unknown, TState>> {
     return this.sdk.joinById<TState>(
       room.roomId,
-      { ...options, protocolVersion: PROTOCOL_VERSION },
+      {
+        ...options,
+        seatSecret: this.seatSecretFor(options.playerId),
+        protocolVersion: PROTOCOL_VERSION,
+      },
       stateClass,
     );
   }

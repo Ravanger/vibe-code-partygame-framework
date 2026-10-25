@@ -697,6 +697,7 @@ ann.client.state.winner;                               // the client's own typed
 bob.errors;                                            // every well-formed ERROR bob received
 ```
 `joinPlayer(t, room, n, stateClass)` joins one player without a name; `TestPlayer.setName(name?)` readies it.
+Every join sends a seat secret: `t.seatSecretFor(playerId)` returns the stable per-player-id value, so a test reconnect presents the same one.
 A runnable example is the fixture in `packages/server/tests/fixtures/buzzer.ts`.
 
 ## Client SDK
@@ -726,6 +727,7 @@ const result = await manager.sendAction("PRESS", { power: 3 });
 |---|---|
 | `status` | `"idle" \| "connecting" \| "connected" \| "reconnecting" \| "disconnected"` (`$state`) |
 | `playerId` | stable UUID kept in `localStorage` under `${storagePrefix}.playerId` |
+| seat secret | sent on every `join`: two UUIDs joined, generated once per session and kept in `localStorage` under `${storagePrefix}.seatSecret`. Cleared with the rest of the session when leaving, so a re-join gets a fresh one |
 | `state` | the room's state, or `undefined` outside a room; reactive (below) |
 | `roomCode`, `isHost`, `isSpectator`, `me()` | from `state`; `me()` is your `PlayerSchema` seat (`undefined` for spectators); `isSpectator` is true in a room without a seat |
 | `create(opts?)`, `join(code, opts?)`, `joinAsSpectator(code)`, `resume()`, `leave()` | connect and disconnect. `create`/`join`/`resume` resolve once the first state has arrived. `join` throws with the server's reason for an unknown code. The newest connect wins: an older one still in flight rejects with "Connection cancelled", as does one interrupted by `leave()`/`dispose()`. A first state that never arrives rejects with a timeout |
