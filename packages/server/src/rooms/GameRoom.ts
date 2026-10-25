@@ -85,6 +85,8 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
   private readonly seatSecrets = new Map<string, Buffer>();
   private readonly spectators = new Set<string>();
   private readonly kicked = new Set<string>();
+  /** sha256 hex digest of each kicked player's seat secret; a fresh `playerId` with the same stored secret is refused too. */
+  private readonly kickedSecretHashes = new Set<string>();
   /** Synced-state snapshot recorded at every phase transition; exported as a replay bundle. */
   private readonly snapshots: Array<{ from: string; to: string; state: unknown }> = [];
   private seatList: Set<string> | undefined;
@@ -220,6 +222,12 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     }
     const { playerId, name, spectator, seatSecret } = parsed.data;
     if (this.kicked.has(playerId)) throw this.closeWith(CLOSE_CODES.KICKED_REJOIN);
+    if (
+      seatSecret !== undefined &&
+      this.kickedSecretHashes.has(sha256(seatSecret).toString("hex"))
+    ) {
+      throw this.closeWith(CLOSE_CODES.KICKED_REJOIN);
+    }
     if (!spectator && this.seatList && !this.seatList.has(playerId)) {
       throw this.closeWith(CLOSE_CODES.WATCH_ONLY);
     }
@@ -327,7 +335,7 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
         code: ErrorCode.KICKED,
         message: CLIENT_MESSAGES.KICKED,
       });
-      this.dropSeat(playerId);
+      this.dropSeat(playerId, true);
       this.scheduleDisposeIfEmpty();
       client?.leave();
     },
@@ -498,7 +506,9 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     this.rosterChanged();
   }
 
-  private dropSeat(playerId: string): void {
+  private dropSeat(playerId: string, rememberSecret: boolean): void {
+    const secret = this.seatSecrets.get(playerId);
+    if (secret !== undefined && rememberSecret) this.kickedSecretHashes.add(secret.toString("hex"));
     this.state.players.delete(playerId);
     this.viewRefs.delete(playerId);
     this.unbind(playerId);
@@ -512,7 +522,7 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
   }
 
   private removeSeat(playerId: string): void {
-    this.dropSeat(playerId);
+    this.dropSeat(playerId, false);
     this.rosterChanged();
     this.scheduleDisposeIfEmpty();
   }

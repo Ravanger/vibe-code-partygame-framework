@@ -260,4 +260,44 @@ describe("seat secret", () => {
       expect(json).not.toContain(hash);
     }
   });
+
+  it("refuses a kicked player who rejoins with a fresh playerId and the same secret", async () => {
+    const { room, p1 } = await startedRoom(t);
+    p1.client.send("ACTION", { type: "KICK_PLAYER", playerId: pid(2) });
+    await waitUntil(() => !stateOf(room).players.has(pid(2)), "seat removed");
+    // The kicked client's storage still holds its seat secret; a fresh id does not dodge the ban.
+    await expect(
+      t.sdk.joinById(room.roomId, {
+        playerId: "player-0009",
+        seatSecret: t.seatSecretFor(pid(2)),
+        protocolVersion: PROTOCOL_VERSION,
+      }),
+    ).rejects.toMatchObject({
+      code: CLOSE_CODES.KICKED_REJOIN.code,
+      message: CLOSE_CODES.KICKED_REJOIN.message,
+    });
+    expect(stateOf(room).players.has("player-0009")).toBe(false);
+  });
+
+  it("seats a fresh playerId with a different secret after a kick", async () => {
+    const { room, p1 } = await startedRoom(t);
+    p1.client.send("ACTION", { type: "KICK_PLAYER", playerId: pid(2) });
+    await waitUntil(() => !stateOf(room).players.has(pid(2)), "seat removed");
+    const client = await t.sdk.joinById(room.roomId, {
+      playerId: "player-0009",
+      seatSecret: crypto.randomUUID() + crypto.randomUUID(),
+      protocolVersion: PROTOCOL_VERSION,
+    });
+    await waitUntil(() => stateOf(room).players.get("player-0009") !== undefined, "seated");
+    await client.leave(true);
+  });
+
+  it("lets a player who left normally rejoin with the same secret", async () => {
+    const { room, p2 } = await startedRoom(t);
+    await p2.client.leave(true);
+    await waitUntil(() => !stateOf(room).players.has(pid(2)), "seat removed");
+    // A mid-game joiner is seated inactive: the Buzz phase already ran its showTo, so no private view is expected.
+    await t.join(room, { playerId: pid(2) });
+    await waitUntil(() => stateOf(room).players.get(pid(2))?.isConnected === true, "rejoined");
+  });
 });
