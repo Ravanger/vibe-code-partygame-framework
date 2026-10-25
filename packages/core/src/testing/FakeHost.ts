@@ -28,6 +28,8 @@ export class FakeHost implements RuntimeHost {
   private rngFn: () => number;
   private timers: Timer[] = [];
   private nextId = 1;
+  /** Scopes each audience key has already used; cleared on every transition. */
+  private readonly audienceScopes = new Map<string, Set<string>>();
 
   constructor(seed: Seed | number = 0) {
     this.seed = typeof seed === "number" ? seedFromNumber(seed) : seed;
@@ -95,6 +97,18 @@ export class FakeHost implements RuntimeHost {
 
   notifyTransition(from: string, to: string): void {
     this.transitions.push({ from, to });
+    this.audienceScopes.clear();
+  }
+
+  audienceOnce(audienceKey: string, scope: string): boolean {
+    const scopes = this.audienceScopes.get(audienceKey);
+    if (scopes === undefined) {
+      this.audienceScopes.set(audienceKey, new Set([scope]));
+      return true;
+    }
+    if (scopes.has(scope)) return false;
+    scopes.add(scope);
+    return true;
   }
 
   showTo(playerId: string, ref: object): void {

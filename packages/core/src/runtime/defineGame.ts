@@ -6,7 +6,12 @@ import {
   SET_OPTIONS,
   START_GAME,
 } from "@partygame/shared";
-import type { ActionDefinition, GameDefinition, PhaseState } from "./types.js";
+import type {
+  ActionDefinition,
+  AudienceActionDefinition,
+  GameDefinition,
+  PhaseState,
+} from "./types.js";
 
 const PHASE_NAME = /^[A-Za-z][A-Za-z0-9_]*$/;
 const RESERVED_ACTIONS: readonly string[] = [START_GAME, KICK_PLAYER, SET_OPTIONS, END_GAME];
@@ -70,10 +75,16 @@ export function defineGame<
 
 /**
  * Binds the state, private-state and options types once so each action infers its payload from its zod schema.
+ * Accepts a seated player's action (`from: "host" | "player"`) or an audience one (`from: "audience"`);
+ * the handler's context is typed to match.
  * @example const action = actionFactory<State, Priv, Options>();
  */
 export function actionFactory<TState extends PhaseState, TPrivate, TOptions>() {
   return <TPayload>(
-    spec: ActionDefinition<TState, TPrivate, TOptions, TPayload>,
-  ): ActionDefinition<TState, TPrivate, TOptions, TPayload> => spec;
+    spec:
+      | ActionDefinition<TState, TPrivate, TOptions, TPayload>
+      | AudienceActionDefinition<TState, TPrivate, TOptions, TPayload>,
+  ):
+    | ActionDefinition<TState, TPrivate, TOptions, TPayload>
+    | AudienceActionDefinition<TState, TPrivate, TOptions, TPayload> => spec;
 }

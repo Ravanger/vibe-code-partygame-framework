@@ -37,6 +37,7 @@ import { PlayerSchema, syncedJsonOf } from "@partygame/shared/schema";
 import type { ZodError } from "zod";
 import type { RateLimiter, ResolvedRateLimits, TokenBucket } from "../RateLimiter.js";
 import type { RoomCodeService } from "../services/RoomCodeService.js";
+import { AudienceScopes } from "./AudienceScopes.js";
 
 const SPECTATOR_SLOTS = 32;
 const FRAMEWORK_KEYS = ["playerId", "name", "spectator", "seatSecret", "seats", "protocolVersion"];
@@ -304,6 +305,9 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
   private timerSeq = 0;
   private readonly timerByHandle = new Map<number, Delayed>();
 
+  /** Scopes each audience key has already used (`ctx.audience.once`); cleared on every transition. */
+  private readonly audienceScopes = new AudienceScopes();
+
   private readonly host: RuntimeHost = {
     players: () => [...this.state.players.values()].map((seat) => this.infoOf(seat)),
     activateWaitingPlayers: () => {
@@ -317,8 +321,10 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     notifyTransition: (from, to) => {
       this.safely(() => {
         this.snapshots.push({ from, to, state: syncedJsonOf(this.state) });
+        this.audienceScopes.clear();
       });
     },
+    audienceOnce: this.audienceScopes.once.bind(this.audienceScopes),
     showTo: (playerId, ref: Schema) => {
       const refs = this.viewRefs.get(playerId) ?? new Set<Schema>();
       this.viewRefs.set(playerId, refs.add(ref));

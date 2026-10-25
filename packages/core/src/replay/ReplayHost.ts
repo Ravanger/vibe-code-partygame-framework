@@ -10,8 +10,9 @@ interface Timer {
 /**
  * A minimal {@link RuntimeHost} for replaying a recorded session: a manual clock, seats and the
  * given seed — no recording or assertion helpers, because a replay observes state snapshots, not
- * messages. Client traffic (send, broadcast, views) and transition notifications are dropped;
- * `kick` only removes the seat.
+ * messages. Client traffic (send, broadcast, views) is dropped; `kick` only removes the seat;
+ * transition notifications clear the audience once-scopes so a re-dispatched `ctx.audience.once`
+ * sees the same answers as live.
  */
 export class ReplayHost implements RuntimeHost {
   readonly seats: PlayerInfo[] = [];
@@ -20,6 +21,8 @@ export class ReplayHost implements RuntimeHost {
   private rngFn: () => number;
   private timers: Timer[] = [];
   private nextId = 1;
+  /** Scopes each audience key has already used; cleared on every transition, like the live host. */
+  private readonly audienceScopes = new Map<string, Set<string>>();
 
   constructor(seed: Seed | number = 0) {
     this.seed = typeof seed === "number" ? seedFromNumber(seed) : seed;
@@ -71,7 +74,20 @@ export class ReplayHost implements RuntimeHost {
 
   broadcast(_type: string, _payload: unknown): void {}
 
-  notifyTransition(_from: string, _to: string): void {}
+  notifyTransition(_from: string, _to: string): void {
+    this.audienceScopes.clear();
+  }
+
+  audienceOnce(audienceKey: string, scope: string): boolean {
+    const scopes = this.audienceScopes.get(audienceKey);
+    if (scopes === undefined) {
+      this.audienceScopes.set(audienceKey, new Set([scope]));
+      return true;
+    }
+    if (scopes.has(scope)) return false;
+    scopes.add(scope);
+    return true;
+  }
 
   showTo(_playerId: string, _ref: object): void {}
 

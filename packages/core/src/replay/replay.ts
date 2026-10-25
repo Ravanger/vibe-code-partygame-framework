@@ -361,10 +361,15 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
       // re-dispatching it is impossible, and skipping it keeps state and RNG in step with live.
       if (entry.kind !== "action" || entry.redacted === true) return undefined;
       const senderId = entry.senderId ?? "";
-      return runtime.dispatch(toSeat?.get(senderId) ?? senderId, {
+      const seat = toSeat?.get(senderId);
+      const rawAction = {
         type: entry.actionType ?? "",
         ...((entry.payload ?? {}) as Record<string, unknown>),
-      });
+      };
+      if (seat !== undefined) return runtime.dispatch(seat, rawAction);
+      if (toSeat === undefined) return runtime.dispatch(senderId, rawAction);
+      // A sender missing from the recorded roster is an audience key: re-dispatch it seatless.
+      return runtime.dispatchAudience(senderId, rawAction);
     });
     if (entry.kind === "action" && entry.redacted !== true) {
       if (entry.rejected === true) {

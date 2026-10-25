@@ -8,8 +8,10 @@ import {
 import type {
   ActionContext,
   ActionDefinition,
+  AudienceActionContext,
   GameContext,
   MiddlewareEvent,
+  PhaseAction,
   PhaseState,
   PlayerInfo,
 } from "./types.js";
@@ -19,9 +21,7 @@ interface DispatchPipelineDeps<TState extends PhaseState, TPrivate, TOptions> {
   /** Built-in actions available in every phase (kick, end game). */
   builtins: Record<string, ActionDefinition<TState, TPrivate, TOptions, unknown>>;
   /** The current phase's action table, or undefined when it declares none. */
-  currentPhaseActions():
-    | Record<string, ActionDefinition<TState, TPrivate, TOptions, unknown>>
-    | undefined;
+  currentPhaseActions(): Record<string, PhaseAction<TState, TPrivate, TOptions>> | undefined;
   /** Whether any phase declares `type` at all (drives WRONG_PHASE vs UNKNOWN_ACTION). */
   declaredInAnyPhase(type: string): boolean;
   /** The current phase name, for rejection messages. */
@@ -30,6 +30,8 @@ interface DispatchPipelineDeps<TState extends PhaseState, TPrivate, TOptions> {
   contextFactory(): GameContext<TState, TPrivate, TOptions>;
   /** The room's current text-filter level (the definition's `filterLevel`, default `"off"`). */
   filterLevel(): FilterLevel;
+  /** True the first time `audienceKey` uses `scope`; see `RuntimeHost.audienceOnce`. */
+  audienceOnce(audienceKey: string, scope: string): boolean;
   reject(playerId: string, action: string | undefined, code: ErrorCode, message: string): void;
   chain(event: MiddlewareEvent, inner: () => void): void;
 }
@@ -55,15 +57,9 @@ export class DispatchPipeline<TState extends PhaseState, TPrivate, TOptions> {
       return;
     }
     const type = envelope.data.type;
-    const action = this.deps.builtins[type] ?? this.deps.currentPhaseActions()?.[type];
-    if (!action) {
-      const declaredElsewhere = this.deps.declaredInAnyPhase(type);
-      throw new FrameworkError(
-        declaredElsewhere ? ErrorCode.WRONG_PHASE : ErrorCode.UNKNOWN_ACTION,
-        declaredElsewhere
-          ? `${type} is not allowed in ${this.deps.phaseName()}`
-          : `Unknown action ${type}`,
-      );
+    const action = this.lookup(type);
+    if (action.from === "audience") {
+      throw new FrameworkError(ErrorCode.NOT_ALLOWED, `${type} is an audience action`);
     }
     const player = this.deps.players().find((p) => p.id === playerId);
     if (!player || (action.from === "host" && player.role !== "host")) {
@@ -94,5 +90,65 @@ export class DispatchPipeline<TState extends PhaseState, TPrivate, TOptions> {
       },
       () => action.handler(actionContext),
     );
+  }
+
+  /**
+   * Run one raw audience action through the same steps as {@link run}, for a seatless sender
+   * identified by `audienceKey`. Only actions declared `from: "audience"` are accepted; the
+   * handler receives an {@link AudienceActionContext} (no `playerId`), and the middleware event
+   * and action log carry `audienceKey` as `senderId`.
+   */
+  runAudience(audienceKey: string, rawAction: unknown): void {
+    const envelope = ActionEnvelopeSchema.safeParse(rawAction);
+    if (!envelope.success) {
+      this.deps.reject(
+        audienceKey,
+        undefined,
+        ErrorCode.INVALID_ACTION,
+        CLIENT_MESSAGES.INVALID_ACTION,
+      );
+      return;
+    }
+    const type = envelope.data.type;
+    const action = this.lookup(type);
+    if (action.from !== "audience") {
+      throw new FrameworkError(ErrorCode.UNAUTHORIZED, `Not allowed to send ${type}`);
+    }
+    const payload = action.payload.safeParse(envelope.data);
+    if (!payload.success) {
+      this.deps.reject(audienceKey, type, ErrorCode.INVALID_ACTION, CLIENT_MESSAGES.INVALID_ACTION);
+      return;
+    }
+    const actionContext: AudienceActionContext<TState, TPrivate, TOptions, unknown> = {
+      ...this.deps.contextFactory(),
+      payload: payload.data,
+      audience: { once: (scope) => this.deps.audienceOnce(audienceKey, scope) },
+      reject: (code, message) => this.deps.reject(audienceKey, type, code, message),
+    };
+    this.deps.chain(
+      {
+        kind: "action",
+        actionType: type,
+        senderId: audienceKey,
+        payload: payload.data,
+        filterLevel: this.deps.filterLevel(),
+      },
+      () => action.handler(actionContext),
+    );
+  }
+
+  /** Find `type` in the built-ins or the current phase; throws WRONG_PHASE/UNKNOWN_ACTION otherwise. */
+  private lookup(type: string): PhaseAction<TState, TPrivate, TOptions> {
+    const action = this.deps.builtins[type] ?? this.deps.currentPhaseActions()?.[type];
+    if (!action) {
+      const declaredElsewhere = this.deps.declaredInAnyPhase(type);
+      throw new FrameworkError(
+        declaredElsewhere ? ErrorCode.WRONG_PHASE : ErrorCode.UNKNOWN_ACTION,
+        declaredElsewhere
+          ? `${type} is not allowed in ${this.deps.phaseName()}`
+          : `Unknown action ${type}`,
+      );
+    }
+    return action;
   }
 }

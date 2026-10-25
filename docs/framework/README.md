@@ -99,6 +99,22 @@ ready, active ones, and `ctx.player(id)` one seat.
 `PlayerInfo` and every `ctx.players()` list cover seated players only. Spectators (join option `spectator: true`) never count
 towards `minPlayers`, `maxPlayers` or auto-start.
 
+### Audience
+An action can be declared `from: "audience"` instead of a role: it is sent by a seatless sender identified by an opaque
+`audienceKey` string and dispatched through `runtime.dispatchAudience(audienceKey, raw)` rather than `dispatch`. The key only
+identifies the sender — to middleware, rejections and the action log (`senderId`) — and is never persisted; audience identity
+lives in memory for the room's lifetime.
+
+The handler receives an `AudienceActionContext`: like `ActionContext` without `playerId`, plus `audience: AudienceScope` with a
+single method, `once(scope)`. It returns `true` the first time that key uses that scope and `false` afterwards — count one vote per
+audience member per option without any per-member state (write the counts into synced state as plain counters). The host clears
+every scope when the phase changes (`RuntimeHost.audienceOnce`, cleared in `notifyTransition`), so a new round accepts fresh votes.
+
+Refusals mirror the player path: a seated player who sends an audience action gets `NOT_ALLOWED`; an audience key that sends
+anything but an audience action gets `UNAUTHORIZED`. Payload validation, middleware and the failure policy are identical to
+`dispatch`. In replay, an entry whose sender is not in the recorded roster is re-dispatched through `dispatchAudience` (legacy
+logs without a roster keep player dispatch).
+
 ### Host controls
 The runtime handles these host-only actions for you; do not declare them (`defineGame` rejects the names):
 
