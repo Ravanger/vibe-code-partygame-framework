@@ -1,5 +1,7 @@
+import { createHash } from "node:crypto";
 import { CloseCode } from "@colyseus/core";
-import { CLOSE_CODES } from "@partygame/shared";
+import { CLOSE_CODES, PROTOCOL_VERSION } from "@partygame/shared";
+import { syncedJsonOf } from "@partygame/shared/schema";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import type { TestServer } from "../src/testing/index.js";
 import { waitUntil } from "../src/testing/index.js";
@@ -174,5 +176,88 @@ describe("GameRoom host handover", () => {
     await p1.client.leave(false);
     await waitUntil(() => stateOf(room).players.get(pid(1))?.isConnected === false, "p1 dropped");
     expect(stateOf(room).players.get(pid(1))?.role).toBe("host");
+  });
+});
+
+describe("seat secret", () => {
+  // Schema-valid (16+ characters) but not pid(2)'s.
+  const wrongSecret = "hijacker-secret-0000";
+
+  it("refuses a hijack of a taken seat with the wrong secret and changes nothing", async () => {
+    const { room, p2 } = await startedRoom(t);
+    await waitUntil(() => clientState(p2.client).secrets?.has(pid(2)) === true, "secret synced");
+    await expect(
+      t.sdk.joinById(room.roomId, {
+        playerId: pid(2),
+        seatSecret: wrongSecret,
+        protocolVersion: PROTOCOL_VERSION,
+      }),
+    ).rejects.toMatchObject({
+      code: CLOSE_CODES.SEAT_TAKEN.code,
+      message: CLOSE_CODES.SEAT_TAKEN.message,
+    });
+    expect(stateOf(room).players.get(pid(2))).toMatchObject({ name: "P2", isConnected: true });
+    expect(clientState(p2.client).secrets?.has(pid(2))).toBe(true);
+    expect(room.clients.length).toBe(2);
+  });
+
+  it("refuses a re-join of an existing seat without a secret", async () => {
+    const { room, p2 } = await startedRoom(t);
+    await waitUntil(() => clientState(p2.client).secrets?.has(pid(2)) === true, "secret synced");
+    await expect(
+      t.sdk.joinById(room.roomId, { playerId: pid(2), protocolVersion: PROTOCOL_VERSION }),
+    ).rejects.toMatchObject({
+      code: CLOSE_CODES.SEAT_TAKEN.code,
+      message: CLOSE_CODES.SEAT_TAKEN.message,
+    });
+    expect(stateOf(room).players.get(pid(2))?.isConnected).toBe(true);
+    expect(clientState(p2.client).secrets?.has(pid(2))).toBe(true);
+    expect(room.clients.length).toBe(2);
+  });
+
+  it("refuses the first join of a new player without a secret", async () => {
+    const { room } = await startedRoom(t);
+    await expect(
+      t.sdk.joinById(room.roomId, { playerId: "player-0009", protocolVersion: PROTOCOL_VERSION }),
+    ).rejects.toMatchObject({
+      code: CLOSE_CODES.SEAT_TAKEN.code,
+      message: CLOSE_CODES.SEAT_TAKEN.message,
+    });
+    expect(stateOf(room).players.size).toBe(2);
+  });
+
+  it("resumes a dropped seat from a new session that presents the same secret", async () => {
+    const { room, p2 } = await startedRoom(t);
+    await p2.client.leave(false);
+    await waitUntil(() => stateOf(room).players.get(pid(2))?.isConnected === false, "dropped");
+    // TestServer presents the same stable secret it used when p2 first joined.
+    const fresh = await t.join(room, { playerId: pid(2) });
+    await waitUntil(() => stateOf(room).players.get(pid(2))?.isConnected === true, "resumed");
+    await waitUntil(() => clientState(fresh).secrets?.has(pid(2)) === true, "view re-applied");
+  });
+
+  it("takes the seat over with the right secret and closes the old session with SEAT_TAKEN_OVER", async () => {
+    const { room, p2 } = await startedRoom(t);
+    const closed = new Promise<number>((resolve) =>
+      p2.client.onLeave((code: number) => resolve(code)),
+    );
+    const fresh = await t.join(room, { playerId: pid(2) });
+    expect(await closed).toBe(CLOSE_CODES.SEAT_TAKEN_OVER.code);
+    await waitUntil(() => stateOf(room).players.get(pid(2))?.isConnected === true, "taken over");
+    expect(stateOf(room).players.size).toBe(2);
+    await waitUntil(() => clientState(fresh).secrets?.has(pid(2)) === true, "view re-applied");
+  });
+
+  it("never puts the secret or its hash in synced state", async () => {
+    const { room, p1 } = await startedRoom(t);
+    const secret = t.seatSecretFor(pid(1));
+    const hash = createHash("sha256").update(secret).digest("hex");
+    for (const json of [
+      JSON.stringify(syncedJsonOf(stateOf(room))),
+      JSON.stringify(clientState(p1.client)),
+    ]) {
+      expect(json).not.toContain(secret);
+      expect(json).not.toContain(hash);
+    }
   });
 });

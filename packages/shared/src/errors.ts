@@ -25,7 +25,7 @@ export interface CloseCode {
 }
 
 /**
- * Join/create close codes (4400-4405, 4426, 4429, 4500), each mapped to an {@link ErrorCode} and a
+ * Join/create close codes (4400-4406, 4409, 4426, 4429, 4500), each mapped to an {@link ErrorCode} and a
  * fixed message. `VERSION_MISMATCH`'s message is a template the server fills with both versions
  * (numbers only; a missing client version renders as `unknown`) before closing.
  */
@@ -47,6 +47,14 @@ export const CLOSE_CODES = {
     code: 4405,
     errorCode: ErrorCode.CONTENT_REJECTED,
     message: "That text was not allowed",
+  },
+  /** A join naming a seated `playerId` without that seat's matching secret. */
+  SEAT_TAKEN: { code: 4406, errorCode: ErrorCode.UNAUTHORIZED, message: "Seat is taken" },
+  /** The old session of a seat taken over by another connection presenting the same secret. */
+  SEAT_TAKEN_OVER: {
+    code: 4409,
+    errorCode: ErrorCode.KICKED,
+    message: "Your seat was opened on another device",
   },
   VERSION_MISMATCH: {
     code: 4426,

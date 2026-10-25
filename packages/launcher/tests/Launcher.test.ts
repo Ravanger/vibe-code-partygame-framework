@@ -279,7 +279,11 @@ describe("Launcher", () => {
       const playerId = crypto.randomUUID();
       const room = await new Client(`ws://localhost:${ports.game}`).joinById<TapState>(
         roomId,
-        { playerId, protocolVersion: PROTOCOL_VERSION },
+        {
+          playerId,
+          seatSecret: crypto.randomUUID() + crypto.randomUUID(),
+          protocolVersion: PROTOCOL_VERSION,
+        },
         TapState,
       );
       leavers.push(() => room.leave(true));

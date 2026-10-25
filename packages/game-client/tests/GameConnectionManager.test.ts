@@ -853,10 +853,17 @@ describe("protocol versioning", () => {
     );
   });
 
-  it("sends the persisted seat secret when joining", async () => {
+  it("sends the persisted seat secret when creating and joining", async () => {
     const manager = newManager();
     const { room } = seated(manager);
     stubFetchReply({ roomId: "room-1" });
+    const created = vi.spyOn(Client.prototype, "create").mockResolvedValue(room as never);
+    await manager.create();
+    expect(created).toHaveBeenCalledWith(
+      "stub",
+      expect.objectContaining({ seatSecret: expect.stringMatching(/^[0-9a-f-]{72}$/) }),
+      undefined,
+    );
     const joined = vi.spyOn(Client.prototype, "joinById").mockResolvedValue(room as never);
     await manager.join("WXYZ");
     expect(joined).toHaveBeenCalledWith(

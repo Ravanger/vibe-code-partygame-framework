@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from "node:crypto";
 import { type Client, type Delayed, logger, Room, ServerError } from "@colyseus/core";
 import { type Schema, StateView } from "@colyseus/schema";
 import type { FilterLevel, TextFilter } from "@partygame/content/filter";
@@ -38,7 +39,7 @@ import type { RateLimiter, ResolvedRateLimits, TokenBucket } from "../RateLimite
 import type { RoomCodeService } from "../services/RoomCodeService.js";
 
 const SPECTATOR_SLOTS = 32;
-const FRAMEWORK_KEYS = ["playerId", "name", "spectator", "seats", "protocolVersion"];
+const FRAMEWORK_KEYS = ["playerId", "name", "spectator", "seatSecret", "seats", "protocolVersion"];
 const SPECTATOR_ERROR: ProtocolError = {
   code: ErrorCode.UNAUTHORIZED,
   message: CLIENT_MESSAGES.UNAUTHORIZED,
@@ -72,11 +73,16 @@ export interface GameRoomConfig {
   rateLimits: ResolvedRateLimits;
 }
 
+/** sha256 of a join secret; digests are compared with `timingSafeEqual`, so a wrong secret costs the same time as a right one. */
+const sha256 = (value: string): Buffer => createHash("sha256").update(value).digest();
+
 /** Generic Colyseus room: seats, roster, reconnection and per-player views around a core `GameRuntime`. */
 export class GameRoom extends Room<{ state: BaseGameState }> {
   private runtime!: GameRuntime<BaseGameState, unknown, unknown>;
   private emptyTimer: Delayed | undefined;
   private readonly playerOf = new Map<string, string>();
+  /** Server-only sha256 of each seated player's join secret; proves seat ownership on a later join and never leaves the room. */
+  private readonly seatSecrets = new Map<string, Buffer>();
   private readonly spectators = new Set<string>();
   private readonly kicked = new Set<string>();
   /** Synced-state snapshot recorded at every phase transition; exported as a replay bundle. */
@@ -212,7 +218,7 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     if (parsed.data.protocolVersion !== PROTOCOL_VERSION) {
       throw this.versionMismatch(parsed.data.protocolVersion);
     }
-    const { playerId, name, spectator } = parsed.data;
+    const { playerId, name, spectator, seatSecret } = parsed.data;
     if (this.kicked.has(playerId)) throw this.closeWith(CLOSE_CODES.KICKED_REJOIN);
     if (!spectator && this.seatList && !this.seatList.has(playerId)) {
       throw this.closeWith(CLOSE_CODES.WATCH_ONLY);
@@ -228,10 +234,16 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     this.cancelDispose();
     const existing = this.state.players.get(playerId);
     if (existing) {
-      this.bind(playerId, client.sessionId);
+      const stored = this.seatSecrets.get(playerId);
+      if (!seatSecret || stored === undefined || !timingSafeEqual(stored, sha256(seatSecret))) {
+        throw this.closeWith(CLOSE_CODES.SEAT_TAKEN);
+      }
+      const oldClient = this.bind(playerId, client.sessionId);
       this.reconnected(existing, client);
+      oldClient?.leave(CLOSE_CODES.SEAT_TAKEN_OVER.code);
       return;
     }
+    if (!seatSecret) throw this.closeWith(CLOSE_CODES.SEAT_TAKEN);
     if (this.state.players.size >= this.config.definition.maxPlayers) {
       throw this.closeWith(CLOSE_CODES.ROOM_FULL);
     }
@@ -243,6 +255,7 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     seat.name = name && !this.nameTaken(playerId, name) ? name : "";
     seat.isActive = this.state.phase === LOBBY_PHASE;
     this.state.players.set(playerId, seat);
+    this.seatSecrets.set(playerId, sha256(seatSecret));
     this.bind(playerId, client.sessionId);
     this.rosterChanged();
   }
@@ -466,9 +479,15 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     };
   }
 
-  private bind(playerId: string, sessionId: string): void {
+  /** Rebinds `playerId` to `sessionId`; returns the client of the session it was bound to before, if any. */
+  private bind(playerId: string, sessionId: string): Client | undefined {
+    let previous: Client | undefined;
+    for (const [sid, id] of this.playerOf) {
+      if (id === playerId) previous = this.clients.get(sid);
+    }
     this.unbind(playerId);
     this.playerOf.set(sessionId, playerId);
+    return previous;
   }
 
   private reconnected(seat: PlayerSchema, client: Client): void {
@@ -483,6 +502,7 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     this.state.players.delete(playerId);
     this.viewRefs.delete(playerId);
     this.unbind(playerId);
+    this.seatSecrets.delete(playerId);
     this.config.rateLimiter.drop(`${this.roomId}:${playerId}:`);
   }
 

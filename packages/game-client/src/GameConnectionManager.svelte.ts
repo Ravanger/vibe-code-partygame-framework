@@ -128,7 +128,12 @@ export class GameConnectionManager<
         () =>
           this.client.create<TState>(
             this.options.roomName,
-            { ...options, playerId: this.playerId, protocolVersion: PROTOCOL_VERSION },
+            {
+              ...options,
+              playerId: this.playerId,
+              seatSecret: this.session.seatSecret,
+              protocolVersion: PROTOCOL_VERSION,
+            },
             this.options.rootSchema,
           ),
         false,
