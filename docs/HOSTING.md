@@ -42,6 +42,7 @@ on the same host name as the page, so no configuration is needed. Make sure your
 
 The room-code API binds to your own machine by default, so strangers cannot look up codes; for LAN play use `bun run launch:host`,
 which starts it on every interface and allows any origin (`HOST=0.0.0.0`, `ALLOWED_ORIGINS=*`). The game server (2567) is reachable from the LAN either way.
+For internet play put a TLS-terminating proxy in front — what the framework does and does not protect is listed in the [threat model](security/threat-model.md).
 
 ### Finding your LAN IP
 
