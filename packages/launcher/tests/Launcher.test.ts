@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:net";
-import { tmpdir } from "node:os";
+import { networkInterfaces, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Client } from "@colyseus/sdk";
@@ -125,6 +125,26 @@ describe("Launcher", () => {
       expect(logs.filter((line) => line.startsWith("Guests on this network"))).toEqual(lan);
       expect(logs).toContain(`Open http://localhost:${ports.clientDev}`);
       expect(opened).toEqual([]);
+    },
+    TIMEOUT,
+  );
+
+  it(
+    "opens the API to the LAN in host mode and keeps it loopback otherwise",
+    async () => {
+      const lan = Object.values(networkInterfaces())
+        .flatMap((addresses) => addresses ?? [])
+        .find((address) => address.family === "IPv4" && !address.internal)?.address;
+      if (lan === undefined) return;
+      const probe = new ServerProbe();
+      const hosted = launcherOf();
+      await hosted.start({ mode: "host", openBrowser: false });
+      expect(await probe.canConnect(ports.api, lan)).toBe(true);
+      await hosted.stop();
+      await waitUntilFree(ports.api);
+      const dev = launcherOf();
+      await dev.start({ mode: "dev", openBrowser: false });
+      expect(await probe.canConnect(ports.api, lan)).toBe(false);
     },
     TIMEOUT,
   );

@@ -14,7 +14,7 @@ export type StartServerOptions = Omit<GameServerOptions, "transport"> & StartPor
 
 /** Bun entry point: WebSocket game server plus the code-resolution API. */
 export async function startServer(options: StartServerOptions) {
-  const { port, apiPort, roomCodeService, allowedOrigins } = resolveStartOptions(
+  const { port, apiPort, roomCodeService, host, allowedOrigins } = resolveStartOptions(
     options,
     process.env,
   );
@@ -35,6 +35,7 @@ export async function startServer(options: StartServerOptions) {
   let api: ReturnType<typeof serve>;
   api = serve({
     port: apiPort,
+    hostname: host ?? "127.0.0.1",
     fetch: (req: Request) => {
       const remoteAddress = api?.requestIP(req)?.address;
       return handler(req, remoteAddress === undefined ? {} : { remoteAddress });

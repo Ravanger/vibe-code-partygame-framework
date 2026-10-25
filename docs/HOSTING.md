@@ -40,6 +40,9 @@ The launcher refuses to start if one of its ports is already in use.
 Players on the same network open `http://<YOUR-LAN-IP>:5173` (`:3000` with `launch:prod`). The client talks to the game server and the API
 on the same host name as the page, so no configuration is needed. Make sure your firewall lets other machines reach the client port, 2567 and 3001.
 
+The room-code API binds to your own machine by default, so strangers cannot look up codes; for LAN play use `bun run launch:host`,
+which starts it on every interface and allows any origin (`HOST=0.0.0.0`, `ALLOWED_ORIGINS=*`). The game server (2567) is reachable from the LAN either way.
+
 ### Finding your LAN IP
 
 `bun run launch:host` prints it. Otherwise:
@@ -115,6 +118,8 @@ The server refuses to start with fewer than 3 categories.
 |---|---|---|
 | `PORT` | `2567` | Game server (WebSocket) port |
 | `API_PORT` | `3001` | Room-code lookup API port |
+| `HOST` | `127.0.0.1` | Interface the room-code API binds; `0.0.0.0` for every interface (the game server listens on all of them anyway) |
+| `ALLOWED_ORIGINS` | loopback origins, any port | Comma-separated browser origins allowed to read the API; `*` for all. Needed when guests' pages are not on localhost |
 | `WITCLASH_CONTENT_DIR` | `games/wit-clash/content/categories` | Directory holding the category files |
 
 Other server limits are set as options of `createGameServer` (see the [framework README](framework/README.md)), not environment variables: for example `maxRooms` caps the number of concurrent rooms (default 100); a create beyond the cap is refused with "Server is full". Rate limits (`rateLimits`) throttle player actions, name changes and `/api/resolve-code` per remote address; an exhausted address gets HTTP 429 with `Retry-After`.

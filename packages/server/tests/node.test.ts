@@ -1,9 +1,16 @@
 import { request as httpRequest, type Server } from "node:http";
+import { networkInterfaces } from "node:os";
 import { afterEach, describe, expect, it } from "vitest";
 import { type NodeServerHandle, serveApi, startNodeServer } from "../src/node.js";
 import { freePort, ServerProbe } from "../src/probe.js";
 import { RoomCodeService } from "../src/services/RoomCodeService.js";
 import { GAMES } from "./support.js";
+
+/** The first external IPv4 address of this machine; binding tests skip their LAN half without one. */
+const lanAddress = (): string | undefined =>
+  Object.values(networkInterfaces())
+    .flatMap((addresses) => addresses ?? [])
+    .find((address) => address.family === "IPv4" && !address.internal)?.address;
 
 const servers: Server[] = [];
 const handles: NodeServerHandle[] = [];
@@ -34,6 +41,23 @@ describe("serveApi", () => {
     const port = await freePort();
     servers.push(await serveApi(new RoomCodeService(), { port, host: "127.0.0.1" }));
     await expect(serveApi(new RoomCodeService(), { port, host: "127.0.0.1" })).rejects.toThrow();
+  });
+
+  it("binds loopback when no host is given", async () => {
+    const port = await freePort();
+    servers.push(await serveApi(new RoomCodeService(), { port }));
+    expect(await new ServerProbe().canConnect(port, "127.0.0.1")).toBe(true);
+    const lan = lanAddress();
+    if (lan !== undefined) expect(await new ServerProbe().canConnect(port, lan)).toBe(false);
+  });
+
+  it("binds the given non-loopback interface and no other", async () => {
+    const lan = lanAddress();
+    if (lan === undefined) return;
+    const port = await freePort();
+    servers.push(await serveApi(new RoomCodeService(), { port, host: lan }));
+    expect(await new ServerProbe().canConnect(port, lan)).toBe(true);
+    expect(await new ServerProbe().canConnect(port, "127.0.0.1")).toBe(false);
   });
 
   it("forwards request headers so the handler sees Origin", async () => {
@@ -166,6 +190,32 @@ describe("startNodeServer", () => {
   it("binds the code API to the given interface", async () => {
     const handle = await start({ games: GAMES, host: "127.0.0.1" });
     expect(await probe.canConnect(handle.apiPort, "127.0.0.1")).toBe(true);
+  });
+
+  it("binds the code API to loopback by default", async () => {
+    const handle = await start({ games: GAMES });
+    expect(await probe.canConnect(handle.apiPort, "127.0.0.1")).toBe(true);
+    const lan = lanAddress();
+    if (lan !== undefined) expect(await probe.canConnect(handle.apiPort, lan)).toBe(false);
+  });
+
+  it("reads HOST and ALLOWED_ORIGINS from the environment", async () => {
+    const lan = lanAddress();
+    if (lan === undefined) return;
+    process.env.HOST = lan;
+    process.env.ALLOWED_ORIGINS = "*";
+    try {
+      const handle = await start({ games: GAMES });
+      expect(await probe.canConnect(handle.apiPort, lan)).toBe(true);
+      expect(await probe.canConnect(handle.apiPort, "127.0.0.1")).toBe(false);
+      const response = await fetch(`http://${lan}:${handle.apiPort}/api/resolve-code?code=ABCD`, {
+        headers: { Origin: "http://party.example" },
+      });
+      expect(response.headers.get("Access-Control-Allow-Origin")).toBe("*");
+    } finally {
+      delete process.env.HOST;
+      delete process.env.ALLOWED_ORIGINS;
+    }
   });
 
   it("throttles /api/resolve-code with the given rate limits", async () => {

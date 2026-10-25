@@ -9,11 +9,12 @@ import {
 } from "./createGameServer.js";
 import { closeHttpServer, freePort } from "./probe.js";
 import type { RateLimits } from "./RateLimiter.js";
+import { hostFrom, parseAllowedOrigins } from "./resolveStartOptions.js";
 import { RoomCodeService } from "./services/RoomCodeService.js";
 
 export interface ServeApiOptions {
   port: number;
-  /** Interface to bind; every interface when omitted. */
+  /** Interface to bind; loopback when omitted. */
   host?: string;
   /** Origins allowed to read the API; loopback only when omitted. */
   allowedOrigins?: string[] | "*";
@@ -58,7 +59,7 @@ export async function serveApi(
   });
   await new Promise<void>((resolve, reject) => {
     api.once("error", reject);
-    api.listen(options.port, options.host, resolve);
+    api.listen(options.port, options.host ?? "127.0.0.1", resolve);
   });
   return api;
 }
@@ -68,8 +69,10 @@ export interface NodeServerOptions extends Omit<GameServerOptions, "transport"> 
   port?: number;
   /** Code API port; a free one when omitted. */
   apiPort?: number;
-  /** Interface the code API binds; every interface when omitted. */
+  /** Interface the code API binds; loopback (or `HOST`) when omitted. */
   host?: string;
+  /** Origins allowed to read the code API; loopback only (or `ALLOWED_ORIGINS`) when omitted. */
+  allowedOrigins?: string[] | "*";
 }
 
 /** A game server and its code API running in this process. */
@@ -121,11 +124,20 @@ export async function startNodeServer(
   /** Test seam: overrides how free ports are discovered. */
   hooks?: { freePort?: () => Promise<number> },
 ): Promise<NodeServerHandle> {
-  const { port: wantedPort, apiPort: wantedApiPort, host, ...serverOptions } = options;
+  const {
+    port: wantedPort,
+    apiPort: wantedApiPort,
+    host: optionHost,
+    allowedOrigins: optionAllowedOrigins,
+    ...serverOptions
+  } = options;
   if (wantedPort !== undefined && wantedPort === wantedApiPort) {
     throw new Error("The game server and the code API need different ports");
   }
   const roomCodeService = options.roomCodeService ?? new RoomCodeService();
+  // Unset options fall back to the environment, so a launcher can steer the bind with HOST/ALLOWED_ORIGINS.
+  const host = optionHost ?? hostFrom(process.env.HOST);
+  const allowedOrigins = optionAllowedOrigins ?? parseAllowedOrigins(process.env.ALLOWED_ORIGINS);
   const discoverFreePort = hooks?.freePort ?? freePort;
   for (let attempt = 1; ; ++attempt) {
     const port = wantedPort ?? (await discoverFreePort());
@@ -137,6 +149,7 @@ export async function startNodeServer(
       api = await serveApi(roomCodeService, {
         port: apiPort,
         ...(host !== undefined ? { host } : {}),
+        ...(allowedOrigins !== undefined ? { allowedOrigins } : {}),
         ...(options.rateLimits !== undefined ? { rateLimits: options.rateLimits } : {}),
       });
       server = createGameServer({ ...serverOptions, roomCodeService });
