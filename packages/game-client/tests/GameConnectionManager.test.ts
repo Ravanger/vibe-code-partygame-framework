@@ -201,6 +201,13 @@ describe("sendAction", () => {
     expect(manager.lastServerError).toBeUndefined();
   });
 
+  it("needs no new API for a spectator: an attached seatless room can send actions", async () => {
+    const manager = newManager();
+    manager.attach(new StubRoom(new BaseGameState()));
+    expect(manager.isSpectator).toBe(true);
+    expect(await manager.sendAction("PRESS")).toEqual({ ok: true });
+  });
+
   it("refuses a payload that names the reserved type field without sending", async () => {
     const manager = newManager();
     const { room } = seated(manager);

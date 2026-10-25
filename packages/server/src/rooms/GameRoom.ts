@@ -16,6 +16,7 @@ import {
 } from "@partygame/core";
 import { createBundle } from "@partygame/core/replay";
 import {
+  ActionEnvelopeSchema,
   type ActionResult,
   CLIENT_MESSAGES,
   CLOSE_CODES,
@@ -39,7 +40,6 @@ import type { RateLimiter, ResolvedRateLimits, TokenBucket } from "../RateLimite
 import type { RoomCodeService } from "../services/RoomCodeService.js";
 import { AudienceScopes } from "./AudienceScopes.js";
 
-const SPECTATOR_SLOTS = 32;
 const FRAMEWORK_KEYS = ["playerId", "name", "spectator", "seatSecret", "seats", "protocolVersion"];
 const SPECTATOR_ERROR: ProtocolError = {
   code: ErrorCode.UNAUTHORIZED,
@@ -66,6 +66,8 @@ export interface GameRoomConfig {
   emptyRoomGraceMs: number;
   /** Maximum concurrent rooms across all games; a create beyond it closes with `SERVER_FULL` (4429). */
   maxRooms: number;
+  /** Spectator connections admitted on top of `maxPlayers`; the room's `maxClients`. */
+  audienceSlots: number;
   /** When set, player names are checked against it at join and on `SET_NAME`. */
   textFilter?: TextFilter;
   /** Shared per-player limiter; buckets are keyed `(roomId, playerId, messageType)` so a reconnect cannot reset them. */
@@ -85,6 +87,8 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
   /** Server-only sha256 of each seated player's join secret; proves seat ownership on a later join and never leaves the room. */
   private readonly seatSecrets = new Map<string, Buffer>();
   private readonly spectators = new Set<string>();
+  /** The join `playerId` of each spectator session: the key for audience dedup and per-scope votes. */
+  private readonly spectatorIds = new Map<string, string>();
   private readonly kicked = new Set<string>();
   /** sha256 hex digest of each kicked player's seat secret; a fresh `playerId` with the same stored secret is refused too. */
   private readonly kickedSecretHashes = new Set<string>();
@@ -161,7 +165,7 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
       this.seatList = new Set(roomOptions.data.seats);
     }
     this.autoDispose = false;
-    this.maxClients = definition.maxPlayers + SPECTATOR_SLOTS;
+    this.maxClients = definition.maxPlayers + this.config.audienceSlots;
     const rawOptions = Object.fromEntries(
       Object.entries(options).filter(([key]) => !FRAMEWORK_KEYS.includes(key)),
     );
@@ -200,8 +204,8 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
 
       this.onMessage(ClientMessage.SET_NAME, (client, raw: unknown) => this.setName(client, raw));
       this.onMessage(ClientMessage.ACTION, (client, raw: unknown): ActionResult => {
-        const seat = this.seatOf(client);
-        if (!seat) return { ok: false, error: SPECTATOR_ERROR };
+        const seat = this.seatBySession(client);
+        if (!seat) return this.actAudience(client, raw);
         if (!this.limited(seat.id, ClientMessage.ACTION, this.config.rateLimits.action)) {
           client.send(ServerMessage.ERROR, RATE_LIMITED_ERROR);
           return { ok: false, error: RATE_LIMITED_ERROR };
@@ -237,6 +241,7 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     this.views.set(client.sessionId, view);
     if (spectator) {
       this.spectators.add(client.sessionId);
+      this.spectatorIds.set(client.sessionId, playerId);
       ++this.state.spectatorCount;
       return;
     }
@@ -289,6 +294,8 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     this.views.delete(client.sessionId);
     if (this.spectators.delete(client.sessionId)) {
       --this.state.spectatorCount;
+      this.spectatorIds.delete(client.sessionId);
+      this.config.rateLimiter.drop(`${this.roomId}:${client.sessionId}:`);
       return;
     }
     const seat = this.seatBySession(client);
@@ -316,7 +323,8 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     benchUnreadyPlayers: () => {
       for (const seat of this.state.players.values()) if (!seat.isReady) seat.isActive = false;
     },
-    send: (playerId, type, payload) => this.clientFor(playerId)?.send(type, payload),
+    send: (playerId, type, payload) =>
+      (this.clientFor(playerId) ?? this.spectatorClientFor(playerId))?.send(type, payload),
     broadcast: (type, payload) => this.broadcast(type, payload),
     notifyTransition: (from, to) => {
       this.safely(() => {
@@ -445,6 +453,34 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     }
   }
 
+  /**
+   * An ACTION from a seatless connection: only an action declared `from: "audience"` in the current
+   * phase is dispatched, under the per-connection rate limit and keyed by the spectator's join
+   * `playerId`; everything else gets the spectator error, as before audience actions existed.
+   */
+  private actAudience(client: Client, raw: unknown): ActionResult {
+    if (!this.limited(client.sessionId, ClientMessage.ACTION, this.config.rateLimits.action)) {
+      client.send(ServerMessage.ERROR, RATE_LIMITED_ERROR);
+      return { ok: false, error: RATE_LIMITED_ERROR };
+    }
+    const playerId = this.spectatorIds.get(client.sessionId);
+    const envelope = ActionEnvelopeSchema.safeParse(raw);
+    const action = envelope.success
+      ? this.config.definition.phases[this.state.phase]?.actions?.[envelope.data.type]
+      : undefined;
+    if (playerId === undefined || action?.from !== "audience") {
+      client.send(ServerMessage.ERROR, SPECTATOR_ERROR);
+      return { ok: false, error: SPECTATOR_ERROR };
+    }
+    try {
+      const error = this.runtime.dispatchAudience(playerId, raw);
+      return error ? { ok: false, error } : { ok: true };
+    } catch (error) {
+      logger.error("[GameRoom] audience action failed", error);
+      return ACTION_FAILED;
+    }
+  }
+
   /** Host-only `EXPORT_REPLAY`: the room's replay bundle, or a fixed refusal. */
   private exportReplay(client: Client): unknown {
     const seat = this.seatBySession(client);
@@ -475,6 +511,11 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
 
   private clientFor(playerId: string): Client | undefined {
     return this.clients.find((client) => this.playerOf.get(client.sessionId) === playerId);
+  }
+
+  /** The spectator connection whose join `playerId` is `playerId`, if any. */
+  private spectatorClientFor(playerId: string): Client | undefined {
+    return this.clients.find((client) => this.spectatorIds.get(client.sessionId) === playerId);
   }
 
   private viewFor(playerId: string): StateView | undefined {

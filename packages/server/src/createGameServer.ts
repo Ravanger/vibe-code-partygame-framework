@@ -38,6 +38,12 @@ export interface GameServerOptions {
   reconnectMs?: number;
   /** How long an empty room lives before it is disposed. Default 120 s. */
   emptyRoomGraceMs?: number;
+  /**
+   * Spectator (audience) connections a room admits on top of `maxPlayers`. The room's `maxClients`
+   * is `maxPlayers + audienceSlots`, so once it is full Colyseus refuses further joins. Default
+   * {@link DEFAULT_AUDIENCE_SLOTS}.
+   */
+  audienceSlots?: number;
   /** When set, player names are checked against it at join and on `SET_NAME`, at the level of each game's `filterLevel`. */
   textFilter?: TextFilter;
   /**
@@ -52,6 +58,8 @@ export const DEFAULT_RECONNECT_MS = 60_000;
 export const DEFAULT_EMPTY_ROOM_GRACE_MS = 120_000;
 /** Default maximum number of concurrent rooms across all games. */
 export const DEFAULT_MAX_ROOMS = 100;
+/** Default spectator (audience) slots per room, on top of the game's `maxPlayers`. */
+export const DEFAULT_AUDIENCE_SLOTS = 32;
 /** Default largest accepted WebSocket frame (bytes); the transports' own default, now made explicit. */
 export const DEFAULT_MAX_PAYLOAD_BYTES = 4096;
 /** Default action limit per player: 10/s, burst 20. */
@@ -113,6 +121,7 @@ export function createGameServer(options: GameServerOptions): Server {
       reconnectMs: options.reconnectMs ?? DEFAULT_RECONNECT_MS,
       emptyRoomGraceMs: options.emptyRoomGraceMs ?? DEFAULT_EMPTY_ROOM_GRACE_MS,
       maxRooms: options.maxRooms ?? DEFAULT_MAX_ROOMS,
+      audienceSlots: options.audienceSlots ?? DEFAULT_AUDIENCE_SLOTS,
       ...(options.textFilter ? { textFilter: options.textFilter } : {}),
       rateLimiter,
       rateLimits,

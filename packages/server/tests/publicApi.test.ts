@@ -6,6 +6,7 @@ describe("public API", () => {
     expect(Object.keys(api).sort()).toEqual([
       "BaseGameState",
       "DEFAULT_ACTION_BUCKET",
+      "DEFAULT_AUDIENCE_SLOTS",
       "DEFAULT_EMPTY_ROOM_GRACE_MS",
       "DEFAULT_MAX_PAYLOAD_BYTES",
       "DEFAULT_MAX_ROOMS",

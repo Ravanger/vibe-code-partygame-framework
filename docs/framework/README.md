@@ -115,6 +115,14 @@ anything but an audience action gets `UNAUTHORIZED`. Payload validation, middlew
 `dispatch`. In replay, an entry whose sender is not in the recorded roster is re-dispatched through `dispatchAudience` (legacy
 logs without a roster keep player dispatch).
 
+On the server, spectators are the audience. A seatless connection may send `ACTION` only for an action declared
+`from: "audience"` in the current phase; anything else (a player action, a built-in, an action of another phase) gets the
+same `UNAUTHORIZED` spectator refusal as before audience actions existed. The audience key is the spectator's join
+`playerId`: once-scopes survive that connection dropping and reconnecting within the phase, and are cleared on a phase
+change, not on disconnect. Spectator actions draw from the same ACTION rate-limit bucket, keyed per connection and freed
+when the spectator leaves. Audience identity is in-memory and unauthenticated — a client that rotates its join `playerId`
+gets fresh scopes — so audience votes count participation, not commitments.
+
 ### Host controls
 The runtime handles these host-only actions for you; do not declare them (`defineGame` rejects the names):
 
@@ -674,7 +682,7 @@ import { startServer } from "@partygame/server/bun";
 await startServer({ games });   // WebSocket on PORT (2567) + /api/resolve-code on API_PORT (3001)
 ```
 
-Elsewhere: `createGameServer({ games, roomCodeService?, transport?, maxPayloadBytes?, maxRooms?, reconnectMs?, emptyRoomGraceMs?, textFilter? })` returns the Colyseus `Server`,
+Elsewhere: `createGameServer({ games, roomCodeService?, transport?, maxPayloadBytes?, maxRooms?, reconnectMs?, emptyRoomGraceMs?, audienceSlots?, textFilter? })` returns the Colyseus `Server`,
 and `createApiHandler(roomCodeService, { allowedOrigins? })` is the pure `(request, info?) => Response` behind `/api/resolve-code`: it answers with CORS headers only for origins in `allowedOrigins` (exact origins or `scheme://host:*` patterns; `"*"` for all) — by default loopback on any port, the dev client — echoing the origin with `Vary: Origin`; a disallowed origin gets no CORS headers, so the browser blocks it while non-browser callers still get the answer. The HTTP entries (`serveApi`, the Bun `startServer`) forward the request's method and headers and pass `{ remoteAddress }` as the second argument, and they bind the code API to loopback by default: `host` (or env `HOST`) picks another interface, and `allowedOrigins` (or env `ALLOWED_ORIGINS`, comma-separated, `*` for all) widens who may read it.
 The largest accepted WebSocket frame is `maxPayloadBytes` (default `DEFAULT_MAX_PAYLOAD_BYTES`, 4096), enforced on both transports; a bigger frame closes only that connection (code 1009) and leaves the room and its other players untouched.
 The number of concurrent rooms across all games is capped by `maxRooms` (default `DEFAULT_MAX_ROOMS`, 100; `Infinity` removes the cap): a create beyond the cap is refused with close code 4429 (`SERVER_FULL`, "Server is full") and existing rooms keep working; a slot frees again when one of the rooms is disposed.
@@ -688,6 +696,7 @@ A matching secret takes the seat over even while the old owner is still connecte
 A mid-game joiner is seated inactive.
 When the host leaves or drops, the role moves to a connected seat that is active and ready, else one that is ready, else any connected seat.
 Spectators get no reconnection window; they simply rejoin.
+A room admits at most `maxPlayers + audienceSlots` connections in total (default 32 audience slots, `DEFAULT_AUDIENCE_SLOTS`; set `audienceSlots` on `createGameServer`). Once the total is reached Colyseus locks the room's listing and further joins are refused at matchmaking time: the client gets a matchmake error (`"room … is locked"`, code 522), not a join close code.
 
 ### Private state with StateView
 Tag a synced field `.view()`, put per-player entries in it, and reveal each with `ctx.showTo(playerId, entry)`;
