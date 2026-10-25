@@ -1,5 +1,4 @@
 import { createServer as createHttpServer, type Server as HttpServer } from "node:http";
-import { createServer as createSocketServer } from "node:net";
 import type { Server } from "@colyseus/core";
 import { type ApiRequestInfo, createApiHandler } from "./api/createApiHandler.js";
 import {
@@ -7,6 +6,7 @@ import {
   createResolveCodeThrottle,
   type GameServerOptions,
 } from "./createGameServer.js";
+import { listenGameServer } from "./gameTransport.js";
 import { closeHttpServer, freePort } from "./probe.js";
 import type { RateLimits } from "./RateLimiter.js";
 import { hostFrom, parseAllowedOrigins } from "./resolveStartOptions.js";
@@ -101,19 +101,9 @@ export class NodeServerHandle {
   }
 }
 
-// Colyseus `listen` hangs instead of rejecting on a taken port, so check first.
-async function claimPort(port: number): Promise<void> {
-  const probe = createSocketServer();
-  await new Promise<void>((resolve, reject) => {
-    probe.once("error", reject);
-    probe.listen(port, resolve);
-  });
-  await new Promise((resolve) => probe.close(resolve));
-}
-
 const MAX_PORT_ATTEMPTS = 5;
 
-/** True for the EADDRINUSE a failed `listen` reports when a port was taken after we checked it. */
+/** True for the EADDRINUSE a failed bind reports when a free port was taken after we discovered it. */
 function isEaddrinuse(error: unknown): boolean {
   return (error as { code?: string } | null)?.code === "EADDRINUSE";
 }
@@ -143,26 +133,23 @@ export async function startNodeServer(
     const port = wantedPort ?? (await discoverFreePort());
     const apiPort = wantedApiPort ?? (await discoverFreePort());
     let api: HttpServer | undefined;
-    let server: Server | undefined;
     try {
-      await claimPort(port);
       api = await serveApi(roomCodeService, {
         port: apiPort,
         ...(host !== undefined ? { host } : {}),
         ...(allowedOrigins !== undefined ? { allowedOrigins } : {}),
         ...(options.rateLimits !== undefined ? { rateLimits: options.rateLimits } : {}),
       });
-      server = createGameServer({ ...serverOptions, roomCodeService });
-      await server.listen(port);
+      const server = createGameServer({ ...serverOptions, roomCodeService });
+      // A failed bind shuts the server down itself; only the API needs closing here.
+      await listenGameServer(server, port);
       return new NodeServerHandle(server, api, roomCodeService, port, apiPort);
     } catch (error) {
-      // A failed `listen` leaves no listening server behind; only close what is open.
       if (api !== undefined) {
         const openApi = api;
         openApi.closeAllConnections();
         await closeHttpServer(openApi);
       }
-      await server?.gracefullyShutdown(false);
       const retriable =
         isEaddrinuse(error) && wantedPort === undefined && wantedApiPort === undefined;
       if (!retriable || attempt === MAX_PORT_ATTEMPTS) throw error;

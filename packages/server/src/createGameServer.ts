@@ -1,7 +1,8 @@
-import { Server, type ServerOptions, type Transport } from "@colyseus/core";
+import type { ServerOptions, Transport } from "@colyseus/core";
 import type { TextFilter } from "@partygame/content/filter";
 import type { GameDefinition } from "@partygame/core";
 import { assertSyncedFields, type BaseGameState } from "@partygame/shared/schema";
+import { GameColyseusServer } from "./gameTransport.js";
 import {
   RateLimiter,
   type RateLimits,
@@ -105,12 +106,12 @@ export function createResolveCodeThrottle(rateLimits?: RateLimits): {
 }
 
 /** Colyseus server with one {@link GameRoom} per game. */
-export function createGameServer(options: GameServerOptions): Server {
+export function createGameServer(options: GameServerOptions): GameColyseusServer {
   const roomCodeService = options.roomCodeService ?? new RoomCodeService();
   const defaultTransportOptions: ServerOptions & { maxPayload?: number } = {
     maxPayload: options.maxPayloadBytes ?? DEFAULT_MAX_PAYLOAD_BYTES,
   };
-  const server = new Server(
+  const server = new GameColyseusServer(
     options.transport ? { transport: options.transport } : defaultTransportOptions,
   );
   const rateLimits = resolveRateLimits(options.rateLimits);
