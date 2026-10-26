@@ -18,6 +18,8 @@ import type {
   ActionDefinition,
   GameContext,
   GameDefinition,
+  LogFields,
+  Logger,
   MiddlewareContext,
   MiddlewareEvent,
   PhaseDefinition,
@@ -35,6 +37,9 @@ const STOPPED_ERROR: ServerError = {
 const FAILURE_NOTICE = "The game stopped because of an unexpected error.";
 /** `PhaseDefinition.tickMs` when a ticking phase does not set one: 10 Hz. */
 const DEFAULT_TICK_MS = 100;
+
+/** A logger that drops every line; the default when a host supplies no `RuntimeHost.log`. */
+export const noopLogger: Logger = { info() {}, warn() {}, error() {} };
 
 /** Thrown by the {@link GameRuntime} constructor when `createPrivateState()` returns a non-object. */
 export class InvalidPrivateStateError extends Error {
@@ -71,6 +76,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   private readonly state: TState;
   private options: TOptions;
   private readonly host: RuntimeHost;
+  private readonly logger: Logger;
   private readonly lobby: Lobby<TState, TPrivate, TOptions>;
   private readonly builtins: Record<string, ActionDefinition<TState, TPrivate, TOptions, unknown>>;
   private readonly phases: Record<string, PhaseDefinition<TState, TPrivate, TOptions>>;
@@ -95,6 +101,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     this.spec = config.definition;
     this.state = config.state;
     this.host = config.host;
+    this.logger = config.host.log ?? noopLogger;
     this.options = deepFreeze(config.options) as TOptions;
     const priv = this.spec.createPrivateState();
     if (typeof priv !== "object" || priv === null) throw new InvalidPrivateStateError();
@@ -232,6 +239,10 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       activateWaitingPlayers: () => this.host.activateWaitingPlayers(),
       send: (playerId, type, payload) => this.host.send(playerId, type, payload),
       broadcast: (type, payload) => this.host.broadcast(type, payload),
+      log: Object.assign((event: string, fields?: LogFields) => this.logger.info(event, fields), {
+        warn: (event: string, fields?: LogFields) => this.logger.warn(event, fields),
+        error: (event: string, fields?: LogFields) => this.logger.error(event, fields),
+      }),
       showTo: (playerId, ref) => this.host.showTo(playerId, ref),
       hideFrom: (playerId, ref) => this.host.hideFrom(playerId, ref),
       transition: (phase) => {

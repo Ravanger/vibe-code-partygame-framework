@@ -93,6 +93,7 @@ const rawContext = (priv: unknown): MiddlewareContext<PhaseState, unknown, unkno
   activateWaitingPlayers: () => {},
   send: () => {},
   broadcast: () => {},
+  log: Object.assign(() => {}, { warn() {}, error() {} }),
   showTo: () => {},
   hideFrom: () => {},
   transition: () => {},

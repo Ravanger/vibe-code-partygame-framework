@@ -545,6 +545,28 @@ Client-visible error strings are fixed and table-driven; raw Zod or exception te
 `CLIENT_MESSAGES` holds the fixed string per `ErrorCode`; `closeCodeEntry(code)` looks up a close-code entry by
 number. Both live in `packages/shared/src/errors.ts`, the single source for the table above.
 
+### Logging
+Structured log lines are injected through the host — there is no process-global logger (#110). A host implements
+`RuntimeHost.log`, a `Logger` with `info`, `warn` and `error`; each call is one line shaped
+`{ ts, level, event, roomId, ...fields }`. Field values are strings, numbers or booleans only: lines carry
+`playerId`s and event names, never player names or payloads. A host that supplies no logger gets the default no-op
+(`noopLogger` from `@partygame/core`).
+
+The framework defines a fixed set of events the server logs for every room (games may add their own dotted names):
+
+| Event | When | Fields |
+|---|---|---|
+| `room.created` | A room is created | — |
+| `room.disposed` | A room is disposed | — |
+| `player.joined` | A player joins | `playerId` |
+| `player.left` | A player leaves | `playerId` |
+| `player.reconnected` | A disconnected player reconnects | `playerId` |
+| `action.rejected` | An action is rejected by the game or the framework | `code`, `action` |
+
+Game code logs through the context in phases, action handlers, middleware and timers: `ctx.log("custom.event", { n: 1 })`
+writes at level `info`; `ctx.log.warn(...)` and `ctx.log.error(...)` set the other levels. In tests, `FakeHost.logs`
+captures every line as `{ level, event, fields }`.
+
 ## Minimal game: first to press the button
 
 ```ts

@@ -30,6 +30,29 @@ export interface PhaseState {
   notice?: string;
 }
 
+/** Field values for a log line: plain data only — ids and counters, never names or payloads. */
+export type LogFields = Record<string, string | number | boolean>;
+
+/** The level of a log line. */
+export type LogLevel = "info" | "warn" | "error";
+
+/**
+ * A structured log sink, injected by the host (never process-global). Each call is one line; the
+ * host shapes it as `{ ts, level, event, roomId, ...fields }`. `event` is a dotted name and
+ * `fields` carries {@link LogFields} only.
+ */
+export interface Logger {
+  info(event: string, fields?: LogFields): void;
+  warn(event: string, fields?: LogFields): void;
+  error(event: string, fields?: LogFields): void;
+}
+
+/** The logger a hook receives as `ctx.log`: call it to log at `info`, or use `.warn` / `.error`. */
+export type ContextLog = ((event: string, fields?: LogFields) => void) & {
+  warn(event: string, fields?: LogFields): void;
+  error(event: string, fields?: LogFields): void;
+};
+
 /** What every hook receives. */
 export interface GameContext<TState extends PhaseState, TPrivate, TOptions> {
   /** Synced to every client. */
@@ -48,6 +71,11 @@ export interface GameContext<TState extends PhaseState, TPrivate, TOptions> {
   activateWaitingPlayers(): void;
   send(playerId: string, type: string, payload: unknown): void;
   broadcast(type: string, payload: unknown): void;
+  /**
+   * Write a structured log line at level `info`; use `.warn` / `.error` for the other levels.
+   * Lines carry event names and fields only — never player names or payloads (see {@link Logger}).
+   */
+  log: ContextLog;
   /** Make a `.view()`-tagged part of the state visible to one player. Re-applied by the server on reconnect. */
   showTo(playerId: string, ref: object): void;
   hideFrom(playerId: string, ref: object): void;
@@ -291,6 +319,8 @@ export interface RuntimeHost {
   kick(playerId: string): void;
   /** Make the (validated) room options visible to clients. */
   publishOptions(options: unknown): void;
+  /** Structured logging sink for this room; when omitted the runtime defaults to a no-op logger. */
+  log?: Logger;
   now(): number;
   rng(): number;
   /** The room RNG seed (see `sfc32`); recorded in the action log header. */
