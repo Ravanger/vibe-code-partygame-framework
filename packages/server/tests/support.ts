@@ -1,5 +1,6 @@
 import type { Room } from "@colyseus/core";
 import type { Room as ClientRoom } from "@colyseus/sdk";
+import { defineGame } from "@partygame/core";
 import { BaseGameState } from "@partygame/shared/schema";
 import type { GameServerOptions } from "../src/createGameServer.js";
 import {
@@ -16,10 +17,19 @@ import { POLL_PUBLIC_FIELDS, PollGame, PollState } from "./fixtures/poll.js";
 export const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
+/** A buzzer variant that never migrates the host (#36). */
+const BuzzerNoMigrateGame = defineGame({ ...BuzzerGame, hostMigration: "none" });
+
 export const GAMES = [
   {
     roomName: "buzzer",
     definition: BuzzerGame,
+    stateClass: BuzzerState,
+    publicFields: BUZZER_PUBLIC_FIELDS,
+  },
+  {
+    roomName: "buzzer-none",
+    definition: BuzzerNoMigrateGame,
     stateClass: BuzzerState,
     publicFields: BUZZER_PUBLIC_FIELDS,
   },
@@ -65,8 +75,12 @@ export async function seat(t: TestServer, room: Room, n: number): Promise<Seated
   return { client, errors };
 }
 
-export async function startedRoom(t: TestServer, options: Record<string, unknown> = {}) {
-  const room = await t.createRoom("buzzer", options);
+export async function startedRoom(
+  t: TestServer,
+  options: Record<string, unknown> = {},
+  roomName = "buzzer",
+) {
+  const room = await t.createRoom(roomName, options);
   const p1 = await seat(t, room, 1);
   const p2 = await seat(t, room, 2);
   await waitUntil(() => stateOf(room).phase === "Buzz", "game started");

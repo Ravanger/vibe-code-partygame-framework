@@ -133,6 +133,16 @@ The runtime handles these host-only actions for you; do not declare them (`defin
 - `SET_OPTIONS { ...partial }`: Lobby only. If the game declares no `definition.options` schema, it rejects any key but `type` (`INVALID_ACTION`); a room for such a game also refuses create options. Otherwise the partial is merged into the current options and validated, then published; a failed parse or a result whose JSON is longer than `MAX_OPTIONS_JSON_LENGTH` is `INVALID_ACTION` and keeps the previous options. `ctx.options` reflects the new value.
 - `END_GAME`: any phase but the Lobby (`WRONG_PHASE` there). It runs `onEndGame(ctx)`, where a game can set a notice for the players, and then returns everyone to the Lobby as `ctx.returnToLobby()` does (`onReturnToLobby` runs, waiting joiners are let in). The hook cannot veto it.
 
+The first seat of a room is host by acquisition. After that, when the current host is not connected — or no seat holds the role any more (their seat was removed) — the runtime migrates it to one of the connected seats, in seat order, per `definition.hostMigration`:
+
+- `"next-seated"` (the default): the first connected seat that is active and ready, else the first connected ready seat, else the first connected seat — the historical behaviour.
+- `"oldest"`: the first connected seat regardless of ready or active.
+- `"random"`: one drawn with the room's seeded RNG, so a replay makes the same draw.
+- `"none"`: nobody — the room stays host-less until the old host returns; if their seat is removed (reconnect window expired, kicked) it stays host-less, and there is no recovery.
+- A `HostPicker` function `(candidates, rng) => playerId | undefined` for a game-defined pick among the connected seats; returning `undefined` leaves the room host-less like `"none"`.
+
+Migration runs before the phase's `onRosterChange`, so the hook sees the new role.
+
 ### Roster changes and mid-game joiners
 Joins, leaves, disconnects, reconnects and ready changes call the current phase's `onRosterChange(ctx)`.
 Use it to re-check completion ("everyone has answered") so a leaver cannot stall the game.
