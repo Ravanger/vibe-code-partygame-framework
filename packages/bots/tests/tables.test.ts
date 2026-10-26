@@ -458,8 +458,9 @@ describe("table overrides", () => {
   });
 
   it("BotTable and DemoTable forward timeoutMs to joinBots", async () => {
-    // The padded room's ~4 MB initial state sync lands well past waitFor's 20 ms poll floor, so a
-    // 1 ms budget forwarded to joinBots times out in joinOne; the 5000 ms default would resolve.
+    // The padded room's ~4 MB initial state sync blocks the event loop well past waitFor's 20 ms
+    // poll floor, so a 1 ms budget forwarded to joinBots expires in joinOne — in whichever of its
+    // two waits (the pending poll and the synced state race); the 5000 ms default would resolve.
     const table = new BotTable({ ...paddedKit, endpoint: t.endpoint, apiPort, timeoutMs: 1 });
     leavers.push(table);
     const code = await table.open();
@@ -474,8 +475,9 @@ describe("table overrides", () => {
     );
     leavers.push({ leave: () => room.leave(true) });
     await claimName(room, "human-zed-0005", "Zed");
+    // Either of joinOne's two waits can carry the timeout (see above); both prove forwarding.
     await expect(table.seatBots({ count: 1 })).rejects.toThrow(
-      "Timed out waiting for the room state",
+      /Timed out waiting for (the room state|your name to be accepted)/,
     );
 
     const demo = new DemoTable({
@@ -488,7 +490,9 @@ describe("table overrides", () => {
     });
     leavers.push(demo);
     await demo.open();
-    await expect(demo.seatBots()).rejects.toThrow("Timed out waiting for the room state");
+    await expect(demo.seatBots()).rejects.toThrow(
+      /Timed out waiting for (the room state|your name to be accepted)/,
+    );
   }, 20_000);
 
   it("DemoTable keeps the code open() verified when synced state is later clobbered", async () => {
@@ -505,7 +509,10 @@ describe("table overrides", () => {
     leavers.push(demo);
     await demo.open();
     demo.clobberRoomCode();
-    await expect(demo.seatBots()).rejects.toThrow("Timed out waiting for the room state");
+    // The 1 ms budget can expire in either of joinOne's two waits; both prove forwarding.
+    await expect(demo.seatBots()).rejects.toThrow(
+      /Timed out waiting for (the room state|your name to be accepted)/,
+    );
   }, 20_000);
 
   it("DemoTable keeps a code observed before claimName when state is clobbered mid-open", async () => {
@@ -550,7 +557,10 @@ describe("table overrides", () => {
       } as never);
       const code = await demo.open();
       expect(RoomCodeSchema.safeParse(code).success).toBe(true);
-      await expect(demo.seatBots()).rejects.toThrow("Timed out waiting for the room state");
+      // The 1 ms budget can expire in either of joinOne's two waits; both prove forwarding.
+      await expect(demo.seatBots()).rejects.toThrow(
+        /Timed out waiting for (the room state|your name to be accepted)/,
+      );
     } finally {
       createSpy.mockRestore();
     }
