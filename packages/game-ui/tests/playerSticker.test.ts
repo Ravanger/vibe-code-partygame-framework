@@ -15,7 +15,12 @@ describe("playerSticker", () => {
       colors.add(color);
     }
     expect([...shapes].sort()).toEqual([...STICKER_SHAPES].sort());
-    expect([...colors].sort()).toEqual(["var(--mint)", "var(--pink)", "var(--sky)", "var(--sun)"]);
+    expect([...colors].sort()).toEqual([
+      "var(--color-1)",
+      "var(--color-2)",
+      "var(--color-3)",
+      "var(--color-4)",
+    ]);
   });
 });
 

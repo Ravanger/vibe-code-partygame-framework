@@ -67,7 +67,7 @@ $effect(() => () => vm.destroy());
             <span class="player-name">{player.isReady ? player.name : "Choosing a name..."}</span>
             <div class="badges">
               {#if player.isMe}
-                <span class="chip chip--sky">(You)</span>
+                <span class="chip chip--color-4">(You)</span>
               {/if}
               {#if player.isHost}
                 <span class="chip"><span aria-hidden="true">&#128081;</span> Host</span>

@@ -18,10 +18,10 @@ const { rows }: { rows: ScoreRow[] } = $props();
             <span class="you hand">&larr; you</span>
           {/if}
           {#if entry.wonTieBreaker}
-            <span class="chip chip--sky">TIE-BREAKER</span>
+            <span class="chip chip--color-4">TIE-BREAKER</span>
           {/if}
           {#if entry.hadClash}
-            <span class="chip chip--pink">CLASH</span>
+            <span class="chip chip--color-1">CLASH</span>
           {/if}
         </span>
       </div>
@@ -53,7 +53,7 @@ const { rows }: { rows: ScoreRow[] } = $props();
   }
 
   .score-row.first {
-    background: var(--sun);
+    background: var(--color-2);
   }
 
   .score-row.is-me:not(.first) {
@@ -111,7 +111,7 @@ const { rows }: { rows: ScoreRow[] } = $props();
   }
 
   .round-points.positive {
-    background: var(--mint);
+    background: var(--color-3);
   }
 
   .total-score {

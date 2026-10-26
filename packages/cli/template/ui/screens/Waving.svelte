@@ -65,7 +65,7 @@ const vm = untrack(() => new WavingViewModel(manager));
   }
 
   .row.leader {
-    background: var(--sun);
+    background: var(--color-2);
   }
 
   .row.me {

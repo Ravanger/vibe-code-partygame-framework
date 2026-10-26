@@ -122,11 +122,11 @@ $effect(() => () => vm.destroy());
   }
 
   .tab.active {
-    background: var(--sun);
+    background: var(--color-2);
   }
 
   .tab.done:not(.active) {
-    background: var(--mint);
+    background: var(--color-3);
   }
 
   .question {
