@@ -6,7 +6,7 @@ Ships source (`.ts`/`.svelte.ts`); consumers need the Svelte plugin — Vite wit
 
 | Import | What |
 |---|---|
-| `@partygame/game-client` | `GameConnectionManager<TState>`: connect, sync, send actions; `Countdown`, `resolveEndpoints`, `readCodeParam` |
+| `@partygame/game-client` | `GameConnectionManager<TState>`: connect, sync, send actions; `Countdown`, `FeedbackBus`, `resolveEndpoints`, `readCodeParam` |
 | `@partygame/game-client/testing` | `StubRoom`, `connectedClient`, `fakeFetch` for UI tests without a server |
 | `@partygame/game-client/test-setup` | jsdom setup (shims storage, fixes WebSocket for the SDK) |
 
@@ -104,6 +104,24 @@ if (response.ok === false) console.warn(manager.lastServerError?.message);
 const clock = manager.countdown();
 clock.secondsLeft; clock.isUrgent; clock.isExpired; // reactive
 ```
+
+## Sound and animation feedback
+
+`manager.feedback` is a typed event stream for attaching sound or animation, without the framework shipping assets. Every event carries a `reducedMotion` flag (read live from `prefers-reduced-motion`) so a game can choose quiet or subtle feedback:
+
+- `{ type: "phase", from, to }` — when `state.phase` changes; the first phase observed after connecting is the silent baseline.
+- `{ type: "urgent" }` — once per phase, when the countdown enters its last ten seconds.
+- `{ type: "message", name, payload }` — a server broadcast for a name registered with `onMessage`.
+
+```ts
+manager.feedback.on("phase", (event) => {
+  if (!event.reducedMotion) playWhoosh(event.to);
+});
+manager.feedback.on("urgent", () => tickSound());
+const off = manager.feedback.on("message", (event) => chime(event.name)); // returns an unsubscribe
+```
+
+`matchMedia` is injectable through the `matchMedia` option for tests; it defaults to `window.matchMedia`.
 
 ## Test UI without a server
 

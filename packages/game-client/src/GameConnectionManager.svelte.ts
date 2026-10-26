@@ -19,6 +19,7 @@ import {
 import type { BaseGameState, PlayerSchema } from "@partygame/shared/schema";
 import { createSubscriber } from "svelte/reactivity";
 import { Countdown } from "./countdown.svelte.js";
+import { FeedbackBus } from "./FeedbackBus.js";
 import { CANCELLED, JoinCoordinator } from "./JoinCoordinator.js";
 import { MessageBus } from "./MessageBus.js";
 import { PersistedSession } from "./PersistedSession.js";
@@ -46,6 +47,8 @@ export interface GameConnectionOptions<TState> {
   syncTimeoutMs?: number;
   /** Receives the exception behind a local action failure, never shown to the UI. Default `console.warn`. */
   logger?: (message: string, error: unknown) => void;
+  /** Browser `matchMedia`, injected for tests. Default `window.matchMedia`. */
+  matchMedia?: (query: string) => { matches: boolean };
 }
 
 /** Options for {@link GameConnectionManager.join}; the manager adds `playerId`, `seatSecret` and `protocolVersion` itself. */
@@ -60,6 +63,9 @@ export interface JoinOptions {
 
 const DEFAULT_API_PORT = 3001;
 const DEFAULT_SYNC_TIMEOUT_MS = 10_000;
+// Same cadence as the Countdown's own ticker.
+const URGENCY_TICK_MS = 250;
+const URGENCY_WINDOW_MS = 10_000;
 
 /**
  * Connection to one game room: lifecycle, the reactive state, and the player's actions.
@@ -73,12 +79,21 @@ export class GameConnectionManager<
   lastServerError: ServerError | undefined = $state.raw(undefined);
   readonly playerId: string;
 
+  /** Sound and animation events derived from the room's state and registered server broadcasts. */
+  readonly feedback: FeedbackBus;
   private room: RoomLike<TState> | undefined = $state.raw(undefined);
   private readonly client: Client;
   private readonly session: PersistedSession;
   private readonly apiBase: string;
   private readonly bus = new MessageBus<TState>();
   private readonly coordinator = new JoinCoordinator();
+  private lastPhase: string | undefined;
+  private phaseWatcher: { room: RoomLike<TState>; callback: () => void } | undefined;
+  private urgencyTimer: ReturnType<typeof setInterval> | undefined;
+  private urgentFired = false;
+  private lastServerNow = 0;
+  private lastServerNowAt = 0;
+  private readonly messageRelays = new Map<string, { count: number; off: () => void }>();
   private spectating = false;
   private notify: (() => void) | undefined;
   private bound: { room: RoomLike<TState>; callback: () => void } | undefined;
@@ -98,7 +113,10 @@ export class GameConnectionManager<
     const url = new URL(options.endpoint);
     const port = options.apiPort ?? DEFAULT_API_PORT;
     this.apiBase = `${url.protocol.replace("ws", "http")}//${url.hostname}:${port}`;
-    this.onMessage(ServerMessage.ERROR, (payload) => this.serverErrorReceived(payload));
+    const matchMedia = options.matchMedia ?? ((query: string) => window.matchMedia(query));
+    this.feedback = new FeedbackBus(() => matchMedia("(prefers-reduced-motion: reduce)").matches);
+    // Protocol errors are internal plumbing, not a game broadcast: no feedback relay.
+    this.bus.on(ServerMessage.ERROR, (payload) => this.serverErrorReceived(payload));
   }
 
   /** The room's state, or `undefined` while not in a room. Reading it inside `$derived`/`$effect`/templates re-runs on every patch. */
@@ -286,13 +304,32 @@ export class GameConnectionManager<
     }
   }
 
-  /** Listens for a pushed message type; survives room changes. Register before connecting so the SDK does not warn. */
+  /** Listens for a pushed message type; survives room changes. Register before connecting so the SDK does not warn. While at least one listener is registered, broadcasts of the name are also relayed to `feedback`. */
   onMessage<K extends keyof TEvents & string>(
     type: K,
     callback: (payload: TEvents[K]) => void,
   ): () => void {
     // The bus stores untyped callbacks; the typed contract lives at this public boundary.
-    return this.bus.on(type, callback as (payload: unknown) => void);
+    const offBus = this.bus.on(type, callback as (payload: unknown) => void);
+    let relay = this.messageRelays.get(type);
+    if (relay === undefined) {
+      relay = {
+        count: 0,
+        off: this.bus.on(type, (payload) => this.feedback.emitMessage(type, payload)),
+      };
+      this.messageRelays.set(type, relay);
+    }
+    relay.count += 1;
+    return () => {
+      offBus();
+      const current = this.messageRelays.get(type);
+      if (current === undefined) return;
+      current.count -= 1;
+      if (current.count === 0) {
+        current.off();
+        this.messageRelays.delete(type);
+      }
+    };
   }
 
   dismissError(): void {
@@ -320,6 +357,10 @@ export class GameConnectionManager<
         this.detach("disconnected");
       }),
     );
+    const watchPhase = () => this.observePhase(room);
+    room.onStateChange(watchPhase);
+    this.phaseWatcher = { room, callback: watchPhase };
+    this.startUrgencyTimer(room);
     this.status = "connected";
     this.rememberToken(room);
     this.rememberRoomCode(room);
@@ -403,9 +444,52 @@ export class GameConnectionManager<
 
   private detach(status?: ConnectionStatus): void {
     this.unbindState();
+    this.phaseWatcher?.room.onStateChange.remove(this.phaseWatcher.callback);
+    this.phaseWatcher = undefined;
+    this.stopUrgencyTimer();
     this.bus.unbind();
     this.room = undefined;
     if (status) this.status = status;
+  }
+
+  /** Emits a phase event when `state.phase` changes; the first observation after connecting is the silent baseline. */
+  private observePhase(room: RoomLike<TState>): void {
+    const phase = room.state.phase;
+    const from = this.lastPhase;
+    this.lastPhase = phase;
+    if (from === undefined || from === phase) return;
+    this.urgentFired = false;
+    this.feedback.emitPhase(from, phase);
+  }
+
+  private startUrgencyTimer(room: RoomLike<TState>): void {
+    this.stopUrgencyTimer();
+    this.urgentFired = false;
+    this.lastServerNow = 0;
+    this.lastServerNowAt = 0;
+    this.urgencyTimer = setInterval(() => this.observeUrgency(room), URGENCY_TICK_MS);
+  }
+
+  private stopUrgencyTimer(): void {
+    if (this.urgencyTimer !== undefined) clearInterval(this.urgencyTimer);
+    this.urgencyTimer = undefined;
+  }
+
+  /** Fires the once-per-phase urgent event while the phase's countdown is in its last ten seconds, skew-corrected like `Countdown`. */
+  private observeUrgency(room: RoomLike<TState>): void {
+    const state = room.state;
+    const ends = state.phaseEndsAt;
+    if (state.serverNow !== this.lastServerNow) {
+      this.lastServerNow = state.serverNow;
+      this.lastServerNowAt = Date.now();
+    }
+    if (!ends || !this.lastServerNow) return;
+    const estimatedNow = this.lastServerNow + (Date.now() - this.lastServerNowAt);
+    const remainingMs = ends - estimatedNow;
+    if (!this.urgentFired && remainingMs > 0 && remainingMs <= URGENCY_WINDOW_MS) {
+      this.urgentFired = true;
+      this.feedback.emitUrgent();
+    }
   }
 
   private bindState(): void {

@@ -823,6 +823,13 @@ A client that joined with `joinAsSpectator` is remembered as a spectator and `re
 `leave()` forgets the room code, token and spectator flag (a reload does not rejoin) and sets `status` to `"disconnected"`.
 Joins are de-duplicated per code and mode, so watching and playing the same room are different joins and the newest wins.
 
+### Sound and animation hooks
+`manager.feedback` is a typed event stream for attaching sound or animation; the framework ships no assets. Every event carries a `reducedMotion`
+flag (read live from `prefers-reduced-motion`, injectable through the `matchMedia` option for tests) so a game can choose quiet or subtle feedback:
+`{ type: "phase", from, to }` when `state.phase` changes (the first phase observed after connecting is the silent baseline), `{ type: "urgent" }`
+once per phase when the countdown enters its last ten seconds, and `{ type: "message", name, payload }` for server broadcasts whose name the game
+registered with `onMessage`. `manager.feedback.on(type, callback)` returns an unsubscribe.
+
 ### Testing UI code
 `@partygame/game-client/testing` has `StubRoom`, an in-memory room around a real state object. `manager.attach(new StubRoom(state))`, mutate the state,
 call `room.patch()`. `room.requests`/`room.sent` record what the UI sent, `room.reply` sets the answer to `request`, and `push`, `dropConnection`,
