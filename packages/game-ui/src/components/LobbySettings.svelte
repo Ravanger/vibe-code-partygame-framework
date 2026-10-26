@@ -12,10 +12,10 @@ const { vm }: { vm: LobbySettingsViewModel<TState> } = $props();
     {#each vm.fields as field (field.key)}
       <div class="setting">
         {#if vm.canEdit}
-          {#if field.options}
+          {#if field.kind === "select"}
             <span class="setting-label">{field.label}</span>
             <fieldset class="choices" aria-label={field.label}>
-              {#each field.options as choice (choice)}
+              {#each field.choices as choice (choice)}
                 <button
                   type="button"
                   class:active={vm.valueOf(field.key) === choice}
@@ -26,6 +26,25 @@ const { vm }: { vm: LobbySettingsViewModel<TState> } = $props();
                 </button>
               {/each}
             </fieldset>
+          {:else if field.kind === "boolean"}
+            <label for={`opt-${field.key}`}>{field.label}</label>
+            <input
+              id={`opt-${field.key}`}
+              type="checkbox"
+              checked={vm.valueOf(field.key) === "true"}
+              oninput={(e) => vm.setDraft(field.key, String(e.currentTarget.checked))}
+              onchange={() => vm.commit(field.key)}
+            />
+          {:else if field.kind === "text"}
+            <label for={`opt-${field.key}`}>{field.label}</label>
+            <input
+              id={`opt-${field.key}`}
+              type="text"
+              maxlength={field.maxLength}
+              value={vm.valueOf(field.key)}
+              oninput={(e) => vm.setDraft(field.key, e.currentTarget.value)}
+              onchange={() => vm.commit(field.key)}
+            />
           {:else}
             <label for={`opt-${field.key}`}>{field.label}</label>
             <input
@@ -33,7 +52,7 @@ const { vm }: { vm: LobbySettingsViewModel<TState> } = $props();
               type="number"
               min={field.min}
               max={field.max}
-              step="1"
+              step={field.step}
               value={vm.valueOf(field.key)}
               oninput={(e) => vm.setDraft(field.key, e.currentTarget.value)}
               onchange={() => vm.commit(field.key)}
@@ -116,6 +135,15 @@ const { vm }: { vm: LobbySettingsViewModel<TState> } = $props();
     font-family: var(--font-display);
     font-size: var(--fs-3);
     text-align: center;
+  }
+
+  input[type="text"] {
+    width: 8rem;
+  }
+
+  input[type="checkbox"] {
+    width: auto;
+    padding: 0;
   }
 
   .setting-label {

@@ -11,12 +11,19 @@ const model = (c: ReturnType<typeof client>) =>
   new LobbySettingsViewModel(c.manager, { schema: TestOptionsSchema, defaults: TEST_DEFAULTS });
 
 describe("LobbySettingsViewModel", () => {
-  it("has a field per bounded option and shows published values, with defaults for the rest", () => {
+  it("has a field per option kind and shows published values, with defaults for the rest", () => {
     const c = client({ role: "host" });
     c.state.options = JSON.stringify({ turnSeconds: 30 });
     const vm = model(c);
-    expect(vm.fields.map((f) => f.key)).toEqual(["turnSeconds"]);
+    expect(vm.fields.map((f) => f.key)).toEqual([
+      "turnSeconds",
+      "tolerance",
+      "soundOn",
+      "level",
+      "label",
+    ]);
     expect(vm.valueOf("turnSeconds")).toBe("30");
+    expect(vm.valueOf("soundOn")).toBe("true");
     expect(vm.valueOf("label")).toBe("x");
     expect(vm.valueOf("nope")).toBe("");
   });
@@ -76,6 +83,61 @@ describe("LobbySettingsViewModel", () => {
     expect(host.room.requests).toEqual([]);
   });
 
+  it("sends a non-integer number for a stepped field", async () => {
+    const host = client({ role: "host" });
+    const vm = model(host);
+    vm.setDraft("tolerance", "0.3");
+    await vm.commit("tolerance");
+    expect(host.room.requests).toEqual([
+      { type: "ACTION", payload: { tolerance: 0.3, type: "SET_OPTIONS" } },
+    ]);
+  });
+
+  it("sends a boolean for a checkbox draft and drops anything else", async () => {
+    const host = client({ role: "host" });
+    const vm = model(host);
+    vm.setDraft("soundOn", "false");
+    await vm.commit("soundOn");
+    vm.setDraft("soundOn", "maybe");
+    await vm.commit("soundOn");
+    expect(host.room.requests).toEqual([
+      { type: "ACTION", payload: { soundOn: false, type: "SET_OPTIONS" } },
+    ]);
+    expect(vm.valueOf("soundOn")).toBe("true");
+  });
+
+  it("sends the typed string for a text field, even an empty one", async () => {
+    const host = client({ role: "host" });
+    const vm = model(host);
+    vm.setDraft("label", "hello");
+    await vm.commit("label");
+    vm.setDraft("label", "");
+    await vm.commit("label");
+    expect(host.room.requests).toEqual([
+      { type: "ACTION", payload: { label: "hello", type: "SET_OPTIONS" } },
+      { type: "ACTION", payload: { label: "", type: "SET_OPTIONS" } },
+    ]);
+  });
+
+  it("sends nothing for a key the form does not have", async () => {
+    const host = client({ role: "host" });
+    const vm = model(host);
+    vm.setDraft("nope", "5");
+    await vm.commit("nope");
+    expect(host.room.requests).toEqual([]);
+  });
+
+  it("passes onUnsupported through to the field builder", () => {
+    const seen: string[] = [];
+    new LobbySettingsViewModel(client().manager, {
+      schema: z.object({ tags: z.array(z.string()).default([]) }),
+      onUnsupported: (key) => {
+        seen.push(key);
+      },
+    });
+    expect(seen).toEqual(["tags"]);
+  });
+
   it("clearing a field sends nothing and restores the published value", async () => {
     const host = client({ role: "host" });
     host.state.options = JSON.stringify({ turnSeconds: 30 });
@@ -105,7 +167,7 @@ describe("LobbySettingsViewModel", () => {
     const host = client({ role: "host" });
     const vm = levelVm(host);
     expect(vm.fields).toEqual([
-      { key: "level", label: "Level", options: ["off", "moderate", "strict"] },
+      { key: "level", label: "Level", kind: "select", choices: ["off", "moderate", "strict"] },
     ]);
     await vm.choose("level", "strict");
     expect(host.room.requests).toEqual([
@@ -136,7 +198,7 @@ describe("LobbySettingsViewModel", () => {
   it("still sends a value the schema would reject; the server validates", async () => {
     const host = client({ role: "host" });
     const vm = new LobbySettingsViewModel(host.manager, {
-      schema: z.object({ n: z.number().int().min(1).default(2) }),
+      schema: z.object({ n: z.number().int().min(1).max(9).default(2) }),
     });
     vm.setDraft("n", "0");
     await vm.commit("n");

@@ -12,9 +12,11 @@ export interface LobbySettingsConfig {
   defaults?: Readonly<Record<string, unknown>>;
   /** Overrides the generated label of a field. */
   labels?: Readonly<Record<string, string>>;
+  /** Reports each option the form cannot render; default warns once per key. */
+  onUnsupported?: (key: string, reason: string) => void;
 }
 
-/** The room options as a form: one number field per bounded numeric option and one choice field per string-enum option of the schema. */
+/** The room options as a form: one field per bounded numeric, boolean, string-enum or string option of the schema. */
 export class LobbySettingsViewModel<TState extends BaseGameState> {
   readonly fields: OptionField[];
   private readonly drafts = $state<Record<string, string>>({});
@@ -24,7 +26,9 @@ export class LobbySettingsViewModel<TState extends BaseGameState> {
     private readonly manager: GameConnectionManager<TState>,
     config: LobbySettingsConfig,
   ) {
-    this.fields = new OptionFields(config.labels).from(z.toJSONSchema(config.schema));
+    this.fields = new OptionFields(config.labels, config.onUnsupported).from(
+      z.toJSONSchema(config.schema),
+    );
     // The config's schema is untyped; the reader only ever reads it as a record of fields.
     this.reader = new OptionsReader(
       manager,
@@ -56,24 +60,33 @@ export class LobbySettingsViewModel<TState extends BaseGameState> {
     await this.commit(key);
   }
 
-  /** Sends the typed value. An empty draft, a non-numeric number draft or a choice that is not one of the field's options is dropped without sending; a rejection (also shown by the app's error toast) puts the published value back. */
+  /** Sends the typed value with the field's own JSON type. A number draft that is empty or not a number, a boolean draft that is neither "true" nor "false", or a choice that is not one of the field's options is dropped without sending; a rejection (also shown by the app's error toast) puts the published value back. */
   async commit(key: string): Promise<void> {
     const raw = this.drafts[key];
     if (raw === undefined || !this.canEdit) return;
     const field = this.fields.find((candidate) => candidate.key === key);
-    if (field?.options !== undefined) {
-      if (!field.options.includes(raw)) {
+    if (field === undefined) return;
+    let value: boolean | number | string;
+    if (field.kind === "number") {
+      value = Number(raw);
+      if (raw.trim() === "" || !Number.isFinite(value)) {
         delete this.drafts[key];
         return;
       }
-      const result = await this.manager.sendAction(SET_OPTIONS, { [key]: raw });
-      if (!result.ok) delete this.drafts[key];
-      return;
-    }
-    const value = Number(raw);
-    if (raw.trim() === "" || !Number.isFinite(value)) {
-      delete this.drafts[key];
-      return;
+    } else if (field.kind === "boolean") {
+      if (raw !== "true" && raw !== "false") {
+        delete this.drafts[key];
+        return;
+      }
+      value = raw === "true";
+    } else if (field.kind === "select") {
+      if (!field.choices.includes(raw)) {
+        delete this.drafts[key];
+        return;
+      }
+      value = raw;
+    } else {
+      value = raw;
     }
     const result = await this.manager.sendAction(SET_OPTIONS, { [key]: value });
     if (!result.ok) delete this.drafts[key];
