@@ -47,11 +47,19 @@ describe("LobbySettings", () => {
     ]);
   });
 
+  it("renders editable rows as a list, never a definition list", () => {
+    const { vm } = setup({ role: "host" });
+    const { container } = render(LobbySettings, { vm });
+    expect(container.querySelector("dl")).not.toBeInTheDocument();
+    expect(container.querySelectorAll("ul li.setting").length).toBeGreaterThan(0);
+  });
+
   it("shows everyone else read-only lines, collapsed", () => {
     const { vm } = setup();
     const { container } = render(LobbySettings, { vm });
     expect(screen.getByText("Game settings")).toBeInTheDocument();
     expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
+    expect(container.querySelector("dl > div")).not.toBeInTheDocument();
     expect(screen.getByText("Turn seconds").tagName).toBe("DT");
     expect(screen.getByText("30").tagName).toBe("DD");
     expect(container.querySelector("details")).not.toHaveAttribute("open");

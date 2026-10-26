@@ -25,7 +25,11 @@ describe("Podium", () => {
     for (const label of ["1st", "2nd", "3rd"]) expect(screen.getByText(label)).toBeInTheDocument();
     for (const name of ["Ann", "Bo", "Cy"]) expect(screen.getByText(name)).toBeInTheDocument();
     expect(screen.getByText("30 pts")).toBeInTheDocument();
-    expect(screen.getAllByText("← you")).toHaveLength(1);
+    const marker = container.querySelector<HTMLElement>(".you");
+    expect(marker).not.toBeNull();
+    expect(marker?.querySelector('[aria-hidden="true"]')?.textContent).toBe("←");
+    expect(marker?.querySelector(".sr-only")?.textContent).toBe("This is you");
+    expect(screen.getByText("you")).toBeInTheDocument();
     expect(container.querySelectorAll(".star")).toHaveLength(1);
     expect(container.querySelector(".tier-1 .star")).toBeInTheDocument();
   });
