@@ -1,8 +1,7 @@
-import { Client } from "@colyseus/sdk";
-import { apiBaseOf, claimName, resolveRoomCode, waitFor } from "@partygame/client-utils";
-import { PROTOCOL_VERSION } from "@partygame/shared";
+import { claimName, type RoomConnector } from "@partygame/client-utils";
 import type { BaseGameState } from "@partygame/shared/schema";
 import { BotPlayer } from "./BotPlayer.js";
+import { ColyseusConnector } from "./ColyseusConnector.js";
 import type { BotConnection, BotKit } from "./types.js";
 
 const DEFAULT_TIMEOUT_MS = 5000;
@@ -17,21 +16,24 @@ export interface JoinBotsOptions<TState extends BaseGameState>
   /** Name for the n-th free slot (1-based); "Bot n" by default. Taken names are skipped. */
   nameFor?: (n: number) => string;
   timeoutMs?: number;
+  /** Opens the bot seats; a Colyseus connector for `endpoint` and `apiPort` by default. */
+  connector?: RoomConnector<TState>;
 }
 
 class BotJoiner<TState extends BaseGameState> {
-  private readonly client: Client;
+  private readonly connector: RoomConnector<TState>;
 
   constructor(private readonly options: JoinBotsOptions<TState>) {
-    this.client = new Client(options.endpoint);
+    this.connector =
+      options.connector ??
+      new ColyseusConnector(options.endpoint, options.apiPort, { stateClass: options.stateClass });
   }
 
   async join(): Promise<BotPlayer<TState>[]> {
-    const { endpoint, apiPort, code, count } = this.options;
-    const roomId = await resolveRoomCode(apiBaseOf(endpoint, apiPort), code);
+    const { code, count } = this.options;
     const bots: BotPlayer<TState>[] = [];
     try {
-      for (let i = 0; i < count; ++i) bots.push(await this.joinOne(roomId, i));
+      for (let i = 0; i < count; ++i) bots.push(await this.joinOne(code, i));
     } catch (error) {
       await Promise.allSettled(bots.map((bot) => bot.leave()));
       throw error;
@@ -39,22 +41,12 @@ class BotJoiner<TState extends BaseGameState> {
     return bots;
   }
 
-  private async joinOne(roomId: string, index: number): Promise<BotPlayer<TState>> {
-    const { stateClass, strategy, bot, playerIds } = this.options;
+  private async joinOne(code: string, index: number): Promise<BotPlayer<TState>> {
+    const { strategy, bot, playerIds } = this.options;
     const timeoutMs = this.options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     const playerId = playerIds?.[index] ?? crypto.randomUUID();
-    const room = await this.client.joinById<TState>(
-      roomId,
-      {
-        playerId,
-        seatSecret: crypto.randomUUID() + crypto.randomUUID(),
-        protocolVersion: PROTOCOL_VERSION,
-      },
-      stateClass,
-    );
+    const room = await this.connector.join(code, { playerId, timeoutMs });
     try {
-      // The SDK leaves room.state undefined until the first sync lands; poll it as if absent.
-      await waitFor(() => (room.state?.roomCode ?? "") !== "", "the room state", timeoutMs);
       const name = this.freeName(room.state);
       await claimName(room, playerId, name, timeoutMs);
       return new BotPlayer(room, playerId, name, strategy, bot);

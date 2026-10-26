@@ -1,7 +1,8 @@
-import { Client } from "@colyseus/sdk";
-import { PROTOCOL_VERSION, RoomCodeSchema } from "@partygame/shared";
+import type { RoomConnector } from "@partygame/client-utils";
+import { RoomCodeSchema } from "@partygame/shared";
 import type { BaseGameState } from "@partygame/shared/schema";
 import type { BotPlayer } from "./BotPlayer.js";
+import { ColyseusConnector } from "./ColyseusConnector.js";
 import { type JoinBotsOptions, joinBots } from "./joinBots.js";
 import { RoomWatch } from "./RoomWatch.js";
 import type { BotConnection, BotKit, BotRoom } from "./types.js";
@@ -9,7 +10,10 @@ import type { BotConnection, BotKit, BotRoom } from "./types.js";
 export interface BotTableOptions<TState extends BaseGameState>
   extends BotConnection,
     BotKit<TState>,
-    Pick<JoinBotsOptions<TState>, "nameFor" | "timeoutMs"> {}
+    Pick<JoinBotsOptions<TState>, "nameFor" | "timeoutMs"> {
+  /** Opens the room and seats the bots; a Colyseus connector for `endpoint` and `apiPort` by default. */
+  connector?: RoomConnector<TState>;
+}
 
 export interface SeatBotsOptions {
   count: number;
@@ -21,22 +25,23 @@ const OPEN_TIMEOUT_MS = 5000;
 
 /** Opens an empty room as a spectator, then seats bots once a human has joined and named themselves. */
 export class BotTable<TState extends BaseGameState> {
-  private readonly client: Client;
+  private readonly connector: RoomConnector<TState>;
   private seat: { room: BotRoom<TState>; watch: RoomWatch; code: string } | undefined;
   private bots: BotPlayer<TState>[] = [];
 
   constructor(private readonly options: BotTableOptions<TState>) {
-    this.client = new Client(options.endpoint);
+    this.connector =
+      options.connector ??
+      new ColyseusConnector(options.endpoint, options.apiPort, {
+        roomName: options.roomName,
+        stateClass: options.stateClass,
+      });
   }
 
   /** Creates the room and returns its code. */
   async open(): Promise<string> {
     if (this.seat) throw new Error("The table is already open");
-    const room = await this.client.create<TState>(
-      this.options.roomName,
-      { playerId: crypto.randomUUID(), spectator: true, protocolVersion: PROTOCOL_VERSION },
-      this.options.stateClass,
-    );
+    const room = await this.connector.create({ playerId: crypto.randomUUID(), spectator: true });
     const watch = new RoomWatch(room);
     this.seat = { room, watch, code: "" };
     // The initial state sync lands after create() resolves (room.state is undefined until then),
@@ -87,6 +92,7 @@ export class BotTable<TState extends BaseGameState> {
       apiPort,
       stateClass,
       strategy,
+      connector: this.connector,
       ...(bot ? { bot } : {}),
       ...(nameFor ? { nameFor } : {}),
       ...(joinTimeoutMs === undefined ? {} : { timeoutMs: joinTimeoutMs }),

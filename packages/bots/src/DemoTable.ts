@@ -1,8 +1,8 @@
-import { Client } from "@colyseus/sdk";
-import { claimName, waitFor } from "@partygame/client-utils";
-import { PROTOCOL_VERSION, RoomCodeSchema } from "@partygame/shared";
+import { claimName, type RoomConnector, waitFor } from "@partygame/client-utils";
+import { RoomCodeSchema } from "@partygame/shared";
 import type { BaseGameState } from "@partygame/shared/schema";
 import { BotPlayer } from "./BotPlayer.js";
+import { ColyseusConnector } from "./ColyseusConnector.js";
 import { type JoinBotsOptions, joinBots } from "./joinBots.js";
 import { RoomWatch } from "./RoomWatch.js";
 import type { BotConnection, BotKit, BotRoom } from "./types.js";
@@ -20,6 +20,8 @@ export interface DemoTableOptions<TState extends BaseGameState>
   hostName?: string;
   /** True once the game has reached its end. */
   isFinished: (state: TState) => boolean;
+  /** Creates the room and seats the bots; a Colyseus connector for `endpoint` and `apiPort` by default. */
+  connector?: RoomConnector<TState>;
 }
 
 /** A watch-only room played by bots: a host bot creates and starts it; spectators watch. */
@@ -29,27 +31,29 @@ export class DemoTable<TState extends BaseGameState> {
   private host: BotPlayer<TState> | undefined;
   protected seat: { room: BotRoom<TState>; watch: RoomWatch; code: string } | undefined;
   private bots: BotPlayer<TState>[] = [];
+  private readonly connector: RoomConnector<TState>;
 
   constructor(private readonly options: DemoTableOptions<TState>) {
     this.botIds = Array.from({ length: options.bots }, () => crypto.randomUUID());
+    this.connector =
+      options.connector ??
+      new ColyseusConnector(options.endpoint, options.apiPort, {
+        roomName: options.roomName,
+        stateClass: options.stateClass,
+      });
   }
 
   /** Creates the room and its host bot; returns the room code. */
   async open(): Promise<string> {
     if (this.seat) throw new Error("The table is already open");
-    const { endpoint, roomName, stateClass, strategy, roomOptions, bot, bots } = this.options;
+    const { strategy, roomOptions, bot, bots } = this.options;
     const hostName = this.options.hostName ?? "Host Bot";
-    const room = await new Client(endpoint).create<TState>(
-      roomName,
-      {
-        ...roomOptions,
-        playerId: this.hostId,
-        seatSecret: crypto.randomUUID() + crypto.randomUUID(),
-        seats: [this.hostId, ...this.botIds],
-        protocolVersion: PROTOCOL_VERSION,
-      },
-      stateClass,
-    );
+    const room = await this.connector.create({
+      ...roomOptions,
+      playerId: this.hostId,
+      seatSecret: crypto.randomUUID() + crypto.randomUUID(),
+      seats: [this.hostId, ...this.botIds],
+    });
     const watch = new RoomWatch(room);
     // The initial state sync lands after create() resolves (room.state is undefined until then),
     // and a wire hiccup can blank the synced code at any point after that. Capture it atomically
@@ -93,6 +97,7 @@ export class DemoTable<TState extends BaseGameState> {
       stateClass,
       strategy,
       playerIds: this.botIds,
+      connector: this.connector,
       ...(bot ? { bot } : {}),
       ...(nameFor ? { nameFor } : {}),
       ...(timeoutMs === undefined ? {} : { timeoutMs }),

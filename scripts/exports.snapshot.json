@@ -20,6 +20,7 @@
           "BotTable": {},
           "BotTableOptions": {},
           "BotTurn": {},
+          "ColyseusConnector": {},
           "DelayRange": {},
           "DemoTable": {},
           "DemoTableOptions": {},
@@ -37,9 +38,13 @@
           "default": "./dist/index.js"
         },
         "symbols": {
+          "ConnectedRoom": {},
           "Parsed": {},
           "RoomCodeError": {},
           "RoomCodeFailure": {},
+          "RoomConnector": {},
+          "RoomCreateOptions": {},
+          "RoomJoinOptions": {},
           "SeatRoom": {},
           "apiBaseOf": {},
           "between": {},

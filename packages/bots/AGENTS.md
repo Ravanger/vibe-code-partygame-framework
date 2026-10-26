@@ -17,7 +17,7 @@ Bot players for any game: `BotPlayer`, `joinBots`, `BotTable`, `DemoTable`, driv
 
 ## Public entry points
 
-- `.`: `BotPlayer`, `joinBots`, `BotTable`, `DemoTable`, `BotStrategy`, `BotKit`.
+- `.`: `BotPlayer`, `joinBots`, `BotTable`, `DemoTable`, `ColyseusConnector`, `BotStrategy`, `BotKit`.
 
 ## Tests
 
