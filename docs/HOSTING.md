@@ -111,6 +111,27 @@ Categories live in `games/wit-clash/content/categories/`. Drop a `.jsonc` file i
 The file format and rules are in [`games/wit-clash/content/categories/README.md`](../games/wit-clash/content/categories/README.md).
 The server refuses to start with fewer than 3 categories.
 
+## Behind HTTPS and a reverse proxy
+
+When the page is served over HTTPS or from an origin that cannot reach `host:port` directly, point the client at your own origin through a reverse proxy instead. Two paths are enough (the prefixes are arbitrary; `/game` and `/api` shown):
+
+| Path on the public origin | Forward to | Notes |
+|---|---|---|
+| `/game` (plus anything after it) | game port `2567` | Must forward the WebSocket upgrade. Forward **without stripping** the prefix: the game server accepts upgrades on any path — the client SDK itself connects to `/<processId>/<roomId>` — so a prefixed URL works as-is. |
+| `/api` (plus anything after it) | API port `3001` | Forward **without stripping**: the API answers exactly `GET /api/resolve-code`. |
+
+Then run or build the client with:
+
+```sh
+VITE_SERVER_ENDPOINT=wss://your-origin/game VITE_API_BASE=https://your-origin/api bun run dev   # or: bun run build
+```
+
+- `VITE_SERVER_ENDPOINT` is used verbatim as the game server URL and skips `VITE_SERVER_HOST`/`VITE_GAME_PORT`.
+- `VITE_API_BASE` is used verbatim as the base of the room-code API — the client calls `<VITE_API_BASE>/api/resolve-code`, with no port appended — and wins over `VITE_API_PORT`.
+- Without either variable, an HTTPS page still derives its endpoint from its own protocol (`https://<page host>:2567`), which is what you want when TLS terminates directly on those ports.
+
+The reverse proxy itself is not exercised by this repo's tests; the client-side contract (verbatim endpoints, no port appended to `VITE_API_BASE`) and the server's path-tolerant upgrades are covered by tests.
+
 ## Environment Variables
 
 ### Server
@@ -134,6 +155,8 @@ Read by Vite at dev or build time.
 | `VITE_SERVER_HOST` | the page's host name | Host of the game server and API, when they are not on the same host as the page |
 | `VITE_GAME_PORT` | `2567` | Game server port |
 | `VITE_API_PORT` | `3001` | API port |
+| `VITE_SERVER_ENDPOINT` | — | Full game server URL (e.g. `wss://your-origin/game`); used verbatim, skips the host/port form. See [Behind HTTPS and a reverse proxy](#behind-https-and-a-reverse-proxy) |
+| `VITE_API_BASE` | — | Base URL of the room-code API (e.g. `https://your-origin/api`); used verbatim, wins over `VITE_API_PORT` |
 
 The launcher always uses the default ports. To move them, start the pieces yourself (below) and give the client the matching `VITE_GAME_PORT` and `VITE_API_PORT`.
 

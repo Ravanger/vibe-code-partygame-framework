@@ -536,6 +536,32 @@ describe("refused joins", () => {
   });
 });
 
+describe("api base", () => {
+  it("calls the given apiBase verbatim, with no port appended", async () => {
+    const manager = new GameConnectionManager({
+      endpoint: "wss://proxy.example/game",
+      roomName: "stub",
+      storagePrefix: `unit${++counter}`,
+      apiBase: "https://proxy.example/api",
+    });
+    const network = stubFetchReply(new Error("fetch failed"));
+    await expect(manager.join("WXYZ")).rejects.toThrow("Could not reach the game server");
+    expect(network.urls).toEqual(["https://proxy.example/api/api/resolve-code?code=WXYZ"]);
+  });
+
+  it("builds the API base from the endpoint and apiPort when no apiBase is given", async () => {
+    const manager = new GameConnectionManager({
+      endpoint: "ws://localhost:2567",
+      roomName: "stub",
+      storagePrefix: `unit${++counter}`,
+      apiPort: 8080,
+    });
+    const network = stubFetchReply(new Error("fetch failed"));
+    await expect(manager.join("WXYZ")).rejects.toThrow("Could not reach the game server");
+    expect(network.urls).toEqual(["http://localhost:8080/api/resolve-code?code=WXYZ"]);
+  });
+});
+
 describe("messages", () => {
   it("delivers to listeners registered before and after the room, and survives a room change", () => {
     const manager = newManager();

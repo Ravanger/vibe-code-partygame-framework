@@ -38,6 +38,8 @@ export interface GameConnectionOptions<TState> {
   roomName: string;
   /** Port of the `/api/resolve-code` API on the same host. Default 3001. */
   apiPort?: number;
+  /** Base URL (protocol + host, plus any path prefix) of the `/api/resolve-code` API; preferred over `apiPort`. */
+  apiBase?: string;
   /** Namespaces the browser storage keys, so several games (or several test clients) never share a session. */
   storagePrefix: string;
   /** The game's state class; without it the client decodes the state from the server's reflection. */
@@ -95,9 +97,13 @@ export class GameConnectionManager<
     this.client = new Client(options.endpoint);
     this.session = new PersistedSession(options.storagePrefix);
     this.playerId = this.session.playerId;
-    const url = new URL(options.endpoint);
-    const port = options.apiPort ?? DEFAULT_API_PORT;
-    this.apiBase = `${url.protocol.replace("ws", "http")}//${url.hostname}:${port}`;
+    if (options.apiBase !== undefined) {
+      this.apiBase = options.apiBase;
+    } else {
+      const url = new URL(options.endpoint);
+      const port = options.apiPort ?? DEFAULT_API_PORT;
+      this.apiBase = `${url.protocol.replace("ws", "http")}//${url.hostname}:${port}`;
+    }
     this.onMessage(ServerMessage.ERROR, (payload) => this.serverErrorReceived(payload));
   }
 
