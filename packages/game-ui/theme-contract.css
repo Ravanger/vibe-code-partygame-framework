@@ -32,6 +32,26 @@
   --scrap-shadow: 3px 4px 0 rgb(43 34 53 / 0.25);
   --scale: 1;
   --timer-size: 96px;
+  --podium-block-height-1: calc(150px * var(--scale, 1));
+  --podium-block-height-2: calc(108px * var(--scale, 1));
+  --podium-block-height-3: calc(78px * var(--scale, 1));
+}
+
+/* PlayerSticker sets data-color="0".."3"; map each index onto the palette. */
+.player-sticker[data-color="0"] {
+  --fill: var(--color-1);
+}
+
+.player-sticker[data-color="1"] {
+  --fill: var(--color-2);
+}
+
+.player-sticker[data-color="2"] {
+  --fill: var(--color-3);
+}
+
+.player-sticker[data-color="3"] {
+  --fill: var(--color-4);
 }
 
 .card {

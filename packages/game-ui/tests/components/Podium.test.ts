@@ -45,6 +45,15 @@ describe("Podium", () => {
     expect(sizes(render(Podium, { steps: tied }).container).slice(-2)).toEqual(["36px", "36px"]);
   });
 
+  it("sizes the blocks from podium custom properties without targeting the game's markup", () => {
+    render(Podium, { steps: steps() });
+    const css = [...document.querySelectorAll("style")]
+      .map((tag) => tag.textContent ?? "")
+      .join("\n");
+    expect(css).not.toContain("main.tv");
+    for (const tier of [1, 2, 3]) expect(css).toContain(`--podium-block-height-${tier}`);
+  });
+
   it("renders the extra snippet for every occupant", () => {
     const extra = createRawSnippet((player: () => PodiumRow) => ({
       render: () => `<span class="extra">${player().name}!</span>`,

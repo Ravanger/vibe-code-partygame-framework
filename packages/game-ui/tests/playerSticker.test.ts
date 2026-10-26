@@ -6,21 +6,18 @@ describe("playerSticker", () => {
     expect(playerSticker("player-1")).toEqual(playerSticker("player-1"));
   });
 
-  it("spreads players over every shape and colour", () => {
+  it("spreads players over every shape and colour index", () => {
     const shapes = new Set<string>();
-    const colors = new Set<string>();
+    const colorIndices = new Set<number>();
     for (let i = 0; i < 300; ++i) {
-      const { shape, color } = playerSticker(`id-${i}`);
+      const { shape, colorIndex } = playerSticker(`id-${i}`);
       shapes.add(shape);
-      colors.add(color);
+      expect(colorIndex).toBeGreaterThanOrEqual(0);
+      expect(colorIndex).toBeLessThan(4);
+      colorIndices.add(colorIndex);
     }
     expect([...shapes].sort()).toEqual([...STICKER_SHAPES].sort());
-    expect([...colors].sort()).toEqual([
-      "var(--color-1)",
-      "var(--color-2)",
-      "var(--color-3)",
-      "var(--color-4)",
-    ]);
+    expect([...colorIndices].sort()).toEqual([0, 1, 2, 3]);
   });
 });
 

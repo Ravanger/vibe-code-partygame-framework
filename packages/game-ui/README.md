@@ -122,7 +122,7 @@ Props (all render in plain markup, e.g. `<Timer seconds={12} total={30} />`): `L
 
 ## Podium and ranking
 
-`rankRows` adds competition ranks (1, 1, 3) to rows in leaderboard order; `podiumSteps` keeps the top three rank groups among seated rows; `Podium` takes `steps` and an optional `extra` snippet per occupant.
+`rankRows` adds competition ranks (1, 1, 3) to rows in leaderboard order; `podiumSteps` keeps the top three rank groups among seated rows; `Podium` takes `steps` and an optional `extra` snippet per occupant. Block heights come from `--podium-block-height-1`..`--podium-block-height-3` (the contract's baselines scale with `--scale`); for a large display set them in your own `main.tv` rule, e.g. `17dvh`, `12dvh`, `8dvh`. `Podium` never styles the game's markup.
 
 ```svelte
 <script lang="ts">
@@ -152,7 +152,8 @@ own rules (later rules win):
 }
 ```
 
-- Custom properties: `--ink`, `--ink-soft`, `--white`, `--paper`, `--color-1`, `--color-2`, `--color-3`, `--color-4`, `--accent`, `--danger`, `--disabled`, `--tape-1`, `--tape-2`, `--tape-3`, `--tape-4`, `--fs-1`, `--fs-2`, `--fs-3`, `--fs-4`, `--fs-5`, `--font-display`, `--outline`, `--radius-card`, `--radius-btn`, `--scrap-shadow`, `--scale` (default 1), `--timer-size` (default 96px).
+- Custom properties: `--ink`, `--ink-soft`, `--white`, `--paper`, `--color-1`, `--color-2`, `--color-3`, `--color-4`, `--accent`, `--danger`, `--disabled`, `--tape-1`, `--tape-2`, `--tape-3`, `--tape-4`, `--fs-1`, `--fs-2`, `--fs-3`, `--fs-4`, `--fs-5`, `--font-display`, `--outline`, `--radius-card`, `--radius-btn`, `--scrap-shadow`, `--scale` (default 1), `--timer-size` (default 96px), `--podium-block-height-1`, `--podium-block-height-2`, `--podium-block-height-3`.
+- `PlayerSticker` sets `data-color="0"`..`"3"` from `playerSticker(playerId).colorIndex`; the contract maps each index to `--color-1`..`--color-4`.
 - Global classes the contract styles: `card`, `taped` (tape strip + tilt), `sticker`, `hand` (reads an optional game-defined `--font-hand`), `sr-only`, `btn`, `btn--ghost`, `btn--danger`; `action-bar` is rendered by `ActionBar`, which styles nothing.
 - Chrome vs artwork: the contract covers the framework chrome — lobby, join overlays, scoreboard/podium, game controls and timer; your screens and cards are artwork you style freely.
 

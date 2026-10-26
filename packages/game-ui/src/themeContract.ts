@@ -32,4 +32,7 @@ export const CONTRACT_VARIABLES = [
   "--scrap-shadow",
   "--scale",
   "--timer-size",
+  "--podium-block-height-1",
+  "--podium-block-height-2",
+  "--podium-block-height-3",
 ] as const;
