@@ -320,18 +320,32 @@ describe("refused joins", () => {
     });
   });
 
-  it.each([CLOSE_CODES.KICKED_REJOIN, CLOSE_CODES.WATCH_ONLY])(
-    "records a refused join closed with $code as its own fixed message",
-    async (entry) => {
-      const manager = newManager();
-      vi.stubGlobal("fetch", fakeFetch({ roomId: "room-1" }).fetch);
-      vi.spyOn(Client.prototype, "joinById").mockRejectedValue(
-        Object.assign(new Error("internal detail"), { code: entry.code }),
-      );
-      await expect(manager.join("ABCD")).rejects.toThrow();
-      expect(manager.lastServerError).toEqual({ code: entry.errorCode, message: entry.message });
-    },
-  );
+  it("records a refused join closed with WATCH_ONLY as its own fixed message", async () => {
+    const manager = newManager();
+    vi.stubGlobal("fetch", fakeFetch({ roomId: "room-1" }).fetch);
+    vi.spyOn(Client.prototype, "joinById").mockRejectedValue(
+      Object.assign(new Error("internal detail"), { code: CLOSE_CODES.WATCH_ONLY.code }),
+    );
+    await expect(manager.join("ABCD")).rejects.toThrow();
+    expect(manager.lastServerError).toEqual({
+      code: CLOSE_CODES.WATCH_ONLY.errorCode,
+      message: CLOSE_CODES.WATCH_ONLY.message,
+    });
+  });
+
+  it("passes the game's canJoin refusal message through on a 4403 close", async () => {
+    const manager = newManager();
+    vi.stubGlobal("fetch", fakeFetch({ roomId: "room-1" }).fetch);
+    vi.spyOn(Client.prototype, "joinById").mockRejectedValue(
+      Object.assign(new Error("Wrong password"), { code: CLOSE_CODES.JOIN_REFUSED.code }),
+    );
+    await expect(manager.join("ABCD")).rejects.toThrow();
+    expect(manager.lastServerError).toEqual({
+      // 4403 is shared with KICKED_REJOIN; the client keeps its error code and shows the received message.
+      code: CLOSE_CODES.KICKED_REJOIN.errorCode,
+      message: "Wrong password",
+    });
+  });
 
   it("records a rejection without a close code as CONNECTION_LOST, logs it and rethrows it", async () => {
     const logger = vi.fn();

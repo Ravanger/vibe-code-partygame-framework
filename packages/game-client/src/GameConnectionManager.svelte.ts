@@ -435,7 +435,8 @@ export class GameConnectionManager<
 
   /**
    * The client-visible error for a refused connection: the table's fixed message, except
-   * VERSION_MISMATCH, whose template the server fills with both versions and the rejection preserves.
+   * VERSION_MISMATCH (whose template the server fills with both versions) and a 4403 canJoin refusal
+   * (which carries the game's own message); both pass the received text through.
    */
   private closeErrorOf(error: unknown): ServerError | undefined {
     if (typeof error !== "object" || error === null || !("code" in error)) return undefined;
@@ -443,8 +444,9 @@ export class GameConnectionManager<
     if (typeof code !== "number") return undefined;
     const entry = closeCodeEntry(code);
     if (!entry) return undefined;
+    // VERSION_MISMATCH's template and a 4403 canJoin refusal carry server-filled text; show what arrived.
     if (
-      entry === CLOSE_CODES.VERSION_MISMATCH &&
+      (entry === CLOSE_CODES.VERSION_MISMATCH || code === CLOSE_CODES.JOIN_REFUSED.code) &&
       "message" in error &&
       typeof error.message === "string"
     ) {
