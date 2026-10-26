@@ -934,10 +934,18 @@ To change a rule, subclass it and override a member, for example `banner`: `clas
 <ActionBar><button type="button" class="btn">Go</button></ActionBar>
 ```
 
-Theming contract: the package ships no stylesheet. The game's CSS defines these, and the components read them.
+Theming contract: `@partygame/game-ui/theme-contract.css` ships a baseline for every contract variable plus the framework chrome's classes. Import it at the very top of your `app.css`, then override what you want in your own rules (later rules win).
 
-- Custom properties: `--ink`, `--ink-soft`, `--white`, `--color-1`, `--color-2`, `--color-3`, `--color-4`, `--disabled`, `--tape-4`, `--tape-3` (`StatusPanel` sets `--tape` itself), `--fs-3`, `--fs-4`, `--fs-5`, `--font-display`, `--outline`, `--radius-card`, `--scrap-shadow`, `--scale` (optional multiplier, default 1), `--timer-size` (optional, default 96px).
-- Global classes: `card`, `taped`, `sticker`, `hand` (`StatusPanel`); `sr-only` (`Timer`); `action-bar` (`ActionBar` renders it and styles nothing, so the game styles the bar, e.g. `.action-bar > .btn` and `main.tv .action-bar`).
+```css
+@import "@partygame/game-ui/theme-contract.css";
+
+:root {
+  --font-display: "Lilita One", system-ui, sans-serif; /* any contract variable may be overridden */
+}
+```
+
+- Custom properties: `--ink`, `--ink-soft`, `--white`, `--paper`, `--color-1` to `--color-4`, `--accent`, `--danger`, `--disabled`, `--tape-1` to `--tape-4` (`.taped` picks one; `StatusPanel` sets `--tape` per tone), `--fs-1` to `--fs-5`, `--font-display`, `--outline`, `--radius-card`, `--radius-btn`, `--scrap-shadow`, `--scale` (optional multiplier, default 1), `--timer-size` (optional, default 96px).
+- Global classes the contract styles: `card`, `taped`, `sticker`, `hand` (reads an optional game-defined `--font-hand`), `sr-only`, `btn` (`btn--ghost`, `btn--danger`); `action-bar` is rendered by `ActionBar` and styled by nothing, so the game styles the bar, e.g. `.action-bar > .btn` and `main.tv .action-bar`.
 
 ## Bots
 

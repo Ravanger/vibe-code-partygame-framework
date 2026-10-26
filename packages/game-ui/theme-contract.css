@@ -1,0 +1,154 @@
+/* Theme contract for the @partygame/game-ui components. Import it at the very top of your
+   app.css:  @import "@partygame/game-ui/theme-contract.css";
+   It defines a baseline for every contract variable (see CONTRACT_VARIABLES in
+   src/themeContract.ts) and the framework chrome's classes (.card, .taped, .sticker, .hand,
+   .sr-only, .btn, .btn--ghost, .btn--danger). Override any variable in your own :root — later
+   rules win — and style your screens freely. */
+:root {
+  --ink: #2b2235;
+  --ink-soft: #5a4f66;
+  --white: #ffffff;
+  --paper: #fbf3e4;
+  --color-1: #ff5fa2;
+  --color-2: #ffd23f;
+  --color-3: #3ddc97;
+  --color-4: #4cc9f0;
+  --accent: #7b5cff;
+  --danger: #e5383b;
+  --disabled: #ddd3c2;
+  --tape-1: rgb(255 95 162 / 0.7);
+  --tape-2: rgb(255 210 63 / 0.75);
+  --tape-3: rgb(61 220 151 / 0.7);
+  --tape-4: rgb(76 201 240 / 0.7);
+  --fs-1: 0.8rem;
+  --fs-2: 1rem;
+  --fs-3: 1.25rem;
+  --fs-4: 1.6rem;
+  --fs-5: 2.2rem;
+  --font-display: "Trebuchet MS", "Arial Rounded MT Bold", system-ui, sans-serif;
+  --outline: 3px solid var(--ink);
+  --radius-card: 6px;
+  --radius-btn: 12px;
+  --scrap-shadow: 3px 4px 0 rgb(43 34 53 / 0.25);
+  --scale: 1;
+  --timer-size: 96px;
+}
+
+.card {
+  position: relative;
+  padding: 1rem 1.25rem;
+  border: var(--outline);
+  border-radius: var(--radius-card);
+  background: var(--white);
+  color: var(--ink);
+  box-shadow: var(--scrap-shadow);
+}
+
+.taped {
+  --tape: var(--tape-1);
+  --tilt: -1deg;
+  transform: rotate(var(--tilt));
+}
+
+.taped:nth-child(even) {
+  --tilt: 1deg;
+  --tape: var(--tape-2);
+}
+
+.taped::before {
+  content: "";
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  width: 84px;
+  height: 24px;
+  background: var(--tape);
+  transform: translateX(-50%) rotate(-3deg);
+  clip-path: polygon(0 8%, 4% 0, 8% 10%, 12% 0, 100% 0, 96% 50%, 100% 100%, 4% 100%, 0 90%, 3% 50%);
+}
+
+.sticker {
+  display: inline-block;
+  padding: 0.1rem 0.8rem;
+  border: 3px solid var(--ink);
+  border-radius: var(--radius-btn);
+  background: var(--color-2);
+  color: var(--ink);
+  box-shadow:
+    0 0 0 3px var(--white),
+    3px 4px 0 3px var(--ink);
+  font-family: var(--font-display);
+  font-size: calc(var(--fs-3) * var(--scale, 1));
+  line-height: 1.4;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transform: rotate(-4deg);
+}
+
+.hand {
+  font-family: var(--font-hand);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.4rem 1.1rem;
+  border: var(--outline);
+  border-radius: var(--radius-btn);
+  background: var(--white);
+  color: var(--ink);
+  box-shadow: 0 4px 0 var(--ink);
+  font-family: var(--font-display);
+  font-size: calc(var(--fs-2) * var(--scale, 1));
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition:
+    transform 0.08s,
+    box-shadow 0.08s;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 var(--ink);
+}
+
+.btn:disabled {
+  background: var(--disabled);
+  color: var(--ink-soft);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.btn--ghost {
+  border-style: dashed;
+  border-color: var(--ink-soft);
+  background: transparent;
+  color: var(--ink);
+  box-shadow: none;
+}
+
+.btn--ghost:disabled {
+  background: transparent;
+  color: var(--ink-soft);
+  opacity: 0.7;
+}
+
+.btn--danger {
+  background: var(--danger);
+  color: var(--white);
+}

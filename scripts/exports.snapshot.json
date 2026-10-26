@@ -411,6 +411,10 @@
           "Timer": {}
         },
         "source": true
+      },
+      "./theme-contract.css": {
+        "target": "./theme-contract.css",
+        "symbols": {}
       }
     },
     "launcher": {

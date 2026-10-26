@@ -140,10 +140,21 @@ Props (all render in plain markup, e.g. `<Timer seconds={12} total={30} />`): `L
 
 ## Theme
 
-No stylesheet ships; the components read your CSS.
+The package ships `theme-contract.css`: a baseline for every contract variable plus the framework
+chrome's classes. Import it at the very top of your `app.css`, then override what you want in your
+own rules (later rules win):
 
-- Custom properties: `--ink`, `--ink-soft`, `--white`, `--paper`, `--color-1`, `--color-2`, `--color-3`, `--color-4`, `--disabled`, `--tape-4`, `--tape-3`, `--fs-1` to `--fs-5`, `--font-display`, `--outline`, `--radius-card`, `--radius-btn`, `--scrap-shadow`; optional `--scale` (default 1) and `--timer-size` (default 96px).
-- Global classes: `card`, `taped`, `sticker`, `hand`, `sr-only`, `btn` (`btn--ghost`, `btn--danger`); `action-bar` is rendered by `ActionBar`, which styles nothing.
+```css
+@import "@partygame/game-ui/theme-contract.css";
+
+:root {
+  --font-display: "Lilita One", system-ui, sans-serif; /* any contract variable may be overridden */
+}
+```
+
+- Custom properties: `--ink`, `--ink-soft`, `--white`, `--paper`, `--color-1`, `--color-2`, `--color-3`, `--color-4`, `--accent`, `--danger`, `--disabled`, `--tape-1`, `--tape-2`, `--tape-3`, `--tape-4`, `--fs-1`, `--fs-2`, `--fs-3`, `--fs-4`, `--fs-5`, `--font-display`, `--outline`, `--radius-card`, `--radius-btn`, `--scrap-shadow`, `--scale` (default 1), `--timer-size` (default 96px).
+- Global classes the contract styles: `card`, `taped` (tape strip + tilt), `sticker`, `hand` (reads an optional game-defined `--font-hand`), `sr-only`, `btn`, `btn--ghost`, `btn--danger`; `action-bar` is rendered by `ActionBar`, which styles nothing.
+- Chrome vs artwork: the contract covers the framework chrome — lobby, join overlays, scoreboard/podium, game controls and timer; your screens and cards are artwork you style freely.
 
 Depends on: `@partygame/game-client`, `@partygame/shared`, `svelte`, `uqr`, `zod`
 
