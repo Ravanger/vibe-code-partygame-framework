@@ -77,7 +77,7 @@ const stickerSize = (step: PodiumStep<TRow>): number => {
   }
 
   .star {
-    color: var(--sun);
+    color: var(--color-2);
     -webkit-text-stroke: 2px var(--ink);
     paint-order: stroke fill;
     font-size: calc(var(--fs-4) * var(--scale, 1));
@@ -95,7 +95,7 @@ const stickerSize = (step: PodiumStep<TRow>): number => {
   }
 
   .is-me .occupant-name {
-    text-decoration: underline wavy var(--pink) 3px;
+    text-decoration: underline wavy var(--color-1) 3px;
     text-underline-offset: 4px;
   }
 
@@ -119,7 +119,7 @@ const stickerSize = (step: PodiumStep<TRow>): number => {
     border: var(--outline);
     border-bottom: none;
     border-radius: var(--radius-card) var(--radius-card) 0 0;
-    background: var(--sky);
+    background: var(--color-4);
     color: var(--ink);
     box-shadow: var(--scrap-shadow);
     font-family: var(--font-display);
@@ -128,7 +128,7 @@ const stickerSize = (step: PodiumStep<TRow>): number => {
 
   .tier-1 .block {
     height: calc(150px * var(--scale, 1));
-    background: var(--sun);
+    background: var(--color-2);
   }
 
   .tier-2 .block {
@@ -137,7 +137,7 @@ const stickerSize = (step: PodiumStep<TRow>): number => {
 
   .tier-3 .block {
     height: calc(78px * var(--scale, 1));
-    background: var(--pink);
+    background: var(--color-1);
   }
 
   :global(main.tv) .tier-1 .block {

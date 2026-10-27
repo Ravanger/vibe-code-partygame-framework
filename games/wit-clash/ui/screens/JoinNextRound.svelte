@@ -43,7 +43,7 @@ $effect(() => () => vm.destroy());
     font-size: calc(var(--fs-5) * var(--scale, 1));
     line-height: 1.1;
     text-align: center;
-    text-decoration: underline wavy var(--pink) 3px;
+    text-decoration: underline wavy var(--color-1) 3px;
     text-underline-offset: 8px;
   }
 

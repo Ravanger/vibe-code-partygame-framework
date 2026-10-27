@@ -142,7 +142,7 @@ Props (all render in plain markup, e.g. `<Timer seconds={12} total={30} />`): `L
 
 No stylesheet ships; the components read your CSS.
 
-- Custom properties: `--ink`, `--ink-soft`, `--white`, `--paper`, `--pink`, `--sun`, `--mint`, `--sky`, `--disabled`, `--tape-sky`, `--tape-mint`, `--fs-1` to `--fs-5`, `--font-display`, `--outline`, `--radius-card`, `--radius-btn`, `--scrap-shadow`; optional `--scale` (default 1) and `--timer-size` (default 96px).
+- Custom properties: `--ink`, `--ink-soft`, `--white`, `--paper`, `--color-1` to `--color-4`, `--disabled`, `--tape-3`, `--tape-4`, `--fs-1` to `--fs-5`, `--font-display`, `--outline`, `--radius-card`, `--radius-btn`, `--scrap-shadow`; optional `--scale` (default 1) and `--timer-size` (default 96px).
 - Global classes: `card`, `taped`, `sticker`, `hand`, `sr-only`, `btn` (`btn--ghost`, `btn--danger`); `action-bar` is rendered by `ActionBar`, which styles nothing.
 
 Depends on: `@partygame/game-client`, `@partygame/shared`, `svelte`, `uqr`, `zod`

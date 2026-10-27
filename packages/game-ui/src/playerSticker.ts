@@ -1,7 +1,7 @@
 export const STICKER_SHAPES = ["blob", "star", "flower", "cloud", "heart", "burst"] as const;
 export type StickerShape = (typeof STICKER_SHAPES)[number];
 
-const STICKER_COLORS = ["var(--pink)", "var(--sun)", "var(--mint)", "var(--sky)"];
+const STICKER_COLORS = ["var(--color-1)", "var(--color-2)", "var(--color-3)", "var(--color-4)"];
 
 export interface PlayerSticker {
   shape: StickerShape;

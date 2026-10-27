@@ -53,7 +53,7 @@ const { rows }: { rows: ScoreRow[] } = $props();
   }
 
   .score-row.first {
-    background: var(--sun);
+    background: var(--color-2);
   }
 
   .score-row.is-me:not(.first) {
@@ -111,7 +111,7 @@ const { rows }: { rows: ScoreRow[] } = $props();
   }
 
   .round-points.positive {
-    background: var(--mint);
+    background: var(--color-3);
   }
 
   .total-score {

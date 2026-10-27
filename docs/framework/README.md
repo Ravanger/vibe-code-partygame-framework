@@ -936,7 +936,7 @@ To change a rule, subclass it and override a member, for example `banner`: `clas
 
 Theming contract: the package ships no stylesheet. The game's CSS defines these, and the components read them.
 
-- Custom properties: `--ink`, `--ink-soft`, `--white`, `--pink`, `--sun`, `--mint`, `--sky`, `--disabled`, `--tape-sky`, `--tape-mint` (`StatusPanel` sets `--tape` itself), `--fs-3`, `--fs-4`, `--fs-5`, `--font-display`, `--outline`, `--radius-card`, `--scrap-shadow`, `--scale` (optional multiplier, default 1), `--timer-size` (optional, default 96px).
+- Custom properties: `--ink`, `--ink-soft`, `--white`, `--color-1` to `--color-4`, `--disabled`, `--tape-3`, `--tape-4` (`StatusPanel` sets `--tape` itself), `--fs-3`, `--fs-4`, `--fs-5`, `--font-display`, `--outline`, `--radius-card`, `--scrap-shadow`, `--scale` (optional multiplier, default 1), `--timer-size` (optional, default 96px).
 - Global classes: `card`, `taped`, `sticker`, `hand` (`StatusPanel`); `sr-only` (`Timer`); `action-bar` (`ActionBar` renders it and styles nothing, so the game styles the bar, e.g. `.action-bar > .btn` and `main.tv .action-bar`).
 
 ## Bots

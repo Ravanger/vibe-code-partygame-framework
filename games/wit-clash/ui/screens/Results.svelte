@@ -143,18 +143,18 @@ $effect(() => () => spotlight.destroy());
     font-size: calc(var(--fs-5) * var(--scale, 1));
     line-height: 1.1;
     text-align: center;
-    text-decoration: underline wavy var(--pink) 3px;
+    text-decoration: underline wavy var(--color-1) 3px;
     text-underline-offset: 8px;
   }
 
   .winner-banner {
-    --tape: var(--tape-mint);
+    --tape: var(--tape-3);
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: center;
     gap: 0.75rem;
-    background: var(--sun);
+    background: var(--color-2);
     text-align: center;
   }
 
@@ -185,10 +185,10 @@ $effect(() => () => spotlight.destroy());
   }
 
   .best-answer {
-    --tape: var(--tape-sky);
+    --tape: var(--tape-4);
     width: 100%;
     margin: 0;
-    background: var(--sun);
+    background: var(--color-2);
     text-align: center;
   }
 
@@ -229,10 +229,10 @@ $effect(() => () => spotlight.destroy());
   }
 
   .award {
-    --tape: var(--tape-mint);
+    --tape: var(--tape-3);
     width: 100%;
     margin: 0;
-    background: var(--sun);
+    background: var(--color-2);
     text-align: center;
     display: flex;
     flex-direction: column;
