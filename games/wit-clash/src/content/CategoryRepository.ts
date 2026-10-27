@@ -11,6 +11,10 @@ const CategorySchema = z
     emoji: z.string().default("🎲"),
     prompts: z.array(PromptSchema).min(1),
     tieBreakers: z.array(PromptSchema).default([]),
+    /** Relative chance of being offered; 0 never offers the category. */
+    weight: z.number().min(0).default(1),
+    /** "mature" categories are only offered when the room's content rating allows them. */
+    rating: z.enum(["family", "mature"]).default("family"),
   })
   .strict();
 
@@ -28,8 +32,27 @@ export class CategoryRepository {
     return this.categories.find((c) => c.id === id);
   }
 
-  pickRandom(count: number, rng: () => number = Math.random): Category[] {
-    return shuffle(this.categories, rng).slice(0, Math.min(count, this.categories.length));
+  /**
+   * `count` distinct categories from the candidates (weight > 0, and passing `filter` when given).
+   * Equal weights deal a uniform shuffle — exactly as before weighting existed; differing weights
+   * use Efraimidis–Spirakis sampling, where each candidate draws a key of `rng() ** (1 / weight)`
+   * and the highest keys win, so a category's share of picks tracks its weight. A weight of 0
+   * means never offered.
+   */
+  pickRandom(
+    count: number,
+    rng: () => number = Math.random,
+    filter?: (category: Category) => boolean,
+  ): Category[] {
+    const candidates = this.categories.filter((c) => c.weight > 0 && (filter?.(c) ?? true));
+    if (new Set(candidates.map((c) => c.weight)).size <= 1) {
+      return shuffle(candidates, rng).slice(0, Math.min(count, candidates.length));
+    }
+    return candidates
+      .map((category) => ({ category, key: rng() ** (1 / category.weight) }))
+      .sort((a, b) => b.key - a.key)
+      .slice(0, count)
+      .map(({ category }) => category);
   }
 }
 

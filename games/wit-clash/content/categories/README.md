@@ -23,7 +23,9 @@ they are the canon every server plays on a given UTC date, so adding or editing 
   ],
   "tieBreakers": [          // OPTIONAL: used when the final round ends level, see below
     { "id": "my-category-tb-1", "text": "Tie-breaker prompt." }
-  ]
+  ],
+  "weight": 1,              // OPTIONAL: default is 1; relative chance of being offered in free play, 0 = never
+  "rating": "family"        // OPTIONAL: "family" or "mature"; mature is only offered when the room's contentRating is "any"
 }
 ```
 
@@ -46,8 +48,14 @@ once per game. A category without any simply adds nothing to the pool.
 4. **Bad files stop startup:** A file that is not valid JSON or does not match the schema stops the server from starting with an error that
    names the file and, for schema problems, every failing field. Unknown fields are rejected too — a typo in a key is an error, not a
    silently ignored category.
-5. **Minimum:** The server refuses to start with fewer than 3 valid categories.
-6. **Restart to reload:** Files are read once at startup. Set `WITCLASH_CONTENT_DIR` to read the free-play content from another
+5. **Weighting:** In free play the three offered categories are sampled by `weight` — a category's share of offerings tracks its
+   weight, and a weight of 0 means it is never offered. Equal weights (the default) deal a uniform pick as before. Daily mode deals
+   from its day-seeded order and ignores weights.
+6. **Rating:** `rating` is `"family"` (the default) or `"mature"`. Mature categories are only offered in free play when the room's
+   `contentRating` option is `"any"`; a `"family"` room never sees them. Daily mode plays every category regardless of rating.
+7. **Minimum:** The server refuses to start with fewer than 3 valid categories, or fewer than 3 family-rated ones — a family-rated
+   room must always have options to offer.
+8. **Restart to reload:** Files are read once at startup. Set `WITCLASH_CONTENT_DIR` to read the free-play content from another
    directory; daily mode always uses this repo directory and ignores the variable.
 
 ## Example errors
