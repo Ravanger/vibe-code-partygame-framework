@@ -110,12 +110,18 @@ $effect(() => () => spotlight.destroy());
     {/if}
   </div>
 
+  {#snippet exportButton()}
+    <button type="button" class="btn" onclick={() => vm.exportReplay()}>Export replay</button>
+  {/snippet}
+
   {#if vm.showNextRound}
     <ActionBar>
+      {@render exportButton()}
       <button type="button" class="btn btn--primary btn--big" onclick={() => vm.nextRound()}>Next Round</button>
     </ActionBar>
   {:else if vm.showPlayAgain}
     <ActionBar>
+      {@render exportButton()}
       <button type="button" class="btn btn--primary btn--big" onclick={() => vm.playAgain()}>Play Again</button>
     </ActionBar>
   {/if}

@@ -261,10 +261,12 @@ You answer and vote by typing; `q` quits (`/q` while writing an answer). `play` 
 ## Client (`ui/`)
 
 ```
-main.ts             builds the GameConnectionManager<WitClashState> (storagePrefix "witclash"), resumes, mounts App
+main.ts             builds the GameConnectionManager<WitClashState> (storagePrefix "witclash"), resumes, mounts App;
+                    `?replay` in the URL instead mounts ReplayApp with no manager (no server connection)
 config.ts           server endpoints from the page's host (VITE_SERVER_HOST, VITE_GAME_PORT, VITE_API_PORT) and the `?code=` share link
 manager.ts          the WitClashManager type
 App.svelte          screen router, error toast, "reconnecting" indicator, Leave game / End game controls outside the lobby
+ReplayApp.svelte    offline replay viewer: opens an exported bundle file and steps through it with the phase screens
 screens/            one component per screen: Welcome, WaitingRoom, JoinNextRound, CategoryVote, Prompting,
                     MatchupVote, MatchupReveal, TieBreakerPrompting, TieBreakerVote, TieBreakerReveal, Results
 components/         WitClash-only pieces: MatchupCard, Scoreboard, ProgressBadges, VoteBoard, AnswerBox, NextUpBar, ScreenTitle
@@ -281,6 +283,8 @@ viewmodels/         one viewmodel per game screen (the name field, welcome, wait
 - Votes stay hidden while voting: only `votesCast`/`votesExpected` and your own highlighted vote show. Counts and authors appear in `MatchupReveal`.
 - Shared components (StatusPanel, Timer, PlayerSticker, QrCode, ActionBar, NameInput, LobbySettings, GameControls, Podium) come from `@partygame/game-ui/components` and take their look from the CSS variables and classes in `ui/app.css`. Results passes the "Won the tie-breaker" chip to `Podium` through its `extra` snippet.
 - Add a phase screen: a viewmodel, a screen component and one `PHASE_SCREENS` entry in `ui/screens/index.ts`.
+- Replay viewer: open the client with `?replay` in the URL to get `ReplayApp` instead of the game — no manager is built, so no server connection is ever opened. Pick an exported bundle file (the JSON the host downloads from Results) and step through it with previous/next, play/pause auto-advance or the scrubber; each snapshot renders that phase's own screen read-only (`isSpectator`, no seat). The snapshot is the final state of the phase being left, so its timer reads 0. A malformed file shows the viewer's error instead of a screen, and a phase without a `PHASE_SCREENS` entry gets a fallback line.
+- On Results, the host sees an **Export replay** button (mid-round and final): it sends the host-only `EXPORT_REPLAY` request through `manager.exportReplay()` and downloads the bundle as `<game>-replay.json`. A non-host's refusal is remembered in `lastServerError` like any rejected action.
 
 ## Tests
 

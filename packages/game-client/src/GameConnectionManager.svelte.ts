@@ -7,6 +7,7 @@ import {
   ClientMessage,
   closeCodeEntry,
   ErrorCode,
+  type ExportReplayResponse,
   isActionResult,
   isServerError,
   PROTOCOL_VERSION,
@@ -235,6 +236,34 @@ export class GameConnectionManager<
     } catch (error) {
       (this.options.logger ?? console.warn)(
         `[GameConnectionManager] ${type} request failed`,
+        error,
+      );
+      return this.fail(ErrorCode.CONNECTION_LOST);
+    }
+  }
+
+  /**
+   * The host's request for this room's replay bundle (the answer to `ClientMessage.EXPORT_REPLAY`).
+   * A non-host gets the server's `UNAUTHORIZED` refusal, passed through and remembered in
+   * {@link lastServerError}; a well-formed bundle resolves as-is.
+   */
+  async exportReplay(): Promise<ExportReplayResponse> {
+    if (!this.room) return this.fail(ErrorCode.NOT_CONNECTED);
+    try {
+      const response = await this.room.request(ClientMessage.EXPORT_REPLAY);
+      if (response === null || typeof response !== "object" || Array.isArray(response)) {
+        return this.fail(ErrorCode.BAD_REPLY);
+      }
+      const reply = response as Record<string, unknown>;
+      if (reply.ok === false) {
+        if (!isServerError(reply.error)) return this.fail(ErrorCode.BAD_REPLY);
+        this.setLastError(reply.error);
+        return { ok: false, error: reply.error };
+      }
+      return reply;
+    } catch (error) {
+      (this.options.logger ?? console.warn)(
+        `[GameConnectionManager] EXPORT_REPLAY request failed`,
         error,
       );
       return this.fail(ErrorCode.CONNECTION_LOST);
