@@ -2,7 +2,6 @@ import { Client } from "@colyseus/sdk";
 import { RoomCodeError, resolveRoomCode } from "@partygame/client-utils";
 import {
   type ActionResult,
-  CLIENT_MESSAGES,
   CLOSE_CODES,
   ClientMessage,
   closeCodeEntry,
@@ -11,7 +10,6 @@ import {
   isActionResult,
   isServerError,
   PROTOCOL_VERSION,
-  ROOM_CODE_LENGTH,
   RoomCodeSchema,
   type ServerError,
   ServerMessage,
@@ -23,6 +21,7 @@ import { CANCELLED, JoinCoordinator } from "./JoinCoordinator.js";
 import { MessageBus } from "./MessageBus.js";
 import { PersistedSession } from "./PersistedSession.js";
 import type { RoomLike } from "./RoomLike.js";
+import { type ClientStrings, defaultClientStrings, resolveClientMessages } from "./strings.js";
 
 export type ConnectionStatus =
   | "idle"
@@ -46,6 +45,8 @@ export interface GameConnectionOptions<TState> {
   syncTimeoutMs?: number;
   /** Receives the exception behind a local action failure, never shown to the UI. Default `console.warn`. */
   logger?: (message: string, error: unknown) => void;
+  /** Replaces the manager's client-owned messages; unspecified keys keep the English defaults. */
+  strings?: Partial<ClientStrings>;
 }
 
 /** Options for {@link GameConnectionManager.join}; the manager adds `playerId`, `seatSecret` and `protocolVersion` itself. */
@@ -77,6 +78,8 @@ export class GameConnectionManager<
   private readonly client: Client;
   private readonly session: PersistedSession;
   private readonly apiBase: string;
+  private readonly strings: ClientStrings;
+  private readonly messages: Record<ErrorCode, string>;
   private readonly bus = new MessageBus<TState>();
   private readonly coordinator = new JoinCoordinator();
   private spectating = false;
@@ -98,6 +101,8 @@ export class GameConnectionManager<
     const url = new URL(options.endpoint);
     const port = options.apiPort ?? DEFAULT_API_PORT;
     this.apiBase = `${url.protocol.replace("ws", "http")}//${url.hostname}:${port}`;
+    this.strings = { ...defaultClientStrings, ...options.strings };
+    this.messages = resolveClientMessages(this.strings);
     this.onMessage(ServerMessage.ERROR, (payload) => this.serverErrorReceived(payload));
   }
 
@@ -157,7 +162,7 @@ export class GameConnectionManager<
   async join(code: string, options: JoinOptions = {}): Promise<void> {
     const clean = code.trim().toUpperCase();
     if (!RoomCodeSchema.safeParse(clean).success) {
-      throw new Error(`Game code must be ${ROOM_CODE_LENGTH} letters (A-Z)`);
+      throw new Error(this.strings.invalidRoomCode);
     }
     const spectator = options.spectator === true;
     if (this.room && this.roomCode === clean && this.spectating === spectator) return;
@@ -437,9 +442,18 @@ export class GameConnectionManager<
     if (isServerError(payload)) this.setLastError(payload);
   }
 
-  /** The single writer for `lastServerError`: server ERROR payloads, failed actions and close codes all land here. */
+  /**
+   * The single writer for `lastServerError`: server ERROR payloads, failed actions, close codes and
+   * `dismissError()` (undefined) all land here. When the strings table has an entry for the code, it
+   * replaces the message.
+   */
   private setLastError(error: ServerError | undefined): void {
-    this.lastServerError = error;
+    if (error === undefined) {
+      this.lastServerError = error;
+      return;
+    }
+    const text = this.strings.errors?.[error.code];
+    this.lastServerError = text === undefined ? error : { ...error, message: text };
   }
 
   /** Records a numeric close code when it is in CLOSE_CODES; unknown codes leave `lastServerError` untouched. */
@@ -489,9 +503,9 @@ export class GameConnectionManager<
     return { code: entry.errorCode, message: entry.message };
   }
 
-  /** A client-side action failure: the fixed message for `code`, never the raw exception text. */
+  /** A client-side action failure: the strings table's message for `code`, never the raw exception text. */
   private fail(code: ErrorCode): ActionResult {
-    const error: ServerError = { code, message: CLIENT_MESSAGES[code] };
+    const error: ServerError = { code, message: this.messages[code] };
     this.setLastError(error);
     return { ok: false, error };
   }

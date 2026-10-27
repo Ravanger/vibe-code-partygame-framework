@@ -291,6 +291,7 @@
           "default": "./src/index.ts"
         },
         "symbols": {
+          "ClientStrings": {},
           "ConnectionStatus": {},
           "Countdown": {},
           "EndpointOverrides": {},
@@ -298,6 +299,7 @@
           "GameConnectionOptions": {},
           "JoinOptions": {},
           "RoomLike": {},
+          "defaultClientStrings": {},
           "readCodeParam": {},
           "resolveEndpoints": {}
         },
