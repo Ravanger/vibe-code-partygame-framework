@@ -11,9 +11,9 @@ export interface PlayerSticker {
 export function playerSticker(playerId: string): PlayerSticker {
   let hash = 0;
   for (const char of playerId) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-  const [shape = "blob"] = STICKER_SHAPES.slice(hash % STICKER_SHAPES.length).slice(0, 1);
+  const [shape = "blob"] = STICKER_SHAPES.slice(hash % STICKER_SHAPES.length);
   const colorIndex = Math.floor(hash / STICKER_SHAPES.length) % STICKER_COLORS.length;
-  const [color = ""] = STICKER_COLORS.slice(colorIndex).slice(0, 1);
+  const [color = ""] = STICKER_COLORS.slice(colorIndex);
   return { shape, color };
 }
 
