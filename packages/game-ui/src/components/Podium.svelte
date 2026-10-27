@@ -2,9 +2,11 @@
 // biome-ignore lint/correctness/noUnusedImports: used by the generics attribute
 import type { PodiumRow, PodiumStep } from "@partygame/game-ui";
 import type { Snippet } from "svelte";
+import { getStrings } from "../strings.js";
 import PlayerSticker from "./PlayerSticker.svelte";
 
 const { steps, extra }: { steps: PodiumStep<TRow>[]; extra?: Snippet<[TRow]> } = $props();
+const strings = getStrings();
 
 const stickerSize = (step: PodiumStep<TRow>): number => {
   if (step.players.length > 1) return 36;
@@ -13,7 +15,7 @@ const stickerSize = (step: PodiumStep<TRow>): number => {
 </script>
 
 {#if steps.length > 0}
-  <ol class="podium" aria-label="Podium">
+  <ol class="podium" aria-label={strings.podium}>
     {#each steps as step (step.rank)}
       <li class={`step tier-${step.tier}`}>
         <div class="occupants">
@@ -25,10 +27,10 @@ const stickerSize = (step: PodiumStep<TRow>): number => {
               <PlayerSticker name={player.name} playerId={player.playerId} size={stickerSize(step)} />
               <span class="occupant-name">{player.name}</span>
               {#if player.isMe}
-                <span class="you hand">&larr; you</span>
+                <span class="you hand">{`← ${strings.you}`}</span>
               {/if}
               {#if extra}{@render extra(player)}{/if}
-              <span class="occupant-score">{`${player.score} pts`}</span>
+              <span class="occupant-score">{`${player.score} ${strings.scoreUnit}`}</span>
             </div>
           {/each}
         </div>
