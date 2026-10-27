@@ -87,6 +87,83 @@ describe("loadCategoriesFromDir", () => {
   it("throws a clear error when the directory does not exist", async () => {
     await expect(loadCategoriesFromDir(join(dir, "nope"))).rejects.toThrow(/not found/i);
   });
+
+  it("refuses a category with an unknown field, naming the file and the field", async () => {
+    await writeFile(
+      join(dir, "x.json"),
+      JSON.stringify({ id: "x", name: "X", prompts: [{ id: "x-1", text: "p" }], surprise: true }),
+    );
+    await expect(loadCategoriesFromDir(dir)).rejects.toThrow("x.json");
+    await expect(loadCategoriesFromDir(dir)).rejects.toThrow(/surprise/);
+  });
+
+  it("refuses a prompt with an unknown field, naming the file and the field path", async () => {
+    await writeFile(
+      join(dir, "y.json"),
+      JSON.stringify({ id: "y", name: "Y", prompts: [{ id: "y-1", text: "p", extra: 1 }] }),
+    );
+    await expect(loadCategoriesFromDir(dir)).rejects.toThrow("y.json");
+    await expect(loadCategoriesFromDir(dir)).rejects.toThrow(/extra/);
+  });
+
+  it("refuses a duplicate prompt id across files, naming both files, entries and field paths", async () => {
+    await writeFile(
+      join(dir, "one.json"),
+      JSON.stringify({
+        id: "one",
+        name: "One",
+        prompts: [{ id: "shared", text: "A" }],
+        tieBreakers: [],
+      }),
+    );
+    await writeFile(
+      join(dir, "two.json"),
+      JSON.stringify({
+        id: "two",
+        name: "Two",
+        prompts: [{ id: "other", text: "B" }],
+        tieBreakers: [{ id: "shared", text: "C" }],
+      }),
+    );
+    const error = await loadCategoriesFromDir(dir).catch((e) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect(error.message).toContain('Duplicate prompt id "shared"');
+    expect(error.message).toContain("one.json");
+    expect(error.message).toContain("two.json");
+    expect(error.message).toContain('(category "one")');
+    expect(error.message).toContain('(category "two")');
+    expect(error.message).toContain("prompts[0]");
+    expect(error.message).toContain("tieBreakers[0]");
+  });
+
+  it("lists every duplicate prompt id in one error", async () => {
+    await writeFile(
+      join(dir, "a.json"),
+      JSON.stringify({
+        id: "a",
+        name: "A",
+        prompts: [
+          { id: "dup-1", text: "1" },
+          { id: "dup-2", text: "2" },
+        ],
+      }),
+    );
+    await writeFile(
+      join(dir, "b.json"),
+      JSON.stringify({
+        id: "b",
+        name: "B",
+        prompts: [
+          { id: "dup-1", text: "again" },
+          { id: "dup-2", text: "also again" },
+        ],
+      }),
+    );
+    const error = await loadCategoriesFromDir(dir).catch((e) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect(error.message).toContain('"dup-1"');
+    expect(error.message).toContain('"dup-2"');
+  });
 });
 
 describe("pickRandom", () => {
