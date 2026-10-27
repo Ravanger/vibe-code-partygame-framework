@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { PLACEHOLDER_TEXT } from "../../src/round.js";
 import { Table, type TableConfig } from "./support.js";
 
 const inResults = (config: TableConfig = {}) => {
@@ -252,5 +253,54 @@ describe("PLAY_AGAIN", () => {
     t.act("p1", "START_GAME");
     expect(t.phase).toBe("CategorySelection");
     expect(t.state.roundNumber).toBe(1);
+  });
+});
+
+describe("the highlight reel", () => {
+  it("writes the highlights from the answer history at the final results", () => {
+    const t = inResults({ options: { totalRounds: 1 } });
+    expect(t.state.highlights.length).toBeGreaterThan(0);
+    for (const highlight of t.state.highlights) {
+      expect(["biggestMargin", "closestMatch", "fastestAnswer"]).toContain(highlight.kind);
+      expect(highlight.promptText).not.toBe("");
+      expect(highlight.answers.length).toBeGreaterThan(0);
+      for (const answer of highlight.answers) {
+        expect(
+          t.priv.answerHistory.some(
+            (r) => r.authorName === answer.authorName && r.text === answer.text,
+          ),
+        ).toBe(true);
+      }
+    }
+  });
+
+  it("times every history answer and never records a placeholder", () => {
+    const t = new Table({ options: { totalRounds: 1 } });
+    t.toPrompting();
+    for (const playerId of ["p1", "p2", "p3"]) {
+      for (const prompt of t.mine(playerId).prompts) {
+        t.act(playerId, "SUBMIT_ANSWER", {
+          matchupId: prompt.matchupId,
+          answer: `from ${playerId}`,
+        });
+      }
+    }
+    t.tick(90_000); // p4 never answers; their slots become forfeits or skipped matchups
+    t.playOutVoting();
+    expect(t.priv.answerHistory.length).toBeGreaterThan(0);
+    for (const record of t.priv.answerHistory) {
+      expect(record.text).not.toBe(PLACEHOLDER_TEXT);
+      expect(record.answerMs).toBeGreaterThanOrEqual(0);
+    }
+    for (const highlight of t.state.highlights) {
+      for (const answer of highlight.answers) expect(answer.text).not.toBe(PLACEHOLDER_TEXT);
+    }
+  });
+
+  it("clears the highlights when the game restarts", () => {
+    const t = inResults({ options: { totalRounds: 1 } });
+    expect(t.state.highlights.length).toBeGreaterThan(0);
+    t.act("p1", "PLAY_AGAIN");
+    expect(t.state.highlights.length).toBe(0);
   });
 });

@@ -9,6 +9,7 @@ const record = (id: string, votes: number, matchupVotes: number): AnswerRecord =
   promptText: "prompt",
   votes,
   matchupVotes,
+  matchupId: "m1",
 });
 
 describe("pickBestAnswers", () => {
