@@ -574,6 +574,17 @@ The protocol does not change: errors keep their `ErrorCode` and English `message
 
 The generic `@partygame/game-ui` components read their labels from one more table, `defaultUiStrings`, set with `setStrings(partial)` at the app root (GameControls menu and dialog, LobbySettings summary, NameInput, Podium, QrCode, and the `PhaseClock` announcement through its `secondsRemaining(n)` function entry). The table carries a `clientStrings` field: pass the same object to both the manager's `strings` option and `setStrings`, and one table localises both layers. Server error text resolves as `clientStrings.errors[code] ?? message`, so codes you do not translate keep the server's own message.
 
+On the server side, every message the core runtime owns (the lobby built-ins' refusals, the failure notice in `state.notice`, the stopped-runtime error, and the dispatch pipeline's refusal log messages) comes from `defaultCoreStrings` (`@partygame/core`). Pass a partial table as the definition's `strings` field — it lives on the game definition, so replays and tests see it; `defineGame` fills in the defaults:
+
+```ts
+const game = defineGame<ButtonState, Priv>({
+  // ...
+  strings: { cannotKickSelf: "Du kannst dich nicht selbst rausschmeißen", needAtLeast: (n) => `Noch ${n - 1} Spieler fehlen` },
+});
+```
+
+Function entries receive their arguments (`needAtLeast(minPlayers)`, `notAllowedToSend(action)`). The client-visible entries reach players in `ERROR` payloads or `state.notice`; the log-only ones are `FrameworkError` messages, where clients see the fixed `CLIENT_MESSAGES` text for the code. Your own game-authored `ctx.reject` text is not part of this table.
+
 ## Minimal game: first to press the button
 
 ```ts

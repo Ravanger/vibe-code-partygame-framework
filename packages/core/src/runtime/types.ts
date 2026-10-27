@@ -2,6 +2,7 @@ import type { FilterLevel } from "@partygame/content/filter";
 import type { ErrorCode } from "@partygame/shared";
 import type { z } from "zod";
 import type { Seed } from "../utils.js";
+import type { CoreStrings } from "./strings.js";
 
 /** `"host"` is the room owner; everyone else is a `"player"`. */
 export type PlayerRole = "host" | "player";
@@ -260,6 +261,8 @@ export interface GameDefinition<
   filterLevel?(options: TOptions): FilterLevel;
   /** Synchronously gates every join, including spectators and creation joins (which come through `onJoin`); see {@link CanJoinInput}. */
   canJoin?(input: CanJoinInput): CanJoinResult;
+  /** Replaces the core-owned messages (lobby built-ins, runtime refusals); see {@link CoreStrings}. `defineGame` fills in the defaults. */
+  strings?: Partial<CoreStrings>;
   /** Called once per room (and per replay table); must return a fresh object each call, never a shared one: the action log and phase timings are keyed by it. */
   createPrivateState(): TPrivate;
   /** `"Lobby"` is reserved and built in. */

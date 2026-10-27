@@ -6,6 +6,7 @@ import {
   SET_OPTIONS,
   START_GAME,
 } from "@partygame/shared";
+import { mergeCoreStrings } from "./strings.js";
 import type {
   ActionDefinition,
   AudienceActionDefinition,
@@ -70,6 +71,7 @@ export function defineGame<
       }
   }
   if (problems.length > 0) throw new GameDefinitionError(problems);
+  spec.strings = mergeCoreStrings(spec.strings);
   return spec;
 }
 

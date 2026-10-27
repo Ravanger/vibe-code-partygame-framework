@@ -13,6 +13,7 @@ import { deepFreeze, newId } from "../utils.js";
 import { DispatchPipeline } from "./DispatchPipeline.js";
 import { Lobby } from "./lobby.js";
 import { buildPhaseMachine } from "./machineFactory.js";
+import { type CoreStrings, mergeCoreStrings } from "./strings.js";
 import { type Pending, PhaseLoopError, TransitionQueue } from "./TransitionQueue.js";
 import type {
   ActionDefinition,
@@ -28,11 +29,6 @@ import type {
   TimerHandle,
 } from "./types.js";
 
-const STOPPED_ERROR: ServerError = {
-  code: ErrorCode.NOT_ALLOWED,
-  message: "The game has ended",
-};
-const FAILURE_NOTICE = "The game stopped because of an unexpected error.";
 /** `PhaseDefinition.tickMs` when a ticking phase does not set one: 10 Hz. */
 const DEFAULT_TICK_MS = 100;
 
@@ -71,6 +67,8 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   private readonly state: TState;
   private options: TOptions;
   private readonly host: RuntimeHost;
+  /** The definition's `strings` over the defaults; every core-owned message comes from it. */
+  private readonly strings: CoreStrings;
   private readonly lobby: Lobby<TState, TPrivate, TOptions>;
   private readonly builtins: Record<string, ActionDefinition<TState, TPrivate, TOptions, unknown>>;
   private readonly phases: Record<string, PhaseDefinition<TState, TPrivate, TOptions>>;
@@ -95,6 +93,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     this.spec = config.definition;
     this.state = config.state;
     this.host = config.host;
+    this.strings = mergeCoreStrings(config.definition.strings);
     this.options = deepFreeze(config.options) as TOptions;
     const priv = this.spec.createPrivateState();
     if (typeof priv !== "object" || priv === null) throw new InvalidPrivateStateError();
@@ -124,6 +123,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
         Object.values(this.phases).some((p) => p.actions && type in p.actions),
       phaseName: () => this.phaseName,
       players: () => this.host.players(),
+      strings: this.strings,
       contextFactory: () => this.context(),
       filterLevel: () => this.spec.filterLevel?.(this.options) ?? "off",
       audienceOnce: (audienceKey, scope) => this.host.audienceOnce(audienceKey, scope),
@@ -168,7 +168,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
    * with `NOT_ALLOWED`.
    */
   dispatch(playerId: string, rawAction: unknown): ServerError | undefined {
-    if (this.stopped) return STOPPED_ERROR;
+    if (this.stopped) return this.stoppedError();
     this.rejections.length = 0;
     this.redactedRejections = 0;
     try {
@@ -187,7 +187,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
    * {@link GameRuntime.stop} every action fails with `NOT_ALLOWED`.
    */
   dispatchAudience(audienceKey: string, rawAction: unknown): ServerError | undefined {
-    if (this.stopped) return STOPPED_ERROR;
+    if (this.stopped) return this.stoppedError();
     this.rejections.length = 0;
     this.redactedRejections = 0;
     try {
@@ -382,7 +382,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
 
   /** The default failure policy: a fixed notice, and the Lobby when not already there. */
   private defaultFailurePolicy(): void {
-    this.state.notice = FAILURE_NOTICE;
+    this.state.notice = this.strings.failureNotice;
     if (this.phaseName === LOBBY_PHASE) return;
     if (!this.lobbyReturnFailed) {
       this.guarded(() => this.observeTransition(this.phaseName, LOBBY_PHASE));
@@ -502,6 +502,11 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       this.queue.clear();
       this.recordFrameworkError(event.senderId, error);
     }
+  }
+
+  /** Every action after `stop()` fails with this. */
+  private stoppedError(): ServerError {
+    return { code: ErrorCode.NOT_ALLOWED, message: this.strings.stopped };
   }
 
   private recordFrameworkError(playerId: string, error: FrameworkError): ServerError {
