@@ -82,7 +82,7 @@ $effect(() => () => spotlight.destroy());
     <Scoreboard rows={vm.scoreboard.rows} />
 
     {#if vm.awards.length > 0}
-      <section class="ceremony" aria-label="Awards">
+      <section class="ceremony" aria-label="Awards" style:--count={vm.awards.length}>
         <h2 class="sticker">Awards</h2>
         {#each vm.awards as award (award.id)}
           <div class="award card taped">
@@ -386,7 +386,9 @@ $effect(() => () => spotlight.destroy());
     grid-template-areas:
       "head head"
       "stage board";
-    align-items: start;
+    /* the columns take the full row height instead of hugging their content to the top */
+    align-items: stretch;
+    min-height: 0;
     gap: 1.5rem 3rem;
   }
 
@@ -424,7 +426,24 @@ $effect(() => () => spotlight.destroy());
 
   :global(main.tv) .results .board {
     grid-area: board;
+    /* spread the sections across the full column height at 4k, pack them at 1080p */
+    justify-content: space-between;
     gap: 1rem;
+  }
+
+  :global(main.tv) .ceremony {
+    display: grid;
+    grid-template-columns: repeat(var(--count, 1), minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  :global(main.tv) .ceremony h2 {
+    grid-column: 1 / -1;
+    justify-self: center;
+  }
+
+  :global(main.tv) .award {
+    padding: 0.4rem 0.75rem;
   }
 
   :global(main.tv) .winner-banner {
