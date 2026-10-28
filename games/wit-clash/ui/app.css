@@ -274,6 +274,8 @@ h3 {
 
 main.tv {
   --scale: 1.6;
+  /* smallest text step lifted so fs-1-based TV text stays at or above the 24px minimum (0.9375rem x 1.6 = 24px) */
+  --fs-1: 0.9375rem;
   font-size: 1.6rem;
   --podium-block-height-1: 17dvh;
   --podium-block-height-2: 12dvh;
