@@ -565,9 +565,15 @@ describe("a leaver at the top of the standings", () => {
   it("lists the leaver below every seated player in the final scoreboard", () => {
     const t = new Table(finalRound());
     t.toVoting();
-    t.priv.scores = { p1: 100, p2: 50, p3: 50, p4: 900 };
     t.leave("p4");
-    t.playOutVoting();
+    for (;;) {
+      if (t.phase === "MatchupVoting") t.voteFor(nth(t.authors(), 0));
+      else if (t.phase === "MatchupReveal") {
+        if (t.state.activeMatchupIndex + 1 === t.state.matchups.length)
+          t.priv.scores = { p1: 100, p2: 50, p3: 50, p4: 900 };
+        t.tick(5000);
+      } else break;
+    }
     const rows = [...t.state.scoreboard];
     expect(rows[rows.length - 1]).toMatchObject({ playerId: "p4", hasLeft: true });
     expect(rows.slice(0, -1).every((r) => !r.hasLeft)).toBe(true);

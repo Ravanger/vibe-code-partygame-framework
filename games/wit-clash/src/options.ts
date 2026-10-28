@@ -4,6 +4,8 @@ import { z } from "zod";
 export const WitClashOptionsSchema = z.object({
   /** free plays the host-editable content with a category vote; daily plays the repo-shipped canon on a day-seeded order. */
   mode: z.enum(["free", "daily"]).default("free"),
+  /** Which category ratings free play may offer: `any` includes mature categories, `family` does not. */
+  contentRating: z.enum(["any", "family"]).default("any"),
   totalRounds: z.number().int().min(1).max(10).default(3),
   categoryVoteSeconds: z.number().int().min(5).max(300).default(60),
   promptSeconds: z.number().int().min(15).max(600).default(90),

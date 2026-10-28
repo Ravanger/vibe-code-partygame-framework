@@ -61,7 +61,11 @@ export const CategorySelection: WitClashPhase = {
       ctx.transition(PHASE.Prompting);
       return;
     }
-    for (const category of ctx.priv.content.pickRandom(OPTION_COUNT, ctx.rng)) {
+    for (const category of ctx.priv.content.pickRandom(
+      OPTION_COUNT,
+      ctx.rng,
+      (c) => ctx.options.contentRating === "any" || c.rating === "family",
+    )) {
       const option = new CategoryOption();
       option.id = category.id;
       option.name = category.name;

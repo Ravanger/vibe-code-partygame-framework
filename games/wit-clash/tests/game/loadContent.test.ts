@@ -18,6 +18,9 @@ beforeEach(async () => {
 const category = (id: string) =>
   JSON.stringify({ id, name: id, prompts: [{ id: `${id}-1`, text: "Say something." }] });
 
+const ratedCategory = (id: string, rating: "family" | "mature") =>
+  JSON.stringify({ id, name: id, prompts: [{ id: `${id}-1`, text: "Say something." }], rating });
+
 describe("contentDir", () => {
   it("prefers WITCLASH_CONTENT_DIR", () => {
     expect(contentDir({ WITCLASH_CONTENT_DIR: "/somewhere" }, "file:///game/server.ts")).toBe(
@@ -42,6 +45,21 @@ describe("loadContent", () => {
   it("refuses to start with too few categories", async () => {
     await writeFile(join(dir, "a.json"), category("a"));
     await expect(loadContent(dir)).rejects.toThrow(`Need at least ${MIN_CATEGORIES} categories`);
+  });
+
+  it("loads when the family categories alone meet the minimum, even with mature extras", async () => {
+    for (const id of ["a", "b", "c"]) await writeFile(join(dir, `${id}.jsonc`), category(id));
+    for (const id of ["m1", "m2"])
+      await writeFile(join(dir, `${id}.jsonc`), ratedCategory(id, "mature"));
+    const categories = await loadContent(dir);
+    expect(categories.all()).toHaveLength(5);
+  });
+
+  it("refuses to start when fewer than MIN_CATEGORIES are family-rated, even if the total is enough", async () => {
+    await writeFile(join(dir, "a.json"), ratedCategory("a", "family"));
+    await writeFile(join(dir, "b.json"), ratedCategory("b", "family"));
+    await writeFile(join(dir, "m.json"), ratedCategory("m", "mature"));
+    await expect(loadContent(dir)).rejects.toThrow(/family/);
   });
 
   it("reports a missing directory", async () => {

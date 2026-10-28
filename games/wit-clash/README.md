@@ -196,6 +196,7 @@ Passed when the room is created or changed by the host in the lobby with `SET_OP
 | Option | Default | Range |
 | --- | --- | --- |
 | `mode` | `free` | `free` or `daily` |
+| `contentRating` | `any` | `any` (offers every category) or `family` (never offers `"mature"` ones); free play only — daily plays the canon regardless |
 | `totalRounds` | 3 | 1 to 10 |
 | `categoryVoteSeconds` | 60 | 5 to 300 |
 | `promptSeconds` | 90 | 15 to 600 |

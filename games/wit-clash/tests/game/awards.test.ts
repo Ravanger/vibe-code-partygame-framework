@@ -131,7 +131,7 @@ describe("the results ceremony", () => {
       {
         id: "most-votes-received",
         title: "Most votes received",
-        winnerNames: ["p3"],
+        winnerNames: ["p4"],
         detail: "4 votes",
       },
     ]);

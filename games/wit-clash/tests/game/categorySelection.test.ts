@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { resolveCategoryVote } from "../../src/categoryVote.js";
+import { categoriesFromArray } from "../../src/content/CategoryRepository.js";
 import { Table } from "./support.js";
 
 const started = (players = 4) => {
@@ -191,6 +192,66 @@ describe("VOTE_CATEGORY", () => {
     const t = started(3);
     for (const p of ["p1", "p2", "p3"]) t.drop(p);
     expect(t.phase).toBe("CategorySelection");
+  });
+});
+
+describe("content rating", () => {
+  const rated = (entries: ReadonlyArray<readonly [string, "family" | "mature"]>) =>
+    categoriesFromArray(
+      entries.map(([id, rating]) => ({
+        id,
+        name: id,
+        emoji: "x",
+        prompts: Array.from({ length: 8 }, (_, p) => ({ id: `${id}-p${p}`, text: `P ${id}.${p}` })),
+        tieBreakers: [],
+        weight: 1,
+        rating,
+      })),
+    );
+
+  it("offers only the family categories in every round when contentRating is family", () => {
+    const t = new Table({
+      players: 4,
+      options: { contentRating: "family", totalRounds: 3 },
+      categories: rated([
+        ["fam-a", "family"],
+        ["fam-b", "family"],
+        ["fam-c", "family"],
+        ["hot-1", "mature"],
+        ["hot-2", "mature"],
+      ]),
+    });
+    t.start();
+    for (let round = 0; round < 3; ++round) {
+      if (round > 0) t.act("p1", "NEXT_ROUND");
+      expect([...t.state.categoryOptions].map((o) => o.id).sort()).toEqual([
+        "fam-a",
+        "fam-b",
+        "fam-c",
+      ]);
+      if (round < 2) {
+        t.voteFirstCategory();
+        t.answerEverything();
+        t.playOutVoting();
+      }
+    }
+  });
+
+  it("offers mature categories too when contentRating is any (the default)", () => {
+    const t = new Table({
+      players: 4,
+      categories: rated([
+        ["hot-1", "mature"],
+        ["hot-2", "mature"],
+        ["hot-3", "mature"],
+      ]),
+    });
+    t.start();
+    expect([...t.state.categoryOptions].map((o) => o.id).sort()).toEqual([
+      "hot-1",
+      "hot-2",
+      "hot-3",
+    ]);
   });
 });
 

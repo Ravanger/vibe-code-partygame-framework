@@ -23,9 +23,20 @@ they are the canon every server plays on a given UTC date, so adding or editing 
   ],
   "tieBreakers": [          // OPTIONAL: used when the final round ends level, see below
     { "id": "my-category-tb-1", "text": "Tie-breaker prompt." }
-  ]
+  ],
+  "weight": 1,              // OPTIONAL: default is 1; relative chance of being offered in free play
+  "rating": "family"        // OPTIONAL: default is "family"; "mature" is only offered when the room allows it
 }
 ```
+
+## Weighting and ratings (free play)
+
+- **`weight`** is a relative chance, not a probability: a category with weight 2 is offered about twice as often as one
+  with weight 1. A weight of 0 means the category is never offered in free play (its prompts are simply unreachable there).
+  Daily mode ignores weights and plays the canon in its day-seeded order.
+- **`rating`** tags a category `"family"` or `"mature"`. The room option `contentRating` (lobby settings, default `"any"`)
+  decides what free play may offer: `"any"` offers everything, `"family"` never offers a `"mature"` category. Daily mode
+  ignores ratings too.
 
 ## Tie-breakers
 
@@ -44,7 +55,8 @@ once per game. A category without any simply adds nothing to the pool.
    At least 16 per category is a sane floor; the bundled files have 40 each.
 4. **Bad files are skipped:** A file that is not valid JSON or does not match the schema is skipped with a `[CategoryRepository] Skipping <file>`
    warning in the server log, so a typo quietly removes a category. Check the log after adding one.
-5. **Minimum:** The server refuses to start with fewer than 3 valid categories.
+5. **Minimum:** The server refuses to start with fewer than 3 valid categories, or with fewer than 3 family-rated ones (a
+   room set to `contentRating: "family"` would have nothing to play).
 6. **Restart to reload:** Files are read once at startup. Set `WITCLASH_CONTENT_DIR` to read the free-play content from another
    directory; daily mode always uses this repo directory and ignores the variable.
 

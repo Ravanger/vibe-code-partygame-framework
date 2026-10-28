@@ -8,6 +8,7 @@ describe("WitClashOptionsSchema", () => {
   it("defaults to free play, 3 rounds, the standard timers and moderate filtering", () => {
     expect(WitClashOptionsSchema.parse({})).toEqual({
       mode: "free",
+      contentRating: "any",
       totalRounds: 3,
       categoryVoteSeconds: 60,
       promptSeconds: 90,
@@ -20,6 +21,7 @@ describe("WitClashOptionsSchema", () => {
 
   it.each([
     { mode: "weekly" },
+    { contentRating: "spicy" },
     { totalRounds: 0 },
     { totalRounds: 11 },
     { totalRounds: 1.5 },
