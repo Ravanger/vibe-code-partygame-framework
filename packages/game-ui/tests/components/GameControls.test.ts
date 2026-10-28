@@ -14,6 +14,25 @@ const menu = () => screen.getByRole("button", { name: "Game menu" });
 const endGame = () => screen.queryByRole("button", { name: "End game" });
 const leaveButton = () => screen.queryByRole("button", { name: "Leave game" });
 
+/** The cssText of the first style rule whose selector matches `re`. */
+function ruleCss(re: RegExp): string {
+  for (const sheet of document.styleSheets) {
+    let rules: CSSRuleList;
+    try {
+      rules = sheet.cssRules;
+    } catch {
+      continue;
+    }
+    for (const rule of rules) {
+      if (rule instanceof CSSStyleRule && re.test(rule.selectorText)) return rule.cssText;
+    }
+  }
+  throw new Error(`no style rule matching ${re}`);
+}
+
+/** The scale-aware fs-1 declaration every TV text uses under main.tv. */
+const SCALED_FS_1 = /font-size:\s*calc\(var\(--fs-1\) \* var\(--scale,\s*1\)\)/;
+
 describe("GameControls", () => {
   it("renders nothing in the lobby", () => {
     const { vm } = setup("host", "Lobby");
@@ -72,5 +91,12 @@ describe("GameControls", () => {
     expect(endGame()).not.toBeInTheDocument();
     await fireEvent.click(leaveButton() as HTMLElement);
     expect(leave).toHaveBeenCalledOnce();
+  });
+
+  it("scales the spectator leave button with the TV font scale", () => {
+    const { c, vm } = setup();
+    c.state.players.delete(c.manager.playerId);
+    render(GameControls, { vm });
+    expect(ruleCss(/leave-small/)).toMatch(SCALED_FS_1);
   });
 });

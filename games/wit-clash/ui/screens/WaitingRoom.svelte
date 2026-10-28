@@ -280,6 +280,6 @@ $effect(() => () => vm.destroy());
     grid-column: 1 / -1;
     justify-self: end;
     min-height: 36px;
-    font-size: var(--fs-1);
+    font-size: calc(var(--fs-1) * var(--scale, 1));
   }
 </style>

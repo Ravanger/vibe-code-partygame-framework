@@ -13,6 +13,25 @@ afterEach(() => {
   window.history.replaceState({}, "", "/");
 });
 
+/** The cssText of the first style rule whose selector matches `re`. */
+function ruleCss(re: RegExp): string {
+  for (const sheet of document.styleSheets) {
+    let rules: CSSRuleList;
+    try {
+      rules = sheet.cssRules;
+    } catch {
+      continue;
+    }
+    for (const rule of rules) {
+      if (rule instanceof CSSStyleRule && re.test(rule.selectorText)) return rule.cssText;
+    }
+  }
+  throw new Error(`no style rule matching ${re}`);
+}
+
+/** The scale-aware fs-1 declaration every TV text uses under main.tv. */
+const SCALED_FS_1 = /font-size:\s*calc\(var\(--fs-1\) \* var\(--scale,\s*1\)\)/;
+
 describe("Welcome screen", () => {
   it("hosts a game", async () => {
     const network = stubFetch(new Error("Server down"));
@@ -141,6 +160,11 @@ describe("Waiting room", () => {
   it("shows no notice when nothing ended the game", () => {
     render(WaitingRoom, { manager: lobby("player").manager });
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("scales the TV leave button with the font scale", () => {
+    render(WaitingRoom, { manager: lobby("player").manager });
+    expect(ruleCss(/main\.tv .*\.leave\b/)).toMatch(SCALED_FS_1);
   });
 
   it("copies the room code", async () => {
