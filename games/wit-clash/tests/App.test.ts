@@ -181,6 +181,19 @@ describe("App", () => {
     expect(container.querySelector("main")).not.toHaveClass("tv");
   });
 
+  it("keeps the TV game view out of the outer 5% viewport band", () => {
+    const c = connectedClient({}, "Prompting");
+    c.state.players.delete(c.manager.playerId);
+    const { container } = render(App, { manager: c.manager });
+    const view = container.querySelector<HTMLElement>(".game-view");
+    if (view === null) throw new Error("the TV game view did not render");
+    const cs = getComputedStyle(view);
+    // 7vw >= 5% of the viewport width and 6vh >= 5% of its height, at any TV resolution
+    expect(cs.paddingLeft).toBe("7vw");
+    expect(cs.paddingRight).toBe("7vw");
+    expect(cs.paddingBottom).toBe("6vh");
+  });
+
   it("shows server errors in a toast that can be dismissed", async () => {
     const c = connectedClient();
     render(App, { manager: c.manager });
