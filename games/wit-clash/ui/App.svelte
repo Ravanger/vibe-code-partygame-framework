@@ -119,7 +119,8 @@ const route = $derived(vm.screen);
   }
 
   main.tv header {
-    padding: 24px 40px 8px;
+    /* viewport-relative so the wordmark and room chip stay out of the outer 5% overscan band */
+    padding: 7vh 7vw 8px;
   }
 
   main.tv .wordmark {
