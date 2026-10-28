@@ -589,7 +589,7 @@ Function entries receive their arguments (`needAtLeast(minPlayers)`, `notAllowed
 
 The runtime logs through an injected `Logger` (`@partygame/core`): `info`, `warn` and `error`, each taking an event name and optional fields. Phase code and middleware log through the context — `ctx.log("custom.event", { n: 1 })`. A host that provides no logger gets a no-op, so games run and replay without one; tests assert on `FakeHost.logs`. The logger is injected per host, never process-global.
 
-Log lines are structured: `{ ts, level, event, roomId, ...fields }`, where field values are strings, numbers or booleans only. Lines carry event names and `playerId` — no player names, no action payloads, no free text. The server's default logger writes one line per event to stdout; a host may swap in its own implementation (for example pino). The room lifecycle events the server emits:
+Log lines are structured: `{ ts, level, event, roomId, ...fields }`, where field values are strings, numbers or booleans only. Lines carry event names and `playerId` — no player names, no action payloads, no free text. The server's default is `jsonLineLogger` (`@partygame/server`) — one JSON object per line on stdout, no dependency; pass any other `Logger` through `GameServerOptions.logger` to route lines elsewhere (for example pino). Under test, `bootTestServer` is silent by default and takes a capturing logger through the same option. The room lifecycle events the server emits:
 
 | Event | When | Extra fields |
 |---|---|---|

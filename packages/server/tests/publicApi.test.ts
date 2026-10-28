@@ -20,6 +20,7 @@ describe("public API", () => {
       "createApiHandler",
       "createGameServer",
       "createResolveCodeThrottle",
+      "jsonLineLogger",
     ]);
   });
 });

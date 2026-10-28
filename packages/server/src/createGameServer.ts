@@ -1,8 +1,9 @@
 import type { ServerOptions, Transport } from "@colyseus/core";
 import type { TextFilter } from "@partygame/content/filter";
-import type { GameDefinition } from "@partygame/core";
+import type { GameDefinition, Logger } from "@partygame/core";
 import { assertSyncedFields, type BaseGameState } from "@partygame/shared/schema";
 import { GameColyseusServer } from "./gameTransport.js";
+import { jsonLineLogger } from "./logger.js";
 import {
   RateLimiter,
   type RateLimits,
@@ -58,6 +59,8 @@ export interface GameServerOptions {
    * `/api/resolve-code` (429 with `Retry-After`).
    */
   rateLimits?: RateLimits;
+  /** Structured lifecycle logger for every room. Defaults to {@link jsonLineLogger} (one JSON line per event on stdout). */
+  logger?: Logger;
 }
 
 export const DEFAULT_RECONNECT_MS = 60_000;
@@ -132,6 +135,7 @@ export function createGameServer(options: GameServerOptions): GameColyseusServer
       ...(options.textFilter ? { textFilter: options.textFilter } : {}),
       rateLimiter,
       rateLimits,
+      logger: options.logger ?? jsonLineLogger(),
     };
     server.define(
       game.roomName,

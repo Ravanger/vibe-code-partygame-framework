@@ -7,6 +7,7 @@ import {
   type GameDefinition,
   GameRuntime,
   getActionLog,
+  type Logger,
   type PlayerInfo,
   type RuntimeHost,
   randomSeed,
@@ -75,6 +76,8 @@ export interface GameRoomConfig {
   rateLimiter: RateLimiter;
   /** The resolved limits behind `rateLimiter`, one bucket per message type. */
   rateLimits: ResolvedRateLimits;
+  /** Structured lifecycle logger; every line this room emits carries the room id. */
+  logger: Logger;
 }
 
 /** sha256 of a join secret; digests are compared with `timingSafeEqual`, so a wrong secret costs the same time as a right one. */
@@ -151,6 +154,25 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     return this.closeWith(CLOSE_CODES.INVALID_OPTIONS);
   }
 
+  /** One structured line for this room at `level`; the room id is bound here, never by the game. */
+  private logLine(
+    level: "info" | "warn" | "error",
+    event: string,
+    fields?: Record<string, string | number | boolean>,
+  ): void {
+    this.config.logger[level](event, { roomId: this.roomId, ...(fields ?? {}) });
+  }
+
+  /** Logs a runtime-rejected action (code and type only — never the payload) and returns the rejection. */
+  private rejected(raw: unknown, error: ProtocolError): ActionResult {
+    const envelope = ActionEnvelopeSchema.safeParse(raw);
+    this.logLine("warn", "action.rejected", {
+      code: error.code,
+      action: envelope.success ? envelope.data.type : "unknown",
+    });
+    return { ok: false, error };
+  }
+
   private create(options: Record<string, unknown>): void {
     const { definition, stateClass, roomCodeService } = this.config;
     if (roomCodeService.size >= this.config.maxRooms) throw this.closeWith(CLOSE_CODES.SERVER_FULL);
@@ -214,6 +236,7 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
         return this.act(seat.id, raw);
       });
       this.onMessage(ClientMessage.EXPORT_REPLAY, (client): unknown => this.exportReplay(client));
+      this.logLine("info", "room.created");
     } catch (error) {
       roomCodeService.unregister(code);
       throw error;
@@ -284,6 +307,7 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     this.seatSecrets.set(playerId, sha256(seatSecret));
     this.bind(playerId, client.sessionId);
     this.rosterChanged();
+    this.logLine("info", "player.joined", { playerId });
   }
 
   async onDrop(client: Client): Promise<void> {
@@ -311,13 +335,17 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
       return;
     }
     const seat = this.seatBySession(client);
-    if (seat) this.removeSeat(seat.id);
+    if (seat) {
+      this.removeSeat(seat.id);
+      this.logLine("info", "player.left", { playerId: seat.id });
+    }
   }
 
   onDispose(): void {
     this.runtime?.stop();
     if (this.state?.roomCode) this.config.roomCodeService.unregister(this.state.roomCode);
     this.config.rateLimiter.drop(`${this.roomId}:`);
+    this.logLine("info", "room.disposed");
   }
 
   /** TimerHandle ids handed out by the host, mapped to their Colyseus Delayed. */
@@ -364,6 +392,11 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
       this.dropSeat(playerId, true);
       this.scheduleDisposeIfEmpty();
       client?.leave();
+    },
+    log: {
+      info: (event, fields) => this.logLine("info", event, fields),
+      warn: (event, fields) => this.logLine("warn", event, fields),
+      error: (event, fields) => this.logLine("error", event, fields),
     },
     publishOptions: (options) => {
       this.roomOptions = options as Record<string, unknown>;
@@ -458,7 +491,7 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
   private act(playerId: string, raw: unknown): ActionResult {
     try {
       const error = this.runtime.dispatch(playerId, raw);
-      return error ? { ok: false, error } : { ok: true };
+      return error ? this.rejected(raw, error) : { ok: true };
     } catch (error) {
       logger.error("[GameRoom] action failed", error);
       return ACTION_FAILED;
@@ -486,7 +519,7 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     }
     try {
       const error = this.runtime.dispatchAudience(playerId, raw);
-      return error ? { ok: false, error } : { ok: true };
+      return error ? this.rejected(raw, error) : { ok: true };
     } catch (error) {
       logger.error("[GameRoom] audience action failed", error);
       return ACTION_FAILED;
@@ -563,6 +596,7 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     for (const ref of this.viewRefs.get(seat.id) ?? []) view?.add(ref);
     this.safely(() => this.runtime.syncPlayer(seat.id));
     this.rosterChanged();
+    this.logLine("info", "player.reconnected", { playerId: seat.id });
   }
 
   private dropSeat(playerId: string, rememberSecret: boolean): void {
