@@ -29,6 +29,12 @@ export {
   podiumSteps,
   rankRows,
 } from "./ranking.js";
+export {
+  type GestureTarget,
+  SoundPolicy,
+  type SoundPolicyOptions,
+  type SoundStorage,
+} from "./SoundPolicy.svelte.js";
 export { TypingReporter } from "./TypingReporter.js";
 export { type LobbyPlayer, WaitingRoomViewModel } from "./WaitingRoomViewModel.svelte.js";
 export { WelcomeViewModel } from "./WelcomeViewModel.svelte.js";
