@@ -17,8 +17,11 @@ import { type CoreStrings, mergeCoreStrings } from "./strings.js";
 import { type Pending, PhaseLoopError, TransitionQueue } from "./TransitionQueue.js";
 import type {
   ActionDefinition,
+  ContextLogger,
   GameContext,
   GameDefinition,
+  Logger,
+  LogLine,
   MiddlewareContext,
   MiddlewareEvent,
   PhaseDefinition,
@@ -28,6 +31,7 @@ import type {
   RuntimeHost,
   TimerHandle,
 } from "./types.js";
+import { noopLogger } from "./types.js";
 
 /** `PhaseDefinition.tickMs` when a ticking phase does not set one: 10 Hz. */
 const DEFAULT_TICK_MS = 100;
@@ -67,6 +71,10 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   private readonly state: TState;
   private options: TOptions;
   private readonly host: RuntimeHost;
+  /** The host's logger, or the no-op when the host provides none. */
+  private readonly logger: Logger;
+  /** The `ctx.log` wrapper over the host's logger: a call is an info line. */
+  private readonly contextLog: ContextLogger;
   /** The definition's `strings` over the defaults; every core-owned message comes from it. */
   private readonly strings: CoreStrings;
   private readonly lobby: Lobby<TState, TPrivate, TOptions>;
@@ -93,6 +101,14 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     this.spec = config.definition;
     this.state = config.state;
     this.host = config.host;
+    this.logger = this.host.log ?? noopLogger;
+    this.contextLog = Object.assign(
+      (event: string, fields?: LogLine["fields"]) => this.logger.info(event, fields),
+      {
+        warn: (event: string, fields?: LogLine["fields"]) => this.logger.warn(event, fields),
+        error: (event: string, fields?: LogLine["fields"]) => this.logger.error(event, fields),
+      },
+    );
     this.strings = mergeCoreStrings(config.definition.strings);
     this.options = deepFreeze(config.options) as TOptions;
     const priv = this.spec.createPrivateState();
@@ -244,6 +260,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       rng: () => this.host.rng(),
       newId: () => newId(() => this.host.rng()),
       now: () => this.host.now(),
+      log: this.contextLog,
       gameName: this.spec.name,
       gameVersion: this.spec.version,
       seed: this.host.seed,
