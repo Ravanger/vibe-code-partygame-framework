@@ -19,6 +19,25 @@ export interface AwardView {
   detail: string;
 }
 
+interface HighlightAnswerView {
+  authorName: string;
+  text: string;
+  votes: number;
+}
+
+export interface HighlightView {
+  kind: string;
+  label: string;
+  promptText: string;
+  answers: HighlightAnswerView[];
+}
+
+const HIGHLIGHT_LABELS: Record<string, string> = {
+  biggestMargin: "Biggest margin",
+  closestMatch: "Closest match",
+  fastestAnswer: "Fastest answer",
+};
+
 export class ResultsViewModel {
   readonly scoreboard: Scoreboard;
   private readonly recap: MatchupRecap;
@@ -52,6 +71,19 @@ export class ResultsViewModel {
       title: award.title,
       winnerNames: [...award.winnerNames],
       detail: award.detail,
+    }));
+  }
+
+  get highlights(): HighlightView[] {
+    return [...(this.manager.state?.highlights ?? [])].map((highlight) => ({
+      kind: highlight.kind,
+      label: HIGHLIGHT_LABELS[highlight.kind] ?? "Highlight",
+      promptText: highlight.promptText,
+      answers: [...highlight.answers].map((answer) => ({
+        authorName: answer.authorName,
+        text: answer.text,
+        votes: answer.votes,
+      })),
     }));
   }
 

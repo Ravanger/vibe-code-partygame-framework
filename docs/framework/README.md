@@ -143,6 +143,22 @@ an unnamed seat stays waiting, and in the Lobby a seat that sets its name is act
 A seat that joined the Lobby is active, but when the game leaves the Lobby (`START_GAME` or auto-start) every seat that is still unnamed is benched (`RuntimeHost.benchUnreadyPlayers`) and waits for the next activation.
 After a player reconnects, `onPlayerSync(ctx, playerId)` runs so you can resend their private messages.
 
+### Join control
+A game declares an optional synchronous `canJoin(input): CanJoinResult` on the definition to gate every join — including spectators and creation joins (there is no separate `canCreate`; creating a room joins through `onJoin`). The input carries `playerId`, the proposed `name`, the `spectator` flag, the client's `joinData` (string/number/boolean values) and the current `roster`. Return `{ ok: true }` to admit, or `{ ok: false, code, message }` to refuse with a game-authored message (for example `code: "ROOM_LOCKED"`); the refusal is not an `ErrorCode`, it is shown to the joining client as-is. The hook must be synchronous — core stays deterministic and Colyseus-free, so external auth stays out of it.
+
+The client sends `joinData` with `manager.join(code, { joinData })`: at most 8 keys, keys up to 32 characters, string values up to 256 characters (numbers and booleans unbounded) — enforced by `JoinOptionsSchema`. It is a one-shot per join: the framework never stores or logs it (it may hold a password), so it is not resent when a client resumes after a reload.
+
+The runtime evaluates it through the pure `evaluateJoin(definition, input)`: no hook accepts; a refusal message is trimmed and capped at 200 characters; a throwing hook yields the generic refusal `{ ok: false, code: "JOIN_REFUSED", message: "You cannot join this room." }` instead of crashing the join.
+
+The server enforces it in `GameRoom` on every join — after the kicked and watch-only checks, before a seat is given out; a reload-rejoin of an already-seated player skips the hook. A refusal closes the connection with close code 4403 (`CLOSE_CODES.JOIN_REFUSED`) carrying the game's message:
+
+```ts
+canJoin: (input) =>
+  input.joinData.password === "sesame"
+    ? { ok: true }
+    : { ok: false, code: "NO_PASSWORD", message: "Wrong password" },
+```
+
 ### Timers
 `duration` is milliseconds, or a function of the context. The timer restarts on every entry (including re-entry).
 `onTimeout` is required whenever `duration` is set, fires once, and never fires after the phase was left.
@@ -531,6 +547,7 @@ Client-visible error strings are fixed and table-driven; raw Zod or exception te
   | 4401 | `ROOM_FULL` | `NOT_ALLOWED` | Room is full |
   | 4402 | `SEAT_REMOVED` | `KICKED` | Your seat was removed |
   | 4403 | `KICKED_REJOIN` | `KICKED` | Removed by the host |
+  | 4403 | `JOIN_REFUSED` | `NOT_ALLOWED` | the game's refusal message (shares 4403) |
   | 4404 | `WATCH_ONLY` | `NOT_ALLOWED` | This room is watch-only |
   | 4406 | `SEAT_TAKEN` | `UNAUTHORIZED` | Seat is taken |
   | 4409 | `SEAT_TAKEN_OVER` | `KICKED` | Your seat was opened on another device |
@@ -543,7 +560,7 @@ Client-visible error strings are fixed and table-driven; raw Zod or exception te
 - `ctx.reject(code, message)` is the one game-authored exception: your message is passed through to the client.
   Keep it short and player-facing; the code still comes from `ErrorCode`.
 - The client keeps one `lastServerError` (`GameConnectionManager.lastServerError`): server `ERROR` payloads,
-  failed action answers, refused joins (looked up by close code), a failed `join`/`create` (`ROOM_NOT_FOUND`, `BAD_REPLY` or `CONNECTION_LOST`; the exception goes to the `logger` option and the promise still rejects) and a fixed `NOT_CONNECTED`, `CONNECTION_LOST` or `BAD_REPLY` message for local action failures (the exception goes to the manager's `logger` option, default `console.warn`).
+  failed action answers, refused joins (looked up by close code; a `VERSION_MISMATCH` template and a 4403 `canJoin` refusal keep the server-filled text), a failed `join`/`create` (`ROOM_NOT_FOUND`, `BAD_REPLY` or `CONNECTION_LOST`; the exception goes to the `logger` option and the promise still rejects) and a fixed `NOT_CONNECTED`, `CONNECTION_LOST` or `BAD_REPLY` message for local action failures (the exception goes to the manager's `logger` option, default `console.warn`).
   The welcome screen moves a failed join's message into its own error line and clears the toast, so exactly one renders.
   `ServerError.action` is set only by `ctx.reject` and invalid-payload rejections; framework rejections omit it.
   Clear it with `dismissError()`.

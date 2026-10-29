@@ -35,10 +35,13 @@ void manager.resume();       // page load: stored token, then stored room code
 ```ts
 await manager.create();                  // new room, you are the host; optional create options
 await manager.join("ABCD");              // by room code; throws with the server's reason
+await manager.join("ABCD", { joinData: { invite: "X" } }); // bounded data for the game's canJoin hook
 await manager.joinAsSpectator("ABCD");   // TV display, no seat
 manager.setName("Ada");                  // readies the seat
 await manager.leave();                   // forgets the room
 ```
+
+`join` options (`JoinOptions`): `name`, `spectator`, and `joinData` (string/number/boolean values; at most 8 keys, keys up to 32 characters, strings up to 256). `joinData` is sent once per join and never stored or logged by the manager.
 
 ```ts
 import { readCodeParam } from "@partygame/game-client";

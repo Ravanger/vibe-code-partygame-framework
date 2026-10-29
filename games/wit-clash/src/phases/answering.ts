@@ -28,6 +28,13 @@ export function answeringActions(
         }
         const drafts = ctx.priv.drafts.get(ctx.playerId) ?? new Map<string, string>();
         ctx.priv.drafts.set(ctx.playerId, drafts.set(matchupId, answer));
+        // Both answering phases run for promptSeconds, so the phase start is the deadline minus that.
+        const startedAt = ctx.state.phaseEndsAt - ctx.options.promptSeconds * 1000;
+        const times = ctx.priv.submitTimes.get(ctx.playerId) ?? new Map<string, number>();
+        ctx.priv.submitTimes.set(
+          ctx.playerId,
+          times.set(matchupId, Math.max(0, ctx.now() - startedAt)),
+        );
         ctx.state.progress.set(ctx.playerId, drafts.size);
         const prompt = new Round(ctx)
           .mineOf(ctx.playerId)

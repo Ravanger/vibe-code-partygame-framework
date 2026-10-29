@@ -48,6 +48,16 @@ export interface GameConnectionOptions<TState> {
   logger?: (message: string, error: unknown) => void;
 }
 
+/** Options for {@link GameConnectionManager.join}; the manager adds `playerId`, `seatSecret` and `protocolVersion` itself. */
+export interface JoinOptions {
+  /** The name to join with; validated like `SET_NAME`. */
+  name?: string;
+  /** Join without a seat, as a TV display does. */
+  spectator?: boolean;
+  /** Bounded data for the game's `canJoin` hook (an invite code or password); sent once per join, never stored or logged. */
+  joinData?: Record<string, string | number | boolean>;
+}
+
 const DEFAULT_API_PORT = 3001;
 const DEFAULT_SYNC_TIMEOUT_MS = 10_000;
 
@@ -143,7 +153,8 @@ export class GameConnectionManager<
     );
   }
 
-  async join(code: string, options: Record<string, unknown> = {}): Promise<void> {
+  /** Joins the room for `code` by its code; throws with the server's reason. */
+  async join(code: string, options: JoinOptions = {}): Promise<void> {
     const clean = code.trim().toUpperCase();
     if (!RoomCodeSchema.safeParse(clean).success) {
       throw new Error(`Game code must be ${ROOM_CODE_LENGTH} letters (A-Z)`);
@@ -458,7 +469,8 @@ export class GameConnectionManager<
 
   /**
    * The client-visible error for a refused connection: the table's fixed message, except
-   * VERSION_MISMATCH, whose template the server fills with both versions and the rejection preserves.
+   * VERSION_MISMATCH (whose template the server fills with both versions) and a 4403 canJoin refusal
+   * (which carries the game's own message); both pass the received text through.
    */
   private closeErrorOf(error: unknown): ServerError | undefined {
     if (typeof error !== "object" || error === null || !("code" in error)) return undefined;
@@ -466,8 +478,9 @@ export class GameConnectionManager<
     if (typeof code !== "number") return undefined;
     const entry = closeCodeEntry(code);
     if (!entry) return undefined;
+    // VERSION_MISMATCH's template and a 4403 canJoin refusal carry server-filled text; show what arrived.
     if (
-      entry === CLOSE_CODES.VERSION_MISMATCH &&
+      (entry === CLOSE_CODES.VERSION_MISMATCH || code === CLOSE_CODES.JOIN_REFUSED.code) &&
       "message" in error &&
       typeof error.message === "string"
     ) {
