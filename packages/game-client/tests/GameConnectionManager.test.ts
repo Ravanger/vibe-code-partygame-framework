@@ -357,6 +357,27 @@ describe("exportReplay", () => {
     });
   });
 
+  it("does not trust a bundle-shaped reply that is missing its version or snapshots", async () => {
+    const manager = newManager();
+    const { room } = seated(manager, "host");
+    manager.attach(room);
+    for (const bad of [
+      { name: "stub-game" },
+      { bundleVersion: "1", snapshots: [] },
+      { bundleVersion: 1, snapshots: {} },
+    ]) {
+      room.reply = bad;
+      await expect(manager.exportReplay()).resolves.toEqual({
+        ok: false,
+        error: { code: ErrorCode.BAD_REPLY, message: CLIENT_MESSAGES.BAD_REPLY },
+      });
+    }
+    expect(manager.lastServerError).toEqual({
+      code: ErrorCode.BAD_REPLY,
+      message: CLIENT_MESSAGES.BAD_REPLY,
+    });
+  });
+
   it("does not trust a null or an array reply", async () => {
     const manager = newManager();
     const { room } = seated(manager, "host");

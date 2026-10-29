@@ -245,7 +245,9 @@ export class GameConnectionManager<
   /**
    * The host's request for this room's replay bundle (the answer to `ClientMessage.EXPORT_REPLAY`).
    * A non-host gets the server's `UNAUTHORIZED` refusal, passed through and remembered in
-   * {@link lastServerError}; a well-formed bundle resolves as-is.
+   * {@link lastServerError}; a well-formed bundle resolves as-is. The success side is validated
+   * too: a reply without both a number `bundleVersion` and an array `snapshots` fails with
+   * `BAD_REPLY`.
    */
   async exportReplay(): Promise<ExportReplayResponse> {
     if (!this.room) return this.fail(ErrorCode.NOT_CONNECTED);
@@ -259,6 +261,9 @@ export class GameConnectionManager<
         if (!isServerError(reply.error)) return this.fail(ErrorCode.BAD_REPLY);
         this.setLastError(reply.error);
         return { ok: false, error: reply.error };
+      }
+      if (typeof reply.bundleVersion !== "number" || !Array.isArray(reply.snapshots)) {
+        return this.fail(ErrorCode.BAD_REPLY);
       }
       return reply;
     } catch (error) {

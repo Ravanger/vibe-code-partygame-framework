@@ -1,7 +1,10 @@
+import { required } from "@partygame/core";
+import { syncedJsonOf } from "@partygame/shared/schema";
 import { fireEvent, render, screen } from "@testing-library/svelte";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import ReplayApp from "../../ui/ReplayApp.svelte";
 import BUNDLE_TEXT from "../fixtures/replay-bundle.json?raw";
+import { makeCategories, nth, Table } from "../game/support.js";
 
 const BUNDLE = JSON.parse(BUNDLE_TEXT) as {
   snapshots: Array<{ phase: string; state: Record<string, unknown> }>;
@@ -14,6 +17,49 @@ function openBundle(text: string): void {
     value: [new File([text], "bundle.json", { type: "application/json" })],
   });
   void fireEvent.change(input);
+}
+
+/** Drives a one-round game through its final tie-breaker and records the final state of each
+ * tie phase, in the same shape the server's exporter writes. */
+function tieBreakerBundleText(): string {
+  const t = new Table({
+    players: 4,
+    categories: makeCategories(4, 8, 3),
+    options: { totalRounds: 1 },
+  });
+  const snapshots: Array<{ seq: number; phase: string; state: Record<string, unknown> }> = [];
+  let seq = 0;
+  const record = (): void => {
+    if (t.phase.startsWith("TieBreaker")) {
+      snapshots.push({ seq: ++seq, phase: t.phase, state: syncedJsonOf(t.state) });
+    }
+  };
+  t.toVoting();
+  for (;;) {
+    if (t.phase === "MatchupVoting") {
+      t.voteFor(nth(t.authors(), 0));
+    } else if (t.phase === "MatchupReveal") {
+      // Force a two-way tie for the lead when the last matchup is revealed.
+      if (t.state.activeMatchupIndex + 1 === t.state.matchups.length) {
+        t.priv.scores = { p1: 500, p2: 500, p3: 100, p4: 0 };
+      }
+      t.tick(5000);
+    } else break;
+  }
+  record(); // TieBreakerPrompting: the tied players face the prompt
+  for (const id of ["p1", "p2"]) {
+    t.act(id, "SUBMIT_ANSWER", {
+      matchupId: nth([...t.mine(id).prompts], 0).matchupId,
+      answer: `${id} tie-breaker answer`,
+    });
+  }
+  record(); // TieBreakerVoting: the answers are in, the votes are out
+  const tie = required(t.state.tieBreakers[t.state.tieBreakers.length - 1], "tie-breaker");
+  for (const voter of ["p3", "p4"]) {
+    t.act(voter, "CAST_VOTE", { answerId: nth([...tie.answers], 0).id });
+  }
+  record(); // TieBreakerReveal: the verdict is in
+  return JSON.stringify({ bundleVersion: 1, snapshots });
 }
 
 afterEach(() => {
@@ -37,7 +83,7 @@ describe("Replay viewer", () => {
     expect(screen.getByText(/open a replay bundle/i)).toBeInTheDocument();
   });
 
-  it("opens at the first snapshot with the controls ready", async () => {
+  it("opens at the first snapshot with the controls ready and clears the file input", async () => {
     render(ReplayApp);
     openBundle(BUNDLE_TEXT);
     // The first recorded phase is the lobby; its screen shows the seated players.
@@ -45,6 +91,8 @@ describe("Replay viewer", () => {
     expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
     expect(screen.getByText(`1 / ${BUNDLE.snapshots.length}`)).toBeInTheDocument();
+    // A cleared input re-fires change when the same file is picked again.
+    expect((screen.getByLabelText("Open replay bundle") as HTMLInputElement).value).toBe("");
   });
 
   it("steps forward to the next phase's screen and back again", async () => {
@@ -83,7 +131,7 @@ describe("Replay viewer", () => {
     const resultsIndex = BUNDLE.snapshots.findIndex((snap) => snap.phase === "Results");
     expect(resultsIndex).toBeGreaterThan(0);
     const scrubber = screen.getByLabelText("Replay position") as HTMLInputElement;
-    await fireEvent.change(scrubber, { target: { value: String(resultsIndex) } });
+    await fireEvent.input(scrubber, { target: { value: String(resultsIndex) } });
     expect(await screen.findByText(`Round 1 of 2 Results`)).toBeInTheDocument();
     expect(
       screen.getByText(`${resultsIndex + 1} / ${BUNDLE.snapshots.length}`),
@@ -125,6 +173,17 @@ describe("Replay viewer", () => {
       JSON.stringify({ bundleVersion: 1, snapshots: [{ seq: 0, phase: "Mystery", state: {} }] }),
     );
     expect(await screen.findByText(/Mystery/)).toBeInTheDocument();
+  });
+
+  it("steps through the tie-breaker screens of a recorded game", async () => {
+    render(ReplayApp);
+    openBundle(tieBreakerBundleText());
+    expect(await screen.findByText("Sit tight while the tied players answer.")).toBeInTheDocument();
+    await fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(await screen.findByText("Sit tight while the others vote.")).toBeInTheDocument();
+    await fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    // The reveal is the only tie phase that shows authors, so it proves the verdict rendered.
+    expect(await screen.findByText("by p1")).toBeInTheDocument();
   });
 
   it("lets the lobby's leave button go quietly in replay mode", async () => {

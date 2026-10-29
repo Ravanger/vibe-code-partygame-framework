@@ -9,8 +9,9 @@ import { isKnownPhase, PHASE_SCREENS, type PhaseScreen } from "./screens/index.j
 /**
  * The read-only manager the phase screens get in replay mode: the snapshot's synced state plus the
  * members they touch while mounting that a static recording has no meaning for. `countdown()` is
- * rebuilt from the snapshot's own clock fields (the recorded phase is over, so it reads 0), and
- * there is no seat, so `me()` is empty and leaving is a no-op.
+ * rebuilt from the snapshot's own clock fields (the recorded phase is over, so it counts down from
+ * at most 1s and reads 0 almost immediately), and there is no seat, so `me()` is empty and leaving
+ * is a no-op.
  */
 function replayManager(viewModel: ReplayViewModel): WitClashManager {
   const base = snapshotManager(viewModel, WitClashState);
@@ -58,9 +59,12 @@ const view = $derived.by((): View => {
 });
 
 async function onFileChange(event: Event): Promise<void> {
-  const file = (event.currentTarget as HTMLInputElement).files?.[0];
+  const input = event.currentTarget as HTMLInputElement;
+  const file = input.files?.[0];
   if (file === undefined) return;
   vm = new ReplayViewModel(await file.text());
+  // Clear the selection so re-picking the same file fires change again.
+  input.value = "";
 }
 
 function togglePlay(model: ReplayViewModel): void {
@@ -125,7 +129,7 @@ function togglePlay(model: ReplayViewModel): void {
         step="1"
         value={model.index}
         aria-label="Replay position"
-        onchange={(event) => model.goTo(Number((event.currentTarget as HTMLInputElement).value))}
+        oninput={(event) => model.goTo(Number((event.currentTarget as HTMLInputElement).value))}
       />
     </footer>
   {/if}

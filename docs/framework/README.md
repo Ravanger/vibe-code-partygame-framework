@@ -345,8 +345,9 @@ being left.
 
 The host exports with `room.request(ClientMessage.EXPORT_REPLAY)` — on a game client, `manager.exportReplay()`
 from `@partygame/game-client`, which normalizes the answer the same way `sendAction` does (a well-formed
-refusal is passed through and remembered in `lastServerError`; a malformed reply or a failed request becomes
-a fixed `BAD_REPLY`/`CONNECTION_LOST` result). The raw answer is an `ExportReplayResponse` (from
+refusal is passed through and remembered in `lastServerError`; a malformed reply — including a bundle-shaped
+reply without a number `bundleVersion` or an array `snapshots` — or a failed request becomes a fixed
+`BAD_REPLY`/`CONNECTION_LOST` result). The raw answer is an `ExportReplayResponse` (from
 `@partygame/shared`) — the bundle, or a refusal shaped like a rejected `ActionResult`: `UNAUTHORIZED`
 for a non-host (including spectators), `NOT_ALLOWED` when the game records no action log or its logged
 transitions do not match the recorded snapshots (a middleware that drops transition events makes export
