@@ -189,7 +189,8 @@ const route = $derived(vm.screen);
   main.tv .game-view {
     max-width: none;
     justify-content: center;
-    padding: 0 60px 40px;
+    /* viewport-relative so the content stays out of the outer 5% overscan band at any TV resolution */
+    padding: 0 7vw 6vh;
   }
 
   main.tv .screen {
