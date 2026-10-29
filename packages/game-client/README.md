@@ -87,6 +87,15 @@ const manager = new GameConnectionManager<MyState, { TURN: { id: string } }>();
 manager.onMessage("TURN", (turn) => turn.id); // typed; other names are a compile error
 ```
 
+## Export the replay
+
+`exportReplay()` is the client route to the host-only `EXPORT_REPLAY` request (#19's server child). It resolves with an `ExportReplayResponse` from `@partygame/shared`: the room's replay bundle for the host, or a refusal — the server's well-formed refusal (for example `UNAUTHORIZED` for a non-host) is passed through and remembered in `lastServerError`, while a malformed reply becomes a fixed `BAD_REPLY`. A request that cannot be sent or answered fails locally with `NOT_CONNECTED` (no room) or `CONNECTION_LOST` (the exception goes to the `logger` option, default `console.warn`).
+
+```ts
+const response = await manager.exportReplay(); // host: the bundle; non-host: { ok: false, error }
+if (response.ok === false) console.warn(manager.lastServerError?.message);
+```
+
 ## Show the phase clock
 
 `countdown()` counts down to `state.phaseEndsAt`, corrected for client clock skew. It ticks only while something reads it inside a Svelte effect and stops when the last reader goes away — no cleanup needed. `destroy()` is a deprecated no-op kept for existing callers.

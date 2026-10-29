@@ -359,8 +359,12 @@ a snapshot never carries `ctx.priv` or per-client data. Each snapshot names the 
 `transition` entry it belongs to and shows that transition's `from` phase — the final state of the phase
 being left.
 
-The host exports with `room.request(ClientMessage.EXPORT_REPLAY)`; the answer is an `ExportReplayResponse`
-(from `@partygame/shared`) — the bundle, or a refusal shaped like a rejected `ActionResult`: `UNAUTHORIZED`
+The host exports with `room.request(ClientMessage.EXPORT_REPLAY)` — on a game client, `manager.exportReplay()`
+from `@partygame/game-client`, which normalizes the answer the same way `sendAction` does (a well-formed
+refusal is passed through and remembered in `lastServerError`; a malformed reply — including a bundle-shaped
+reply without a number `bundleVersion` or an array `snapshots` — or a failed request becomes a fixed
+`BAD_REPLY`/`CONNECTION_LOST` result). The raw answer is an `ExportReplayResponse` (from
+`@partygame/shared`) — the bundle, or a refusal shaped like a rejected `ActionResult`: `UNAUTHORIZED`
 for a non-host (including spectators), `NOT_ALLOWED` when the game records no action log or its logged
 transitions do not match the recorded snapshots (a middleware that drops transition events makes export
 impossible), and `INTERNAL` if building the bundle throws. The bundle's `frameworkVersion` is
@@ -387,7 +391,9 @@ missing or malformed snapshots set its `error` and leave no snapshots) and steps
 `state` is a fresh `stateClass` instance filled from the current snapshot (via `syncedStateFromJson`, the
 inverse of `syncedJsonOf`, from `@partygame/shared/schema`), and `isSpectator` is always true — so a game's
 existing screens render a replay read-only. Snapshots hold synced state only: no private or per-client data,
-and player ids are the live ones (no `p1..pN` remapping).
+and player ids are the live ones (no `p1..pN` remapping). A game wires its own viewer on top (WitClash ships
+one at the `?replay` URL parameter — see its README); screens that read manager members beyond `state` and
+`isSpectator` while mounting (for example a countdown or the seat) need those supplied by the game's adapter.
 
 **Limitations in v1.** Mid-game roster changes are not replayed: `replayLog` throws naming the first such
 entry. Lobby-phase roster changes are skipped — the table is already seated — except the one that

@@ -1,6 +1,12 @@
 import { Client } from "@colyseus/sdk";
 import { RoomCodeError } from "@partygame/client-utils";
-import { CLIENT_MESSAGES, CLOSE_CODES, ErrorCode, PROTOCOL_VERSION } from "@partygame/shared";
+import {
+  CLIENT_MESSAGES,
+  CLOSE_CODES,
+  ClientMessage,
+  ErrorCode,
+  PROTOCOL_VERSION,
+} from "@partygame/shared";
 import { BaseGameState, PlayerSchema } from "@partygame/shared/schema";
 import { flushSync } from "svelte";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -289,6 +295,132 @@ describe("sendAction", () => {
       CLIENT_MESSAGES.INTERNAL,
     ];
     expect(new Set(messages).size).toBe(4);
+  });
+});
+
+describe("exportReplay", () => {
+  it("resolves with the bundle and records the host-only request", async () => {
+    const manager = newManager();
+    const { room } = seated(manager, "host");
+    const bundle = { bundleVersion: 1, name: "stub-game", snapshots: [] };
+    room.reply = bundle;
+    manager.attach(room);
+    await expect(manager.exportReplay()).resolves.toEqual(bundle);
+    expect(room.requests).toEqual([{ type: ClientMessage.EXPORT_REPLAY, payload: undefined }]);
+  });
+
+  it("hands a server refusal through and remembers it", async () => {
+    const manager = newManager();
+    const { room } = seated(manager);
+    room.reply = {
+      ok: false,
+      error: { code: ErrorCode.UNAUTHORIZED, message: "only the host can export" },
+    };
+    manager.attach(room);
+    await expect(manager.exportReplay()).resolves.toEqual({
+      ok: false,
+      error: { code: ErrorCode.UNAUTHORIZED, message: "only the host can export" },
+    });
+    expect(manager.lastServerError).toEqual({
+      code: ErrorCode.UNAUTHORIZED,
+      message: "only the host can export",
+    });
+  });
+
+  it("refuses with NOT_CONNECTED when not in a room", async () => {
+    const manager = newManager();
+    await expect(manager.exportReplay()).resolves.toEqual({
+      ok: false,
+      error: { code: ErrorCode.NOT_CONNECTED, message: CLIENT_MESSAGES.NOT_CONNECTED },
+    });
+  });
+
+  it("does not trust a malformed refusal", async () => {
+    const manager = newManager();
+    const { room } = seated(manager, "host");
+    room.reply = { ok: false, error: "garbage" };
+    manager.attach(room);
+    await expect(manager.exportReplay()).resolves.toEqual({
+      ok: false,
+      error: { code: ErrorCode.BAD_REPLY, message: CLIENT_MESSAGES.BAD_REPLY },
+    });
+  });
+
+  it("does not trust a non-object reply", async () => {
+    const manager = newManager();
+    const { room } = seated(manager, "host");
+    room.reply = "yes";
+    manager.attach(room);
+    await expect(manager.exportReplay()).resolves.toEqual({
+      ok: false,
+      error: { code: ErrorCode.BAD_REPLY, message: CLIENT_MESSAGES.BAD_REPLY },
+    });
+  });
+
+  it("does not trust a bundle-shaped reply that is missing its version or snapshots", async () => {
+    const manager = newManager();
+    const { room } = seated(manager, "host");
+    manager.attach(room);
+    for (const bad of [
+      { name: "stub-game" },
+      { bundleVersion: "1", snapshots: [] },
+      { bundleVersion: 1, snapshots: {} },
+    ]) {
+      room.reply = bad;
+      await expect(manager.exportReplay()).resolves.toEqual({
+        ok: false,
+        error: { code: ErrorCode.BAD_REPLY, message: CLIENT_MESSAGES.BAD_REPLY },
+      });
+    }
+    expect(manager.lastServerError).toEqual({
+      code: ErrorCode.BAD_REPLY,
+      message: CLIENT_MESSAGES.BAD_REPLY,
+    });
+  });
+
+  it("does not trust a null or an array reply", async () => {
+    const manager = newManager();
+    const { room } = seated(manager, "host");
+    manager.attach(room);
+    room.reply = null;
+    await expect(manager.exportReplay()).resolves.toEqual({
+      ok: false,
+      error: { code: ErrorCode.BAD_REPLY, message: CLIENT_MESSAGES.BAD_REPLY },
+    });
+    room.reply = [];
+    await expect(manager.exportReplay()).resolves.toEqual({
+      ok: false,
+      error: { code: ErrorCode.BAD_REPLY, message: CLIENT_MESSAGES.BAD_REPLY },
+    });
+  });
+
+  it("turns a request rejection into CONNECTION_LOST and hands the exception to the logger only", async () => {
+    const logger = vi.fn();
+    const manager = new GameConnectionManager({
+      endpoint: "ws://localhost:2567",
+      roomName: "stub",
+      storagePrefix: `unit${++counter}`,
+      logger,
+    });
+    const { room } = seated(manager, "host");
+    const cause = new Error("socket gone");
+    room.request = () => Promise.reject(cause);
+    manager.attach(room);
+    await expect(manager.exportReplay()).resolves.toEqual({
+      ok: false,
+      error: { code: ErrorCode.CONNECTION_LOST, message: CLIENT_MESSAGES.CONNECTION_LOST },
+    });
+    expect(logger).toHaveBeenCalledWith(expect.any(String), cause);
+  });
+
+  it("logs a request rejection with console.warn by default", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const manager = newManager();
+    const { room } = seated(manager, "host");
+    room.request = () => Promise.reject(new Error("down"));
+    manager.attach(room);
+    await manager.exportReplay();
+    expect(warn).toHaveBeenCalledOnce();
   });
 });
 

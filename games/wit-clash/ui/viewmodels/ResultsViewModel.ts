@@ -142,4 +142,20 @@ export class ResultsViewModel {
   async playAgain(): Promise<void> {
     await this.manager.sendAction(ACTION.PLAY_AGAIN);
   }
+
+  /** Host only: asks the server for the room's replay bundle and downloads it as a JSON file. */
+  async exportReplay(): Promise<void> {
+    const response = (await this.manager.exportReplay()) as Record<string, unknown>;
+    if (response.ok === false) return;
+    const name = typeof response.name === "string" ? response.name : "replay";
+    const blob = new Blob([JSON.stringify(response)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${name.toLowerCase()}-replay.json`;
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }
 }
