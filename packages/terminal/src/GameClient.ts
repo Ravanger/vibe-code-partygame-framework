@@ -20,8 +20,8 @@ export class GameClient<TState extends BaseGameState> {
   /** Opens a room and claims `name` in it; `options` are the room's create options. */
   async create(playerId: string, name: string, options: object = {}): Promise<GameRoomOf<TState>> {
     const room = await this.connector.create({
-      ...options,
       playerId,
+      ...options,
       seatSecret: crypto.randomUUID() + crypto.randomUUID(),
     });
     await claimName(room, playerId, name);
