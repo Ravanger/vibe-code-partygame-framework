@@ -260,6 +260,10 @@ describe("the highlight reel", () => {
   it("writes the highlights from the answer history at the final results", () => {
     const t = inResults({ options: { totalRounds: 1 } });
     expect(t.state.highlights.length).toBeGreaterThan(0);
+    const kinds = new Set(t.state.highlights.map((h) => h.kind));
+    for (const kind of ["biggestMargin", "closestMatch", "fastestAnswer"]) {
+      expect(kinds.has(kind)).toBe(true);
+    }
     for (const highlight of t.state.highlights) {
       expect(["biggestMargin", "closestMatch", "fastestAnswer"]).toContain(highlight.kind);
       expect(highlight.promptText).not.toBe("");

@@ -97,7 +97,7 @@ $effect(() => () => spotlight.destroy());
     {#if vm.highlights.length > 0}
       <section class="highlights" aria-label="Highlights">
         <h2 class="sticker">Highlights</h2>
-        {#each vm.highlights as highlight (highlight.kind + highlight.promptText)}
+        {#each vm.highlights as highlight, i (highlight.kind + highlight.promptText + i)}
           <div class="highlight card taped">
             <span class="highlight-kind">{highlight.label}</span>
             <p class="highlight-prompt">{highlight.promptText}</p>

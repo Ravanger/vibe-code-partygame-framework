@@ -20,16 +20,19 @@ export interface PickedHighlights {
 }
 
 /** Winner's votes minus the best opposing answer of the same matchup (0 for a level contest).
- * The game writes exactly two records per matchup, so both lookups are present. */
+ * Called only on contestable groups, which always have at least two records. */
 const gapOf = (records: readonly AnswerRecord[]): number => {
   const votes = records.map((r) => r.votes).sort((a, b) => b - a);
   return required(votes[0], "top vote") - required(votes[1], "second vote");
 };
 
-/** A matchup is contestable when every answer was actually submitted (no placeholders) and at
- * least one vote was cast. Forfeited matchups never reach the history at all. */
+/** A group is contestable when it holds at least two answers, every one of them was actually
+ * submitted (no placeholders) and at least one vote was cast. Forfeited matchups never reach the
+ * history at all. */
 const contestable = (records: readonly AnswerRecord[]): boolean =>
-  records.every((r) => r.answerMs !== undefined) && records.some((r) => r.votes > 0);
+  records.length >= 2 &&
+  records.every((r) => r.answerMs !== undefined) &&
+  records.some((r) => r.votes > 0);
 
 const card = (
   kind: HighlightKind,

@@ -193,4 +193,26 @@ describe("pickHighlights", () => {
     expect(picked.closestMatch?.map((h) => h.promptText)).toEqual(["P1?"]);
     expect(picked.fastestAnswer?.map((h) => h.promptText)).toEqual(["P1?"]);
   });
+
+  it("skips a one-record group for margin and closest, but still highlights its fastest answer", () => {
+    const picked = pickHighlights([
+      record({
+        matchupId: "m1",
+        authorId: "a",
+        authorName: "A",
+        text: "from A",
+        votes: 2,
+        answerMs: 300,
+      }),
+    ]);
+    expect(picked.biggestMargin).toBeUndefined();
+    expect(picked.closestMatch).toBeUndefined();
+    expect(picked.fastestAnswer).toEqual([
+      {
+        kind: "fastestAnswer",
+        promptText: "The prompt?",
+        answers: [{ authorName: "A", text: "from A", votes: 2 }],
+      },
+    ]);
+  });
 });
