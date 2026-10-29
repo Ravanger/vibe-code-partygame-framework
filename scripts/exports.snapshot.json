@@ -365,6 +365,7 @@
         "symbols": {
           "AppRouter": {},
           "GameControlsViewModel": {},
+          "GestureTarget": {},
           "LobbyPlayer": {},
           "LobbySettingsConfig": {},
           "LobbySettingsViewModel": {},
@@ -384,6 +385,9 @@
           "RouterScreen": {},
           "STICKER_SHAPES": {},
           "SnapshotManager": {},
+          "SoundPolicy": {},
+          "SoundPolicyOptions": {},
+          "SoundStorage": {},
           "StickerShape": {},
           "TypingReporter": {},
           "WaitingRoomViewModel": {},
@@ -412,6 +416,7 @@
           "PlayerSticker": {},
           "Podium": {},
           "QrCode": {},
+          "SoundToggle": {},
           "StatusPanel": {},
           "Timer": {}
         },
