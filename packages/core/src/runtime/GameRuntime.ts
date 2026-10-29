@@ -323,6 +323,8 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
 
   /** Promotes a new host when the current one is not connected, per `hostMigration` (#36). */
   private migrateHost(): void {
+    const setHost = this.host.setHost;
+    if (setHost === undefined) return; // replay hosts never migrate: no picker call, no rng draw
     const players = this.host.players();
     const host = players.find((p) => p.role === "host");
     if (host?.isConnected) return;
@@ -333,8 +335,9 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       typeof policy === "function"
         ? policy(candidates, () => this.host.rng())
         : pickHost(policy, candidates, () => this.host.rng());
-    if (nextId === undefined) return;
-    this.host.setHost?.(nextId);
+    // An id outside the candidates would demote the current host and promote nobody.
+    if (nextId === undefined || !candidates.some((p) => p.id === nextId)) return;
+    setHost(nextId);
   }
 
   private enter(name: string, phase: PhaseDefinition<TState, TPrivate, TOptions>): void {

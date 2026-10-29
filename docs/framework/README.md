@@ -139,7 +139,7 @@ The first seat of a room is host by acquisition. After that, when the current ho
 - `"oldest"`: the first connected seat regardless of ready or active.
 - `"random"`: one drawn with the room's seeded RNG, so a replay makes the same draw.
 - `"none"`: nobody — the room stays host-less until the old host returns; if their seat is removed (reconnect window expired, kicked) it stays host-less, and there is no recovery.
-- A `HostPicker` function `(candidates, rng) => playerId | undefined` for a game-defined pick among the connected seats; returning `undefined` leaves the room host-less like `"none"`.
+- A `HostPicker` function `(candidates, rng) => playerId | undefined` for a game-defined pick among the connected seats; returning `undefined` leaves the room host-less like `"none"`, and an id that is not among the candidates is ignored (the current host stays in place).
 
 Migration runs before the phase's `onRosterChange`, so the hook sees the new role.
 

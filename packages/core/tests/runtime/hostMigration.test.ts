@@ -149,4 +149,36 @@ describe("host migration", () => {
     runtime.rosterChanged();
     expect(roleOf(host, "p1")).toBe("host");
   });
+
+  it("consults no picker and draws no rng when the host has no setHost", () => {
+    let pickerCalls = 0;
+    const policy: HostMigration = (_candidates, rng) => {
+      pickerCalls += 1;
+      rng(); // a draw the replay stream must never consume
+      return undefined;
+    };
+    const { host, runtime } = makeTable(policy);
+    delete host.setHost;
+    let draws = 0;
+    const draw = host.rng.bind(host);
+    host.rng = () => {
+      draws += 1;
+      return draw();
+    };
+    seats(host);
+    runtime.rosterChanged();
+    expect(pickerCalls).toBe(0);
+    expect(draws).toBe(0);
+    expect(roleOf(host, "p1")).toBe("host");
+  });
+
+  it("keeps the old host when a HostPicker returns a non-candidate id", () => {
+    const policy: HostMigration = () => "ghost";
+    const { host, runtime } = makeTable(policy);
+    seats(host);
+    runtime.rosterChanged();
+    expect(roleOf(host, "p1")).toBe("host");
+    expect(roleOf(host, "p2")).toBe("player");
+    expect(roleOf(host, "p3")).toBe("player");
+  });
 });

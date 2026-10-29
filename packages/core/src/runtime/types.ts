@@ -210,7 +210,11 @@ type DurationFn<TState extends PhaseState, TPrivate, TOptions> = {
   compute(ctx: GameContext<TState, TPrivate, TOptions>): number;
 }["compute"];
 
-/** Picks the next host from the connected seats in seat order; return `undefined` to leave the room without a host. */
+/**
+ * Picks the next host from the connected seats in seat order; return `undefined` to leave the room
+ * without a host. An id that is not among `candidates` (stale, disconnected or never seated) is
+ * ignored and the current host stays in place.
+ */
 export type HostPicker = (candidates: PlayerInfo[], rng: () => number) => string | undefined;
 
 /** How the runtime picks a new host when the current one disconnects (`GameDefinition.hostMigration`). */
