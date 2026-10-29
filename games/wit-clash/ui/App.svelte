@@ -84,7 +84,7 @@ const route = $derived(vm.screen);
     padding: 0 0.7rem;
     border: var(--outline);
     border-radius: var(--radius-card);
-    background: var(--pink);
+    background: var(--color-1);
     color: var(--white);
     -webkit-text-stroke: 1.5px var(--ink);
     paint-order: stroke fill;
@@ -104,7 +104,7 @@ const route = $derived(vm.screen);
     left: 50%;
     width: 44px;
     height: 16px;
-    background: var(--tape-sun);
+    background: var(--tape-2);
     transform: translateX(-50%) rotate(4deg);
   }
 
@@ -138,7 +138,7 @@ const route = $derived(vm.screen);
     margin: 0;
     padding: 0.5rem 1rem;
     border-bottom: var(--outline);
-    background: var(--sun);
+    background: var(--color-2);
     color: var(--ink);
     font-family: var(--font-display);
     text-align: center;
@@ -235,7 +235,7 @@ const route = $derived(vm.screen);
     left: 50%;
     width: 90px;
     height: 26px;
-    background: var(--tape-pink);
+    background: var(--tape-1);
     transform: translateX(-50%) rotate(-3deg);
   }
 

@@ -9,7 +9,7 @@ describe("PlayerSticker", () => {
     expect(sticker).toHaveTextContent("M");
     expect(sticker).toHaveAttribute("aria-hidden", "true");
     expect(sticker?.getAttribute("style")).toContain("--size: 56px");
-    expect(sticker?.getAttribute("style")).toMatch(/--fill: var\(--(pink|sun|mint|sky)\)/);
+    expect(sticker?.getAttribute("style")).toMatch(/--fill: var\(--color-[1-4]\)/);
     expect(container.querySelectorAll("path")).toHaveLength(3);
   });
 

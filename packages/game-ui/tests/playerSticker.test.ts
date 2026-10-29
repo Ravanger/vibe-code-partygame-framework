@@ -15,7 +15,17 @@ describe("playerSticker", () => {
       colors.add(color);
     }
     expect([...shapes].sort()).toEqual([...STICKER_SHAPES].sort());
-    expect([...colors].sort()).toEqual(["var(--mint)", "var(--pink)", "var(--sky)", "var(--sun)"]);
+    expect([...colors].sort()).toEqual([
+      "var(--color-1)",
+      "var(--color-2)",
+      "var(--color-3)",
+      "var(--color-4)",
+    ]);
+  });
+
+  it("maps a player id to its stable shape and colour", () => {
+    expect(playerSticker("player-1")).toEqual({ shape: "star", color: "var(--color-3)" });
+    expect(playerSticker("maya")).toEqual({ shape: "heart", color: "var(--color-1)" });
   });
 });
 

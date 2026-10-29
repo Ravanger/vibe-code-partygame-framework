@@ -70,7 +70,7 @@ const { rows }: { rows: ProgressRow[] } = $props();
     height: calc(22px * var(--scale, 1));
     border: 2px solid var(--ink);
     border-radius: 50%;
-    background: var(--mint);
+    background: var(--color-3);
     color: var(--ink);
     font-family: var(--font-display);
     font-size: calc(var(--fs-1) * var(--scale, 1));
@@ -79,7 +79,7 @@ const { rows }: { rows: ProgressRow[] } = $props();
 
   .mark-typing {
     padding: 3px;
-    background: var(--sun);
+    background: var(--color-2);
     fill: none;
     stroke: var(--ink);
     stroke-width: 2;
@@ -96,7 +96,7 @@ const { rows }: { rows: ProgressRow[] } = $props();
   }
 
   .is-me .who {
-    text-decoration: underline wavy var(--pink);
+    text-decoration: underline wavy var(--color-1);
     text-underline-offset: 3px;
   }
 

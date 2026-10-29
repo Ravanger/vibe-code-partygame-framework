@@ -54,7 +54,7 @@ $effect(() => {
     padding: 0.2rem 1.5rem;
     border: var(--outline);
     border-radius: var(--radius-card);
-    background: var(--pink);
+    background: var(--color-1);
     color: var(--white);
     box-shadow: var(--scrap-shadow);
     font-size: var(--fs-5);

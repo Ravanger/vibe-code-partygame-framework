@@ -30,7 +30,7 @@ const { title, hint = "" }: { title: string; hint?: string } = $props();
     width: min(14rem, 70%);
     height: 0.6rem;
     fill: none;
-    stroke: var(--pink);
+    stroke: var(--color-1);
     stroke-width: 3;
     stroke-linecap: round;
     stroke-linejoin: round;

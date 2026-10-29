@@ -6,7 +6,13 @@ export interface ConfettiPiece {
   color: string;
 }
 
-const COLORS = ["var(--pink)", "var(--sun)", "var(--mint)", "var(--sky)", "var(--grape)"];
+const COLORS = [
+  "var(--color-1)",
+  "var(--color-2)",
+  "var(--color-3)",
+  "var(--color-4)",
+  "var(--accent)",
+];
 
 export function confettiPieces(count: number): ConfettiPiece[] {
   return Array.from({ length: count }, (_, index) => {
