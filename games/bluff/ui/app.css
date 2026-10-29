@@ -1,5 +1,7 @@
 /* Theme for this game. The CSS variables are consumed by the @partygame/game-ui
    components; the base styles below are shared by every screen. Restyle freely. */
+@import "@partygame/game-ui/theme-contract.css";
+
 :root {
   color-scheme: light;
   --paper: #fbf3e4;

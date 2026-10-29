@@ -27,8 +27,28 @@
   --radius-card: 6px;
   --radius-btn: 12px;
   --scrap-shadow: 3px 4px 0 var(--ink);
+  --podium-block-height-1: calc(150px * var(--scale, 1));
+  --podium-block-height-2: calc(108px * var(--scale, 1));
+  --podium-block-height-3: calc(78px * var(--scale, 1));
   --scale: 1;
   --timer-size: 96px;
+}
+
+/* PlayerSticker sets data-color to a palette index; these map it to the theme colours. */
+.player-sticker[data-color="0"] {
+  --fill: var(--color-1);
+}
+
+.player-sticker[data-color="1"] {
+  --fill: var(--color-2);
+}
+
+.player-sticker[data-color="2"] {
+  --fill: var(--color-3);
+}
+
+.player-sticker[data-color="3"] {
+  --fill: var(--color-4);
 }
 
 .sr-only {

@@ -127,29 +127,17 @@ const stickerSize = (step: PodiumStep<TRow>): number => {
   }
 
   .tier-1 .block {
-    height: calc(150px * var(--scale, 1));
+    height: var(--podium-block-height-1, calc(150px * var(--scale, 1)));
     background: var(--color-2);
   }
 
   .tier-2 .block {
-    height: calc(108px * var(--scale, 1));
+    height: var(--podium-block-height-2, calc(108px * var(--scale, 1)));
   }
 
   .tier-3 .block {
-    height: calc(78px * var(--scale, 1));
+    height: var(--podium-block-height-3, calc(78px * var(--scale, 1)));
     background: var(--color-1);
-  }
-
-  :global(main.tv) .tier-1 .block {
-    height: 17dvh;
-  }
-
-  :global(main.tv) .tier-2 .block {
-    height: 12dvh;
-  }
-
-  :global(main.tv) .tier-3 .block {
-    height: 8dvh;
   }
 
   @keyframes rise {

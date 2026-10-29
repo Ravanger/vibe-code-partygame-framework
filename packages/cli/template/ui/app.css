@@ -159,4 +159,7 @@ h3 {
 main.tv {
   --scale: 1.6;
   font-size: 1.6rem;
+  --podium-block-height-1: 17dvh;
+  --podium-block-height-2: 12dvh;
+  --podium-block-height-3: 8dvh;
 }

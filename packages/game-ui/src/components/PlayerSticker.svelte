@@ -26,10 +26,11 @@ const sticker = $derived(playerSticker(playerId));
 <svg
   class="player-sticker"
   class:ghost
+  data-color={sticker.colorIndex}
   viewBox="-8 -8 116 116"
   aria-hidden="true"
   style:--size={`${size}px`}
-  style:--fill={ghost ? "var(--disabled)" : sticker.color}
+  style:--fill={ghost ? "var(--disabled)" : undefined}
 >
   <path class="ink" d={SHAPES[sticker.shape]} />
   <path class="cut" d={SHAPES[sticker.shape]} />

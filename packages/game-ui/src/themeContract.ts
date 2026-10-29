@@ -25,6 +25,9 @@ export const CONTRACT_VARIABLES = [
   "--radius-card",
   "--radius-btn",
   "--scrap-shadow",
+  "--podium-block-height-1",
+  "--podium-block-height-2",
+  "--podium-block-height-3",
   "--scale",
   "--timer-size",
 ] as const;
