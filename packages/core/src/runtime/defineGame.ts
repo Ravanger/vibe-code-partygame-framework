@@ -26,7 +26,8 @@ export class GameDefinitionError extends Error {
 }
 
 /**
- * Validates a game definition and returns it unchanged, typed.
+ * Validates a game definition, fills its `strings` with the merged table (mutating the spec),
+ * and returns it typed.
  * @throws {GameDefinitionError} listing every problem.
  */
 export function defineGame<

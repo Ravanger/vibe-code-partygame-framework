@@ -12,6 +12,7 @@ import {
 import type {
   ActionContext,
   ActionDefinition,
+  AudienceActionDefinition,
   GameContext,
   PlayerInfo,
 } from "../../src/runtime/types.js";
@@ -51,7 +52,18 @@ describe("CoreStrings and defineGame", () => {
   });
 
   it("fills the definition with the merged table, keeping its identity", () => {
-    const spec = valid({ cannotKickSelf: "Du kannst dich nicht selbst rausschmeißen" });
+    const base = {
+      name: "G",
+      version: "1",
+      minPlayers: 2,
+      maxPlayers: 4,
+      startPhase: "Play",
+      createPrivateState: () => ({}),
+      phases: { Play: {} },
+      strings: { cannotKickSelf: "Du kannst dich nicht selbst rausschmeißen" },
+    };
+    const spec = defineGame<S, Record<string, never>, Record<string, unknown>>(base);
+    expect(spec).toBe(base);
     expect(spec.strings).toBeDefined();
     expect(spec.strings?.cannotKickSelf).toBe("Du kannst dich nicht selbst rausschmeißen");
     expect(spec.strings?.noSuchPlayer).toBe(defaultCoreStrings.noSuchPlayer);
@@ -226,6 +238,16 @@ describe("log-only core strings", () => {
       payload: z.object({}),
       handler: (_ctx: ActionContext<S, unknown, unknown, unknown>) => {},
     };
+    const chat: ActionDefinition<S, unknown, unknown, unknown> = {
+      from: "player",
+      payload: z.object({}),
+      handler: (_ctx: ActionContext<S, unknown, unknown, unknown>) => {},
+    };
+    const cheer: AudienceActionDefinition<S, unknown, unknown, unknown> = {
+      from: "audience",
+      payload: z.object({}),
+      handler: () => {},
+    };
     const player: PlayerInfo = {
       id: "p1",
       name: "P1",
@@ -234,12 +256,13 @@ describe("log-only core strings", () => {
       isReady: true,
       isActive: true,
     };
+    const waiting: PlayerInfo = { ...player, id: "p2", name: "P2", isActive: false };
     const pipeline = new DispatchPipeline<S, unknown, unknown>({
       builtins: {},
-      currentPhaseActions: () => ({ GIVE_UP: def }),
+      currentPhaseActions: () => ({ GIVE_UP: def, CHAT: chat, CHEER: cheer }),
       declaredInAnyPhase: (type) => type === "NOPE",
       phaseName: () => "Scoring",
-      players: () => [player],
+      players: () => [player, waiting],
       contextFactory: () => fakeContext(0),
       filterLevel: () => "off",
       audienceOnce: () => true,
@@ -253,8 +276,21 @@ describe("log-only core strings", () => {
         unknownAction: (action) => `Unbekannt: ${action}`,
       },
     });
+    // one triggering case per refusal entry, so a miswired key fails its own assertion
     expect(frameworkError(() => pipeline.run("p1", { type: "GIVE_UP" })).message).toBe(
       "Nein: GIVE_UP",
+    );
+    expect(frameworkError(() => pipeline.run("p2", { type: "CHAT" })).message).toBe(
+      "Warten auf Einlass",
+    );
+    expect(frameworkError(() => pipeline.run("p1", { type: "CHEER" })).message).toBe(
+      "CHEER ist ein Zuschauerzug",
+    );
+    expect(frameworkError(() => pipeline.run("p1", { type: "NOPE" })).message).toBe(
+      "NOPE nicht in Scoring",
+    );
+    expect(frameworkError(() => pipeline.run("p1", { type: "GHOST" })).message).toBe(
+      "Unbekannt: GHOST",
     );
   });
 });
