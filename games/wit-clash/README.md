@@ -15,7 +15,7 @@ src/
   phases/            one PhaseDefinition per file; answering.ts holds the answer actions shared by both answering phases, endGame.ts the host-only END_GAME every phase accepts
   round.ts           writes rule results into the synced state
   tieBreakerFlow.ts  the final tie-breaker: contenders, prompt, answers, votes, verdict
-  matchups.ts  categoryVote.ts  eligibility.ts  drafts.ts  scoring.ts  scoreboard.ts  tieBreaker.ts  bestAnswers.ts
+  matchups.ts  categoryVote.ts  eligibility.ts  drafts.ts  scoring.ts  scoreboard.ts  tieBreaker.ts  bestAnswers.ts  highlights.ts
                      pure rules: plain data and the rng in, plain data out
   dailySeed.ts       daily mode's date seed: `utcDay` and `dailyRng` (FNV-1a into `mulberry32`)
   content/           category files (.jsonc) loader
@@ -163,6 +163,7 @@ who cast them is not.
 | `tieBreakers` | `Matchup[]` | One per tie-breaker attempt; `answers` hide authors and votes until `isRevealed`; `isForfeit` for a lone answer |
 | `tieBreakerContenders` | `string[]` of playerIds | Who is in the current tie-breaker |
 | `bestAnswers` | `BestAnswer[]` `{text,authorId,authorName,promptText,votes}` | Empty until the final Results; several entries when the award is shared |
+| `highlights` | `Highlight[]` `{kind,promptText,answers}` with `answers[]` as `{authorName,text,votes}` | Empty until the final Results; `kind` is `biggestMargin`, `closestMatch` or `fastestAnswer`; tied winners each get their own card |
 | `awards` | `Award[]` `{id,title,winnerNames,detail}` | Empty until the final Results; one entry per award with data (see Awards) |
 | `honorWinnerNames` | `string[]` of names | The honor-vote winner(s); empty until (and unless) an honor vote produces one |
 | `typing` | `map<playerId, boolean>` | Present and `true` while that player is typing an answer |
@@ -277,7 +278,7 @@ viewmodels/         one viewmodel per game screen (the name field, welcome, wait
   `manager.sendAction(ACTION.X, payload)` with the constants and payload types from `src/actionNames.ts` / `src/actions.ts`.
 - The client never recomputes rules. Winners (`answer.isWinner`), clashes (`matchup.isClash`), author names (`answer.authorName`), turnout
   (`votesCast`/`votesExpected`, also in CategorySelection), eligibility (`mine.canVote`) and limits (`minPlayers`, `maxPlayers`, `options`) are published by the server.
-- Results shows a podium (top three places; tied players share a step, leavers are marked, `wonTieBreaker` gets a badge), the best-answer award (`state.bestAnswers`; several entries read "Shared best answer"), then the scoreboard. Prompting shows the winning category and tells a player who was dealt no prompt that they sit this round out and vote. Prompting and TieBreakerPrompting list each answering player's `n/answersPerPlayer`, a done tick and a "typing…" marker; the answer boxes send `SET_TYPING` once on the first keystroke and once after 2.5 s idle or on submit. All of it renders large in the TV layout.
+- Results shows a podium (top three places; tied players share a step, leavers are marked, `wonTieBreaker` gets a badge), the best-answer award (`state.bestAnswers`; several entries read "Shared best answer"), the Highlights section (`state.highlights`: biggest margin, closest match and fastest voted answer, one card per tied winner) when any highlight was picked, then the scoreboard. Prompting shows the winning category and tells a player who was dealt no prompt that they sit this round out and vote. Prompting and TieBreakerPrompting list each answering player's `n/answersPerPlayer`, a done tick and a "typing…" marker; the answer boxes send `SET_TYPING` once on the first keystroke and once after 2.5 s idle or on submit. All of it renders large in the TV layout.
 - Votes stay hidden while voting: only `votesCast`/`votesExpected` and your own highlighted vote show. Counts and authors appear in `MatchupReveal`.
 - Shared components (StatusPanel, Timer, PlayerSticker, QrCode, ActionBar, NameInput, LobbySettings, GameControls, Podium) come from `@partygame/game-ui/components` and take their look from the CSS variables and classes in `ui/app.css`. Results passes the "Won the tie-breaker" chip to `Podium` through its `extra` snippet.
 - Add a phase screen: a viewmodel, a screen component and one `PHASE_SCREENS` entry in `ui/screens/index.ts`.

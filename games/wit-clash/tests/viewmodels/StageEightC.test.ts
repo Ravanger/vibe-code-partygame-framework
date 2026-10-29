@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Award, BestAnswer } from "../../src/state.js";
+import { Award, BestAnswer, Highlight, HighlightAnswer } from "../../src/state.js";
 import { AnswerProgress } from "../../ui/viewmodels/AnswerProgress.js";
 import { PromptingViewModel } from "../../ui/viewmodels/PromptingViewModel.svelte.js";
 import { ResultsViewModel } from "../../ui/viewmodels/ResultsViewModel.js";
@@ -133,7 +133,53 @@ describe("ResultsViewModel awards", () => {
     c.manager.dispose();
     expect(vm.bestAnswers).toEqual([]);
     expect(vm.awards).toEqual([]);
+    expect(vm.highlights).toEqual([]);
     expect(vm.podiumSteps).toEqual([]);
+  });
+});
+
+describe("ResultsViewModel highlights", () => {
+  const highlight = (kind: string, authorName: string, text: string, votes: number): Highlight => {
+    const h = Object.assign(new Highlight(), { kind, promptText: "Q" });
+    h.answers.push(Object.assign(new HighlightAnswer(), { authorName, text, votes }));
+    return h;
+  };
+
+  it("copies the highlights to plain views with a label per kind", () => {
+    const c = connectedClient({}, "Results");
+    c.state.highlights.push(
+      highlight("biggestMargin", "Ann", "A blowout.", 3),
+      highlight("closestMatch", "Bo", "A nail-biter.", 1),
+      highlight("fastestAnswer", "Cy", "Quick!", 2),
+    );
+    const vm = new ResultsViewModel(c.manager);
+    expect(vm.highlights).toEqual([
+      {
+        kind: "biggestMargin",
+        label: "Biggest margin",
+        promptText: "Q",
+        answers: [{ authorName: "Ann", text: "A blowout.", votes: 3 }],
+      },
+      {
+        kind: "closestMatch",
+        label: "Closest match",
+        promptText: "Q",
+        answers: [{ authorName: "Bo", text: "A nail-biter.", votes: 1 }],
+      },
+      {
+        kind: "fastestAnswer",
+        label: "Fastest answer",
+        promptText: "Q",
+        answers: [{ authorName: "Cy", text: "Quick!", votes: 2 }],
+      },
+    ]);
+  });
+
+  it("is empty without highlights and labels an unknown kind safely", () => {
+    const c = connectedClient({}, "Results");
+    expect(new ResultsViewModel(c.manager).highlights).toEqual([]);
+    c.state.highlights.push(highlight("mystery", "Ann", "?", 1));
+    expect(new ResultsViewModel(c.manager).highlights[0]?.label).toBe("Highlight");
   });
 });
 
