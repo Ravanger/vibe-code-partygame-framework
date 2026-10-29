@@ -7,6 +7,7 @@ export interface SoundStorage {
 /** The event target that unlocks sound on the first gesture — the window in a game client. */
 export interface GestureTarget {
   addEventListener(type: "pointerdown" | "keydown", listener: () => void): void;
+  removeEventListener(type: "pointerdown" | "keydown", listener: () => void): void;
 }
 
 export interface SoundPolicyOptions {
@@ -26,14 +27,14 @@ export interface SoundPolicyOptions {
 export class SoundPolicy {
   #enabled = $state(false);
   #unlocked = $state(false);
+  readonly #unlock = (): void => {
+    this.#unlocked = true;
+  };
 
   constructor(private readonly options: SoundPolicyOptions) {
     this.#enabled = this.read();
-    const unlock = (): void => {
-      this.#unlocked = true;
-    };
-    this.options.target.addEventListener("pointerdown", unlock);
-    this.options.target.addEventListener("keydown", unlock);
+    this.options.target.addEventListener("pointerdown", this.#unlock);
+    this.options.target.addEventListener("keydown", this.#unlock);
   }
 
   /** Whether sound is turned on; persisted across reloads under `${storagePrefix}.sound`. */
@@ -55,6 +56,12 @@ export class SoundPolicy {
   toggle(): void {
     this.#enabled = !this.#enabled;
     this.write(this.#enabled);
+  }
+
+  /** Removes the gesture listeners from `target`; safe to call more than once. */
+  dispose(): void {
+    this.options.target.removeEventListener("pointerdown", this.#unlock);
+    this.options.target.removeEventListener("keydown", this.#unlock);
   }
 
   private get key(): string {

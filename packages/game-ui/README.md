@@ -94,7 +94,7 @@ Any viewmodel that needs the published options reads them through `OptionsReader
 
 ## Sound
 
-`SoundPolicy({ storage, storagePrefix, target })` is the room's sound gate: off by default, one persisted toggle, and nothing plays before the first tap (browsers block audio until a user gesture, and players on a shared TV may not want it). `enabled` (persisted under `${storagePrefix}.sound`; a throwing or empty storage — private windows — degrades to off), `unlocked` (a pointerdown or keydown on `target` has happened) and `canPlay` (both) are reactive getters; `toggle()` flips `enabled`. Construct it once with the page's globals, using the same prefix you pass to `GameConnectionManager`:
+`SoundPolicy({ storage, storagePrefix, target })` is the room's sound gate: off by default, one persisted toggle, and nothing plays before the first tap (browsers block audio until a user gesture, and players on a shared TV may not want it). `enabled` (persisted under `${storagePrefix}.sound`; a throwing or empty storage — private windows — degrades to off), `unlocked` (a pointerdown or keydown on `target` has happened) and `canPlay` (both) are reactive getters; `toggle()` flips `enabled`; `dispose()` removes the gesture listeners when the owning screen unmounts. Construct it once with the page's globals, using the same prefix you pass to `GameConnectionManager`:
 
 ```ts
 import { SoundPolicy } from "@partygame/game-ui";
@@ -106,11 +106,19 @@ const sound = new SoundPolicy({ storage: localStorage, storagePrefix: "my-game",
 
 ```svelte
 <script lang="ts">
+  import { SoundPolicy } from "@partygame/game-ui";
   import { SoundToggle } from "@partygame/game-ui/components";
 
-  // the bus emits sound events (e.g. "tick", "fanfare"); play only when allowed
+  const sound = new SoundPolicy({ storage: localStorage, storagePrefix: "my-game", target: window });
+
+  // the game's audio player (a stub here); the bus emits events like "tick" or "fanfare"
+  const play = (name: string): void => {
+    /* WebAudio, Howler, ... */
+  };
+
+  // one line per event: play only when allowed
   const onSound = (name: string): void => {
-    if (sound.canPlay) audio.play(name);
+    if (sound.canPlay) play(name);
   };
 </script>
 

@@ -1,6 +1,6 @@
 import { fireEvent } from "@testing-library/svelte";
 import { describe, expect, it } from "vitest";
-import { SoundPolicy, type SoundStorage } from "../src/SoundPolicy.svelte.js";
+import { type GestureTarget, SoundPolicy, type SoundStorage } from "../src/SoundPolicy.svelte.js";
 
 const memoryStorage = (): SoundStorage => {
   const map = new Map<string, string>();
@@ -77,5 +77,30 @@ describe("SoundPolicy", () => {
     expect(p.enabled).toBe(false);
     expect(() => p.toggle()).not.toThrow();
     expect(p.enabled).toBe(true);
+  });
+
+  it("stops listening for gestures after dispose, and disposes twice without error", () => {
+    const listeners = new Map<string, Array<() => void>>();
+    const target: GestureTarget = {
+      addEventListener: (type, listener) => {
+        const list = listeners.get(type) ?? [];
+        list.push(listener);
+        listeners.set(type, list);
+      },
+      removeEventListener: (type, listener) => {
+        listeners.set(
+          type,
+          (listeners.get(type) ?? []).filter((l) => l !== listener),
+        );
+      },
+    };
+    const p = new SoundPolicy({ storage: memoryStorage(), storagePrefix: "g", target });
+    p.toggle();
+    p.dispose();
+    for (const type of ["pointerdown", "keydown"]) {
+      for (const listener of listeners.get(type) ?? []) listener();
+    }
+    expect(p.unlocked).toBe(false);
+    expect(() => p.dispose()).not.toThrow();
   });
 });
