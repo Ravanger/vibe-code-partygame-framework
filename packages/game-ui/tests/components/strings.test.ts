@@ -17,6 +17,7 @@ import { NameField } from "../../src/NameField.svelte.js";
 import { PhaseClock } from "../../src/PhaseClock.js";
 import { errorText, getStrings, setStrings } from "../../src/strings.js";
 import { WelcomeViewModel } from "../../src/WelcomeViewModel.svelte.js";
+import GameControlsProvider from "../fixtures/GameControlsProvider.svelte";
 import NameInputProvider from "../fixtures/NameInputProvider.svelte";
 import { TEST_DEFAULTS, TestOptionsSchema } from "../fixtures/optionsSchema.js";
 
@@ -98,6 +99,14 @@ describe("GameControls", () => {
     expect(screen.getByText("Spiel für alle beenden?")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Ja" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Nein" })).toBeInTheDocument();
+  });
+
+  it("renders the table set by a provider component through the context", async () => {
+    const c = connectedClient({ stateClass: BaseGameState, seat: { role: "host" }, phase: "Play" });
+    render(GameControlsProvider, { vm: new GameControlsViewModel(c.manager) });
+    expect(screen.getByRole("button", { name: "Game menu" })).toBeInTheDocument();
+    await fireEvent.click(screen.getByRole("button", { name: "Game menu" }));
+    expect(screen.getByRole("button", { name: "Spiel verlassen" })).toBeInTheDocument();
   });
 });
 
