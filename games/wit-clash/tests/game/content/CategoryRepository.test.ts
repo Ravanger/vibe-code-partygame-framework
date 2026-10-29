@@ -140,6 +140,27 @@ describe("loadCategoriesFromDir", () => {
     expect(error.message).toContain("tieBreakers[0]");
   });
 
+  it("refuses a duplicate prompt id within one file, naming both entries", async () => {
+    await writeFile(
+      join(dir, "one.json"),
+      JSON.stringify({
+        id: "one",
+        name: "One",
+        prompts: [
+          { id: "shared", text: "A" },
+          { id: "shared", text: "B" },
+        ],
+      }),
+    );
+    const error = await loadCategoriesFromDir(dir).catch((e) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect(error.message).toContain('Duplicate prompt id "shared"');
+    expect(error.message).toContain("one.json");
+    expect(error.message).toContain('(category "one")');
+    expect(error.message).toContain("prompts[0]");
+    expect(error.message).toContain("prompts[1]");
+  });
+
   it("lists every duplicate prompt id in one error", async () => {
     await writeFile(
       join(dir, "a.json"),

@@ -8,15 +8,18 @@ export function contentDir(env: Record<string, string | undefined>, entryUrl: st
   return env.WITCLASH_CONTENT_DIR ?? fileURLToPath(new URL("./content/categories", entryUrl));
 }
 
-/** Loads the category files and refuses to start with fewer than {@link MIN_CATEGORIES} overall or
- * family-rated (a "family"-rated room must never run out of options). */
+/** Loads the category files and refuses to start with fewer than {@link MIN_CATEGORIES} offerable
+ * (weight > 0) categories overall or family-rated: a weight-0 category is never offered, so it does
+ * not count (a "family"-rated room must never run out of options). */
 export async function loadContent(dir: string): Promise<CategoryRepository> {
   const categories = await loadCategoriesFromDir(dir);
-  const all = categories.all();
-  if (all.length < MIN_CATEGORIES) {
-    throw new Error(`Need at least ${MIN_CATEGORIES} categories in ${dir}, found ${all.length}`);
+  const offerable = categories.all().filter((c) => c.weight > 0);
+  if (offerable.length < MIN_CATEGORIES) {
+    throw new Error(
+      `Need at least ${MIN_CATEGORIES} categories in ${dir}, found ${offerable.length}`,
+    );
   }
-  const family = all.filter((c) => c.rating === "family").length;
+  const family = offerable.filter((c) => c.rating === "family").length;
   if (family < MIN_CATEGORIES) {
     throw new Error(
       `Need at least ${MIN_CATEGORIES} family-rated categories in ${dir}, found ${family}`,
