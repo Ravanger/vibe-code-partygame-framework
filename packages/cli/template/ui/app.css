@@ -1,34 +1,16 @@
-/* Theme for this game. The CSS variables are consumed by the @partygame/game-ui
-   components; the base styles below are shared by every screen. Restyle freely. */
+/* Theme for this game. The baseline comes from the @partygame/game-ui theme contract;
+   :root below keeps only this game's overrides and local variables. Restyle freely. */
+@import "@partygame/game-ui/theme-contract.css";
+
 :root {
   color-scheme: light;
-  --paper: #fbf3e4;
-  --white: #ffffff;
-  --ink: #2b2235;
-  --ink-soft: #5a4f66;
-  --color-1: #ff5fa2;
-  --color-2: #ffd23f;
-  --color-3: #3ddc97;
-  --color-4: #4cc9f0;
-  --accent: #7b5cff;
-  --danger: #e5383b;
-  --disabled: #ddd3c2;
   --fill: #fff8ea;
   --spark: #ff9ecb;
-  --tape-1: rgb(255 95 162 / 0.7);
-  --tape-2: rgb(255 210 63 / 0.75);
-  --tape-3: rgb(61 220 151 / 0.7);
-  --tape-4: rgb(76 201 240 / 0.7);
-  --outline: 3px solid var(--ink);
-  --radius-card: 6px;
-  --radius-btn: 12px;
   --radius-pill: 999px;
   --scrap-shadow: 3px 4px 0 rgb(43 34 53 / 0.25);
   --font-display: "Trebuchet MS", "Arial Rounded MT Bold", system-ui, sans-serif;
   --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --fs-1: 0.8rem;
-  --fs-2: 1rem;
-  --fs-3: 1.25rem;
   --fs-4: 1.6rem;
   --fs-5: 2.2rem;
   --fs-6: 2.75rem;

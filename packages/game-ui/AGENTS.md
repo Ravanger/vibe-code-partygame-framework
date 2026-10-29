@@ -20,6 +20,7 @@ Generic Svelte 5 viewmodels and components for the screens every game has (welco
 
 - `.`: viewmodels, `AppRouter`/`createAppRouter`, `rankRows`, `podiumSteps`.
 - `./components`: StatusPanel, Timer, PlayerSticker, Podium, QrCode, ActionBar, ...
+- `./theme-contract.css`: baseline values for every contract variable plus `.sr-only`; games import it first in `app.css` and override.
 
 ## Tests
 

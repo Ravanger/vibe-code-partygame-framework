@@ -959,9 +959,9 @@ To change a rule, subclass it and override a member, for example `banner`: `clas
 <ActionBar><button type="button" class="btn">Go</button></ActionBar>
 ```
 
-Theming contract: the package ships no stylesheet. The game's CSS defines these, and the components read them.
+Theming contract: the package ships `@partygame/game-ui/theme-contract.css`. Import it first in your `app.css` for a working baseline of every variable below (plus `.sr-only`), then override what you want to change. Chrome — the framework components' look (lobby, join overlays, scoreboard/podium, game controls, timer) — is themed through these variables; artwork — your screens and cards — is yours to design.
 
-- Custom properties: `--ink`, `--ink-soft`, `--white`, `--color-1` to `--color-4`, `--disabled`, `--tape-3`, `--tape-4` (`StatusPanel` sets `--tape` itself), `--fs-3`, `--fs-4`, `--fs-5`, `--font-display`, `--outline`, `--radius-card`, `--scrap-shadow`, `--scale` (optional multiplier, default 1), `--timer-size` (optional, default 96px).
+- Custom properties: `--ink`, `--ink-soft`, `--white`, `--paper`, `--color-1` to `--color-4`, `--accent`, `--danger`, `--disabled`, `--tape-1` to `--tape-4` (`StatusPanel` sets `--tape` itself), `--fs-1` to `--fs-5`, `--font-display`, `--outline`, `--radius-card`, `--radius-btn`, `--scrap-shadow`, `--scale`, `--timer-size`.
 - Global classes: `card`, `taped`, `sticker`, `hand` (`StatusPanel`); `sr-only` (`Timer`); `action-bar` (`ActionBar` renders it and styles nothing, so the game styles the bar, e.g. `.action-bar > .btn` and `main.tv .action-bar`).
 
 ## Bots
