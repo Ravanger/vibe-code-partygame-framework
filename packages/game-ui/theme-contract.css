@@ -35,19 +35,19 @@
 }
 
 /* PlayerSticker sets data-color to a palette index; these map it to the theme colours. */
-[data-color="0"] {
+.player-sticker[data-color="0"] {
   --fill: var(--color-1);
 }
 
-[data-color="1"] {
+.player-sticker[data-color="1"] {
   --fill: var(--color-2);
 }
 
-[data-color="2"] {
+.player-sticker[data-color="2"] {
   --fill: var(--color-3);
 }
 
-[data-color="3"] {
+.player-sticker[data-color="3"] {
   --fill: var(--color-4);
 }
 
