@@ -19,11 +19,12 @@ describe("FrameworkError", () => {
 });
 
 describe("CLOSE_CODES", () => {
-  it("maps the eleven join/create close codes to error codes and fixed messages", () => {
+  it("maps the twelve join/create close codes to error codes and fixed messages", () => {
     expect(Object.keys(CLOSE_CODES).sort()).toEqual([
       "CONTENT_REJECTED",
       "INTERNAL",
       "INVALID_OPTIONS",
+      "JOIN_REFUSED",
       "KICKED_REJOIN",
       "ROOM_FULL",
       "SEAT_REMOVED",
@@ -37,6 +38,8 @@ describe("CLOSE_CODES", () => {
     expect(CLOSE_CODES.ROOM_FULL.code).toBe(4401);
     expect(CLOSE_CODES.SEAT_REMOVED.code).toBe(4402);
     expect(CLOSE_CODES.KICKED_REJOIN.code).toBe(4403);
+    expect(CLOSE_CODES.JOIN_REFUSED.code).toBe(4403);
+    expect(CLOSE_CODES.JOIN_REFUSED.errorCode).toBe(ErrorCode.NOT_ALLOWED);
     expect(CLOSE_CODES.WATCH_ONLY.code).toBe(4404);
     expect(CLOSE_CODES.CONTENT_REJECTED.code).toBe(4405);
     expect(CLOSE_CODES.SEAT_TAKEN.code).toBe(4406);
@@ -65,6 +68,7 @@ describe("CLOSE_CODES", () => {
     expect(CLOSE_CODES.ROOM_FULL.message).toBe("Room is full");
     expect(CLOSE_CODES.SEAT_REMOVED.message).toBe("Your seat was removed");
     expect(CLOSE_CODES.KICKED_REJOIN.message).toBe(CLIENT_MESSAGES.KICKED);
+    expect(CLOSE_CODES.JOIN_REFUSED.message).toBe("You cannot join this room.");
     expect(CLOSE_CODES.WATCH_ONLY.message).toBe("This room is watch-only");
     expect(CLOSE_CODES.CONTENT_REJECTED.message).toBe(CLIENT_MESSAGES.CONTENT_REJECTED);
     expect(CLOSE_CODES.SEAT_TAKEN.message).toBe("Seat is taken");
@@ -81,11 +85,17 @@ describe("CLOSE_CODES", () => {
 });
 
 describe("closeCodeEntry", () => {
-  it("maps a numeric close code to its entry", () => {
+  it("maps a numeric close code to its first-registered entry", () => {
     expect(closeCodeEntry(4401)).toBe(CLOSE_CODES.ROOM_FULL);
+    const firstByCode = new Map<number, (typeof CLOSE_CODES)[keyof typeof CLOSE_CODES]>();
     for (const entry of Object.values(CLOSE_CODES)) {
-      expect(closeCodeEntry(entry.code)).toEqual(entry);
+      firstByCode.set(entry.code, firstByCode.get(entry.code) ?? entry);
     }
+    for (const entry of Object.values(CLOSE_CODES)) {
+      expect(closeCodeEntry(entry.code)).toEqual(firstByCode.get(entry.code));
+    }
+    // 4403 is shared by KICKED_REJOIN and JOIN_REFUSED; the client keeps the kicked mapping.
+    expect(closeCodeEntry(4403)).toBe(CLOSE_CODES.KICKED_REJOIN);
   });
 
   it("returns undefined for unknown numbers", () => {
