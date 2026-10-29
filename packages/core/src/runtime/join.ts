@@ -12,9 +12,9 @@ export interface JoinGate {
 
 /**
  * Runs the definition's `canJoin` hook over one join attempt and normalises the outcome: no hook
- * accepts; a refusal message is trimmed and capped at 200 characters; a throwing hook yields the
- * generic `JOIN_REFUSED` refusal instead of crashing the join. Pure and synchronous, so replays
- * and tests see the same decision.
+ * accepts; a refusal message is trimmed and capped at 200 characters and falls back to the generic
+ * message when it trims to empty; a throwing hook yields the generic `JOIN_REFUSED` refusal instead
+ * of crashing the join. Pure and synchronous, so replays and tests see the same decision.
  */
 export function evaluateJoin(definition: JoinGate, input: CanJoinInput): CanJoinResult {
   const hook = definition.canJoin;
@@ -26,9 +26,10 @@ export function evaluateJoin(definition: JoinGate, input: CanJoinInput): CanJoin
     return { ok: false, code: JOIN_REFUSED_CODE, message: JOIN_REFUSED_MESSAGE };
   }
   if (result.ok) return { ok: true };
+  const message = result.message.trim().slice(0, MESSAGE_MAX_LENGTH);
   return {
     ok: false,
     code: result.code,
-    message: result.message.trim().slice(0, MESSAGE_MAX_LENGTH),
+    message: message === "" ? JOIN_REFUSED_MESSAGE : message,
   };
 }

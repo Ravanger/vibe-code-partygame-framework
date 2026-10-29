@@ -71,6 +71,21 @@ describe("evaluateJoin", () => {
     });
   });
 
+  it("falls back to the generic message when a refusal message is whitespace-only", () => {
+    const definition = {
+      canJoin: (_input: CanJoinInput): CanJoinResult => ({
+        ok: false,
+        code: "ROOM_LOCKED",
+        message: " \t\n ",
+      }),
+    };
+    expect(evaluateJoin(definition, input())).toEqual({
+      ok: false,
+      code: "ROOM_LOCKED",
+      message: "You cannot join this room.",
+    });
+  });
+
   it("trims and caps a refusal message at 200 characters", () => {
     const long = "x".repeat(250);
     const definition = {
