@@ -45,6 +45,25 @@ describe("FeedbackBus", () => {
     ]);
   });
 
+  it("treats the first observed phase after a reconnect as the silent baseline", () => {
+    const { manager, state, room } = setup(() => ({ matches: false }));
+    const seen: unknown[] = [];
+    manager.feedback.on("phase", (event) => seen.push(event));
+    manager.attach(room);
+    room.patch(); // the first observation after connecting is the silent baseline
+    state.phase = "Playing";
+    room.patch();
+    expect(seen).toEqual([{ type: "phase", from: "Lobby", to: "Playing", reducedMotion: false }]);
+
+    const secondState = new BaseGameState();
+    secondState.roomCode = "EFGH";
+    secondState.phase = "Results";
+    const room2 = new StubRoom(secondState);
+    manager.attach(room2); // detach + attach: a reconnect into a different phase
+    room2.patch();
+    expect(seen).toHaveLength(1); // the first observation of the new room emits no from/to event
+  });
+
   it("emits urgent once per phase while the countdown is in its last ten seconds", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(1_000_000);
@@ -110,6 +129,26 @@ describe("FeedbackBus", () => {
 
     room.push("boo", { x: 1 }); // never registered
     expect(seen).toHaveLength(2);
+  });
+
+  it("removes a relay listener only once when its unsubscribe is called twice", () => {
+    const { manager, room } = setup(() => ({ matches: false }));
+    const seen: unknown[] = [];
+    manager.feedback.on("message", (event) => seen.push(event));
+    manager.attach(room);
+
+    const offA = manager.onMessage("cheer", () => {});
+    const offB = manager.onMessage("cheer", () => {});
+    offA();
+    offA(); // a double unsubscribe must not count A twice and kill the relay
+    room.push("cheer", { round: 1 });
+    expect(seen).toEqual([
+      { type: "message", name: "cheer", payload: { round: 1 }, reducedMotion: false },
+    ]); // B is still live: the relay survives
+
+    offB();
+    room.push("cheer", { round: 2 });
+    expect(seen).toHaveLength(1); // B was the last listener: the relay is removed
   });
 
   it("stamps every event with the current reducedMotion preference", () => {

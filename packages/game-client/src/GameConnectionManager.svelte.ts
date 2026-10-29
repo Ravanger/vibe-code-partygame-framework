@@ -319,14 +319,16 @@ export class GameConnectionManager<
       };
       this.messageRelays.set(type, relay);
     }
-    relay.count += 1;
+    const registered = relay; // the entry cannot change while a live listener holds it
+    registered.count += 1;
+    let done = false;
     return () => {
+      if (done) return; // an unsubscribe removes only its own listener, once
+      done = true;
       offBus();
-      const current = this.messageRelays.get(type);
-      if (current === undefined) return;
-      current.count -= 1;
-      if (current.count === 0) {
-        current.off();
+      registered.count -= 1;
+      if (registered.count === 0) {
+        registered.off();
         this.messageRelays.delete(type);
       }
     };
@@ -446,6 +448,8 @@ export class GameConnectionManager<
     this.unbindState();
     this.phaseWatcher?.room.onStateChange.remove(this.phaseWatcher.callback);
     this.phaseWatcher = undefined;
+    // Reset the phase baseline so a reconnect re-establishes it silently, like the urgency side.
+    this.lastPhase = undefined;
     this.stopUrgencyTimer();
     this.bus.unbind();
     this.room = undefined;
