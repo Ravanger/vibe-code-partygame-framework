@@ -7,15 +7,23 @@ import { META } from "../src/meta.js";
 import { WitClashState } from "../src/state.js";
 import App from "./App.svelte";
 import { resolveEndpoints } from "./config.js";
+import ReplayApp from "./ReplayApp.svelte";
 
-const { endpoint, apiPort } = resolveEndpoints();
-const manager = new GameConnectionManager<WitClashState>({
-  endpoint,
-  roomName: META.roomName,
-  apiPort,
-  storagePrefix: "witclash",
-  rootSchema: WitClashState,
-});
+const target = document.getElementById("app") ?? document.body;
 
-mount(App, { target: document.getElementById("app") ?? document.body, props: { manager } });
-void manager.resume();
+// `?replay` mounts the offline viewer: no manager, so no server connection is ever opened.
+if (new URLSearchParams(window.location.search).has("replay")) {
+  mount(ReplayApp, { target });
+} else {
+  const { endpoint, apiPort } = resolveEndpoints();
+  const manager = new GameConnectionManager<WitClashState>({
+    endpoint,
+    roomName: META.roomName,
+    apiPort,
+    storagePrefix: "witclash",
+    rootSchema: WitClashState,
+  });
+
+  mount(App, { target, props: { manager } });
+  void manager.resume();
+}

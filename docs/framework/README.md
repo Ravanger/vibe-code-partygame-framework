@@ -143,6 +143,22 @@ an unnamed seat stays waiting, and in the Lobby a seat that sets its name is act
 A seat that joined the Lobby is active, but when the game leaves the Lobby (`START_GAME` or auto-start) every seat that is still unnamed is benched (`RuntimeHost.benchUnreadyPlayers`) and waits for the next activation.
 After a player reconnects, `onPlayerSync(ctx, playerId)` runs so you can resend their private messages.
 
+### Join control
+A game declares an optional synchronous `canJoin(input): CanJoinResult` on the definition to gate every join — including spectators and creation joins (there is no separate `canCreate`; creating a room joins through `onJoin`). The input carries `playerId`, the proposed `name`, the `spectator` flag, the client's `joinData` (string/number/boolean values) and the current `roster`. Return `{ ok: true }` to admit, or `{ ok: false, code, message }` to refuse with a game-authored message (for example `code: "ROOM_LOCKED"`); the refusal is not an `ErrorCode`, it is shown to the joining client as-is. The hook must be synchronous — core stays deterministic and Colyseus-free, so external auth stays out of it.
+
+The client sends `joinData` with `manager.join(code, { joinData })`: at most 8 keys, keys up to 32 characters, string values up to 256 characters (numbers and booleans unbounded) — enforced by `JoinOptionsSchema`. It is a one-shot per join: the framework never stores or logs it (it may hold a password), so it is not resent when a client resumes after a reload.
+
+The runtime evaluates it through the pure `evaluateJoin(definition, input)`: no hook accepts; a refusal message is trimmed and capped at 200 characters; a throwing hook yields the generic refusal `{ ok: false, code: "JOIN_REFUSED", message: "You cannot join this room." }` instead of crashing the join.
+
+The server enforces it in `GameRoom` on every join — after the kicked and watch-only checks, before a seat is given out; a reload-rejoin of an already-seated player skips the hook. A refusal closes the connection with close code 4403 (`CLOSE_CODES.JOIN_REFUSED`) carrying the game's message:
+
+```ts
+canJoin: (input) =>
+  input.joinData.password === "sesame"
+    ? { ok: true }
+    : { ok: false, code: "NO_PASSWORD", message: "Wrong password" },
+```
+
 ### Timers
 `duration` is milliseconds, or a function of the context. The timer restarts on every entry (including re-entry).
 `onTimeout` is required whenever `duration` is set, fires once, and never fires after the phase was left.
@@ -343,8 +359,12 @@ a snapshot never carries `ctx.priv` or per-client data. Each snapshot names the 
 `transition` entry it belongs to and shows that transition's `from` phase — the final state of the phase
 being left.
 
-The host exports with `room.request(ClientMessage.EXPORT_REPLAY)`; the answer is an `ExportReplayResponse`
-(from `@partygame/shared`) — the bundle, or a refusal shaped like a rejected `ActionResult`: `UNAUTHORIZED`
+The host exports with `room.request(ClientMessage.EXPORT_REPLAY)` — on a game client, `manager.exportReplay()`
+from `@partygame/game-client`, which normalizes the answer the same way `sendAction` does (a well-formed
+refusal is passed through and remembered in `lastServerError`; a malformed reply — including a bundle-shaped
+reply without a number `bundleVersion` or an array `snapshots` — or a failed request becomes a fixed
+`BAD_REPLY`/`CONNECTION_LOST` result). The raw answer is an `ExportReplayResponse` (from
+`@partygame/shared`) — the bundle, or a refusal shaped like a rejected `ActionResult`: `UNAUTHORIZED`
 for a non-host (including spectators), `NOT_ALLOWED` when the game records no action log or its logged
 transitions do not match the recorded snapshots (a middleware that drops transition events makes export
 impossible), and `INTERNAL` if building the bundle throws. The bundle's `frameworkVersion` is
@@ -371,7 +391,9 @@ missing or malformed snapshots set its `error` and leave no snapshots) and steps
 `state` is a fresh `stateClass` instance filled from the current snapshot (via `syncedStateFromJson`, the
 inverse of `syncedJsonOf`, from `@partygame/shared/schema`), and `isSpectator` is always true — so a game's
 existing screens render a replay read-only. Snapshots hold synced state only: no private or per-client data,
-and player ids are the live ones (no `p1..pN` remapping).
+and player ids are the live ones (no `p1..pN` remapping). A game wires its own viewer on top (WitClash ships
+one at the `?replay` URL parameter — see its README); screens that read manager members beyond `state` and
+`isSpectator` while mounting (for example a countdown or the seat) need those supplied by the game's adapter.
 
 **Limitations in v1.** Mid-game roster changes are not replayed: `replayLog` throws naming the first such
 entry. Lobby-phase roster changes are skipped — the table is already seated — except the one that
@@ -525,6 +547,7 @@ Client-visible error strings are fixed and table-driven; raw Zod or exception te
   | 4401 | `ROOM_FULL` | `NOT_ALLOWED` | Room is full |
   | 4402 | `SEAT_REMOVED` | `KICKED` | Your seat was removed |
   | 4403 | `KICKED_REJOIN` | `KICKED` | Removed by the host |
+  | 4403 | `JOIN_REFUSED` | `NOT_ALLOWED` | the game's refusal message (shares 4403) |
   | 4404 | `WATCH_ONLY` | `NOT_ALLOWED` | This room is watch-only |
   | 4406 | `SEAT_TAKEN` | `UNAUTHORIZED` | Seat is taken |
   | 4409 | `SEAT_TAKEN_OVER` | `KICKED` | Your seat was opened on another device |
@@ -537,7 +560,7 @@ Client-visible error strings are fixed and table-driven; raw Zod or exception te
 - `ctx.reject(code, message)` is the one game-authored exception: your message is passed through to the client.
   Keep it short and player-facing; the code still comes from `ErrorCode`.
 - The client keeps one `lastServerError` (`GameConnectionManager.lastServerError`): server `ERROR` payloads,
-  failed action answers, refused joins (looked up by close code), a failed `join`/`create` (`ROOM_NOT_FOUND`, `BAD_REPLY` or `CONNECTION_LOST`; the exception goes to the `logger` option and the promise still rejects) and a fixed `NOT_CONNECTED`, `CONNECTION_LOST` or `BAD_REPLY` message for local action failures (the exception goes to the manager's `logger` option, default `console.warn`).
+  failed action answers, refused joins (looked up by close code; a `VERSION_MISMATCH` template and a 4403 `canJoin` refusal keep the server-filled text), a failed `join`/`create` (`ROOM_NOT_FOUND`, `BAD_REPLY` or `CONNECTION_LOST`; the exception goes to the `logger` option and the promise still rejects) and a fixed `NOT_CONNECTED`, `CONNECTION_LOST` or `BAD_REPLY` message for local action failures (the exception goes to the manager's `logger` option, default `console.warn`).
   The welcome screen moves a failed join's message into its own error line and clears the toast, so exactly one renders.
   `ServerError.action` is set only by `ctx.reject` and invalid-payload rejections; framework rejections omit it.
   Clear it with `dismissError()`.
@@ -841,6 +864,7 @@ vitest `setupFiles`: it shims the storages and makes the SDK use `ws` under jsdo
 | `OptionsReader` | The published options, parsed once per state change: `new OptionsReader(manager, schema, defaults?)` exposes reactive `current`, falling back to `defaults` or the schema's `.default()`s. |
 | `PhaseClock` | A phase's server countdown plus its configured length: `new PhaseClock(manager, totalSeconds, announceAt?)` exposes `secondsLeft`, `isUrgent`, `announcement` (30/10/5 by default) and your `totalSeconds` getter. |
 | `TypingReporter` | One typing message per change: `new TypingReporter(send, idleMs = 2500)`; call `keystroke()` per key and `stop()` on submit or teardown. |
+| `SoundPolicy` | The sound gate: off by default, one persisted toggle (stored under the game's `storagePrefix`), nothing plays before the first tap. `new SoundPolicy({ storage, storagePrefix, target })`; reactive `enabled`, `unlocked`, `canPlay` and `toggle()`; `dispose()` removes the gesture listeners. A throwing or empty storage degrades to off. |
 | `AppRouter` | Routes the connection status and room phase to a screen of your screen table (see below). `createAppRouter(manager, screens)` builds one. |
 | `WaitingRoomViewModel` | The lobby: seats (`LobbyPlayer`), ready count, host-only start and kick (with confirmation), name field, share URL, copy code, `notice`. An optional second argument `{ location?, clipboard? }` replaces the defaults (`window.location`, `navigator.clipboard`, read lazily) for non-browser hosts and tests. |
 
@@ -919,6 +943,7 @@ To change a rule, subclass it and override a member, for example `banner`: `clas
 | `QrCode` | `text: string` |
 | `ActionBar` | `children: Snippet` |
 | `NameInput` | `field: NameField`, `focus?: boolean` |
+| `SoundToggle` | `policy: SoundPolicy`, `on?: string`, `off?: string` (labels, default "Sound on"/"Sound off"); a native `type="button"` with `aria-pressed` |
 | `LobbySettings` | `vm: LobbySettingsViewModel<TState>` |
 | `GameControls` | `vm: GameControlsViewModel<TState>` |
 

@@ -7,6 +7,7 @@ import {
   ClientMessage,
   closeCodeEntry,
   ErrorCode,
+  type ExportReplayResponse,
   isActionResult,
   isServerError,
   PROTOCOL_VERSION,
@@ -45,6 +46,16 @@ export interface GameConnectionOptions<TState> {
   syncTimeoutMs?: number;
   /** Receives the exception behind a local action failure, never shown to the UI. Default `console.warn`. */
   logger?: (message: string, error: unknown) => void;
+}
+
+/** Options for {@link GameConnectionManager.join}; the manager adds `playerId`, `seatSecret` and `protocolVersion` itself. */
+export interface JoinOptions {
+  /** The name to join with; validated like `SET_NAME`. */
+  name?: string;
+  /** Join without a seat, as a TV display does. */
+  spectator?: boolean;
+  /** Bounded data for the game's `canJoin` hook (an invite code or password); sent once per join, never stored or logged. */
+  joinData?: Record<string, string | number | boolean>;
 }
 
 const DEFAULT_API_PORT = 3001;
@@ -142,7 +153,8 @@ export class GameConnectionManager<
     );
   }
 
-  async join(code: string, options: Record<string, unknown> = {}): Promise<void> {
+  /** Joins the room for `code` by its code; throws with the server's reason. */
+  async join(code: string, options: JoinOptions = {}): Promise<void> {
     const clean = code.trim().toUpperCase();
     if (!RoomCodeSchema.safeParse(clean).success) {
       throw new Error(`Game code must be ${ROOM_CODE_LENGTH} letters (A-Z)`);
@@ -235,6 +247,39 @@ export class GameConnectionManager<
     } catch (error) {
       (this.options.logger ?? console.warn)(
         `[GameConnectionManager] ${type} request failed`,
+        error,
+      );
+      return this.fail(ErrorCode.CONNECTION_LOST);
+    }
+  }
+
+  /**
+   * The host's request for this room's replay bundle (the answer to `ClientMessage.EXPORT_REPLAY`).
+   * A non-host gets the server's `UNAUTHORIZED` refusal, passed through and remembered in
+   * {@link lastServerError}; a well-formed bundle resolves as-is. The success side is validated
+   * too: a reply without both a number `bundleVersion` and an array `snapshots` fails with
+   * `BAD_REPLY`.
+   */
+  async exportReplay(): Promise<ExportReplayResponse> {
+    if (!this.room) return this.fail(ErrorCode.NOT_CONNECTED);
+    try {
+      const response = await this.room.request(ClientMessage.EXPORT_REPLAY);
+      if (response === null || typeof response !== "object" || Array.isArray(response)) {
+        return this.fail(ErrorCode.BAD_REPLY);
+      }
+      const reply = response as Record<string, unknown>;
+      if (reply.ok === false) {
+        if (!isServerError(reply.error)) return this.fail(ErrorCode.BAD_REPLY);
+        this.setLastError(reply.error);
+        return { ok: false, error: reply.error };
+      }
+      if (typeof reply.bundleVersion !== "number" || !Array.isArray(reply.snapshots)) {
+        return this.fail(ErrorCode.BAD_REPLY);
+      }
+      return reply;
+    } catch (error) {
+      (this.options.logger ?? console.warn)(
+        `[GameConnectionManager] EXPORT_REPLAY request failed`,
         error,
       );
       return this.fail(ErrorCode.CONNECTION_LOST);
@@ -424,7 +469,8 @@ export class GameConnectionManager<
 
   /**
    * The client-visible error for a refused connection: the table's fixed message, except
-   * VERSION_MISMATCH, whose template the server fills with both versions and the rejection preserves.
+   * VERSION_MISMATCH (whose template the server fills with both versions) and a 4403 canJoin refusal
+   * (which carries the game's own message); both pass the received text through.
    */
   private closeErrorOf(error: unknown): ServerError | undefined {
     if (typeof error !== "object" || error === null || !("code" in error)) return undefined;
@@ -432,8 +478,9 @@ export class GameConnectionManager<
     if (typeof code !== "number") return undefined;
     const entry = closeCodeEntry(code);
     if (!entry) return undefined;
+    // VERSION_MISMATCH's template and a 4403 canJoin refusal carry server-filled text; show what arrived.
     if (
-      entry === CLOSE_CODES.VERSION_MISMATCH &&
+      (entry === CLOSE_CODES.VERSION_MISMATCH || code === CLOSE_CODES.JOIN_REFUSED.code) &&
       "message" in error &&
       typeof error.message === "string"
     ) {

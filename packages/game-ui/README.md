@@ -92,6 +92,39 @@ Any viewmodel that needs the published options reads them through `OptionsReader
 
 `TypingReporter(send, idleMs = 2500)` calls `send(true)` on the first keystroke and `send(false)` after `idleMs` of quiet or on `stop()` — one message per change. Call `keystroke()` per key and `stop()` on submit or teardown.
 
+## Sound
+
+`SoundPolicy({ storage, storagePrefix, target })` is the room's sound gate: off by default, one persisted toggle, and nothing plays before the first tap (browsers block audio until a user gesture, and players on a shared TV may not want it). `enabled` (persisted under `${storagePrefix}.sound`; a throwing or empty storage — private windows — degrades to off), `unlocked` (a pointerdown or keydown on `target` has happened) and `canPlay` (both) are reactive getters; `toggle()` flips `enabled`; `dispose()` removes the gesture listeners when the owning screen unmounts. Construct it once with the page's globals, using the same prefix you pass to `GameConnectionManager`:
+
+```ts
+import { SoundPolicy } from "@partygame/game-ui";
+
+const sound = new SoundPolicy({ storage: localStorage, storagePrefix: "my-game", target: window });
+```
+
+`SoundToggle` (from `@partygame/game-ui/components`) is the button for it — a native `type="button"` with `aria-pressed`, so it is keyboard operable; optional `on`/`off` props override the labels ("Sound on"/"Sound off"). Gate every sound your game makes on `canPlay`; combined with a feedback bus of sound events, that is one line per event:
+
+```svelte
+<script lang="ts">
+  import { SoundPolicy } from "@partygame/game-ui";
+  import { SoundToggle } from "@partygame/game-ui/components";
+
+  const sound = new SoundPolicy({ storage: localStorage, storagePrefix: "my-game", target: window });
+
+  // the game's audio player (a stub here); the bus emits events like "tick" or "fanfare"
+  const play = (name: string): void => {
+    /* WebAudio, Howler, ... */
+  };
+
+  // one line per event: play only when allowed
+  const onSound = (name: string): void => {
+    if (sound.canPlay) play(name);
+  };
+</script>
+
+<SoundToggle policy={sound} />
+```
+
 ## Replay viewer
 
 `ReplayViewModel(bundleText, { intervalMs?, timer? })` loads a replay bundle file (the JSON the host exports) and steps through its snapshots as a read-only spectator — no game runtime, no server connection. `snapshots`, `index`, `current` (the snapshot's synced state as plain JSON) and `phase` are reactive; `next()`, `previous()` and `goTo(i)` clamp at the ends. A file that is not valid JSON, not a bundle of the supported format version, or with malformed snapshots sets `error` and leaves no snapshots. `play()`/`pause()` auto-advance every `intervalMs` (default 1000) on an injectable timer, stopping at the last snapshot.
