@@ -32,7 +32,7 @@ function cssOf(mount: () => { unmount(): void }): string {
 }
 
 /**
- * Walks a CSS text and reports every `transition` / `animation*` declaration that is not inside
+ * Walks a CSS text and reports every `transition*` / `animation*` declaration that is not inside
  * an `@media (prefers-reduced-motion: no-preference)` block — motion must be opt-in, so users
  * with reduced-motion preferences never see it (#82).
  */
@@ -52,7 +52,7 @@ function unguardedMotion(css: string): string[] {
     const colon = declaration.indexOf(":");
     if (colon < 0) return;
     const property = declaration.slice(0, colon).trim();
-    if (!/^(transition|animation[\w-]*)$/.test(property)) return;
+    if (!/^(transition[\w-]*|animation[\w-]*)$/.test(property)) return;
     if (!guarded()) findings.push(`${property} outside a reduced-motion guard`);
   };
 
@@ -179,5 +179,9 @@ describe("reduced motion", () => {
     expect(
       unguardedMotion("@media (prefers-reduced-motion: reduce) { .a { transition: opacity 1s; } }"),
     ).toHaveLength(1);
+    expect(unguardedMotion(".a { transition-duration: 1s; transition-delay: 2s; }")).toEqual([
+      "transition-duration outside a reduced-motion guard",
+      "transition-delay outside a reduced-motion guard",
+    ]);
   });
 });

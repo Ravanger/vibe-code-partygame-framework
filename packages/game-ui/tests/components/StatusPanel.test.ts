@@ -22,5 +22,6 @@ describe("StatusPanel", () => {
     expect(info.container.querySelector(".status-panel")).toHaveClass("tone-info");
     expect(info.container.querySelector(".sticker")).not.toBeInTheDocument();
     await expectNoViolations(container, "StatusPanel");
+    await expectNoViolations(info.container, "StatusPanel");
   });
 });

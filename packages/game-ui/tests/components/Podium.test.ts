@@ -15,9 +15,10 @@ function steps(): PodiumStep<PodiumRow>[] {
 }
 
 describe("Podium", () => {
-  it("renders nothing without steps", () => {
-    render(Podium, { steps: [] });
+  it("renders nothing without steps", async () => {
+    const { container } = render(Podium, { steps: [] });
     expect(screen.queryByRole("list", { name: "Podium" })).not.toBeInTheDocument();
+    await expectNoViolations(container, "Podium");
   });
 
   it("lists step labels, names and scores, marks me, and puts the star on tier 1 only", async () => {
