@@ -38,7 +38,7 @@ export interface GameConnectionOptions<TState> {
   roomName: string;
   /** Port of the `/api/resolve-code` API on the same host. Default 3001. */
   apiPort?: number;
-  /** Base URL (protocol + host, plus any path prefix) of the `/api/resolve-code` API; preferred over `apiPort`. */
+  /** Base URL of the room-code API; the client appends exactly `/api/resolve-code`, so a bare origin reaches an API that answers at `/api/resolve-code`. Preferred over `apiPort`. */
   apiBase?: string;
   /** Namespaces the browser storage keys, so several games (or several test clients) never share a session. */
   storagePrefix: string;

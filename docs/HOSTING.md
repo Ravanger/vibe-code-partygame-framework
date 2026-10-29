@@ -117,20 +117,20 @@ When the page is served over HTTPS or from an origin that cannot reach `host:por
 
 | Path on the public origin | Forward to | Notes |
 |---|---|---|
-| `/game` (plus anything after it) | game port `2567` | Must forward the WebSocket upgrade. Forward **without stripping** the prefix: the game server accepts upgrades on any path — the client SDK itself connects to `/<processId>/<roomId>` — so a prefixed URL works as-is. |
+| `/game` (plus anything after it) | game port `2567` | Must forward the WebSocket upgrade. Forward **stripping** the prefix: before opening the socket the client issues an HTTP matchmake call to `<endpoint path>/matchmake/...`, and the game server answers that at a root-relative `/matchmake/...` — so the server must see the request without your prefix. |
 | `/api` (plus anything after it) | API port `3001` | Forward **without stripping**: the API answers exactly `GET /api/resolve-code`. |
 
 Then run or build the client with:
 
 ```sh
-VITE_SERVER_ENDPOINT=wss://your-origin/game VITE_API_BASE=https://your-origin/api bun run dev   # or: bun run build
+VITE_SERVER_ENDPOINT=wss://your-origin/game VITE_API_BASE=https://your-origin bun run dev   # or: bun run build
 ```
 
 - `VITE_SERVER_ENDPOINT` is used verbatim as the game server URL and skips `VITE_SERVER_HOST`/`VITE_GAME_PORT`.
-- `VITE_API_BASE` is used verbatim as the base of the room-code API — the client calls `<VITE_API_BASE>/api/resolve-code`, with no port appended — and wins over `VITE_API_PORT`.
+- `VITE_API_BASE` is a bare origin (protocol + host, **no** `/api` suffix): the client appends exactly `/api/resolve-code` to it, with no port — so `https://your-origin` reaches an API answering at `/api/resolve-code`. It wins over `VITE_API_PORT`.
 - Without either variable, an HTTPS page still derives its endpoint from its own protocol (`https://<page host>:2567`), which is what you want when TLS terminates directly on those ports.
 
-The reverse proxy itself is not exercised by this repo's tests; the client-side contract (verbatim endpoints, no port appended to `VITE_API_BASE`) and the server's path-tolerant upgrades are covered by tests.
+The reverse proxy itself is not exercised by this repo's tests. The forwarding rules above follow from how the client builds its request URLs — the matchmake call carries the endpoint's path, the room-code lookup appends `/api/resolve-code` to `VITE_API_BASE` — and where each backend answers; they are not a live-proxy test.
 
 ## Environment Variables
 
@@ -156,7 +156,7 @@ Read by Vite at dev or build time.
 | `VITE_GAME_PORT` | `2567` | Game server port |
 | `VITE_API_PORT` | `3001` | API port |
 | `VITE_SERVER_ENDPOINT` | — | Full game server URL (e.g. `wss://your-origin/game`); used verbatim, skips the host/port form. See [Behind HTTPS and a reverse proxy](#behind-https-and-a-reverse-proxy) |
-| `VITE_API_BASE` | — | Base URL of the room-code API (e.g. `https://your-origin/api`); used verbatim, wins over `VITE_API_PORT` |
+| `VITE_API_BASE` | — | Bare origin the client appends `/api/resolve-code` to (e.g. `https://your-origin` — no `/api` suffix); used verbatim, wins over `VITE_API_PORT` |
 
 The launcher always uses the default ports. To move them, start the pieces yourself (below) and give the client the matching `VITE_GAME_PORT` and `VITE_API_PORT`.
 

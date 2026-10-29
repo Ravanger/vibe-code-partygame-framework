@@ -7,7 +7,7 @@ export interface EndpointOverrides {
   apiPort?: string | undefined;
   /** Full game server URL (e.g. `wss://proxy.example/game`); returned verbatim and skips the host/port form. */
   endpoint?: string | undefined;
-  /** Base URL of the `/api/resolve-code` API (protocol + host, plus any path prefix); returned verbatim and preferred over `apiPort`. */
+  /** Base URL of the room-code API; the client appends exactly `/api/resolve-code`, so a bare origin reaches an API that answers at `/api/resolve-code`. Returned verbatim and preferred over `apiPort`. */
   apiBase?: string | undefined;
 }
 

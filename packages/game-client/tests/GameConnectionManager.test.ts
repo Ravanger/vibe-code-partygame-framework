@@ -537,16 +537,29 @@ describe("refused joins", () => {
 });
 
 describe("api base", () => {
-  it("calls the given apiBase verbatim, with no port appended", async () => {
+  it("calls the given apiBase verbatim, appending /api/resolve-code", async () => {
     const manager = new GameConnectionManager({
       endpoint: "wss://proxy.example/game",
       roomName: "stub",
       storagePrefix: `unit${++counter}`,
-      apiBase: "https://proxy.example/api",
+      apiBase: "https://proxy.example",
     });
     const network = stubFetchReply(new Error("fetch failed"));
     await expect(manager.join("WXYZ")).rejects.toThrow("Could not reach the game server");
-    expect(network.urls).toEqual(["https://proxy.example/api/api/resolve-code?code=WXYZ"]);
+    expect(network.urls).toEqual(["https://proxy.example/api/resolve-code?code=WXYZ"]);
+  });
+
+  it("prefers apiBase over apiPort when both are set", async () => {
+    const manager = new GameConnectionManager({
+      endpoint: "wss://proxy.example/game",
+      roomName: "stub",
+      storagePrefix: `unit${++counter}`,
+      apiBase: "https://proxy.example",
+      apiPort: 8080,
+    });
+    const network = stubFetchReply(new Error("fetch failed"));
+    await expect(manager.join("WXYZ")).rejects.toThrow("Could not reach the game server");
+    expect(network.urls).toEqual(["https://proxy.example/api/resolve-code?code=WXYZ"]);
   });
 
   it("builds the API base from the endpoint and apiPort when no apiBase is given", async () => {
