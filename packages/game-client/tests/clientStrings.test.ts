@@ -1,6 +1,7 @@
-import { CLIENT_MESSAGES, ErrorCode } from "@partygame/shared";
+import { CLIENT_MESSAGES, ErrorCode, ROOM_CODE_LENGTH } from "@partygame/shared";
 import { afterEach, describe, expect, it } from "vitest";
 import { GameConnectionManager } from "../src/GameConnectionManager.svelte.js";
+import { defaultClientStrings } from "../src/strings.js";
 
 interface Strings {
   notConnected?: string;
@@ -35,7 +36,15 @@ describe("client strings", () => {
 
   it("falls back to the English default for an unspecified key", async () => {
     const manager = newManager({ notConnected: "Nicht verbunden" });
-    await expect(manager.join("no1")).rejects.toThrow("Game code must be 4 letters (A-Z)");
+    await expect(manager.join("no1")).rejects.toThrow(
+      `Game code must be ${ROOM_CODE_LENGTH} letters (A-Z)`,
+    );
+  });
+
+  it("derives the default room-code message from ROOM_CODE_LENGTH", () => {
+    expect(defaultClientStrings.invalidRoomCode).toBe(
+      `Game code must be ${ROOM_CODE_LENGTH} letters (A-Z)`,
+    );
   });
 
   it("replaces the room-code message when the table has it", async () => {

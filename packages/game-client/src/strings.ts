@@ -1,4 +1,4 @@
-import { CLIENT_MESSAGES, ErrorCode } from "@partygame/shared";
+import { CLIENT_MESSAGES, ErrorCode, ROOM_CODE_LENGTH } from "@partygame/shared";
 
 /**
  * Every client-owned message the manager produces, in English. Pass a partial table to
@@ -23,7 +23,7 @@ export interface ClientStrings {
 
 /** The English defaults: every client-owned message the manager produces. */
 export const defaultClientStrings: ClientStrings = {
-  invalidRoomCode: "Game code must be 4 letters (A-Z)",
+  invalidRoomCode: `Game code must be ${ROOM_CODE_LENGTH} letters (A-Z)`,
   notConnected: CLIENT_MESSAGES[ErrorCode.NOT_CONNECTED],
   invalidAction: CLIENT_MESSAGES[ErrorCode.INVALID_ACTION],
   badReply: CLIENT_MESSAGES[ErrorCode.BAD_REPLY],
