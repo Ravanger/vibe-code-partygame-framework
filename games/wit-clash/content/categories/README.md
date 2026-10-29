@@ -53,8 +53,8 @@ once per game. A category without any simply adds nothing to the pool.
    from its day-seeded order and ignores weights.
 6. **Rating:** `rating` is `"family"` (the default) or `"mature"`. Mature categories are only offered in free play when the room's
    `contentRating` option is `"any"`; a `"family"` room never sees them. Daily mode plays every category regardless of rating.
-7. **Minimum:** The server refuses to start with fewer than 3 valid categories, or fewer than 3 family-rated ones — a family-rated
-   room must always have options to offer.
+7. **Minimum:** The server refuses to start with fewer than 3 offerable (`weight` > 0) categories, or fewer than 3 offerable
+   family-rated ones — a weight-0 category is never offered, so it does not count; a family-rated room must always have options.
 8. **Restart to reload:** Files are read once at startup. Set `WITCLASH_CONTENT_DIR` to read the free-play content from another
    directory; daily mode always uses this repo directory and ignores the variable.
 
