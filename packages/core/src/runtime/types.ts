@@ -19,6 +19,23 @@ export interface PlayerInfo {
   isActive: boolean;
 }
 
+/** What a game's `canJoin` hook receives about one join attempt. */
+export interface CanJoinInput {
+  /** The stable client-generated id of the joining seat. */
+  playerId: string;
+  /** The name the client proposes, if any. */
+  name?: string;
+  /** True when the client joins without a seat (for example a TV display). */
+  spectator: boolean;
+  /** String/number/boolean data the client sent with the join. */
+  joinData: Readonly<Record<string, string | number | boolean>>;
+  /** The seats as reported before this join is admitted. */
+  roster: PlayerInfo[];
+}
+
+/** The outcome of a `canJoin` check: an accept or a refusal with a game-authored message. */
+export type CanJoinResult = { ok: true } | { ok: false; code: string; message: string };
+
 /** Fields the runtime writes into the synced state. */
 export interface PhaseState {
   phase: string;
@@ -241,6 +258,8 @@ export interface GameDefinition<
   options?: z.ZodType<TOptions>;
   /** The room's text-filter level, from the parsed options (e.g. a host-picked lobby option). Default `"off"`. */
   filterLevel?(options: TOptions): FilterLevel;
+  /** Synchronously gates every join, including spectators and creation joins (which come through `onJoin`); see {@link CanJoinInput}. */
+  canJoin?(input: CanJoinInput): CanJoinResult;
   /** Called once per room (and per replay table); must return a fresh object each call, never a shared one: the action log and phase timings are keyed by it. */
   createPrivateState(): TPrivate;
   /** `"Lobby"` is reserved and built in. */

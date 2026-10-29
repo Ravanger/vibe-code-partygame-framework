@@ -7,6 +7,9 @@ import {
   ErrorCode,
   isActionResult,
   isServerError,
+  JOIN_DATA_KEY_MAX_LENGTH,
+  JOIN_DATA_MAX_KEYS,
+  JOIN_DATA_VALUE_MAX_LENGTH,
   JoinOptionsSchema,
   KICK_PLAYER,
   LOBBY_PHASE,
@@ -218,6 +221,28 @@ describe("JoinOptionsSchema", () => {
     expect(JoinOptionsSchema.safeParse({ playerId: id, seatSecret: "x".repeat(129) }).success).toBe(
       false,
     );
+  });
+
+  it("accepts a bounded joinData map of string, number and boolean values", () => {
+    const id = "a".repeat(8);
+    const joinData = { invite: "abc", seats: 4, vip: true };
+    expect(JoinOptionsSchema.parse({ playerId: id, joinData })).toEqual({ playerId: id, joinData });
+  });
+
+  it("bounds joinData by key count, key length and string value length", () => {
+    const id = "a".repeat(8);
+    const parse = (joinData: Record<string, unknown>) =>
+      JoinOptionsSchema.safeParse({ playerId: id, joinData }).success;
+    const keys = (count: number) =>
+      Object.fromEntries(Array.from({ length: count }, (_, i) => [`key${i}`, i]));
+    expect(parse(keys(JOIN_DATA_MAX_KEYS))).toBe(true);
+    expect(parse(keys(JOIN_DATA_MAX_KEYS + 1))).toBe(false);
+    expect(parse({ ["k".repeat(JOIN_DATA_KEY_MAX_LENGTH)]: 1 })).toBe(true);
+    expect(parse({ ["k".repeat(JOIN_DATA_KEY_MAX_LENGTH + 1)]: 1 })).toBe(false);
+    expect(parse({ long: "v".repeat(JOIN_DATA_VALUE_MAX_LENGTH) })).toBe(true);
+    expect(parse({ long: "v".repeat(JOIN_DATA_VALUE_MAX_LENGTH + 1) })).toBe(false);
+    expect(parse({ object: {} })).toBe(false);
+    expect(parse({ array: [1] })).toBe(false);
   });
 });
 
