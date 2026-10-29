@@ -6,7 +6,7 @@ import { z } from "zod";
 import { jsonLineLogger } from "../src/logger.js";
 import { bootTestServer, type TestServer, testPlayerId, waitUntil } from "../src/testing/index.js";
 import { BuzzerState } from "./fixtures/buzzer.js";
-import { bootBuzzer } from "./support.js";
+import { bootBuzzer, bootPoll, startedPoll } from "./support.js";
 
 /** One parsed JSON line the server's logger wrote. */
 interface LogObject {
@@ -42,6 +42,14 @@ const LogGame = defineGame<BaseGameState, Record<string, never>, Record<string, 
             ctx.log("custom.info");
             ctx.log.warn("custom.warn");
             ctx.log.error("custom.error");
+            ctx.log("custom.forged", { roomId: "forged-room" });
+          },
+        }),
+        THROW: logAction({
+          from: "player",
+          payload: z.object({}),
+          handler: () => {
+            throw new Error("boom");
           },
         }),
       },
@@ -120,10 +128,45 @@ describe("GameRoom lifecycle logging", () => {
     for (const line of lines.filter(
       (l) => typeof l.event === "string" && l.event.startsWith("custom."),
     )) {
+      // the room id is bound by the room and wins over a caller-supplied field of the same name
       expect(line.roomId).toBe(room.roomId);
     }
     expect(lines.find((line) => line.event === "custom.info")?.level).toBe("info");
     expect(lines.find((line) => line.event === "custom.warn")?.level).toBe("warn");
     expect(lines.find((line) => line.event === "custom.error")?.level).toBe("error");
+  });
+
+  it("emits an action.rejected line with INTERNAL when a dispatch throws", async () => {
+    const lines: LogObject[] = [];
+    t = await bootTestServer({
+      games: [{ roomName: "log", definition: LogGame, stateClass: BaseGameState }],
+      logger: capturing(lines),
+    });
+    const room = await t.createRoom("log");
+    const client = await t.joinAs(room, { playerId: testPlayerId(1) }, BaseGameState);
+    client.send(ClientMessage.SET_NAME, "P1");
+    client.send(ClientMessage.ACTION, { type: "THROW" });
+
+    await waitUntil(() => count(lines, "action.rejected") === 1, "action.rejected");
+    const rejected = lines.find((line) => line.event === "action.rejected");
+    expect(rejected?.level).toBe("warn");
+    expect(rejected?.code).toBe("INTERNAL");
+    expect(rejected?.action).toBe("THROW");
+    expect(rejected?.roomId).toBe(room.roomId);
+  });
+
+  it("emits an action.rejected line with INTERNAL when an audience dispatch throws", async () => {
+    const lines: LogObject[] = [];
+    t = await bootPoll({ logger: capturing(lines) });
+    const { room } = await startedPoll(t);
+    const spec = await t.join(room, { playerId: "aud-0001", spectator: true });
+    spec.send(ClientMessage.ACTION, { type: "BOOM" });
+
+    await waitUntil(() => count(lines, "action.rejected") === 1, "action.rejected");
+    const rejected = lines.find((line) => line.event === "action.rejected");
+    expect(rejected?.level).toBe("warn");
+    expect(rejected?.code).toBe("INTERNAL");
+    expect(rejected?.action).toBe("BOOM");
+    expect(rejected?.roomId).toBe(room.roomId);
   });
 });

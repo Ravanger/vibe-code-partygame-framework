@@ -29,6 +29,23 @@ describe("jsonLineLogger", () => {
     }
   });
 
+  it("keeps the reserved keys when caller fields collide with them", () => {
+    const lines: string[] = [];
+    const logger = jsonLineLogger((line) => {
+      lines.push(line);
+    });
+    const before = Date.now();
+    logger.info("real.event", { ts: 1, level: "error", event: "forged" });
+    const after = Date.now();
+
+    const obj = JSON.parse(lines[0] as string);
+    expect(obj.level).toBe("info");
+    expect(obj.event).toBe("real.event");
+    expect(typeof obj.ts).toBe("number");
+    expect(obj.ts).toBeGreaterThanOrEqual(before);
+    expect(obj.ts).toBeLessThanOrEqual(after);
+  });
+
   it("does not add a fields key when no fields are passed", () => {
     const lines: string[] = [];
     jsonLineLogger((line) => {

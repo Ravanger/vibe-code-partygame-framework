@@ -7,6 +7,7 @@ import {
   type GameDefinition,
   GameRuntime,
   getActionLog,
+  type LogFields,
   type Logger,
   type PlayerInfo,
   type RuntimeHost,
@@ -154,22 +155,20 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     return this.closeWith(CLOSE_CODES.INVALID_OPTIONS);
   }
 
-  /** One structured line for this room at `level`; the room id is bound here, never by the game. */
-  private logLine(
-    level: "info" | "warn" | "error",
-    event: string,
-    fields?: Record<string, string | number | boolean>,
-  ): void {
-    this.config.logger[level](event, { roomId: this.roomId, ...(fields ?? {}) });
+  /** One structured line for this room at `level`; the room id is bound here and wins over caller fields. */
+  private logLine(level: "info" | "warn" | "error", event: string, fields?: LogFields): void {
+    this.config.logger[level](event, { ...(fields ?? {}), roomId: this.roomId });
+  }
+
+  /** The type of a client action envelope, or `"unknown"` when it does not parse. */
+  private actionTypeOf(raw: unknown): string {
+    const envelope = ActionEnvelopeSchema.safeParse(raw);
+    return envelope.success ? envelope.data.type : "unknown";
   }
 
   /** Logs a runtime-rejected action (code and type only — never the payload) and returns the rejection. */
   private rejected(raw: unknown, error: ProtocolError): ActionResult {
-    const envelope = ActionEnvelopeSchema.safeParse(raw);
-    this.logLine("warn", "action.rejected", {
-      code: error.code,
-      action: envelope.success ? envelope.data.type : "unknown",
-    });
+    this.logLine("warn", "action.rejected", { code: error.code, action: this.actionTypeOf(raw) });
     return { ok: false, error };
   }
 
@@ -494,6 +493,10 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
       return error ? this.rejected(raw, error) : { ok: true };
     } catch (error) {
       logger.error("[GameRoom] action failed", error);
+      this.logLine("warn", "action.rejected", {
+        code: ErrorCode.INTERNAL,
+        action: this.actionTypeOf(raw),
+      });
       return ACTION_FAILED;
     }
   }
@@ -522,6 +525,10 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
       return error ? this.rejected(raw, error) : { ok: true };
     } catch (error) {
       logger.error("[GameRoom] audience action failed", error);
+      this.logLine("warn", "action.rejected", {
+        code: ErrorCode.INTERNAL,
+        action: this.actionTypeOf(raw),
+      });
       return ACTION_FAILED;
     }
   }
