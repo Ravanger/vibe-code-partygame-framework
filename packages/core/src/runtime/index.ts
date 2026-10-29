@@ -13,6 +13,7 @@ export type {
   ContextLogger,
   GameContext,
   GameDefinition,
+  LogFields,
   Logger,
   LogLevel,
   LogLine,
