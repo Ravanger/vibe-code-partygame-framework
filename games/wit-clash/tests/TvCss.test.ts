@@ -14,8 +14,9 @@ function mainTvBlock(): string {
 }
 
 describe("TV typography contract (app.css)", () => {
-  it("keeps the fs-1 family at or above 24px under main.tv", () => {
-    // every fs-1 declaration on a TV screen is calc(var(--fs-1) * var(--scale, 1)) with --scale: 1.6,
+  it("keeps the --fs-1 override at the 24px minimum under main.tv", () => {
+    // every fs-1 declaration on a TV screen except the two leave buttons (still raw var(--fs-1)
+    // at this head; #292 scales them) is calc(var(--fs-1) * var(--scale, 1)) with --scale: 1.6,
     // so the single-point override must lift 0.875rem x 1.6 = 22.4px to at least 24px (0.9375rem x 1.6)
     expect(mainTvBlock()).toMatch(/--fs-1:\s*0\.9375rem/);
   });
