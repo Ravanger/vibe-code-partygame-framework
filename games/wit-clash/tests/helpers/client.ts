@@ -12,6 +12,7 @@ import { vi } from "vitest";
 import { META } from "../../src/meta.js";
 import {
   Answer,
+  Award,
   CategoryOption,
   Matchup,
   PlayerPrivate,
@@ -59,6 +60,12 @@ export function scoreRow(
   over: Partial<ScoreEntry> = {},
 ): ScoreEntry {
   return Object.assign(new ScoreEntry(), { playerId, name: playerId, score, ...over });
+}
+
+export function award(id: string, title: string, winnerNames: string[], detail = ""): Award {
+  const made = Object.assign(new Award(), { id, title, detail });
+  for (const name of winnerNames) made.winnerNames.push(name);
+  return made;
 }
 
 export type Client = ConnectedClient<WitClashState>;
