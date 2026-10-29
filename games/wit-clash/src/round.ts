@@ -2,11 +2,19 @@ import { departedIds, isBelowMinimum, required } from "@partygame/core";
 import { countVoted } from "@partygame/core/kits";
 import { pickBestAnswers } from "./bestAnswers.js";
 import { eligibleVoterIds } from "./eligibility.js";
+import { pickHighlights } from "./highlights.js";
 import { META } from "./meta.js";
 import { PHASE } from "./phaseNames.js";
 import type { WitClashContext } from "./private.js";
 import { composeScoreboard } from "./scoreboard.js";
-import { BestAnswer, type Matchup, PlayerPrivate, ScoreEntry } from "./state.js";
+import {
+  BestAnswer,
+  Highlight,
+  HighlightAnswer,
+  type Matchup,
+  PlayerPrivate,
+  ScoreEntry,
+} from "./state.js";
 
 export const PLACEHOLDER_TEXT = "(no answer)";
 
@@ -69,11 +77,30 @@ export class Round {
     }
   }
 
+  writeHighlights(): void {
+    const { state, priv } = this.ctx;
+    state.highlights.clear();
+    const picked = pickHighlights(priv.answerHistory);
+    for (const list of [picked.biggestMargin, picked.closestMatch, picked.fastestAnswer]) {
+      if (list === undefined) continue;
+      for (const item of list) {
+        const entry = Object.assign(new Highlight(), {
+          kind: item.kind,
+          promptText: item.promptText,
+        });
+        for (const answer of item.answers)
+          entry.answers.push(Object.assign(new HighlightAnswer(), answer));
+        state.highlights.push(entry);
+      }
+    }
+  }
+
   /** The end of a round: on the final round, the optional honor vote before Results; otherwise straight to Results. */
   toResults(): void {
     const { state } = this.ctx;
     if (state.roundNumber >= state.totalRounds && this.ctx.options.honorVote) {
       this.writeBestAnswers();
+      this.writeHighlights();
       if (state.bestAnswers.length > 0) {
         this.ctx.transition(PHASE.HonorVote);
         return;
@@ -162,6 +189,7 @@ export class Round {
     this.clearRound();
     this.ctx.priv.clearGame();
     this.ctx.state.bestAnswers.clear();
+    this.ctx.state.highlights.clear();
     this.ctx.state.awards.clear();
     this.ctx.state.honorWinnerNames.clear();
     this.ctx.state.roundNumber = 0;

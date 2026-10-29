@@ -5,6 +5,12 @@ export interface AnswerRecord {
   promptText: string;
   votes: number;
   matchupVotes: number;
+  /** The matchup the answer belongs to; groups the history for per-matchup highlights. */
+  matchupId: string;
+  /** Ms after the answering phase started that the author submitted. Placeholders never reach the
+   * history (their matchups forfeit or skip), so records written by the game always carry a time;
+   * `undefined` is the defensive contract `pickHighlights` checks for answers never submitted. */
+  answerMs?: number | undefined;
 }
 
 const compare = (a: AnswerRecord, b: AnswerRecord): number =>

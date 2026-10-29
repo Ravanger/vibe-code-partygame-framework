@@ -10,6 +10,15 @@ export const MAX_OPTIONS_JSON_LENGTH = 4096;
 /** Most top-level keys an action envelope may carry (including `type`); more is `INVALID_ACTION`. */
 export const MAX_ENVELOPE_KEYS = 32;
 
+/** Most keys a client may send in one join's `joinData` map. */
+export const JOIN_DATA_MAX_KEYS = 8;
+
+/** Longest key in a join's `joinData` map. */
+export const JOIN_DATA_KEY_MAX_LENGTH = 32;
+
+/** Longest string value in a join's `joinData` map; number and boolean values are unbounded. */
+export const JOIN_DATA_VALUE_MAX_LENGTH = 256;
+
 /** How many letters a room code has. */
 export const ROOM_CODE_LENGTH = 4;
 
