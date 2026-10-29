@@ -66,6 +66,27 @@ export const BestAnswer = schema(
 );
 export type BestAnswer = SchemaType<typeof BestAnswer>;
 
+export const HighlightAnswer = schema(
+  {
+    authorName: t.string().default(""),
+    text: t.string().default(""),
+    votes: t.number().default(0),
+  },
+  "HighlightAnswer",
+);
+export type HighlightAnswer = SchemaType<typeof HighlightAnswer>;
+
+/** One card of the post-game highlight reel: a matchup's prompt and its answers. */
+export const Highlight = schema(
+  {
+    kind: t.string().default(""),
+    promptText: t.string().default(""),
+    answers: t.array(HighlightAnswer),
+  },
+  "Highlight",
+);
+export type Highlight = SchemaType<typeof Highlight>;
+
 export const Award = schema(
   {
     id: t.string().default(""),
@@ -121,6 +142,7 @@ export const WitClashState = BaseGameState.extend(
     tieBreakers: t.array(Matchup),
     tieBreakerContenders: t.array("string"),
     bestAnswers: t.array(BestAnswer),
+    highlights: t.array(Highlight),
     awards: t.array(Award),
     /** The honor-vote winner names, for the ceremony; empty when there was no (or no result of a) honor vote. */
     honorWinnerNames: t.array("string"),
@@ -149,6 +171,7 @@ export const WITCLASH_PUBLIC_FIELDS = [
   "tieBreakers",
   "tieBreakerContenders",
   "bestAnswers",
+  "highlights",
   "awards",
   "honorWinnerNames",
   "typing",

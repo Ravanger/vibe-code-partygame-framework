@@ -94,6 +94,25 @@ $effect(() => () => spotlight.destroy());
       </section>
     {/if}
 
+    {#if vm.highlights.length > 0}
+      <section class="highlights" aria-label="Highlights">
+        <h2 class="sticker">Highlights</h2>
+        {#each vm.highlights as highlight, i (highlight.kind + highlight.promptText + i)}
+          <div class="highlight card taped">
+            <span class="highlight-kind">{highlight.label}</span>
+            <p class="highlight-prompt">{highlight.promptText}</p>
+            {#each highlight.answers as answer}
+              <blockquote class="highlight-text">{answer.text}</blockquote>
+              <div class="highlight-meta">
+                <span class="highlight-author">{`by ${answer.authorName}`}</span>
+                <span class="chip">{`${answer.votes} vote${answer.votes !== 1 ? "s" : ""}`}</span>
+              </div>
+            {/each}
+          </div>
+        {/each}
+      </section>
+    {/if}
+
     {#if vm.matchups.length > 0}
       <details class="recap card">
         <summary>Matchup recap</summary>
@@ -110,12 +129,18 @@ $effect(() => () => spotlight.destroy());
     {/if}
   </div>
 
+  {#snippet exportButton()}
+    <button type="button" class="btn" onclick={() => vm.exportReplay()}>Export replay</button>
+  {/snippet}
+
   {#if vm.showNextRound}
     <ActionBar>
+      {@render exportButton()}
       <button type="button" class="btn btn--primary btn--big" onclick={() => vm.nextRound()}>Next Round</button>
     </ActionBar>
   {:else if vm.showPlayAgain}
     <ActionBar>
+      {@render exportButton()}
       <button type="button" class="btn btn--primary btn--big" onclick={() => vm.playAgain()}>Play Again</button>
     </ActionBar>
   {/if}
@@ -249,6 +274,57 @@ $effect(() => () => spotlight.destroy());
   }
 
   .award .chip {
+    background: var(--white);
+  }
+
+  .highlights {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .highlights h2 {
+    margin: 0;
+  }
+
+  .highlight {
+    --tape: var(--tape-pink);
+    width: 100%;
+    margin: 0;
+    background: var(--sun);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .highlight-kind {
+    font-family: var(--font-display);
+    font-size: calc(var(--fs-3) * var(--scale, 1));
+  }
+
+  .highlight-prompt {
+    margin: 0;
+    color: var(--ink-soft);
+    font-family: var(--font-hand);
+    font-size: calc(var(--fs-2) * var(--scale, 1));
+  }
+
+  .highlight-text {
+    margin: 0.25rem 0;
+    font-weight: 700;
+  }
+
+  .highlight-meta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    font-size: calc(var(--fs-2) * var(--scale, 1));
+  }
+
+  .highlight .chip {
     background: var(--white);
   }
 
