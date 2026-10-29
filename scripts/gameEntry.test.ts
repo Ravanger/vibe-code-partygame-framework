@@ -133,7 +133,7 @@ describe("discoverGames manifests", () => {
     expect(result.manifestErrors[0]?.problem).toMatch(/partygame/);
   });
 
-  it("keeps a valid manifest's label when another field is invalid", () => {
+  it("falls back to the package name and drops the rest when one manifest field is invalid", () => {
     const result = discoverGames([
       {
         folder: "wit-clash",
