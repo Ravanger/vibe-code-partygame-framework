@@ -27,7 +27,8 @@ export interface CloseCode {
 /**
  * Join/create close codes (4400-4406, 4409, 4426, 4429, 4500), each mapped to an {@link ErrorCode} and a
  * fixed message. `VERSION_MISMATCH`'s message is a template the server fills with both versions
- * (numbers only; a missing client version renders as `unknown`) before closing.
+ * (numbers only; a missing client version renders as `unknown`) before closing. 4403 is shared by
+ * `KICKED_REJOIN` and `JOIN_REFUSED`; only `JOIN_REFUSED`'s close carries a non-fixed, game-authored message.
  */
 export const CLOSE_CODES = {
   INVALID_OPTIONS: {
@@ -38,6 +39,12 @@ export const CLOSE_CODES = {
   ROOM_FULL: { code: 4401, errorCode: ErrorCode.NOT_ALLOWED, message: "Room is full" },
   SEAT_REMOVED: { code: 4402, errorCode: ErrorCode.KICKED, message: "Your seat was removed" },
   KICKED_REJOIN: { code: 4403, errorCode: ErrorCode.KICKED, message: "Removed by the host" },
+  /** A join refused by the game's `canJoin` hook; shares 4403, and its close carries the game-authored refusal message instead of a fixed one. */
+  JOIN_REFUSED: {
+    code: 4403,
+    errorCode: ErrorCode.NOT_ALLOWED,
+    message: "You cannot join this room.",
+  },
   WATCH_ONLY: {
     code: 4404,
     errorCode: ErrorCode.NOT_ALLOWED,
