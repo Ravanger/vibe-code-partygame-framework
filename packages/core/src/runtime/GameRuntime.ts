@@ -9,30 +9,31 @@ import {
   ServerMessage,
 } from "@partygame/shared";
 import { createActor } from "xstate";
-import { deepFreeze, newId } from "../utils.js";
+import { deepFreeze, newId, required } from "../utils.js";
 import { DispatchPipeline } from "./DispatchPipeline.js";
 import { Lobby } from "./lobby.js";
 import { buildPhaseMachine } from "./machineFactory.js";
+import { type CoreStrings, mergeCoreStrings } from "./strings.js";
 import { type Pending, PhaseLoopError, TransitionQueue } from "./TransitionQueue.js";
 import type {
   ActionDefinition,
+  ContextLogger,
   GameContext,
   GameDefinition,
+  Logger,
+  LogLine,
   MiddlewareContext,
   MiddlewareEvent,
   PhaseDefinition,
   PhaseMiddleware,
   PhaseState,
+  PlayerInfo,
   RejectOptions,
   RuntimeHost,
   TimerHandle,
 } from "./types.js";
+import { noopLogger } from "./types.js";
 
-const STOPPED_ERROR: ServerError = {
-  code: ErrorCode.NOT_ALLOWED,
-  message: "The game has ended",
-};
-const FAILURE_NOTICE = "The game stopped because of an unexpected error.";
 /** `PhaseDefinition.tickMs` when a ticking phase does not set one: 10 Hz. */
 const DEFAULT_TICK_MS = 100;
 
@@ -71,6 +72,12 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   private readonly state: TState;
   private options: TOptions;
   private readonly host: RuntimeHost;
+  /** The host's logger, or the no-op when the host provides none. */
+  private readonly logger: Logger;
+  /** The `ctx.log` wrapper over the host's logger: a call is an info line. */
+  private readonly contextLog: ContextLogger;
+  /** The definition's `strings` over the defaults; every core-owned message comes from it. */
+  private readonly strings: CoreStrings;
   private readonly lobby: Lobby<TState, TPrivate, TOptions>;
   private readonly builtins: Record<string, ActionDefinition<TState, TPrivate, TOptions, unknown>>;
   private readonly phases: Record<string, PhaseDefinition<TState, TPrivate, TOptions>>;
@@ -95,6 +102,15 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     this.spec = config.definition;
     this.state = config.state;
     this.host = config.host;
+    this.logger = this.host.log ?? noopLogger;
+    this.contextLog = Object.assign(
+      (event: string, fields?: LogLine["fields"]) => this.logger.info(event, fields),
+      {
+        warn: (event: string, fields?: LogLine["fields"]) => this.logger.warn(event, fields),
+        error: (event: string, fields?: LogLine["fields"]) => this.logger.error(event, fields),
+      },
+    );
+    this.strings = mergeCoreStrings(config.definition.strings);
     this.options = deepFreeze(config.options) as TOptions;
     const priv = this.spec.createPrivateState();
     if (typeof priv !== "object" || priv === null) throw new InvalidPrivateStateError();
@@ -124,6 +140,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
         Object.values(this.phases).some((p) => p.actions && type in p.actions),
       phaseName: () => this.phaseName,
       players: () => this.host.players(),
+      strings: this.strings,
       contextFactory: () => this.context(),
       filterLevel: () => this.spec.filterLevel?.(this.options) ?? "off",
       audienceOnce: (audienceKey, scope) => this.host.audienceOnce(audienceKey, scope),
@@ -168,7 +185,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
    * with `NOT_ALLOWED`.
    */
   dispatch(playerId: string, rawAction: unknown): ServerError | undefined {
-    if (this.stopped) return STOPPED_ERROR;
+    if (this.stopped) return this.stoppedError();
     this.rejections.length = 0;
     this.redactedRejections = 0;
     try {
@@ -187,7 +204,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
    * {@link GameRuntime.stop} every action fails with `NOT_ALLOWED`.
    */
   dispatchAudience(audienceKey: string, rawAction: unknown): ServerError | undefined {
-    if (this.stopped) return STOPPED_ERROR;
+    if (this.stopped) return this.stoppedError();
     this.rejections.length = 0;
     this.redactedRejections = 0;
     try {
@@ -244,6 +261,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       rng: () => this.host.rng(),
       newId: () => newId(() => this.host.rng()),
       now: () => this.host.now(),
+      log: this.contextLog,
       gameName: this.spec.name,
       gameVersion: this.spec.version,
       seed: this.host.seed,
@@ -316,7 +334,27 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   }
 
   private rosterChange(): void {
+    this.migrateHost();
     this.chain({ kind: "roster-change" }, () => this.current.onRosterChange?.(this.context()));
+  }
+
+  /** Promotes a new host when the current one is not connected, per `hostMigration` (#36). */
+  private migrateHost(): void {
+    const setHost = this.host.setHost;
+    if (setHost === undefined) return; // replay hosts never migrate: no picker call, no rng draw
+    const players = this.host.players();
+    const host = players.find((p) => p.role === "host");
+    if (host?.isConnected) return;
+    const candidates = players.filter((p) => p.isConnected);
+    if (candidates.length === 0) return;
+    const policy = this.spec.hostMigration ?? "next-seated";
+    const nextId =
+      typeof policy === "function"
+        ? policy(candidates, () => this.host.rng())
+        : pickHost(policy, candidates, () => this.host.rng());
+    // An id outside the candidates would demote the current host and promote nobody.
+    if (nextId === undefined || !candidates.some((p) => p.id === nextId)) return;
+    setHost(nextId);
   }
 
   private enter(name: string, phase: PhaseDefinition<TState, TPrivate, TOptions>): void {
@@ -382,7 +420,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
 
   /** The default failure policy: a fixed notice, and the Lobby when not already there. */
   private defaultFailurePolicy(): void {
-    this.state.notice = FAILURE_NOTICE;
+    this.state.notice = this.strings.failureNotice;
     if (this.phaseName === LOBBY_PHASE) return;
     if (!this.lobbyReturnFailed) {
       this.guarded(() => this.observeTransition(this.phaseName, LOBBY_PHASE));
@@ -504,6 +542,11 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     }
   }
 
+  /** Every action after `stop()` fails with this. */
+  private stoppedError(): ServerError {
+    return { code: ErrorCode.NOT_ALLOWED, message: this.strings.stopped };
+  }
+
   private recordFrameworkError(playerId: string, error: FrameworkError): ServerError {
     const serverError: ServerError = { code: error.code, message: CLIENT_MESSAGES[error.code] };
     this.rejections.push(serverError);
@@ -522,5 +565,27 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     this.rejections.push(error);
     if (redactPayload) ++this.redactedRejections;
     this.host.send(playerId, ServerMessage.ERROR, error);
+  }
+}
+
+/** Named `hostMigration` policies: pick from the connected seats in seat order (#36). */
+function pickHost(
+  policy: "oldest" | "next-seated" | "random" | "none",
+  candidates: PlayerInfo[],
+  rng: () => number,
+): string | undefined {
+  switch (policy) {
+    case "none":
+      return undefined;
+    case "oldest":
+      return required(candidates[0], "host candidate").id;
+    case "random":
+      return required(candidates[Math.floor(rng() * candidates.length)], "host candidate").id;
+    case "next-seated":
+      return (
+        candidates.find((c) => c.isActive && c.isReady)?.id ??
+        candidates.find((c) => c.isReady)?.id ??
+        required(candidates[0], "host candidate").id
+      );
   }
 }

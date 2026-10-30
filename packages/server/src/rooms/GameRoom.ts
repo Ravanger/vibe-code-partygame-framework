@@ -7,6 +7,8 @@ import {
   type GameDefinition,
   GameRuntime,
   getActionLog,
+  type LogFields,
+  type Logger,
   type PlayerInfo,
   type RuntimeHost,
   randomSeed,
@@ -75,6 +77,8 @@ export interface GameRoomConfig {
   rateLimiter: RateLimiter;
   /** The resolved limits behind `rateLimiter`, one bucket per message type. */
   rateLimits: ResolvedRateLimits;
+  /** Structured lifecycle logger; every line this room emits carries the room id. */
+  logger: Logger;
 }
 
 /** sha256 of a join secret; digests are compared with `timingSafeEqual`, so a wrong secret costs the same time as a right one. */
@@ -151,6 +155,23 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     return this.closeWith(CLOSE_CODES.INVALID_OPTIONS);
   }
 
+  /** One structured line for this room at `level`; the room id is bound here and wins over caller fields. */
+  private logLine(level: "info" | "warn" | "error", event: string, fields?: LogFields): void {
+    this.config.logger[level](event, { ...(fields ?? {}), roomId: this.roomId });
+  }
+
+  /** The type of a client action envelope, or `"unknown"` when it does not parse. */
+  private actionTypeOf(raw: unknown): string {
+    const envelope = ActionEnvelopeSchema.safeParse(raw);
+    return envelope.success ? envelope.data.type : "unknown";
+  }
+
+  /** Logs a runtime-rejected action (code and type only — never the payload) and returns the rejection. */
+  private rejected(raw: unknown, error: ProtocolError): ActionResult {
+    this.logLine("warn", "action.rejected", { code: error.code, action: this.actionTypeOf(raw) });
+    return { ok: false, error };
+  }
+
   private create(options: Record<string, unknown>): void {
     const { definition, stateClass, roomCodeService } = this.config;
     if (roomCodeService.size >= this.config.maxRooms) throw this.closeWith(CLOSE_CODES.SERVER_FULL);
@@ -214,6 +235,7 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
         return this.act(seat.id, raw);
       });
       this.onMessage(ClientMessage.EXPORT_REPLAY, (client): unknown => this.exportReplay(client));
+      this.logLine("info", "room.created");
     } catch (error) {
       roomCodeService.unregister(code);
       throw error;
@@ -280,10 +302,13 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     seat.id = playerId;
     seat.name = name && !this.nameTaken(playerId, name) ? name : "";
     seat.isActive = this.state.phase === LOBBY_PHASE;
+    // The first seat is host by acquisition (as in FakeHost); `hostMigration` only governs handover.
+    if (this.state.players.size === 0) seat.role = "host";
     this.state.players.set(playerId, seat);
     this.seatSecrets.set(playerId, sha256(seatSecret));
     this.bind(playerId, client.sessionId);
     this.rosterChanged();
+    this.logLine("info", "player.joined", { playerId });
   }
 
   async onDrop(client: Client): Promise<void> {
@@ -311,13 +336,17 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
       return;
     }
     const seat = this.seatBySession(client);
-    if (seat) this.removeSeat(seat.id);
+    if (seat) {
+      this.removeSeat(seat.id);
+      this.logLine("info", "player.left", { playerId: seat.id });
+    }
   }
 
   onDispose(): void {
     this.runtime?.stop();
     if (this.state?.roomCode) this.config.roomCodeService.unregister(this.state.roomCode);
     this.config.rateLimiter.drop(`${this.roomId}:`);
+    this.logLine("info", "room.disposed");
   }
 
   /** TimerHandle ids handed out by the host, mapped to their Colyseus Delayed. */
@@ -364,6 +393,17 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
       this.dropSeat(playerId, true);
       this.scheduleDisposeIfEmpty();
       client?.leave();
+    },
+    log: {
+      info: (event, fields) => this.logLine("info", event, fields),
+      warn: (event, fields) => this.logLine("warn", event, fields),
+      error: (event, fields) => this.logLine("error", event, fields),
+    },
+    setHost: (playerId) => {
+      for (const seat of this.state.players.values()) {
+        if (seat.id === playerId) seat.role = "host";
+        else if (seat.role === "host") seat.role = "player";
+      }
     },
     publishOptions: (options) => {
       this.roomOptions = options as Record<string, unknown>;
@@ -458,9 +498,13 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
   private act(playerId: string, raw: unknown): ActionResult {
     try {
       const error = this.runtime.dispatch(playerId, raw);
-      return error ? { ok: false, error } : { ok: true };
+      return error ? this.rejected(raw, error) : { ok: true };
     } catch (error) {
       logger.error("[GameRoom] action failed", error);
+      this.logLine("warn", "action.rejected", {
+        code: ErrorCode.INTERNAL,
+        action: this.actionTypeOf(raw),
+      });
       return ACTION_FAILED;
     }
   }
@@ -486,9 +530,13 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     }
     try {
       const error = this.runtime.dispatchAudience(playerId, raw);
-      return error ? { ok: false, error } : { ok: true };
+      return error ? this.rejected(raw, error) : { ok: true };
     } catch (error) {
       logger.error("[GameRoom] audience action failed", error);
+      this.logLine("warn", "action.rejected", {
+        code: ErrorCode.INTERNAL,
+        action: this.actionTypeOf(raw),
+      });
       return ACTION_FAILED;
     }
   }
@@ -563,6 +611,7 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     for (const ref of this.viewRefs.get(seat.id) ?? []) view?.add(ref);
     this.safely(() => this.runtime.syncPlayer(seat.id));
     this.rosterChanged();
+    this.logLine("info", "player.reconnected", { playerId: seat.id });
   }
 
   private dropSeat(playerId: string, rememberSecret: boolean): void {
@@ -587,25 +636,8 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
   }
 
   private rosterChanged(): void {
-    const seats = [...this.state.players.values()];
-    const host = seats.find((seat) => seat.role === "host");
-    if (!host?.isConnected) {
-      const next = this.nextHost(seats);
-      if (next) {
-        if (host) host.role = "player";
-        next.role = "host";
-      }
-    }
+    // Host migration (who becomes host when the current one disconnects) is the runtime's call (#36).
     this.safely(() => this.runtime.rosterChanged());
-  }
-
-  private nextHost(seats: PlayerSchema[]): PlayerSchema | undefined {
-    const connected = seats.filter((seat) => seat.isConnected);
-    return (
-      connected.find((seat) => seat.isActive && seat.isReady) ??
-      connected.find((seat) => seat.isReady) ??
-      connected[0]
-    );
   }
 
   private scheduleDisposeIfEmpty(): void {
