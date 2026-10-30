@@ -1,5 +1,6 @@
 import type { Countdown, GameConnectionManager } from "@partygame/game-client";
 import type { BaseGameState } from "@partygame/shared/schema";
+import { getStrings } from "./strings.js";
 
 const ANNOUNCE_AT = [30, 10, 5];
 
@@ -25,10 +26,10 @@ export class PhaseClock {
     return this.countdown.isUrgent;
   }
 
-  /** "N seconds remaining" at the announcement thresholds, otherwise "". */
+  /** The table's `secondsRemaining` text at the announcement thresholds, otherwise "". */
   get announcement(): string {
     const left = this.secondsLeft;
-    return this.announceAt.includes(left) ? `${left} seconds remaining` : "";
+    return this.announceAt.includes(left) ? getStrings().secondsRemaining(left) : "";
   }
 
   /** How long the phase was set to run, in whole seconds. */

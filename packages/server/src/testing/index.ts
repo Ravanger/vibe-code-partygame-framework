@@ -2,6 +2,7 @@ import type { Server as HttpServer } from "node:http";
 import { matchMaker, type Room, type Server } from "@colyseus/core";
 import { type Room as ClientRoom, ColyseusSDK } from "@colyseus/sdk";
 import { waitFor } from "@partygame/client-utils";
+import { noopLogger } from "@partygame/core";
 import { PROTOCOL_VERSION } from "@partygame/shared";
 import { createGameServer, type GameServerOptions } from "../createGameServer.js";
 import { listenGameServer } from "../gameTransport.js";
@@ -146,6 +147,8 @@ export async function bootTestServer(
     emptyRoomGraceMs: 30_000,
     ...options,
     roomCodeService,
+    // Silent under test unless the suite opts in with its own logger.
+    logger: options.logger ?? noopLogger,
   });
   await listenGameServer(server, port);
   const endpoint = `ws://127.0.0.1:${port}`;

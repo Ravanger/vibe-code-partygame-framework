@@ -36,6 +36,8 @@ export const makeCategories = (
           id: `cat-${c}-tb${p}`,
           text: `Tie-breaker ${c}.${p}`,
         })),
+        weight: 1,
+        rating: "family",
       }),
     ),
   );

@@ -1,13 +1,7 @@
-import type { GameConnectionManager } from "@partygame/game-client";
-import {
-  CLIENT_MESSAGES,
-  ROOM_CODE_LENGTH,
-  RoomCodeSchema,
-  sanitizeRoomCode,
-} from "@partygame/shared";
+import { defaultClientStrings, type GameConnectionManager } from "@partygame/game-client";
+import { CLIENT_MESSAGES, RoomCodeSchema, sanitizeRoomCode } from "@partygame/shared";
 import type { BaseGameState } from "@partygame/shared/schema";
-
-const CODE_INVALID = `Game code must be ${ROOM_CODE_LENGTH} letters (A-Z)`;
+import { errorText, getStrings } from "./strings.js";
 
 export class WelcomeViewModel<TState extends BaseGameState> {
   code = $state("");
@@ -40,7 +34,7 @@ export class WelcomeViewModel<TState extends BaseGameState> {
   async join(): Promise<void> {
     this.localError = undefined;
     if (!this.codeIsValid) {
-      this.localError = CODE_INVALID;
+      this.localError = this.invalidCodeText();
       return;
     }
     await this.attempt(() => this.manager.join(this.code));
@@ -49,7 +43,7 @@ export class WelcomeViewModel<TState extends BaseGameState> {
   async watch(): Promise<void> {
     this.localError = undefined;
     if (!this.codeIsValid) {
-      this.localError = CODE_INVALID;
+      this.localError = this.invalidCodeText();
       return;
     }
     await this.attempt(() => this.manager.joinAsSpectator(this.code));
@@ -68,12 +62,20 @@ export class WelcomeViewModel<TState extends BaseGameState> {
     this.localError = undefined;
   }
 
+  /** The table's room-code text, the English default when the table has none. */
+  private invalidCodeText(): string {
+    return getStrings().clientStrings.invalidRoomCode ?? defaultClientStrings.invalidRoomCode;
+  }
+
   private async attempt(connect: () => Promise<void>): Promise<void> {
     this.manager.dismissError();
     try {
       await connect();
     } catch {
-      this.localError = this.manager.lastServerError?.message ?? CLIENT_MESSAGES.CONNECTION_LOST;
+      const error = this.manager.lastServerError;
+      this.localError = error
+        ? errorText(error.code, error.message)
+        : CLIENT_MESSAGES.CONNECTION_LOST;
       this.manager.dismissError();
     }
   }

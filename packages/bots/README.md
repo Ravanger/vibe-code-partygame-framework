@@ -4,7 +4,7 @@ Bot players for any game: you write the strategy, the package handles joining, n
 
 | Import | What |
 |---|---|
-| `@partygame/bots` | `joinBots`, `BotTable`, `DemoTable` to seat bots; types `BotStrategy`, `BotKit`, `BotRoom` for your game |
+| `@partygame/bots` | `joinBots`, `BotTable`, `DemoTable` to seat bots, `ColyseusConnector` to open rooms; types `BotStrategy`, `BotKit`, `BotRoom` for your game |
 
 ## Write a strategy
 
@@ -64,6 +64,10 @@ await table.seatBots({ count: 3 });      // once a human has joined and named th
 ```
 
 On failure `joinBots` leaves the seats it took.
+
+## Room connector
+
+Every entry point opens rooms through a `RoomConnector` (`@partygame/client-utils`): pass `connector` to `joinBots`, `BotTable` or `DemoTable` to supply one, and a table reuses its connector for the bots it seats. The default is `ColyseusConnector(endpoint, { roomName?, stateClass })`, which holds the whole join flow (`joinById`, wait for the state sync, claim a name) over one Colyseus client; `roomName` is only needed to create rooms, so `create` rejects without it. The room code is resolved to an id once per batch — `joinBots` (and the tables, which forward their `resolveCode` option) call `resolveRoomCode` against `apiBaseOf(endpoint, apiPort)` by default and pass the id to every join.
 
 ## Run an unattended demo
 

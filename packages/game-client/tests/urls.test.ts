@@ -15,6 +15,34 @@ describe("resolveEndpoints", () => {
       apiPort: 2,
     });
   });
+
+  it("uses the page protocol for the endpoint", () => {
+    expect(resolveEndpoints({}, "example.com", "https:")).toEqual({
+      endpoint: "https://example.com:2567",
+      apiPort: 3001,
+    });
+    expect(resolveEndpoints({}, "example.com", "http:").endpoint).toBe("http://example.com:2567");
+  });
+
+  it("returns overrides.endpoint verbatim", () => {
+    expect(resolveEndpoints({ endpoint: "wss://proxy.example/game" }, "ignored")).toEqual({
+      endpoint: "wss://proxy.example/game",
+      apiPort: 3001,
+    });
+  });
+
+  it("returns overrides.apiBase verbatim; the manager prefers it over apiPort", () => {
+    expect(
+      resolveEndpoints(
+        { endpoint: "wss://proxy.example/game", apiBase: "https://proxy.example/api" },
+        "ignored",
+      ),
+    ).toEqual({
+      endpoint: "wss://proxy.example/game",
+      apiPort: 3001,
+      apiBase: "https://proxy.example/api",
+    });
+  });
 });
 
 describe("readCodeParam", () => {

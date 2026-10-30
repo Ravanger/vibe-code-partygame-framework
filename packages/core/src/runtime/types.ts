@@ -2,6 +2,7 @@ import type { FilterLevel } from "@partygame/content/filter";
 import type { ErrorCode } from "@partygame/shared";
 import type { z } from "zod";
 import type { Seed } from "../utils.js";
+import type { CoreStrings } from "./strings.js";
 
 /** `"host"` is the room owner; everyone else is a `"player"`. */
 export type PlayerRole = "host" | "player";
@@ -47,6 +48,48 @@ export interface PhaseState {
   notice?: string;
 }
 
+/** The level of a log line. */
+export type LogLevel = "info" | "warn" | "error";
+
+/**
+ * The field map of a log line: strings, numbers or booleans only — never player names, payloads
+ * or free text (see the framework guide's Logging section).
+ */
+export type LogFields = Record<string, string | number | boolean>;
+
+/**
+ * A structured log sink. Each call carries an event name and optional {@link LogFields}. Hosts
+ * bind the room id and timestamp before writing.
+ */
+export interface Logger {
+  info(event: string, fields?: LogFields): void;
+  warn(event: string, fields?: LogFields): void;
+  error(event: string, fields?: LogFields): void;
+}
+
+/** One logged line as captured by `FakeHost.logs`. */
+export interface LogLine {
+  level: LogLevel;
+  event: string;
+  fields?: LogFields;
+}
+
+/**
+ * The logger game code gets as `ctx.log`: call it for an `info` line, or use `.warn`/`.error`.
+ */
+export interface ContextLogger {
+  (event: string, fields?: LogFields): void;
+  warn(event: string, fields?: LogFields): void;
+  error(event: string, fields?: LogFields): void;
+}
+
+/** A no-op logger, usable as a host sink (`RuntimeHost.log`) or a context logger (`GameContext.log`): drops every line. */
+export const noopLogger: Logger & ContextLogger = Object.assign(() => {}, {
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+});
+
 /** What every hook receives. */
 export interface GameContext<TState extends PhaseState, TPrivate, TOptions> {
   /** Synced to every client. */
@@ -82,6 +125,8 @@ export interface GameContext<TState extends PhaseState, TPrivate, TOptions> {
   newId(): string;
   /** Epoch ms. */
   now(): number;
+  /** Logs a structured line for this room, e.g. `ctx.log("custom.event", { n: 1 })` (info) or `ctx.log.warn(...)`. Field values are strings, numbers or booleans; never names or payloads. */
+  log: ContextLogger;
   /** The definition's name; recorded in the action log header for replay sanity checks. */
   readonly gameName: string;
   /** The definition's version; recorded in the action log header for replay sanity checks. */
@@ -210,6 +255,16 @@ type DurationFn<TState extends PhaseState, TPrivate, TOptions> = {
   compute(ctx: GameContext<TState, TPrivate, TOptions>): number;
 }["compute"];
 
+/**
+ * Picks the next host from the connected seats in seat order; return `undefined` to leave the room
+ * without a host. An id that is not among `candidates` (stale, disconnected or never seated) is
+ * ignored and the current host stays in place.
+ */
+export type HostPicker = (candidates: PlayerInfo[], rng: () => number) => string | undefined;
+
+/** How the runtime picks a new host when the current one disconnects (`GameDefinition.hostMigration`). */
+export type HostMigration = "oldest" | "next-seated" | "random" | "none" | HostPicker;
+
 /** One phase of a game. */
 export interface PhaseDefinition<TState extends PhaseState, TPrivate, TOptions> {
   /** Milliseconds, or computed on entry. The timer restarts on every entry. */
@@ -254,12 +309,23 @@ export interface GameDefinition<
   startPhase: string;
   /** Start as soon as everyone is ready and `minPlayers` is met, without the host pressing Start. Default false. */
   autoStart?: boolean;
+  /**
+   * Who becomes host when the current one disconnects. `"next-seated"` (the default) keeps the
+   * historical order: first connected seat that is active and ready, else the first connected
+   * ready seat, else the first connected seat. `"oldest"` takes the first connected seat
+   * regardless of ready or active; `"random"` draws one with the room's seeded RNG (replayable);
+   * `"none"` leaves the room without a host until the old host returns (a removed old host keeps
+   * it that way — there is no recovery); a function picks from the connected seats itself.
+   */
+  hostMigration?: HostMigration;
   /** Parses the room-create options. Omit for a game without options. */
   options?: z.ZodType<TOptions>;
   /** The room's text-filter level, from the parsed options (e.g. a host-picked lobby option). Default `"off"`. */
   filterLevel?(options: TOptions): FilterLevel;
   /** Synchronously gates every join, including spectators and creation joins (which come through `onJoin`); see {@link CanJoinInput}. */
   canJoin?(input: CanJoinInput): CanJoinResult;
+  /** Replaces the core-owned messages (lobby built-ins, runtime refusals); see {@link CoreStrings}. `defineGame` fills in the defaults. */
+  strings?: Partial<CoreStrings>;
   /** Called once per room (and per replay table); must return a fresh object each call, never a shared one: the action log and phase timings are keyed by it. */
   createPrivateState(): TPrivate;
   /** `"Lobby"` is reserved and built in. */
@@ -308,8 +374,12 @@ export interface RuntimeHost {
   hideFrom(playerId: string, ref: object): void;
   /** Remove the seat and tell the player they were kicked. */
   kick(playerId: string): void;
+  /** Make `playerId` the host and demote the current one; the runtime's host migration calls it (#36). Hosts that omit it (replay) never migrate. */
+  setHost?(playerId: string): void;
   /** Make the (validated) room options visible to clients. */
   publishOptions(options: unknown): void;
+  /** Sinks the room's log lines; when omitted the runtime uses {@link noopLogger}. */
+  log?: Logger;
   now(): number;
   rng(): number;
   /** The room RNG seed (see `sfc32`); recorded in the action log header. */

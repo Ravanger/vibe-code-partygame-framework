@@ -104,6 +104,17 @@ describe("renderTemplate", () => {
     }
   });
 
+  it("renders a hostile display name as valid JSON in package.json", async () => {
+    const dest = await freshDir("cli-json-");
+    // A quote, a backslash and an embedded newline: each of these breaks a raw JSON string.
+    const names = { ...NAMES, displayName: 'Bob "The Builder" \\ \n test' };
+    await renderTemplate({ templateDir: SHIPPED_TEMPLATE, outDir: dest, names });
+    const parsed = JSON.parse(await readFile(join(dest, "package.json"), "utf8")) as {
+      partygame?: { name?: unknown };
+    };
+    expect(parsed.partygame?.name).toBe(names.displayName);
+  });
+
   it("renders a hostile display name escaped in HTML and Markdown contexts", async () => {
     // Inside the repo so biome can check the output (vcs.ignoreFile refuses paths outside it).
     const dest = await mkdtemp(join(fileURLToPath(new URL("../..", import.meta.url)), "qa-html-"));

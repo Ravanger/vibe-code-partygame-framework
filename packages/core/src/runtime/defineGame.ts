@@ -6,6 +6,7 @@ import {
   SET_OPTIONS,
   START_GAME,
 } from "@partygame/shared";
+import { mergeCoreStrings } from "./strings.js";
 import type {
   ActionDefinition,
   AudienceActionDefinition,
@@ -25,7 +26,8 @@ export class GameDefinitionError extends Error {
 }
 
 /**
- * Validates a game definition and returns it unchanged, typed.
+ * Validates a game definition, fills its `strings` with the merged table (mutating the spec),
+ * and returns it typed.
  * @throws {GameDefinitionError} listing every problem.
  */
 export function defineGame<
@@ -70,6 +72,7 @@ export function defineGame<
       }
   }
   if (problems.length > 0) throw new GameDefinitionError(problems);
+  spec.strings = mergeCoreStrings(spec.strings);
   return spec;
 }
 

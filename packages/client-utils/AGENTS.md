@@ -2,7 +2,7 @@
 
 ## Responsibility
 
-Browser- and Node-safe client helpers: `waitFor`, `resolveRoomCode`, `joinUrl`, `tvUrl`, `between`, `claimName`, `apiBaseOf`. No `node:` imports, no Colyseus.
+Browser- and Node-safe client helpers: `waitFor`, `resolveRoomCode`, `joinUrl`, `tvUrl`, `between`, `claimName`, `apiBaseOf`, and the `RoomConnector` interface non-UI clients open rooms through. No `node:` imports, no Colyseus.
 
 ## Never put here
 
@@ -16,7 +16,7 @@ Browser- and Node-safe client helpers: `waitFor`, `resolveRoomCode`, `joinUrl`, 
 
 ## Public entry points
 
-- `.`: `waitFor`, `resolveRoomCode`, `joinUrl`, `tvUrl`, `between`, `claimName`, `apiBaseOf`, type `Parsed`, type `SeatRoom`.
+- `.`: `waitFor`, `resolveRoomCode`, `joinUrl`, `tvUrl`, `between`, `claimName`, `apiBaseOf`, type `Parsed`, type `SeatRoom`, types `RoomConnector`, `ConnectedRoom`, `RoomCreateOptions`, `RoomJoinOptions`.
 
 ## Tests
 
