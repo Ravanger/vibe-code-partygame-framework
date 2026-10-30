@@ -329,9 +329,13 @@ describe("TerminalPlayer", () => {
     it("reads the real clock when none is injected", async () => {
       const left: string[] = [];
       const { room } = setup(clockStrategy(left));
+      // One timestamp for both fields: phaseEndsAt - serverNow is exactly 30 s, so the
+      // estimate can only move forward from there and the ceiling stays within 29|30 no
+      // matter how long the real-clock read lags behind the observation.
+      const now = Date.now();
       room.state.phase = "One";
-      room.state.serverNow = Date.now();
-      room.state.phaseEndsAt = Date.now() + 30_000;
+      room.state.serverNow = now;
+      room.state.phaseEndsAt = now + 30_000;
       room.patch();
       expect(left.at(-1)).toMatch(/^ (29|30)s left$/);
     });

@@ -3,6 +3,7 @@ import { type Client, type Delayed, logger, Room, ServerError } from "@colyseus/
 import { type Schema, StateView } from "@colyseus/schema";
 import type { FilterLevel, TextFilter } from "@partygame/content/filter";
 import {
+  evaluateJoin,
   type GameDefinition,
   GameRuntime,
   getActionLog,
@@ -235,6 +236,17 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     }
     if (!spectator && this.seatList && !this.seatList.has(playerId)) {
       throw this.closeWith(CLOSE_CODES.WATCH_ONLY);
+    }
+    // A rejoin of an already-seated player (a new session presenting the seat secret) skips the hook.
+    if (!this.state.players.has(playerId)) {
+      const verdict = evaluateJoin(this.config.definition, {
+        playerId,
+        ...(name === undefined ? {} : { name }),
+        spectator: spectator === true,
+        joinData: parsed.data.joinData ?? {},
+        roster: this.host.players(),
+      });
+      if (!verdict.ok) throw this.closeWith(CLOSE_CODES.JOIN_REFUSED, verdict.message);
     }
     const view = new StateView();
     client.view = view;

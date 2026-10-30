@@ -65,7 +65,7 @@ $effect(() => () => vm.destroy());
     padding: 0.75rem 1rem;
     border: var(--outline);
     border-radius: var(--radius-card);
-    background: var(--sun);
+    background: var(--color-2);
     color: var(--ink);
     font-weight: 600;
     text-align: center;
