@@ -20,6 +20,6 @@ const roomId = await resolveRoomCode("http://192.168.1.5:3001", "ABCD"); // GET 
 
 ## Room connector
 
-`RoomConnector<TState>` is the seam non-UI clients (bots, terminal) use to open rooms: `create(options)` opens a new room and `join(code, options)` joins one through the game's code API, both returning a connected `ConnectedRoom<TState>` once its state has synced. `options` carries `playerId` plus anything forwarded to the server as room/join options; `join` additionally consumes `name` (claim it in the room) and `timeoutMs` (state-sync wait). The package is Colyseus-free by design, so the interface lives here and the Colyseus implementation (`ColyseusConnector`) lives in `@partygame/bots`.
+`RoomConnector<TState>` is the seam non-UI clients (bots, terminal) use to open rooms: `create(options)` opens a new room and `join(roomId, options)` joins one by its id (a code resolved with `resolveRoomCode`), both returning a connected `ConnectedRoom<TState>` once its state has synced. `options` carries `playerId` plus anything forwarded to the server as room/join options; `join` additionally consumes `name` (claim it in the room) and `timeoutMs` (state-sync wait). The package is Colyseus-free by design, so the interface lives here and the Colyseus implementation (`ColyseusConnector`) lives in `@partygame/bots`.
 
 Depends on: `@partygame/shared`

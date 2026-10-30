@@ -10,8 +10,8 @@ import type { BotConnection, BotKit, BotRoom } from "./types.js";
 export interface BotTableOptions<TState extends BaseGameState>
   extends BotConnection,
     BotKit<TState>,
-    Pick<JoinBotsOptions<TState>, "nameFor" | "timeoutMs"> {
-  /** Opens the room and seats the bots; a Colyseus connector for `endpoint` and `apiPort` by default. */
+    Pick<JoinBotsOptions<TState>, "nameFor" | "timeoutMs" | "resolveCode"> {
+  /** Opens the room and seats the bots; a Colyseus connector for `endpoint` by default. */
   connector?: RoomConnector<TState>;
 }
 
@@ -32,7 +32,7 @@ export class BotTable<TState extends BaseGameState> {
   constructor(private readonly options: BotTableOptions<TState>) {
     this.connector =
       options.connector ??
-      new ColyseusConnector(options.endpoint, options.apiPort, {
+      new ColyseusConnector(options.endpoint, {
         roomName: options.roomName,
         stateClass: options.stateClass,
       });
@@ -83,6 +83,7 @@ export class BotTable<TState extends BaseGameState> {
       strategy,
       bot,
       nameFor,
+      resolveCode,
       timeoutMs: joinTimeoutMs,
     } = this.options;
     this.bots = await joinBots({
@@ -95,6 +96,7 @@ export class BotTable<TState extends BaseGameState> {
       connector: this.connector,
       ...(bot ? { bot } : {}),
       ...(nameFor ? { nameFor } : {}),
+      ...(resolveCode === undefined ? {} : { resolveCode }),
       ...(joinTimeoutMs === undefined ? {} : { timeoutMs: joinTimeoutMs }),
     });
     await this.leaveRoom();

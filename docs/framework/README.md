@@ -988,9 +988,10 @@ Overridable: `BotOptions` `thinkMs` (default `[2000, 6000]`), `reactMs` (`[500, 
 `timeoutMs` (`BotTable` and `DemoTable` also take `nameFor` and `timeoutMs`); `DemoTable` `hostName`, `roomOptions`, `isFinished`. Every failure leaves the seats it took.
 
 Every entry point opens rooms through a `RoomConnector` (the interface and option types live in `@partygame/client-utils`):
-pass `connector` to any of them, or let it default to this package's `ColyseusConnector`, which holds the join flow (resolve code,
-`joinById`, wait for the state sync, claim a name) over one Colyseus client. A table reuses its connector for the bots it seats.
-Example: `games/wit-clash/bots/witClashBot.ts`.
+pass `connector` to any of them, or let it default to this package's `ColyseusConnector`, which holds the join flow (`joinById`,
+wait for the state sync, claim a name) over one Colyseus client. The room code is resolved to an id once per batch — by default
+`resolveRoomCode` against `apiBaseOf(endpoint, apiPort)` (injectable as `resolveCode`) — and the id goes to every join. A table
+reuses its connector for the bots it seats. Example: `games/wit-clash/bots/witClashBot.ts`.
 
 A game declares its kit once as the `botKit` field of its declaration (`gamePackage.ts`) and never joins bots by hand:
 the `bun run bots <CODE> [count]` entry is a stub calling `botsCli(gamePackage)` from `@partygame/game-kit`, which seats

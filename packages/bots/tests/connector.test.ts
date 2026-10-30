@@ -6,7 +6,7 @@ import type {
 } from "@partygame/client-utils";
 import { ClientMessage } from "@partygame/shared";
 import { PlayerSchema } from "@partygame/shared/schema";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { BotTable } from "../src/BotTable.js";
 import { ColyseusConnector } from "../src/ColyseusConnector.js";
 import { DemoTable } from "../src/DemoTable.js";
@@ -72,29 +72,32 @@ class FakeRoom implements ConnectedRoom<TapState> {
   }
 }
 
-/** A hand-written connector: records every call; joins of one code land in the same room, as on a real server. */
+/** The fake world's resolver: the code is already the id. */
+const IDENTITY = async (code: string) => code;
+
+/** A hand-written connector: records every call; joins of one id land in the same room, as on a real server. */
 class FakeConnector implements RoomConnector<TapState> {
   readonly created: RoomCreateOptions[] = [];
-  readonly joined: Array<{ code: string; options: RoomJoinOptions }> = [];
+  readonly joined: Array<{ roomId: string; options: RoomJoinOptions }> = [];
   readonly rooms: FakeRoom[] = [];
-  private readonly byCode = new Map<string, FakeRoom>();
+  private readonly byId = new Map<string, FakeRoom>();
 
   async create(options: RoomCreateOptions): Promise<ConnectedRoom<TapState>> {
     this.created.push(options);
     const room = new FakeRoom("WXYZ");
     room.seat(options.playerId);
     this.rooms.push(room);
-    this.byCode.set(room.state.roomCode, room);
+    this.byId.set(room.state.roomCode, room);
     return room;
   }
 
-  async join(code: string, options: RoomJoinOptions): Promise<ConnectedRoom<TapState>> {
-    this.joined.push({ code, options });
-    let room = this.byCode.get(code);
+  async join(roomId: string, options: RoomJoinOptions): Promise<ConnectedRoom<TapState>> {
+    this.joined.push({ roomId, options });
+    let room = this.byId.get(roomId);
     if (room === undefined) {
-      room = new FakeRoom(code);
+      room = new FakeRoom(roomId);
       this.rooms.push(room);
-      this.byCode.set(code, room);
+      this.byId.set(roomId, room);
     }
     room.seat(options.playerId);
     if (options.name !== undefined) {
@@ -116,10 +119,30 @@ describe("the RoomConnector seam", () => {
       apiPort: 0,
       bot: FAST,
       connector: fake,
+      resolveCode: IDENTITY,
     });
-    expect(fake.joined.map((each) => each.code)).toEqual(["WXYZ", "WXYZ"]);
+    expect(fake.joined.map((each) => each.roomId)).toEqual(["WXYZ", "WXYZ"]);
     expect(bots.map((bot) => bot.name)).toEqual(["Bot 1", "Bot 2"]);
     expect(fake.rooms[0]?.sent).toContainEqual({ type: ClientMessage.SET_NAME, payload: "Bot 1" });
+  });
+
+  it("resolves the room code once per batch and joins every bot by the resolved id", async () => {
+    const fake = new FakeConnector();
+    const resolveCode = vi.fn(async (code: string) => code);
+    const bots = await joinBots({
+      ...kit,
+      code: "WXYZ",
+      count: 3,
+      endpoint: "ws://unused",
+      apiPort: 0,
+      bot: FAST,
+      connector: fake,
+      resolveCode,
+    });
+    expect(resolveCode).toHaveBeenCalledTimes(1);
+    expect(resolveCode).toHaveBeenCalledWith("WXYZ");
+    expect(fake.joined.map((each) => each.roomId)).toEqual(["WXYZ", "WXYZ", "WXYZ"]);
+    expect(bots).toHaveLength(3);
   });
 
   it("BotTable opens through the injected connector as a spectator and reuses it for its bots", async () => {
@@ -130,6 +153,7 @@ describe("the RoomConnector seam", () => {
       apiPort: 0,
       bot: FAST,
       connector: fake,
+      resolveCode: IDENTITY,
     });
     const code = await table.open();
     expect(code).toBe("WXYZ");
@@ -145,7 +169,7 @@ describe("the RoomConnector seam", () => {
     room.state.players.set("human-1", human);
     const bots = await table.seatBots({ count: 1 });
     expect(bots.map((bot) => bot.name)).toEqual(["Bot 1"]);
-    expect(fake.joined.map((each) => each.code)).toEqual(["WXYZ"]);
+    expect(fake.joined.map((each) => each.roomId)).toEqual(["WXYZ"]);
     await table.leave();
   });
 
@@ -158,6 +182,7 @@ describe("the RoomConnector seam", () => {
       bots: 1,
       isFinished: () => true,
       connector: fake,
+      resolveCode: IDENTITY,
     });
     const code = await demo.open();
     expect(code).toBe("WXYZ");
@@ -173,12 +198,12 @@ describe("the RoomConnector seam", () => {
     expect(hostRoom.sent).toContainEqual({ type: ClientMessage.SET_NAME, payload: "Host Bot" });
     const bots = await demo.seatBots();
     expect(bots.map((bot) => bot.name)).toEqual(["Bot 1"]);
-    expect(fake.joined.map((each) => each.code)).toEqual(["WXYZ"]);
+    expect(fake.joined.map((each) => each.roomId)).toEqual(["WXYZ"]);
     await demo.leave();
   });
 
   it("ColyseusConnector refuses to create rooms without a roomName", async () => {
-    const connector = new ColyseusConnector("ws://localhost:1", 0, { stateClass: TapState });
+    const connector = new ColyseusConnector("ws://localhost:1", { stateClass: TapState });
     await expect(connector.create({ playerId: "p" })).rejects.toThrow("roomName");
   });
 });

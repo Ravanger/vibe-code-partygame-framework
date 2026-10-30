@@ -1,4 +1,4 @@
-import { claimName, type RoomConnector } from "@partygame/client-utils";
+import { apiBaseOf, claimName, type RoomConnector, resolveRoomCode } from "@partygame/client-utils";
 import type { BaseGameState } from "@partygame/shared/schema";
 import { BotPlayer } from "./BotPlayer.js";
 import { ColyseusConnector } from "./ColyseusConnector.js";
@@ -16,8 +16,10 @@ export interface JoinBotsOptions<TState extends BaseGameState>
   /** Name for the n-th free slot (1-based); "Bot n" by default. Taken names are skipped. */
   nameFor?: (n: number) => string;
   timeoutMs?: number;
-  /** Opens the bot seats; a Colyseus connector for `endpoint` and `apiPort` by default. */
+  /** Opens the bot seats; a Colyseus connector for `endpoint` by default. */
   connector?: RoomConnector<TState>;
+  /** Resolves the room code to a roomId once per batch; `resolveRoomCode` against `apiBaseOf(endpoint, apiPort)` by default. */
+  resolveCode?: (code: string) => Promise<string>;
 }
 
 class BotJoiner<TState extends BaseGameState> {
@@ -26,14 +28,18 @@ class BotJoiner<TState extends BaseGameState> {
   constructor(private readonly options: JoinBotsOptions<TState>) {
     this.connector =
       options.connector ??
-      new ColyseusConnector(options.endpoint, options.apiPort, { stateClass: options.stateClass });
+      new ColyseusConnector(options.endpoint, { stateClass: options.stateClass });
   }
 
   async join(): Promise<BotPlayer<TState>[]> {
-    const { code, count } = this.options;
+    const { code, count, resolveCode } = this.options;
+    const resolve =
+      resolveCode ??
+      ((c) => resolveRoomCode(apiBaseOf(this.options.endpoint, this.options.apiPort), c));
+    const roomId = await resolve(code);
     const bots: BotPlayer<TState>[] = [];
     try {
-      for (let i = 0; i < count; ++i) bots.push(await this.joinOne(code, i));
+      for (let i = 0; i < count; ++i) bots.push(await this.joinOne(roomId, i));
     } catch (error) {
       await Promise.allSettled(bots.map((bot) => bot.leave()));
       throw error;
@@ -41,11 +47,11 @@ class BotJoiner<TState extends BaseGameState> {
     return bots;
   }
 
-  private async joinOne(code: string, index: number): Promise<BotPlayer<TState>> {
+  private async joinOne(roomId: string, index: number): Promise<BotPlayer<TState>> {
     const { strategy, bot, playerIds } = this.options;
     const timeoutMs = this.options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     const playerId = playerIds?.[index] ?? crypto.randomUUID();
-    const room = await this.connector.join(code, { playerId, timeoutMs });
+    const room = await this.connector.join(roomId, { playerId, timeoutMs });
     try {
       const name = this.freeName(room.state);
       await claimName(room, playerId, name, timeoutMs);

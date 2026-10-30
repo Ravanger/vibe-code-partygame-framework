@@ -1,11 +1,9 @@
 import { Client, type Room } from "@colyseus/sdk";
 import {
-  apiBaseOf,
   claimName,
   type RoomConnector,
   type RoomCreateOptions,
   type RoomJoinOptions,
-  resolveRoomCode,
   waitFor,
 } from "@partygame/client-utils";
 import { PROTOCOL_VERSION } from "@partygame/shared";
@@ -17,16 +15,13 @@ const DEFAULT_TIMEOUT_MS = 5000;
 /** `RoomConnector` over a real game server: one Colyseus client for every room it opens. */
 export class ColyseusConnector<TState extends BaseGameState> implements RoomConnector<TState> {
   private readonly client: Client;
-  private readonly apiBase: string;
 
   constructor(
     endpoint: string,
-    apiPort: number,
     /** The game's room name and state class; `roomName` is only needed to create rooms. */
     private readonly game: Pick<BotKit<TState>, "stateClass"> & { roomName?: string },
   ) {
     this.client = new Client(endpoint);
-    this.apiBase = apiBaseOf(endpoint, apiPort);
   }
 
   async create(options: RoomCreateOptions): Promise<Room<unknown, TState>> {
@@ -39,9 +34,8 @@ export class ColyseusConnector<TState extends BaseGameState> implements RoomConn
     );
   }
 
-  async join(code: string, options: RoomJoinOptions): Promise<Room<unknown, TState>> {
+  async join(roomId: string, options: RoomJoinOptions): Promise<Room<unknown, TState>> {
     const { playerId, name, timeoutMs, ...joinOptions } = options;
-    const roomId = await resolveRoomCode(this.apiBase, code);
     const room = await this.client.joinById<TState>(
       roomId,
       {

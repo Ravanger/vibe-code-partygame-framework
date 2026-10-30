@@ -31,6 +31,6 @@ export interface RoomJoinOptions {
 export interface RoomConnector<TState extends BaseGameState> {
   /** Creates a room of the game and returns it connected. */
   create(options: RoomCreateOptions): Promise<ConnectedRoom<TState>>;
-  /** Joins the room with `code` through the game's code API and returns it once its state has synced. */
-  join(code: string, options: RoomJoinOptions): Promise<ConnectedRoom<TState>>;
+  /** Joins the room `roomId` (a code resolved with `resolveRoomCode`) and returns it once its state has synced. */
+  join(roomId: string, options: RoomJoinOptions): Promise<ConnectedRoom<TState>>;
 }

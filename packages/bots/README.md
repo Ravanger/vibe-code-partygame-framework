@@ -67,7 +67,7 @@ On failure `joinBots` leaves the seats it took.
 
 ## Room connector
 
-Every entry point opens rooms through a `RoomConnector` (`@partygame/client-utils`): pass `connector` to `joinBots`, `BotTable` or `DemoTable` to supply one, and a table reuses its connector for the bots it seats. The default is `ColyseusConnector(endpoint, apiPort, { roomName?, stateClass })`, which holds the whole join flow (resolve code, `joinById`, wait for the state sync, claim a name) over one Colyseus client; `roomName` is only needed to create rooms, so `create` rejects without it.
+Every entry point opens rooms through a `RoomConnector` (`@partygame/client-utils`): pass `connector` to `joinBots`, `BotTable` or `DemoTable` to supply one, and a table reuses its connector for the bots it seats. The default is `ColyseusConnector(endpoint, { roomName?, stateClass })`, which holds the whole join flow (`joinById`, wait for the state sync, claim a name) over one Colyseus client; `roomName` is only needed to create rooms, so `create` rejects without it. The room code is resolved to an id once per batch — `joinBots` (and the tables, which forward their `resolveCode` option) call `resolveRoomCode` against `apiBaseOf(endpoint, apiPort)` by default and pass the id to every join.
 
 ## Run an unattended demo
 

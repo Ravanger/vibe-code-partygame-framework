@@ -12,7 +12,7 @@ const OPEN_TIMEOUT_MS = 5000;
 export interface DemoTableOptions<TState extends BaseGameState>
   extends BotConnection,
     BotKit<TState>,
-    Pick<JoinBotsOptions<TState>, "nameFor" | "timeoutMs"> {
+    Pick<JoinBotsOptions<TState>, "nameFor" | "timeoutMs" | "resolveCode"> {
   /** Bots besides the host bot. */
   bots: number;
   /** Room options the host creates the room with; `seats` is added. */
@@ -20,7 +20,7 @@ export interface DemoTableOptions<TState extends BaseGameState>
   hostName?: string;
   /** True once the game has reached its end. */
   isFinished: (state: TState) => boolean;
-  /** Creates the room and seats the bots; a Colyseus connector for `endpoint` and `apiPort` by default. */
+  /** Creates the room and seats the bots; a Colyseus connector for `endpoint` by default. */
   connector?: RoomConnector<TState>;
 }
 
@@ -37,7 +37,7 @@ export class DemoTable<TState extends BaseGameState> {
     this.botIds = Array.from({ length: options.bots }, () => crypto.randomUUID());
     this.connector =
       options.connector ??
-      new ColyseusConnector(options.endpoint, options.apiPort, {
+      new ColyseusConnector(options.endpoint, {
         roomName: options.roomName,
         stateClass: options.stateClass,
       });
@@ -88,7 +88,8 @@ export class DemoTable<TState extends BaseGameState> {
 
   async seatBots(): Promise<BotPlayer<TState>[]> {
     const { code } = this.openSeat();
-    const { endpoint, apiPort, stateClass, strategy, bot, bots, nameFor, timeoutMs } = this.options;
+    const { endpoint, apiPort, stateClass, strategy, bot, bots, nameFor, resolveCode, timeoutMs } =
+      this.options;
     this.bots = await joinBots({
       code,
       count: bots,
@@ -100,6 +101,7 @@ export class DemoTable<TState extends BaseGameState> {
       connector: this.connector,
       ...(bot ? { bot } : {}),
       ...(nameFor ? { nameFor } : {}),
+      ...(resolveCode === undefined ? {} : { resolveCode }),
       ...(timeoutMs === undefined ? {} : { timeoutMs }),
     });
     return this.bots;
