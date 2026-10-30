@@ -69,7 +69,7 @@ Build the waiting room the same way and call `vm.destroy()` on teardown: `$effec
 
 ## Settings from your options schema
 
-`LobbySettingsViewModel` takes the zod schema you pass to `defineGame`. Every bounded numeric option becomes a labelled number input for the host and a read-only line for everyone else; every string-enum option becomes a row of choice buttons, one per value (a commit that is not one of them is dropped without sending); `labels` overrides the generated names.
+`LobbySettingsViewModel` takes the zod schema you pass to `defineGame`. Every bounded numeric option (`.min()` and `.max()`) becomes a labelled number input for the host — step 1 for integers, the schema's `multipleOf` when present, else `any` — and a read-only line for everyone else; every boolean option becomes a checkbox; every string-enum option becomes a row of choice buttons, one per value (a commit that is not one of them is dropped without sending); every plain string option becomes a text input, bounded by `maxlength` when the schema bounds it. Options the form cannot render (unbounded numbers, arrays, objects, enums with non-string choices) are skipped and reported to the optional `onUnsupported(key, reason)` config — by default a console warning, once per key per instance; `labels` overrides the generated names.
 
 ```ts
 import type { GameConnectionManager } from "@partygame/game-client";
@@ -183,6 +183,12 @@ The package ships `theme-contract.css`: a baseline for every contract variable (
 - Sticker colours: `PlayerSticker` sets `data-color` to a palette index (0–3); the contract maps `[data-color="0"]` to `--color-1` through `[data-color="3"]` to `--color-4`.
 - Global classes: `card`, `taped`, `sticker`, `hand`, `sr-only` (shipped with the contract), `btn` (`btn--ghost`, `btn--danger`); `action-bar` is rendered by `ActionBar`, which styles nothing.
 - Chrome vs artwork: chrome — the framework components' look (lobby, join overlays, scoreboard/podium, game controls, timer) — is themed through these variables; artwork — your screens and cards — is yours to design.
+
+## Accessibility
+
+Every component is checked by axe in the jsdom tests via `expectNoViolations(container, "Component")` from `tests/support/a11y.ts`; zero violations is the gate. `color-contrast` is disabled there because jsdom cannot compute it — contrast stays a game-level test (#57). Interactive components are also driven with `userEvent` for tab order and Escape handling, and `tests/reducedMotion.test.ts` fails on any `transition`/`animation` declaration outside an `@media (prefers-reduced-motion: no-preference)` block.
+
+A violation that cannot be fixed yet goes into `tests/support/a11yAllowList.ts`: one entry per rule and component, each with a comment explaining why it is acceptable and the issue that tracks the fix.
 
 Depends on: `@partygame/game-client`, `@partygame/shared`, `svelte`, `uqr`, `zod`
 

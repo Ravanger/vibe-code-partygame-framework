@@ -6,11 +6,12 @@ import { BluffState } from "../src/state.js";
 import App from "./App.svelte";
 import { resolveEndpoints } from "./config.js";
 
-const { endpoint, apiPort } = resolveEndpoints();
+const { endpoint, apiPort, apiBase } = resolveEndpoints();
 const manager = new GameConnectionManager<BluffState>({
   endpoint,
   roomName: META.roomName,
   apiPort,
+  ...(apiBase === undefined ? {} : { apiBase }),
   storagePrefix: "bluff",
   rootSchema: BluffState,
 });

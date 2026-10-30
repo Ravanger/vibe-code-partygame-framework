@@ -19,6 +19,8 @@ const TOKEN_KEYS = {
   __DisplayName__: "displayName",
   // JSON.stringify of the display name, quotes included: safe inside TS/JS string literals.
   __DisplayNameJson__: "displayNameJson",
+  // The display name escaped for the inside of a JSON string, quotes excluded: safe in package.json.
+  __DisplayNameJsonText__: "displayNameJsonText",
   // HTML-entity-escaped display name: safe in index.html and Svelte text nodes.
   __DisplayNameHtml__: "displayNameHtml",
   // Markdown-safe display name (entities plus doubled backslashes, line breaks as spaces).
@@ -35,15 +37,18 @@ const TOKEN_RE = new RegExp(Object.keys(TOKEN_KEYS).join("|"), "g");
  */
 type TokenValues = Names & {
   displayNameJson: string;
+  displayNameJsonText: string;
   displayNameHtml: string;
   displayNameMd: string;
 };
 
 function tokenValues(names: Names): TokenValues {
   // Derived here so the raw display name stays the single source (create may override it).
+  const json = JSON.stringify(names.displayName);
   return {
     ...names,
-    displayNameJson: JSON.stringify(names.displayName),
+    displayNameJson: json,
+    displayNameJsonText: json.slice(1, -1),
     displayNameHtml: htmlEscape(names.displayName),
     displayNameMd: markdownEscape(names.displayName),
   };

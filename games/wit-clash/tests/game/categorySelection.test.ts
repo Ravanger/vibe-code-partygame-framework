@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { resolveCategoryVote } from "../../src/categoryVote.js";
+import type { Category } from "../../src/content/CategoryRepository.js";
+import { categoriesFromArray } from "../../src/content/CategoryRepository.js";
 import { Table } from "./support.js";
 
 const started = (players = 4) => {
@@ -7,6 +9,22 @@ const started = (players = 4) => {
   t.start();
   return t;
 };
+
+/** Exactly three categories, one of them mature: every candidate is offered when asked for three. */
+const mixedCategories = () =>
+  categoriesFromArray(
+    (["fam-1", "fam-2", "mat-1"] as const).map(
+      (id): Category => ({
+        id,
+        name: id,
+        emoji: "x",
+        prompts: [{ id: `${id}-p`, text: `Prompt ${id}` }],
+        tieBreakers: [],
+        weight: 1,
+        rating: id === "mat-1" ? "mature" : "family",
+      }),
+    ),
+  );
 
 describe("entering CategorySelection", () => {
   it("waits in the Lobby until the host presses Start", () => {
@@ -31,6 +49,20 @@ describe("entering CategorySelection", () => {
     expect(t.state.roundNumber).toBe(1);
     expect(t.state.totalRounds).toBe(3);
     expect(t.state.selectedCategory).toBe("");
+  });
+
+  it("offers a mature category when contentRating is any", () => {
+    const t = new Table({ options: { contentRating: "any" }, categories: mixedCategories() });
+    t.start();
+    expect([...t.state.categoryOptions].map((o) => o.id)).toContain("mat-1");
+  });
+
+  it("never offers a mature category when contentRating is family", () => {
+    const t = new Table({ options: { contentRating: "family" }, categories: mixedCategories() });
+    t.start();
+    const ids = [...t.state.categoryOptions].map((o) => o.id);
+    expect(ids).not.toContain("mat-1");
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   it("sets the deadline from the voting option and publishes round count from options", () => {
