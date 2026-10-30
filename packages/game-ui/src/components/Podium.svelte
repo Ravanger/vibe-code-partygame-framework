@@ -27,7 +27,11 @@ const stickerSize = (step: PodiumStep<TRow>): number => {
               <PlayerSticker name={player.name} playerId={player.playerId} size={stickerSize(step)} />
               <span class="occupant-name">{player.name}</span>
               {#if player.isMe}
-                <span class="you hand">{`← ${strings.you}`}</span>
+                <span class="you hand"
+                  ><span aria-hidden="true">&larr;</span
+                  ><span aria-hidden="true">{strings.you}</span
+                  ><span class="sr-only">{strings.thisIsYou}</span></span
+                >
               {/if}
               {#if extra}{@render extra(player)}{/if}
               <span class="occupant-score">{`${player.score} ${strings.scoreUnit}`}</span>

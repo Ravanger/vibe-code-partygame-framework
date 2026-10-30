@@ -20,6 +20,7 @@
           "BotTable": {},
           "BotTableOptions": {},
           "BotTurn": {},
+          "ColyseusConnector": {},
           "DelayRange": {},
           "DemoTable": {},
           "DemoTableOptions": {},
@@ -37,9 +38,13 @@
           "default": "./dist/index.js"
         },
         "symbols": {
+          "ConnectedRoom": {},
           "Parsed": {},
           "RoomCodeError": {},
           "RoomCodeFailure": {},
+          "RoomConnector": {},
+          "RoomCreateOptions": {},
+          "RoomJoinOptions": {},
           "SeatRoom": {},
           "apiBaseOf": {},
           "between": {},
@@ -106,8 +111,10 @@
           "default": "./dist/index.js"
         },
         "symbols": {
+          "ContentFile": {},
           "LoadJsoncDirOptions": {},
           "loadJsoncDir": {},
+          "loadJsoncDirWithFiles": {},
           "stripJsonComments": {}
         }
       },
@@ -150,6 +157,8 @@
           "GameDefinitionError": {},
           "GameRuntime": {},
           "GameRuntimeConfig": {},
+          "HostMigration": {},
+          "HostPicker": {},
           "InvalidPrivateStateError": {},
           "JoinGate": {},
           "LeaderboardEntry": {},
@@ -297,10 +306,15 @@
           "ConnectionStatus": {},
           "Countdown": {},
           "EndpointOverrides": {},
+          "FeedbackBus": {},
+          "FeedbackEvent": {},
           "GameConnectionManager": {},
           "GameConnectionOptions": {},
           "JoinOptions": {},
+          "MessageFeedbackEvent": {},
+          "PhaseFeedbackEvent": {},
           "RoomLike": {},
+          "UrgentFeedbackEvent": {},
           "defaultClientStrings": {},
           "readCodeParam": {},
           "resolveEndpoints": {}

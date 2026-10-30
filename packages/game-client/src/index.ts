@@ -1,5 +1,12 @@
 export { Countdown } from "./countdown.svelte.js";
 export {
+  FeedbackBus,
+  type FeedbackEvent,
+  type MessageFeedbackEvent,
+  type PhaseFeedbackEvent,
+  type UrgentFeedbackEvent,
+} from "./FeedbackBus.js";
+export {
   type ConnectionStatus,
   GameConnectionManager,
   type GameConnectionOptions,

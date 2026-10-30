@@ -98,6 +98,8 @@ describe("daily mode", () => {
           text: `Can ${id}.${p}`,
         })),
         tieBreakers: [],
+        weight: 1,
+        rating: "family",
       })),
     );
     const t = new Table({
@@ -123,6 +125,8 @@ describe("daily mode", () => {
           text: `Can alpha.${p}`,
         })),
         tieBreakers: [{ id: "alpha-tb0", text: "Canon tie-breaker." }],
+        weight: 1,
+        rating: "family",
       },
     ]);
     const t = new Table({

@@ -3,21 +3,25 @@ import type { LobbySettingsViewModel } from "@partygame/game-ui";
 // biome-ignore lint/correctness/noUnusedImports: used by the generics attribute
 import type { BaseGameState } from "@partygame/shared/schema";
 import { getStrings } from "../strings.js";
+import { nextId } from "./uniqueId.js";
 
 const { vm }: { vm: LobbySettingsViewModel<TState> } = $props();
 const strings = getStrings();
+
+// One id namespace per mounted instance, so two instances never share input ids.
+const idPrefix = nextId("lobby-settings");
 </script>
 
 <details class="settings card" open={vm.startsOpen}>
   <summary class="summary-with-marker">{strings.gameSettings}</summary>
-  <dl>
-    {#each vm.fields as field (field.key)}
-      <div class="setting">
-        {#if vm.canEdit}
-          {#if field.options}
+  {#if vm.canEdit}
+    <ul class="settings-list">
+      {#each vm.fields as field (field.key)}
+        <li class="setting">
+          {#if field.kind === "select"}
             <span class="setting-label">{field.label}</span>
             <fieldset class="choices" aria-label={field.label}>
-              {#each field.options as choice (choice)}
+              {#each field.choices as choice (choice)}
                 <button
                   type="button"
                   class:active={vm.valueOf(field.key) === choice}
@@ -28,26 +32,49 @@ const strings = getStrings();
                 </button>
               {/each}
             </fieldset>
-          {:else}
-            <label for={`opt-${field.key}`}>{field.label}</label>
+          {:else if field.kind === "boolean"}
+            <label for={`${idPrefix}-${field.key}`}>{field.label}</label>
             <input
-              id={`opt-${field.key}`}
+              id={`${idPrefix}-${field.key}`}
+              type="checkbox"
+              checked={vm.valueOf(field.key) === "true"}
+              oninput={(e) => vm.setDraft(field.key, String(e.currentTarget.checked))}
+              onchange={() => vm.commit(field.key)}
+            />
+          {:else if field.kind === "text"}
+            <label for={`${idPrefix}-${field.key}`}>{field.label}</label>
+            <input
+              id={`${idPrefix}-${field.key}`}
+              type="text"
+              maxlength={field.maxLength}
+              value={vm.valueOf(field.key)}
+              oninput={(e) => vm.setDraft(field.key, e.currentTarget.value)}
+              onchange={() => vm.commit(field.key)}
+            />
+          {:else}
+            <label for={`${idPrefix}-${field.key}`}>{field.label}</label>
+            <input
+              id={`${idPrefix}-${field.key}`}
               type="number"
               min={field.min}
               max={field.max}
-              step="1"
+              step={field.step}
               value={vm.valueOf(field.key)}
               oninput={(e) => vm.setDraft(field.key, e.currentTarget.value)}
               onchange={() => vm.commit(field.key)}
             />
           {/if}
-        {:else}
-          <dt>{field.label}</dt>
-          <dd>{vm.valueOf(field.key)}</dd>
-        {/if}
-      </div>
-    {/each}
-  </dl>
+        </li>
+      {/each}
+    </ul>
+  {:else}
+    <dl>
+      {#each vm.fields as field (field.key)}
+        <dt>{field.label}</dt>
+        <dd>{vm.valueOf(field.key)}</dd>
+      {/each}
+    </dl>
+  {/if}
 </details>
 
 <style>
@@ -85,6 +112,17 @@ const strings = getStrings();
   dl {
     margin: 0.5rem 0 0;
     display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 12px;
+    row-gap: 0.5rem;
+    align-items: center;
+  }
+
+  .settings-list {
+    margin: 0.5rem 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
     gap: 0.5rem;
   }
 
@@ -99,10 +137,13 @@ const strings = getStrings();
   dt,
   label {
     color: var(--ink-soft);
+    min-height: 44px;
   }
 
   dd {
     margin: 0;
+    justify-self: end;
+    min-height: 44px;
     font-family: var(--font-display);
     font-size: calc(var(--fs-3) * var(--scale, 1));
   }
@@ -118,6 +159,15 @@ const strings = getStrings();
     font-family: var(--font-display);
     font-size: var(--fs-3);
     text-align: center;
+  }
+
+  input[type="text"] {
+    width: 8rem;
+  }
+
+  input[type="checkbox"] {
+    width: auto;
+    padding: 0;
   }
 
   .setting-label {

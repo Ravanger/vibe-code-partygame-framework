@@ -9,7 +9,7 @@ import {
   ServerMessage,
 } from "@partygame/shared";
 import { createActor } from "xstate";
-import { deepFreeze, newId } from "../utils.js";
+import { deepFreeze, newId, required } from "../utils.js";
 import { DispatchPipeline } from "./DispatchPipeline.js";
 import { Lobby } from "./lobby.js";
 import { buildPhaseMachine } from "./machineFactory.js";
@@ -24,6 +24,7 @@ import type {
   PhaseDefinition,
   PhaseMiddleware,
   PhaseState,
+  PlayerInfo,
   RejectOptions,
   RuntimeHost,
   TimerHandle,
@@ -316,7 +317,27 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   }
 
   private rosterChange(): void {
+    this.migrateHost();
     this.chain({ kind: "roster-change" }, () => this.current.onRosterChange?.(this.context()));
+  }
+
+  /** Promotes a new host when the current one is not connected, per `hostMigration` (#36). */
+  private migrateHost(): void {
+    const setHost = this.host.setHost;
+    if (setHost === undefined) return; // replay hosts never migrate: no picker call, no rng draw
+    const players = this.host.players();
+    const host = players.find((p) => p.role === "host");
+    if (host?.isConnected) return;
+    const candidates = players.filter((p) => p.isConnected);
+    if (candidates.length === 0) return;
+    const policy = this.spec.hostMigration ?? "next-seated";
+    const nextId =
+      typeof policy === "function"
+        ? policy(candidates, () => this.host.rng())
+        : pickHost(policy, candidates, () => this.host.rng());
+    // An id outside the candidates would demote the current host and promote nobody.
+    if (nextId === undefined || !candidates.some((p) => p.id === nextId)) return;
+    setHost(nextId);
   }
 
   private enter(name: string, phase: PhaseDefinition<TState, TPrivate, TOptions>): void {
@@ -527,5 +548,27 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     this.rejections.push(error);
     if (redactPayload) ++this.redactedRejections;
     this.host.send(playerId, ServerMessage.ERROR, error);
+  }
+}
+
+/** Named `hostMigration` policies: pick from the connected seats in seat order (#36). */
+function pickHost(
+  policy: "oldest" | "next-seated" | "random" | "none",
+  candidates: PlayerInfo[],
+  rng: () => number,
+): string | undefined {
+  switch (policy) {
+    case "none":
+      return undefined;
+    case "oldest":
+      return required(candidates[0], "host candidate").id;
+    case "random":
+      return required(candidates[Math.floor(rng() * candidates.length)], "host candidate").id;
+    case "next-seated":
+      return (
+        candidates.find((c) => c.isActive && c.isReady)?.id ??
+        candidates.find((c) => c.isReady)?.id ??
+        required(candidates[0], "host candidate").id
+      );
   }
 }
