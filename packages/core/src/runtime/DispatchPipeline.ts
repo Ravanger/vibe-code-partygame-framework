@@ -5,6 +5,7 @@ import {
   ErrorCode,
   FrameworkError,
 } from "@partygame/shared";
+import { type CoreStrings, mergeCoreStrings } from "./strings.js";
 import type {
   ActionContext,
   ActionDefinition,
@@ -27,6 +28,8 @@ interface DispatchPipelineDeps<TState extends PhaseState, TPrivate, TOptions> {
   /** The current phase name, for rejection messages. */
   phaseName(): string;
   players(): PlayerInfo[];
+  /** The definition's strings table (merged or partial); the refusal messages come from it, defaults to English when omitted. */
+  strings?: Partial<CoreStrings>;
   contextFactory(): GameContext<TState, TPrivate, TOptions>;
   /** The room's current text-filter level (the definition's `filterLevel`, default `"off"`). */
   filterLevel(): FilterLevel;
@@ -42,7 +45,12 @@ interface DispatchPipelineDeps<TState extends PhaseState, TPrivate, TOptions> {
  * of the client contract.
  */
 export class DispatchPipeline<TState extends PhaseState, TPrivate, TOptions> {
-  constructor(private readonly deps: DispatchPipelineDeps<TState, TPrivate, TOptions>) {}
+  /** The definition's `strings` over the defaults; the refusal messages come from it. */
+  private readonly strings: CoreStrings;
+
+  constructor(private readonly deps: DispatchPipelineDeps<TState, TPrivate, TOptions>) {
+    this.strings = mergeCoreStrings(deps.strings);
+  }
 
   /** Run one raw action through every step; rejections send `ERROR` to the sender via `deps.reject`. */
   run(playerId: string, rawAction: unknown): void {
@@ -59,14 +67,14 @@ export class DispatchPipeline<TState extends PhaseState, TPrivate, TOptions> {
     const type = envelope.data.type;
     const action = this.lookup(type);
     if (action.from === "audience") {
-      throw new FrameworkError(ErrorCode.NOT_ALLOWED, `${type} is an audience action`);
+      throw new FrameworkError(ErrorCode.NOT_ALLOWED, this.strings.audienceActionFromSeat(type));
     }
     const player = this.deps.players().find((p) => p.id === playerId);
     if (!player || (action.from === "host" && player.role !== "host")) {
-      throw new FrameworkError(ErrorCode.UNAUTHORIZED, `Not allowed to send ${type}`);
+      throw new FrameworkError(ErrorCode.UNAUTHORIZED, this.strings.notAllowedToSend(type));
     }
     if (!player.isActive) {
-      throw new FrameworkError(ErrorCode.NOT_ACTIVE, "You are waiting to be let in");
+      throw new FrameworkError(ErrorCode.NOT_ACTIVE, this.strings.waitingToBeLetIn);
     }
     const payload = action.payload.safeParse(envelope.data);
     if (!payload.success) {
@@ -112,7 +120,7 @@ export class DispatchPipeline<TState extends PhaseState, TPrivate, TOptions> {
     const type = envelope.data.type;
     const action = this.lookup(type);
     if (action.from !== "audience") {
-      throw new FrameworkError(ErrorCode.UNAUTHORIZED, `Not allowed to send ${type}`);
+      throw new FrameworkError(ErrorCode.UNAUTHORIZED, this.strings.notAllowedToSend(type));
     }
     const payload = action.payload.safeParse(envelope.data);
     if (!payload.success) {
@@ -145,8 +153,8 @@ export class DispatchPipeline<TState extends PhaseState, TPrivate, TOptions> {
       throw new FrameworkError(
         declaredElsewhere ? ErrorCode.WRONG_PHASE : ErrorCode.UNKNOWN_ACTION,
         declaredElsewhere
-          ? `${type} is not allowed in ${this.deps.phaseName()}`
-          : `Unknown action ${type}`,
+          ? this.strings.notAllowedInPhase(type, this.deps.phaseName())
+          : this.strings.unknownAction(type),
       );
     }
     return action;
