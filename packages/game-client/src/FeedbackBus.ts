@@ -33,6 +33,7 @@ export class FeedbackBus {
     FeedbackEvent["type"],
     Set<(event: FeedbackEvent) => void>
   >();
+  private readonly changeListeners = new Set<() => void>();
 
   constructor(private readonly isReducedMotion: () => boolean) {}
 
@@ -48,9 +49,28 @@ export class FeedbackBus {
     }
     const wrapped = callback as (event: FeedbackEvent) => void;
     callbacks.add(wrapped);
+    this.notifyChange();
     return () => {
       callbacks.delete(wrapped);
+      this.notifyChange();
     };
+  }
+
+  /** Whether at least one listener is subscribed to a kind of event. */
+  hasListeners(type: FeedbackEvent["type"]): boolean {
+    return (this.listeners.get(type)?.size ?? 0) > 0;
+  }
+
+  /** Registers a callback for subscriber-count changes (the first `on` and the last unsubscribe); returns an unsubscribe. The manager uses it to start and stop its state watchers only while someone listens. */
+  onChange(callback: () => void): () => void {
+    this.changeListeners.add(callback);
+    return () => {
+      this.changeListeners.delete(callback);
+    };
+  }
+
+  private notifyChange(): void {
+    for (const callback of [...this.changeListeners]) callback();
   }
 
   /** Feeds a phase transition. Called by the manager, not by games. */

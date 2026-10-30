@@ -1,5 +1,6 @@
 import { BaseGameState } from "@partygame/shared/schema";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { FeedbackBus } from "../src/FeedbackBus.js";
 import { GameConnectionManager } from "../src/GameConnectionManager.svelte.js";
 import { StubRoom } from "../src/testing.js";
 
@@ -103,6 +104,31 @@ describe("FeedbackBus", () => {
     room.patch();
     await vi.advanceTimersByTimeAsync(500);
     expect(seen).toHaveLength(0);
+  });
+
+  it("runs no state watchers while nothing listens for phase or urgent", async () => {
+    vi.useFakeTimers();
+    const { manager, state, room } = setup(() => ({ matches: false }));
+    manager.attach(room);
+    expect(vi.getTimerCount()).toBe(0); // no urgency interval with zero subscribers
+
+    state.phase = "Playing";
+    room.patch(); // unlistened: nothing is observed, no baseline is established
+
+    const seen: unknown[] = [];
+    const offPhase = manager.feedback.on("phase", (event) => seen.push(event));
+    const offUrgent = manager.feedback.on("urgent", (event) => seen.push(event));
+    expect(vi.getTimerCount()).toBeGreaterThan(0); // the first subscriber starts the watchers
+
+    state.phase = "Results";
+    room.patch();
+    await vi.advanceTimersByTimeAsync(500);
+    // a late subscriber sees only transitions it actually observed, starting from its own baseline
+    expect(seen).toEqual([{ type: "phase", from: "Playing", to: "Results", reducedMotion: false }]);
+
+    offPhase();
+    offUrgent();
+    expect(vi.getTimerCount()).toBe(0); // the last unsubscribe stops them again
   });
 
   it("relays server broadcasts for registered names and stops when the last listener leaves", () => {
@@ -214,6 +240,19 @@ describe("FeedbackBus", () => {
     state.phase = "Lobby";
     room.patch(); // the old room still fires; the manager has left it
     expect(seen).toHaveLength(2);
+  });
+
+  it("stops notifying onChange subscribers once they unsubscribe", () => {
+    const bus = new FeedbackBus(() => false);
+    let calls = 0;
+    const off = bus.onChange(() => {
+      ++calls;
+    });
+    bus.on("phase", () => undefined);
+    expect(calls).toBe(1);
+    off();
+    bus.on("urgent", () => undefined);
+    expect(calls).toBe(1); // no more notifications after the unsubscribe
   });
 
   it("falls back to window.matchMedia when no matchMedia option is given", () => {

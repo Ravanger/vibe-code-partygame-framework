@@ -115,6 +115,8 @@ export class GameConnectionManager<
     this.apiBase = `${url.protocol.replace("ws", "http")}//${url.hostname}:${port}`;
     const matchMedia = options.matchMedia ?? ((query: string) => window.matchMedia(query));
     this.feedback = new FeedbackBus(() => matchMedia("(prefers-reduced-motion: reduce)").matches);
+    // The state watchers only run while someone listens for phase or urgent events.
+    this.feedback.onChange(() => this.syncStateWatchers());
     // Protocol errors are internal plumbing, not a game broadcast: no feedback relay.
     this.bus.on(ServerMessage.ERROR, (payload) => this.serverErrorReceived(payload));
   }
@@ -359,10 +361,7 @@ export class GameConnectionManager<
         this.detach("disconnected");
       }),
     );
-    const watchPhase = () => this.observePhase(room);
-    room.onStateChange(watchPhase);
-    this.phaseWatcher = { room, callback: watchPhase };
-    this.startUrgencyTimer(room);
+    this.syncStateWatchers();
     this.status = "connected";
     this.rememberToken(room);
     this.rememberRoomCode(room);
@@ -446,14 +445,35 @@ export class GameConnectionManager<
 
   private detach(status?: ConnectionStatus): void {
     this.unbindState();
+    this.stopStateWatchers();
+    this.bus.unbind();
+    this.room = undefined;
+    if (status) this.status = status;
+  }
+
+  /** Starts the phase watcher and urgency timer when someone listens for `phase` or `urgent` events, and stops them when the last such listener leaves. The first observation after starting is the silent baseline, so a late subscriber only sees transitions it actually observed. */
+  private syncStateWatchers(): void {
+    const room = this.room;
+    if (room === undefined) return;
+    if (!this.feedback.hasListeners("phase") && !this.feedback.hasListeners("urgent")) {
+      this.stopStateWatchers();
+      return;
+    }
+    if (this.phaseWatcher !== undefined) return; // already running
+    const watchPhase = () => this.observePhase(room);
+    room.onStateChange(watchPhase);
+    this.phaseWatcher = { room, callback: watchPhase };
+    this.startUrgencyTimer(room);
+    watchPhase(); // establish the baseline at the moment listening begins
+  }
+
+  /** Stops the phase watcher and urgency timer and resets the phase baseline so a later (re)start re-establishes it silently. */
+  private stopStateWatchers(): void {
     this.phaseWatcher?.room.onStateChange.remove(this.phaseWatcher.callback);
     this.phaseWatcher = undefined;
     // Reset the phase baseline so a reconnect re-establishes it silently, like the urgency side.
     this.lastPhase = undefined;
     this.stopUrgencyTimer();
-    this.bus.unbind();
-    this.room = undefined;
-    if (status) this.status = status;
   }
 
   /** Emits a phase event when `state.phase` changes; the first observation after connecting is the silent baseline. */

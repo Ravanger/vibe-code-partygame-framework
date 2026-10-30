@@ -109,7 +109,7 @@ clock.secondsLeft; clock.isUrgent; clock.isExpired; // reactive
 
 `manager.feedback` is a typed event stream for attaching sound or animation, without the framework shipping assets. Every event carries a `reducedMotion` flag (read live from `prefers-reduced-motion`) so a game can choose quiet or subtle feedback:
 
-- `{ type: "phase", from, to }` — when `state.phase` changes; the first phase observed after connecting is the silent baseline.
+- `{ type: "phase", from, to }` — when `state.phase` changes; the first phase observed after connecting (or after the first listener subscribes) is the silent baseline.
 - `{ type: "urgent" }` — once per phase, when the countdown enters its last ten seconds.
 - `{ type: "message", name, payload }` — a server broadcast for a name registered with `onMessage`.
 
@@ -120,6 +120,8 @@ manager.feedback.on("phase", (event) => {
 manager.feedback.on("urgent", () => tickSound());
 const off = manager.feedback.on("message", (event) => chime(event.name)); // returns an unsubscribe
 ```
+
+The manager runs its state watchers (phase observation and the urgency timer) only while at least one `phase` or `urgent` listener exists: they start on the first subscription, stop when the last one leaves, and a late subscriber's first observed phase becomes its silent baseline. `hasListeners(type)` reports whether a kind has subscribers; `onChange(callback)` (returns an unsubscribe) fires on every subscriber-count change — that is how the manager keeps the watchers in step.
 
 `matchMedia` is injectable through the `matchMedia` option for tests; it defaults to `window.matchMedia`.
 
