@@ -506,7 +506,8 @@
           "TokenBucket": {},
           "createApiHandler": {},
           "createGameServer": {},
-          "createResolveCodeThrottle": {}
+          "createResolveCodeThrottle": {},
+          "jsonLineLogger": {}
         }
       },
       "./bun": {
