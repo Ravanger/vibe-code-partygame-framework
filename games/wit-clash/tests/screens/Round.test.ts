@@ -1,5 +1,6 @@
+import { ErrorCode } from "@partygame/shared";
 import { fireEvent, render, screen, within } from "@testing-library/svelte";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import CategoryVote from "../../ui/screens/CategoryVote.svelte";
 import MatchupReveal from "../../ui/screens/MatchupReveal.svelte";
 import MatchupVote from "../../ui/screens/MatchupVote.svelte";
@@ -414,5 +415,85 @@ describe("Results screen", () => {
     c.state.isFinalRound = true;
     render(Results, { manager: c.manager });
     expect(screen.queryByText(/wins with/i)).not.toBeInTheDocument();
+  });
+
+  describe("replay export", () => {
+    class TestURL extends URL {
+      static createObjectURL = vi.fn((_blob: unknown) => "blob:test");
+      static revokeObjectURL = vi.fn((_url: string) => {});
+    }
+
+    function clickedAnchors(): HTMLAnchorElement[] {
+      const anchors: HTMLAnchorElement[] = [];
+      vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+        this: HTMLAnchorElement,
+      ) {
+        anchors.push(this);
+      });
+      return anchors;
+    }
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+      vi.unstubAllGlobals();
+      TestURL.createObjectURL.mockReset();
+      TestURL.revokeObjectURL.mockReset();
+    });
+
+    it("lets the host download the bundle as JSON", async () => {
+      const c = results("host", true);
+      c.room.reply = { bundleVersion: 1, name: "WitClash", snapshots: [] };
+      const anchors = clickedAnchors();
+      vi.stubGlobal("URL", TestURL);
+      render(Results, { manager: c.manager });
+      await fireEvent.click(screen.getByRole("button", { name: "Export replay" }));
+      expect(c.room.requests).toEqual([{ type: "EXPORT_REPLAY", payload: undefined }]);
+      expect(TestURL.createObjectURL).toHaveBeenCalledOnce();
+      const blob = TestURL.createObjectURL.mock.calls[0]?.[0] as Blob;
+      expect(JSON.parse(await blob.text())).toMatchObject({ name: "WitClash" });
+      expect(anchors).toHaveLength(1);
+      expect(anchors[0]?.download).toBe("witclash-replay.json");
+      expect(TestURL.revokeObjectURL).toHaveBeenCalledWith("blob:test");
+    });
+
+    it("downloads under a generic name when the bundle has no game name", async () => {
+      const c = results("host", true);
+      c.room.reply = { bundleVersion: 1, snapshots: [] };
+      const anchors = clickedAnchors();
+      vi.stubGlobal("URL", TestURL);
+      render(Results, { manager: c.manager });
+      await fireEvent.click(screen.getByRole("button", { name: "Export replay" }));
+      expect(anchors).toHaveLength(1);
+      expect(anchors[0]?.download).toBe("replay-replay.json");
+    });
+
+    it("offers the export on the mid-round bar too", () => {
+      const c = results("host", false);
+      render(Results, { manager: c.manager });
+      expect(screen.getByRole("button", { name: "Export replay" })).toBeInTheDocument();
+    });
+
+    it("remembers the server's refusal and downloads nothing", async () => {
+      const c = results("host", true);
+      c.room.reply = {
+        ok: false,
+        error: { code: ErrorCode.UNAUTHORIZED, message: "only the host can export" },
+      };
+      const anchors = clickedAnchors();
+      vi.stubGlobal("URL", TestURL);
+      render(Results, { manager: c.manager });
+      await fireEvent.click(screen.getByRole("button", { name: "Export replay" }));
+      expect(TestURL.createObjectURL).not.toHaveBeenCalled();
+      expect(anchors).toHaveLength(0);
+      expect(c.manager.lastServerError).toEqual({
+        code: ErrorCode.UNAUTHORIZED,
+        message: "only the host can export",
+      });
+    });
+
+    it("hides the export from non-hosts", () => {
+      render(Results, { manager: results("player", true).manager });
+      expect(screen.queryByRole("button", { name: "Export replay" })).not.toBeInTheDocument();
+    });
   });
 });

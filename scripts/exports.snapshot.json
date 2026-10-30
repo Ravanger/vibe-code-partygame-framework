@@ -106,8 +106,10 @@
           "default": "./dist/index.js"
         },
         "symbols": {
+          "ContentFile": {},
           "LoadJsoncDirOptions": {},
           "loadJsoncDir": {},
+          "loadJsoncDirWithFiles": {},
           "stripJsonComments": {}
         }
       },
@@ -142,12 +144,15 @@
           "AudienceActionContext": {},
           "AudienceActionDefinition": {},
           "AudienceScope": {},
+          "CanJoinInput": {},
+          "CanJoinResult": {},
           "GameContext": {},
           "GameDefinition": {},
           "GameDefinitionError": {},
           "GameRuntime": {},
           "GameRuntimeConfig": {},
           "InvalidPrivateStateError": {},
+          "JoinGate": {},
           "LeaderboardEntry": {},
           "LeaderboardInput": {},
           "LoggingMiddlewareOptions": {},
@@ -172,6 +177,7 @@
           "composeLeaderboard": {},
           "defineGame": {},
           "departedIds": {},
+          "evaluateJoin": {},
           "getActionLog": {},
           "getPhaseTimings": {},
           "isBelowMinimum": {},
@@ -292,6 +298,7 @@
           "EndpointOverrides": {},
           "GameConnectionManager": {},
           "GameConnectionOptions": {},
+          "JoinOptions": {},
           "RoomLike": {},
           "readCodeParam": {},
           "resolveEndpoints": {}
@@ -360,6 +367,7 @@
         "symbols": {
           "AppRouter": {},
           "GameControlsViewModel": {},
+          "GestureTarget": {},
           "LobbyPlayer": {},
           "LobbySettingsConfig": {},
           "LobbySettingsViewModel": {},
@@ -379,6 +387,9 @@
           "RouterScreen": {},
           "STICKER_SHAPES": {},
           "SnapshotManager": {},
+          "SoundPolicy": {},
+          "SoundPolicyOptions": {},
+          "SoundStorage": {},
           "StickerShape": {},
           "TypingReporter": {},
           "WaitingRoomViewModel": {},
@@ -407,10 +418,15 @@
           "PlayerSticker": {},
           "Podium": {},
           "QrCode": {},
+          "SoundToggle": {},
           "StatusPanel": {},
           "Timer": {}
         },
         "source": true
+      },
+      "./theme-contract.css": {
+        "target": "./theme-contract.css",
+        "symbols": {}
       }
     },
     "launcher": {
@@ -542,6 +558,9 @@
           "ExportReplayResponse": {},
           "FRAMEWORK_VERSION": {},
           "FrameworkError": {},
+          "JOIN_DATA_KEY_MAX_LENGTH": {},
+          "JOIN_DATA_MAX_KEYS": {},
+          "JOIN_DATA_VALUE_MAX_LENGTH": {},
           "JoinOptionsSchema": {},
           "KICK_PLAYER": {},
           "LOBBY_PHASE": {},

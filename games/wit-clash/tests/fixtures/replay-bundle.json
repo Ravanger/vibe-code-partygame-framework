@@ -1,0 +1,5199 @@
+{
+  "bundleVersion": 1,
+  "name": "WitClash",
+  "frameworkVersion": "0.1.0",
+  "gameVersion": "1",
+  "contentHash": "625d548870c968a44e6996bc747937a70ac6ce1d0141ec3b31df8ea2fb520adb",
+  "log": {
+    "header": {
+      "seed": [2067655499, 2040670471, 1615455804, 3362201977],
+      "game": "WitClash",
+      "version": "1",
+      "protocolVersion": 1,
+      "startedAt": 1793080473398
+    },
+    "entries": [
+      {
+        "seq": 1,
+        "t": 1793080473398,
+        "phase": "Lobby",
+        "kind": "enter"
+      },
+      {
+        "seq": 2,
+        "t": 1793080473402,
+        "phase": "Lobby",
+        "kind": "roster-change"
+      },
+      {
+        "seq": 3,
+        "t": 1793080473415,
+        "phase": "Lobby",
+        "kind": "roster-change"
+      },
+      {
+        "seq": 4,
+        "t": 1793080473418,
+        "phase": "Lobby",
+        "kind": "roster-change"
+      },
+      {
+        "seq": 5,
+        "t": 1793080473439,
+        "phase": "Lobby",
+        "kind": "roster-change"
+      },
+      {
+        "seq": 6,
+        "t": 1793080473461,
+        "phase": "Lobby",
+        "kind": "roster-change"
+      },
+      {
+        "seq": 7,
+        "t": 1793080473482,
+        "phase": "Lobby",
+        "kind": "roster-change"
+      },
+      {
+        "seq": 8,
+        "t": 1793080473504,
+        "phase": "Lobby",
+        "kind": "roster-change"
+      },
+      {
+        "seq": 9,
+        "t": 1793080473524,
+        "phase": "Lobby",
+        "kind": "roster-change"
+      },
+      {
+        "seq": 10,
+        "t": 1793080473546,
+        "phase": "Lobby",
+        "kind": "action",
+        "actionType": "START_GAME",
+        "senderId": "host-Host-0001",
+        "payload": {}
+      },
+      {
+        "seq": 11,
+        "t": 1793080473546,
+        "phase": "Lobby",
+        "kind": "transition",
+        "from": "Lobby",
+        "to": "CategorySelection"
+      },
+      {
+        "seq": 12,
+        "t": 1793080473547,
+        "phase": "CategorySelection",
+        "kind": "enter"
+      },
+      {
+        "seq": 13,
+        "t": 1793080473611,
+        "phase": "CategorySelection",
+        "kind": "action",
+        "actionType": "VOTE_CATEGORY",
+        "senderId": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+        "payload": {
+          "categoryId": "cat-3"
+        }
+      },
+      {
+        "seq": 14,
+        "t": 1793080473612,
+        "phase": "CategorySelection",
+        "kind": "action",
+        "actionType": "VOTE_CATEGORY",
+        "senderId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+        "payload": {
+          "categoryId": "cat-2"
+        }
+      },
+      {
+        "seq": 15,
+        "t": 1793080473628,
+        "phase": "CategorySelection",
+        "kind": "action",
+        "actionType": "VOTE_CATEGORY",
+        "senderId": "7616dfa7-1790-483c-a58b-7c776f724489",
+        "payload": {
+          "categoryId": "cat-3"
+        }
+      },
+      {
+        "seq": 16,
+        "t": 1793080478554,
+        "phase": "CategorySelection",
+        "kind": "timeout"
+      },
+      {
+        "seq": 17,
+        "t": 1793080478555,
+        "phase": "CategorySelection",
+        "kind": "transition",
+        "from": "CategorySelection",
+        "to": "Prompting"
+      },
+      {
+        "seq": 18,
+        "t": 1793080478555,
+        "phase": "Prompting",
+        "kind": "enter"
+      },
+      {
+        "seq": 19,
+        "t": 1793080478558,
+        "phase": "Prompting",
+        "kind": "action",
+        "actionType": "SET_TYPING",
+        "senderId": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+        "payload": {
+          "typing": true
+        }
+      },
+      {
+        "seq": 20,
+        "t": 1793080478559,
+        "phase": "Prompting",
+        "kind": "action",
+        "actionType": "SET_TYPING",
+        "senderId": "7616dfa7-1790-483c-a58b-7c776f724489",
+        "payload": {
+          "typing": true
+        }
+      },
+      {
+        "seq": 21,
+        "t": 1793080478559,
+        "phase": "Prompting",
+        "kind": "action",
+        "actionType": "SET_TYPING",
+        "senderId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+        "payload": {
+          "typing": true
+        }
+      },
+      {
+        "seq": 22,
+        "t": 1793080478577,
+        "phase": "Prompting",
+        "kind": "action",
+        "actionType": "SUBMIT_ANSWER",
+        "senderId": "7616dfa7-1790-483c-a58b-7c776f724489",
+        "payload": {
+          "matchupId": "ec9c2507-f7fc-4554-8102-ac997adffd03",
+          "answer": "The moon, on a budget"
+        }
+      },
+      {
+        "seq": 23,
+        "t": 1793080478586,
+        "phase": "Prompting",
+        "kind": "action",
+        "actionType": "SUBMIT_ANSWER",
+        "senderId": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+        "payload": {
+          "matchupId": "7b44bc15-e76b-4df7-ac4d-b9be2effec21",
+          "answer": "A wizard who forgot his password"
+        }
+      },
+      {
+        "seq": 24,
+        "t": 1793080478587,
+        "phase": "Prompting",
+        "kind": "action",
+        "actionType": "SUBMIT_ANSWER",
+        "senderId": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+        "payload": {
+          "matchupId": "1dd81b43-0e64-4eb3-a0d2-84233d5c9238",
+          "answer": "Lukewarm soup"
+        }
+      },
+      {
+        "seq": 25,
+        "t": 1793080478588,
+        "phase": "Prompting",
+        "kind": "action",
+        "actionType": "SUBMIT_ANSWER",
+        "senderId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+        "payload": {
+          "matchupId": "ec9c2507-f7fc-4554-8102-ac997adffd03",
+          "answer": "Whatever grandpa said it was"
+        }
+      },
+      {
+        "seq": 26,
+        "t": 1793080478609,
+        "phase": "Prompting",
+        "kind": "action",
+        "actionType": "SUBMIT_ANSWER",
+        "senderId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+        "payload": {
+          "matchupId": "e586dedf-0883-4544-bd5c-a1d6f2cd3889",
+          "answer": "Lukewarm soup"
+        }
+      },
+      {
+        "seq": 27,
+        "t": 1793080478614,
+        "phase": "Prompting",
+        "kind": "action",
+        "actionType": "SUBMIT_ANSWER",
+        "senderId": "7616dfa7-1790-483c-a58b-7c776f724489",
+        "payload": {
+          "matchupId": "1dd81b43-0e64-4eb3-a0d2-84233d5c9238",
+          "answer": "Whatever grandpa said it was"
+        }
+      },
+      {
+        "seq": 28,
+        "t": 1793080493592,
+        "phase": "Prompting",
+        "kind": "timeout"
+      },
+      {
+        "seq": 29,
+        "t": 1793080493593,
+        "phase": "Prompting",
+        "kind": "transition",
+        "from": "Prompting",
+        "to": "MatchupVoting"
+      },
+      {
+        "seq": 30,
+        "t": 1793080493594,
+        "phase": "MatchupVoting",
+        "kind": "enter"
+      },
+      {
+        "seq": 31,
+        "t": 1793080493606,
+        "phase": "MatchupVoting",
+        "kind": "action",
+        "actionType": "CAST_VOTE",
+        "senderId": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+        "payload": {
+          "answerId": "6a5f6d29-2189-4f30-9112-c8f8ef0effa0"
+        }
+      },
+      {
+        "seq": 32,
+        "t": 1793080498604,
+        "phase": "MatchupVoting",
+        "kind": "timeout"
+      },
+      {
+        "seq": 33,
+        "t": 1793080498604,
+        "phase": "MatchupVoting",
+        "kind": "transition",
+        "from": "MatchupVoting",
+        "to": "MatchupReveal"
+      },
+      {
+        "seq": 34,
+        "t": 1793080498604,
+        "phase": "MatchupReveal",
+        "kind": "enter"
+      },
+      {
+        "seq": 35,
+        "t": 1793080499606,
+        "phase": "MatchupReveal",
+        "kind": "timeout"
+      },
+      {
+        "seq": 36,
+        "t": 1793080499606,
+        "phase": "MatchupReveal",
+        "kind": "transition",
+        "from": "MatchupReveal",
+        "to": "MatchupVoting"
+      },
+      {
+        "seq": 37,
+        "t": 1793080499607,
+        "phase": "MatchupVoting",
+        "kind": "enter"
+      },
+      {
+        "seq": 38,
+        "t": 1793080499607,
+        "phase": "MatchupVoting",
+        "kind": "transition",
+        "from": "MatchupVoting",
+        "to": "MatchupReveal"
+      },
+      {
+        "seq": 39,
+        "t": 1793080499607,
+        "phase": "MatchupReveal",
+        "kind": "enter"
+      },
+      {
+        "seq": 40,
+        "t": 1793080500608,
+        "phase": "MatchupReveal",
+        "kind": "timeout"
+      },
+      {
+        "seq": 41,
+        "t": 1793080500608,
+        "phase": "MatchupReveal",
+        "kind": "transition",
+        "from": "MatchupReveal",
+        "to": "MatchupVoting"
+      },
+      {
+        "seq": 42,
+        "t": 1793080500609,
+        "phase": "MatchupVoting",
+        "kind": "enter"
+      },
+      {
+        "seq": 43,
+        "t": 1793080500609,
+        "phase": "MatchupVoting",
+        "kind": "transition",
+        "from": "MatchupVoting",
+        "to": "MatchupReveal"
+      },
+      {
+        "seq": 44,
+        "t": 1793080500609,
+        "phase": "MatchupReveal",
+        "kind": "enter"
+      },
+      {
+        "seq": 45,
+        "t": 1793080501610,
+        "phase": "MatchupReveal",
+        "kind": "timeout"
+      },
+      {
+        "seq": 46,
+        "t": 1793080501611,
+        "phase": "MatchupReveal",
+        "kind": "transition",
+        "from": "MatchupReveal",
+        "to": "MatchupVoting"
+      },
+      {
+        "seq": 47,
+        "t": 1793080501611,
+        "phase": "MatchupVoting",
+        "kind": "enter"
+      },
+      {
+        "seq": 48,
+        "t": 1793080501622,
+        "phase": "MatchupVoting",
+        "kind": "action",
+        "actionType": "CAST_VOTE",
+        "senderId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+        "payload": {
+          "answerId": "9f9028aa-c780-46f4-a919-c5349422ebe2"
+        }
+      },
+      {
+        "seq": 49,
+        "t": 1793080506621,
+        "phase": "MatchupVoting",
+        "kind": "timeout"
+      },
+      {
+        "seq": 50,
+        "t": 1793080506621,
+        "phase": "MatchupVoting",
+        "kind": "transition",
+        "from": "MatchupVoting",
+        "to": "MatchupReveal"
+      },
+      {
+        "seq": 51,
+        "t": 1793080506622,
+        "phase": "MatchupReveal",
+        "kind": "enter"
+      },
+      {
+        "seq": 52,
+        "t": 1793080507623,
+        "phase": "MatchupReveal",
+        "kind": "timeout"
+      },
+      {
+        "seq": 53,
+        "t": 1793080507624,
+        "phase": "MatchupReveal",
+        "kind": "transition",
+        "from": "MatchupReveal",
+        "to": "Results"
+      },
+      {
+        "seq": 54,
+        "t": 1793080507624,
+        "phase": "Results",
+        "kind": "enter"
+      },
+      {
+        "seq": 55,
+        "t": 1793080507626,
+        "phase": "Results",
+        "kind": "action",
+        "actionType": "NEXT_ROUND",
+        "senderId": "host-Host-0001",
+        "payload": {}
+      },
+      {
+        "seq": 56,
+        "t": 1793080507626,
+        "phase": "Results",
+        "kind": "transition",
+        "from": "Results",
+        "to": "CategorySelection"
+      },
+      {
+        "seq": 57,
+        "t": 1793080507626,
+        "phase": "CategorySelection",
+        "kind": "enter"
+      },
+      {
+        "seq": 58,
+        "t": 1793080507685,
+        "phase": "CategorySelection",
+        "kind": "action",
+        "actionType": "VOTE_CATEGORY",
+        "senderId": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+        "payload": {
+          "categoryId": "cat-0"
+        }
+      },
+      {
+        "seq": 59,
+        "t": 1793080507693,
+        "phase": "CategorySelection",
+        "kind": "action",
+        "actionType": "VOTE_CATEGORY",
+        "senderId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+        "payload": {
+          "categoryId": "cat-1"
+        }
+      },
+      {
+        "seq": 60,
+        "t": 1793080507698,
+        "phase": "CategorySelection",
+        "kind": "action",
+        "actionType": "VOTE_CATEGORY",
+        "senderId": "7616dfa7-1790-483c-a58b-7c776f724489",
+        "payload": {
+          "categoryId": "cat-0"
+        }
+      },
+      {
+        "seq": 61,
+        "t": 1793080512637,
+        "phase": "CategorySelection",
+        "kind": "timeout"
+      },
+      {
+        "seq": 62,
+        "t": 1793080512637,
+        "phase": "CategorySelection",
+        "kind": "transition",
+        "from": "CategorySelection",
+        "to": "Prompting"
+      },
+      {
+        "seq": 63,
+        "t": 1793080512638,
+        "phase": "Prompting",
+        "kind": "enter"
+      },
+      {
+        "seq": 64,
+        "t": 1793080512639,
+        "phase": "Prompting",
+        "kind": "action",
+        "actionType": "SET_TYPING",
+        "senderId": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+        "payload": {
+          "typing": true
+        }
+      },
+      {
+        "seq": 65,
+        "t": 1793080512639,
+        "phase": "Prompting",
+        "kind": "action",
+        "actionType": "SET_TYPING",
+        "senderId": "7616dfa7-1790-483c-a58b-7c776f724489",
+        "payload": {
+          "typing": true
+        }
+      },
+      {
+        "seq": 66,
+        "t": 1793080512639,
+        "phase": "Prompting",
+        "kind": "action",
+        "actionType": "SET_TYPING",
+        "senderId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+        "payload": {
+          "typing": true
+        }
+      },
+      {
+        "seq": 67,
+        "t": 1793080512661,
+        "phase": "Prompting",
+        "kind": "action",
+        "actionType": "SUBMIT_ANSWER",
+        "senderId": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+        "payload": {
+          "matchupId": "c55a1cfc-9b71-422d-9763-749007a3dc49",
+          "answer": "An aggressively average sandwich"
+        }
+      },
+      {
+        "seq": 68,
+        "t": 1793080512667,
+        "phase": "Prompting",
+        "kind": "action",
+        "actionType": "SUBMIT_ANSWER",
+        "senderId": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+        "payload": {
+          "matchupId": "94b3a1dd-e5ac-49a1-8484-e50e301a8325",
+          "answer": "An aggressively average sandwich"
+        }
+      },
+      {
+        "seq": 69,
+        "t": 1793080512669,
+        "phase": "Prompting",
+        "kind": "action",
+        "actionType": "SUBMIT_ANSWER",
+        "senderId": "7616dfa7-1790-483c-a58b-7c776f724489",
+        "payload": {
+          "matchupId": "cca31e08-1ec1-4cc5-8692-5d043344e60b",
+          "answer": "Someone else's leftovers"
+        }
+      },
+      {
+        "seq": 70,
+        "t": 1793080512675,
+        "phase": "Prompting",
+        "kind": "action",
+        "actionType": "SUBMIT_ANSWER",
+        "senderId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+        "payload": {
+          "matchupId": "cca31e08-1ec1-4cc5-8692-5d043344e60b",
+          "answer": "An aggressively average sandwich"
+        }
+      },
+      {
+        "seq": 71,
+        "t": 1793080512677,
+        "phase": "Prompting",
+        "kind": "action",
+        "actionType": "SUBMIT_ANSWER",
+        "senderId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+        "payload": {
+          "matchupId": "c55a1cfc-9b71-422d-9763-749007a3dc49",
+          "answer": "My emotional support cactus"
+        }
+      },
+      {
+        "seq": 72,
+        "t": 1793080512698,
+        "phase": "Prompting",
+        "kind": "action",
+        "actionType": "SUBMIT_ANSWER",
+        "senderId": "7616dfa7-1790-483c-a58b-7c776f724489",
+        "payload": {
+          "matchupId": "255fa156-3c77-4014-9b82-9b177a83b433",
+          "answer": "Someone else's leftovers"
+        }
+      },
+      {
+        "seq": 73,
+        "t": 1793080527672,
+        "phase": "Prompting",
+        "kind": "timeout"
+      },
+      {
+        "seq": 74,
+        "t": 1793080527673,
+        "phase": "Prompting",
+        "kind": "transition",
+        "from": "Prompting",
+        "to": "MatchupVoting"
+      },
+      {
+        "seq": 75,
+        "t": 1793080527673,
+        "phase": "MatchupVoting",
+        "kind": "enter"
+      },
+      {
+        "seq": 76,
+        "t": 1793080527693,
+        "phase": "MatchupVoting",
+        "kind": "action",
+        "actionType": "CAST_VOTE",
+        "senderId": "7616dfa7-1790-483c-a58b-7c776f724489",
+        "payload": {
+          "answerId": "ecec2223-09fc-4eaf-97a9-bda74ac11231"
+        }
+      },
+      {
+        "seq": 77,
+        "t": 1793080532683,
+        "phase": "MatchupVoting",
+        "kind": "timeout"
+      },
+      {
+        "seq": 78,
+        "t": 1793080532683,
+        "phase": "MatchupVoting",
+        "kind": "transition",
+        "from": "MatchupVoting",
+        "to": "MatchupReveal"
+      },
+      {
+        "seq": 79,
+        "t": 1793080532684,
+        "phase": "MatchupReveal",
+        "kind": "enter"
+      },
+      {
+        "seq": 80,
+        "t": 1793080533686,
+        "phase": "MatchupReveal",
+        "kind": "timeout"
+      },
+      {
+        "seq": 81,
+        "t": 1793080533686,
+        "phase": "MatchupReveal",
+        "kind": "transition",
+        "from": "MatchupReveal",
+        "to": "MatchupVoting"
+      },
+      {
+        "seq": 82,
+        "t": 1793080533686,
+        "phase": "MatchupVoting",
+        "kind": "enter"
+      },
+      {
+        "seq": 83,
+        "t": 1793080533707,
+        "phase": "MatchupVoting",
+        "kind": "action",
+        "actionType": "CAST_VOTE",
+        "senderId": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+        "payload": {
+          "answerId": "bf3e17a2-b2e0-4626-87cf-709a1708a369"
+        }
+      },
+      {
+        "seq": 84,
+        "t": 1793080538700,
+        "phase": "MatchupVoting",
+        "kind": "timeout"
+      },
+      {
+        "seq": 85,
+        "t": 1793080538700,
+        "phase": "MatchupVoting",
+        "kind": "transition",
+        "from": "MatchupVoting",
+        "to": "MatchupReveal"
+      },
+      {
+        "seq": 86,
+        "t": 1793080538701,
+        "phase": "MatchupReveal",
+        "kind": "enter"
+      },
+      {
+        "seq": 87,
+        "t": 1793080539703,
+        "phase": "MatchupReveal",
+        "kind": "timeout"
+      },
+      {
+        "seq": 88,
+        "t": 1793080539703,
+        "phase": "MatchupReveal",
+        "kind": "transition",
+        "from": "MatchupReveal",
+        "to": "MatchupVoting"
+      },
+      {
+        "seq": 89,
+        "t": 1793080539703,
+        "phase": "MatchupVoting",
+        "kind": "enter"
+      },
+      {
+        "seq": 90,
+        "t": 1793080539703,
+        "phase": "MatchupVoting",
+        "kind": "transition",
+        "from": "MatchupVoting",
+        "to": "MatchupReveal"
+      },
+      {
+        "seq": 91,
+        "t": 1793080539704,
+        "phase": "MatchupReveal",
+        "kind": "enter"
+      },
+      {
+        "seq": 92,
+        "t": 1793080540705,
+        "phase": "MatchupReveal",
+        "kind": "timeout"
+      },
+      {
+        "seq": 93,
+        "t": 1793080540705,
+        "phase": "MatchupReveal",
+        "kind": "transition",
+        "from": "MatchupReveal",
+        "to": "MatchupVoting"
+      },
+      {
+        "seq": 94,
+        "t": 1793080540705,
+        "phase": "MatchupVoting",
+        "kind": "enter"
+      },
+      {
+        "seq": 95,
+        "t": 1793080540705,
+        "phase": "MatchupVoting",
+        "kind": "transition",
+        "from": "MatchupVoting",
+        "to": "MatchupReveal"
+      },
+      {
+        "seq": 96,
+        "t": 1793080540706,
+        "phase": "MatchupReveal",
+        "kind": "enter"
+      },
+      {
+        "seq": 97,
+        "t": 1793080541707,
+        "phase": "MatchupReveal",
+        "kind": "timeout"
+      },
+      {
+        "seq": 98,
+        "t": 1793080541708,
+        "phase": "MatchupReveal",
+        "kind": "transition",
+        "from": "MatchupReveal",
+        "to": "HonorVote"
+      },
+      {
+        "seq": 99,
+        "t": 1793080541708,
+        "phase": "HonorVote",
+        "kind": "enter"
+      },
+      {
+        "seq": 100,
+        "t": 1793080541721,
+        "phase": "HonorVote",
+        "kind": "action",
+        "actionType": "VOTE_HONOR",
+        "senderId": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+        "payload": {
+          "authorId": "7616dfa7-1790-483c-a58b-7c776f724489"
+        }
+      },
+      {
+        "seq": 101,
+        "t": 1793080541726,
+        "phase": "HonorVote",
+        "kind": "action",
+        "actionType": "VOTE_HONOR",
+        "senderId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+        "payload": {
+          "authorId": "7616dfa7-1790-483c-a58b-7c776f724489"
+        }
+      },
+      {
+        "seq": 102,
+        "t": 1793080541732,
+        "phase": "HonorVote",
+        "kind": "action",
+        "actionType": "VOTE_HONOR",
+        "senderId": "7616dfa7-1790-483c-a58b-7c776f724489",
+        "payload": {
+          "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17"
+        }
+      },
+      {
+        "seq": 103,
+        "t": 1793080546718,
+        "phase": "HonorVote",
+        "kind": "timeout"
+      },
+      {
+        "seq": 104,
+        "t": 1793080546719,
+        "phase": "HonorVote",
+        "kind": "transition",
+        "from": "HonorVote",
+        "to": "Results"
+      },
+      {
+        "seq": 105,
+        "t": 1793080546719,
+        "phase": "Results",
+        "kind": "enter"
+      }
+    ],
+    "roster": [
+      {
+        "id": "host-Host-0001",
+        "isConnected": true,
+        "isReady": true,
+        "isActive": true
+      },
+      {
+        "id": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+        "isConnected": true,
+        "isReady": true,
+        "isActive": true
+      },
+      {
+        "id": "7616dfa7-1790-483c-a58b-7c776f724489",
+        "isConnected": true,
+        "isReady": true,
+        "isActive": true
+      },
+      {
+        "id": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+        "isConnected": true,
+        "isReady": true,
+        "isActive": true
+      }
+    ]
+  },
+  "snapshots": [
+    {
+      "seq": 11,
+      "phase": "Lobby",
+      "state": {
+        "categoryOptions": [],
+        "selectedCategory": "",
+        "roundNumber": 0,
+        "totalRounds": 3,
+        "isFinalRound": false,
+        "matchups": [],
+        "activeMatchupIndex": -1,
+        "votesCast": 0,
+        "votesExpected": 0,
+        "progress": {},
+        "answersPerPlayer": 0,
+        "rejectedTexts": 0,
+        "scoreboard": [],
+        "tieBreakers": [],
+        "tieBreakerContenders": [],
+        "bestAnswers": [],
+        "awards": [],
+        "honorWinnerNames": [],
+        "typing": {},
+        "phase": "Lobby",
+        "roomCode": "DDDE",
+        "phaseEndsAt": 0,
+        "serverNow": 1793080473394,
+        "spectatorCount": 0,
+        "options": "{\"mode\":\"free\",\"totalRounds\":2,\"categoryVoteSeconds\":5,\"promptSeconds\":15,\"voteSeconds\":5,\"revealSeconds\":1,\"honorVote\":true,\"filterLevel\":\"moderate\"}",
+        "notice": "",
+        "minPlayers": 3,
+        "maxPlayers": 8,
+        "canStart": true,
+        "players": {
+          "host-Host-0001": {
+            "id": "host-Host-0001",
+            "name": "Host",
+            "role": "host",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": {
+            "id": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+            "name": "Bot 1",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "7616dfa7-1790-483c-a58b-7c776f724489": {
+            "id": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "name": "Bot 2",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": {
+            "id": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+            "name": "Bot 3",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          }
+        }
+      }
+    },
+    {
+      "seq": 17,
+      "phase": "CategorySelection",
+      "state": {
+        "categoryOptions": [
+          {
+            "id": "cat-3",
+            "name": "Category 3",
+            "emoji": "x",
+            "votes": 2
+          },
+          {
+            "id": "cat-0",
+            "name": "Category 0",
+            "emoji": "x",
+            "votes": 0
+          },
+          {
+            "id": "cat-2",
+            "name": "Category 2",
+            "emoji": "x",
+            "votes": 1
+          }
+        ],
+        "selectedCategory": "cat-3",
+        "roundNumber": 1,
+        "totalRounds": 2,
+        "isFinalRound": false,
+        "matchups": [],
+        "activeMatchupIndex": -1,
+        "votesCast": 3,
+        "votesExpected": 4,
+        "progress": {},
+        "answersPerPlayer": 0,
+        "rejectedTexts": 0,
+        "scoreboard": [],
+        "tieBreakers": [],
+        "tieBreakerContenders": [],
+        "bestAnswers": [],
+        "awards": [],
+        "honorWinnerNames": [],
+        "typing": {},
+        "phase": "CategorySelection",
+        "roomCode": "DDDE",
+        "phaseEndsAt": 1793080478547,
+        "serverNow": 1793080478404,
+        "spectatorCount": 0,
+        "options": "{\"mode\":\"free\",\"totalRounds\":2,\"categoryVoteSeconds\":5,\"promptSeconds\":15,\"voteSeconds\":5,\"revealSeconds\":1,\"honorVote\":true,\"filterLevel\":\"moderate\"}",
+        "notice": "",
+        "minPlayers": 3,
+        "maxPlayers": 8,
+        "canStart": false,
+        "players": {
+          "host-Host-0001": {
+            "id": "host-Host-0001",
+            "name": "Host",
+            "role": "host",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": {
+            "id": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+            "name": "Bot 1",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "7616dfa7-1790-483c-a58b-7c776f724489": {
+            "id": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "name": "Bot 2",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": {
+            "id": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+            "name": "Bot 3",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          }
+        }
+      }
+    },
+    {
+      "seq": 29,
+      "phase": "Prompting",
+      "state": {
+        "categoryOptions": [
+          {
+            "id": "cat-3",
+            "name": "Category 3",
+            "emoji": "x",
+            "votes": 2
+          },
+          {
+            "id": "cat-0",
+            "name": "Category 0",
+            "emoji": "x",
+            "votes": 0
+          },
+          {
+            "id": "cat-2",
+            "name": "Category 2",
+            "emoji": "x",
+            "votes": 1
+          }
+        ],
+        "selectedCategory": "cat-3",
+        "roundNumber": 1,
+        "totalRounds": 2,
+        "isFinalRound": false,
+        "matchups": [
+          {
+            "id": "ec9c2507-f7fc-4554-8102-ac997adffd03",
+            "index": 0,
+            "promptText": "Prompt 3.7",
+            "answers": [
+              {
+                "id": "6a5f6d29-2189-4f30-9112-c8f8ef0effa0",
+                "text": "The moon, on a budget",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "503cb8ee-b7fc-4444-b670-a787b68a7b19",
+                "text": "Whatever grandpa said it was",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "e586dedf-0883-4544-bd5c-a1d6f2cd3889",
+            "index": 1,
+            "promptText": "Prompt 3.1",
+            "answers": [
+              {
+                "id": "d2f24de0-89cc-4f51-b82c-8bfd6b557ab4",
+                "text": "Lukewarm soup",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "82b6aa97-17ce-407c-905d-bd65d16c4a94",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "7b44bc15-e76b-4df7-ac4d-b9be2effec21",
+            "index": 2,
+            "promptText": "Prompt 3.5",
+            "answers": [
+              {
+                "id": "b0f47a56-c7d9-4911-bb15-bd38749cd87e",
+                "text": "A wizard who forgot his password",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "eb41c16e-f5ea-4d71-ac86-a1ae8a8701b5",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "1dd81b43-0e64-4eb3-a0d2-84233d5c9238",
+            "index": 3,
+            "promptText": "Prompt 3.0",
+            "answers": [
+              {
+                "id": "29e1786d-1c3f-4927-bfec-3651d1ca792f",
+                "text": "Lukewarm soup",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "9f9028aa-c780-46f4-a919-c5349422ebe2",
+                "text": "Whatever grandpa said it was",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": false,
+            "isClash": false
+          }
+        ],
+        "activeMatchupIndex": -1,
+        "votesCast": 3,
+        "votesExpected": 4,
+        "progress": {
+          "host-Host-0001": 0,
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": 2,
+          "7616dfa7-1790-483c-a58b-7c776f724489": 2,
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": 2
+        },
+        "answersPerPlayer": 2,
+        "rejectedTexts": 0,
+        "scoreboard": [],
+        "tieBreakers": [],
+        "tieBreakerContenders": [],
+        "bestAnswers": [],
+        "awards": [],
+        "honorWinnerNames": [],
+        "typing": {},
+        "phase": "Prompting",
+        "roomCode": "DDDE",
+        "phaseEndsAt": 1793080493555,
+        "serverNow": 1793080493392,
+        "spectatorCount": 0,
+        "options": "{\"mode\":\"free\",\"totalRounds\":2,\"categoryVoteSeconds\":5,\"promptSeconds\":15,\"voteSeconds\":5,\"revealSeconds\":1,\"honorVote\":true,\"filterLevel\":\"moderate\"}",
+        "notice": "",
+        "minPlayers": 3,
+        "maxPlayers": 8,
+        "canStart": false,
+        "players": {
+          "host-Host-0001": {
+            "id": "host-Host-0001",
+            "name": "Host",
+            "role": "host",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": {
+            "id": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+            "name": "Bot 1",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "7616dfa7-1790-483c-a58b-7c776f724489": {
+            "id": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "name": "Bot 2",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": {
+            "id": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+            "name": "Bot 3",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          }
+        }
+      }
+    },
+    {
+      "seq": 33,
+      "phase": "MatchupVoting",
+      "state": {
+        "categoryOptions": [
+          {
+            "id": "cat-3",
+            "name": "Category 3",
+            "emoji": "x",
+            "votes": 2
+          },
+          {
+            "id": "cat-0",
+            "name": "Category 0",
+            "emoji": "x",
+            "votes": 0
+          },
+          {
+            "id": "cat-2",
+            "name": "Category 2",
+            "emoji": "x",
+            "votes": 1
+          }
+        ],
+        "selectedCategory": "cat-3",
+        "roundNumber": 1,
+        "totalRounds": 2,
+        "isFinalRound": false,
+        "matchups": [
+          {
+            "id": "ec9c2507-f7fc-4554-8102-ac997adffd03",
+            "index": 0,
+            "promptText": "Prompt 3.7",
+            "answers": [
+              {
+                "id": "6a5f6d29-2189-4f30-9112-c8f8ef0effa0",
+                "text": "The moon, on a budget",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "503cb8ee-b7fc-4444-b670-a787b68a7b19",
+                "text": "Whatever grandpa said it was",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "e586dedf-0883-4544-bd5c-a1d6f2cd3889",
+            "index": 1,
+            "promptText": "Prompt 3.1",
+            "answers": [
+              {
+                "id": "d2f24de0-89cc-4f51-b82c-8bfd6b557ab4",
+                "text": "Lukewarm soup",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "82b6aa97-17ce-407c-905d-bd65d16c4a94",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "7b44bc15-e76b-4df7-ac4d-b9be2effec21",
+            "index": 2,
+            "promptText": "Prompt 3.5",
+            "answers": [
+              {
+                "id": "b0f47a56-c7d9-4911-bb15-bd38749cd87e",
+                "text": "A wizard who forgot his password",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "eb41c16e-f5ea-4d71-ac86-a1ae8a8701b5",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "1dd81b43-0e64-4eb3-a0d2-84233d5c9238",
+            "index": 3,
+            "promptText": "Prompt 3.0",
+            "answers": [
+              {
+                "id": "29e1786d-1c3f-4927-bfec-3651d1ca792f",
+                "text": "Lukewarm soup",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "9f9028aa-c780-46f4-a919-c5349422ebe2",
+                "text": "Whatever grandpa said it was",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": false,
+            "isClash": false
+          }
+        ],
+        "activeMatchupIndex": 0,
+        "votesCast": 1,
+        "votesExpected": 2,
+        "progress": {
+          "host-Host-0001": 0,
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": 2,
+          "7616dfa7-1790-483c-a58b-7c776f724489": 2,
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": 2
+        },
+        "answersPerPlayer": 2,
+        "rejectedTexts": 0,
+        "scoreboard": [],
+        "tieBreakers": [],
+        "tieBreakerContenders": [],
+        "bestAnswers": [],
+        "awards": [],
+        "honorWinnerNames": [],
+        "typing": {},
+        "phase": "MatchupVoting",
+        "roomCode": "DDDE",
+        "phaseEndsAt": 1793080498594,
+        "serverNow": 1793080498403,
+        "spectatorCount": 0,
+        "options": "{\"mode\":\"free\",\"totalRounds\":2,\"categoryVoteSeconds\":5,\"promptSeconds\":15,\"voteSeconds\":5,\"revealSeconds\":1,\"honorVote\":true,\"filterLevel\":\"moderate\"}",
+        "notice": "",
+        "minPlayers": 3,
+        "maxPlayers": 8,
+        "canStart": false,
+        "players": {
+          "host-Host-0001": {
+            "id": "host-Host-0001",
+            "name": "Host",
+            "role": "host",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": {
+            "id": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+            "name": "Bot 1",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "7616dfa7-1790-483c-a58b-7c776f724489": {
+            "id": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "name": "Bot 2",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": {
+            "id": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+            "name": "Bot 3",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          }
+        }
+      }
+    },
+    {
+      "seq": 36,
+      "phase": "MatchupReveal",
+      "state": {
+        "categoryOptions": [
+          {
+            "id": "cat-3",
+            "name": "Category 3",
+            "emoji": "x",
+            "votes": 2
+          },
+          {
+            "id": "cat-0",
+            "name": "Category 0",
+            "emoji": "x",
+            "votes": 0
+          },
+          {
+            "id": "cat-2",
+            "name": "Category 2",
+            "emoji": "x",
+            "votes": 1
+          }
+        ],
+        "selectedCategory": "cat-3",
+        "roundNumber": 1,
+        "totalRounds": 2,
+        "isFinalRound": false,
+        "matchups": [
+          {
+            "id": "ec9c2507-f7fc-4554-8102-ac997adffd03",
+            "index": 0,
+            "promptText": "Prompt 3.7",
+            "answers": [
+              {
+                "id": "6a5f6d29-2189-4f30-9112-c8f8ef0effa0",
+                "text": "The moon, on a budget",
+                "votes": 1,
+                "authorId": "7616dfa7-1790-483c-a58b-7c776f724489",
+                "authorName": "Bot 2",
+                "isWinner": true
+              },
+              {
+                "id": "503cb8ee-b7fc-4444-b670-a787b68a7b19",
+                "text": "Whatever grandpa said it was",
+                "votes": 0,
+                "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+                "authorName": "Bot 1",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "e586dedf-0883-4544-bd5c-a1d6f2cd3889",
+            "index": 1,
+            "promptText": "Prompt 3.1",
+            "answers": [
+              {
+                "id": "d2f24de0-89cc-4f51-b82c-8bfd6b557ab4",
+                "text": "Lukewarm soup",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "82b6aa97-17ce-407c-905d-bd65d16c4a94",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "7b44bc15-e76b-4df7-ac4d-b9be2effec21",
+            "index": 2,
+            "promptText": "Prompt 3.5",
+            "answers": [
+              {
+                "id": "b0f47a56-c7d9-4911-bb15-bd38749cd87e",
+                "text": "A wizard who forgot his password",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "eb41c16e-f5ea-4d71-ac86-a1ae8a8701b5",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "1dd81b43-0e64-4eb3-a0d2-84233d5c9238",
+            "index": 3,
+            "promptText": "Prompt 3.0",
+            "answers": [
+              {
+                "id": "29e1786d-1c3f-4927-bfec-3651d1ca792f",
+                "text": "Lukewarm soup",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "9f9028aa-c780-46f4-a919-c5349422ebe2",
+                "text": "Whatever grandpa said it was",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": false,
+            "isClash": false
+          }
+        ],
+        "activeMatchupIndex": 0,
+        "votesCast": 1,
+        "votesExpected": 2,
+        "progress": {
+          "host-Host-0001": 0,
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": 2,
+          "7616dfa7-1790-483c-a58b-7c776f724489": 2,
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": 2
+        },
+        "answersPerPlayer": 2,
+        "rejectedTexts": 0,
+        "scoreboard": [],
+        "tieBreakers": [],
+        "tieBreakerContenders": [],
+        "bestAnswers": [],
+        "awards": [],
+        "honorWinnerNames": [],
+        "typing": {},
+        "phase": "MatchupReveal",
+        "roomCode": "DDDE",
+        "phaseEndsAt": 1793080499604,
+        "serverNow": 1793080499405,
+        "spectatorCount": 0,
+        "options": "{\"mode\":\"free\",\"totalRounds\":2,\"categoryVoteSeconds\":5,\"promptSeconds\":15,\"voteSeconds\":5,\"revealSeconds\":1,\"honorVote\":true,\"filterLevel\":\"moderate\"}",
+        "notice": "",
+        "minPlayers": 3,
+        "maxPlayers": 8,
+        "canStart": false,
+        "players": {
+          "host-Host-0001": {
+            "id": "host-Host-0001",
+            "name": "Host",
+            "role": "host",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": {
+            "id": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+            "name": "Bot 1",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "7616dfa7-1790-483c-a58b-7c776f724489": {
+            "id": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "name": "Bot 2",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": {
+            "id": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+            "name": "Bot 3",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          }
+        }
+      }
+    },
+    {
+      "seq": 38,
+      "phase": "MatchupVoting",
+      "state": {
+        "categoryOptions": [
+          {
+            "id": "cat-3",
+            "name": "Category 3",
+            "emoji": "x",
+            "votes": 2
+          },
+          {
+            "id": "cat-0",
+            "name": "Category 0",
+            "emoji": "x",
+            "votes": 0
+          },
+          {
+            "id": "cat-2",
+            "name": "Category 2",
+            "emoji": "x",
+            "votes": 1
+          }
+        ],
+        "selectedCategory": "cat-3",
+        "roundNumber": 1,
+        "totalRounds": 2,
+        "isFinalRound": false,
+        "matchups": [
+          {
+            "id": "ec9c2507-f7fc-4554-8102-ac997adffd03",
+            "index": 0,
+            "promptText": "Prompt 3.7",
+            "answers": [
+              {
+                "id": "6a5f6d29-2189-4f30-9112-c8f8ef0effa0",
+                "text": "The moon, on a budget",
+                "votes": 1,
+                "authorId": "7616dfa7-1790-483c-a58b-7c776f724489",
+                "authorName": "Bot 2",
+                "isWinner": true
+              },
+              {
+                "id": "503cb8ee-b7fc-4444-b670-a787b68a7b19",
+                "text": "Whatever grandpa said it was",
+                "votes": 0,
+                "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+                "authorName": "Bot 1",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "e586dedf-0883-4544-bd5c-a1d6f2cd3889",
+            "index": 1,
+            "promptText": "Prompt 3.1",
+            "answers": [
+              {
+                "id": "d2f24de0-89cc-4f51-b82c-8bfd6b557ab4",
+                "text": "Lukewarm soup",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "82b6aa97-17ce-407c-905d-bd65d16c4a94",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "7b44bc15-e76b-4df7-ac4d-b9be2effec21",
+            "index": 2,
+            "promptText": "Prompt 3.5",
+            "answers": [
+              {
+                "id": "b0f47a56-c7d9-4911-bb15-bd38749cd87e",
+                "text": "A wizard who forgot his password",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "eb41c16e-f5ea-4d71-ac86-a1ae8a8701b5",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "1dd81b43-0e64-4eb3-a0d2-84233d5c9238",
+            "index": 3,
+            "promptText": "Prompt 3.0",
+            "answers": [
+              {
+                "id": "29e1786d-1c3f-4927-bfec-3651d1ca792f",
+                "text": "Lukewarm soup",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "9f9028aa-c780-46f4-a919-c5349422ebe2",
+                "text": "Whatever grandpa said it was",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": false,
+            "isClash": false
+          }
+        ],
+        "activeMatchupIndex": 1,
+        "votesCast": 0,
+        "votesExpected": 0,
+        "progress": {
+          "host-Host-0001": 0,
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": 2,
+          "7616dfa7-1790-483c-a58b-7c776f724489": 2,
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": 2
+        },
+        "answersPerPlayer": 2,
+        "rejectedTexts": 0,
+        "scoreboard": [],
+        "tieBreakers": [],
+        "tieBreakerContenders": [],
+        "bestAnswers": [],
+        "awards": [],
+        "honorWinnerNames": [],
+        "typing": {},
+        "phase": "MatchupVoting",
+        "roomCode": "DDDE",
+        "phaseEndsAt": 1793080504607,
+        "serverNow": 1793080499405,
+        "spectatorCount": 0,
+        "options": "{\"mode\":\"free\",\"totalRounds\":2,\"categoryVoteSeconds\":5,\"promptSeconds\":15,\"voteSeconds\":5,\"revealSeconds\":1,\"honorVote\":true,\"filterLevel\":\"moderate\"}",
+        "notice": "",
+        "minPlayers": 3,
+        "maxPlayers": 8,
+        "canStart": false,
+        "players": {
+          "host-Host-0001": {
+            "id": "host-Host-0001",
+            "name": "Host",
+            "role": "host",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": {
+            "id": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+            "name": "Bot 1",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "7616dfa7-1790-483c-a58b-7c776f724489": {
+            "id": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "name": "Bot 2",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": {
+            "id": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+            "name": "Bot 3",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          }
+        }
+      }
+    },
+    {
+      "seq": 41,
+      "phase": "MatchupReveal",
+      "state": {
+        "categoryOptions": [
+          {
+            "id": "cat-3",
+            "name": "Category 3",
+            "emoji": "x",
+            "votes": 2
+          },
+          {
+            "id": "cat-0",
+            "name": "Category 0",
+            "emoji": "x",
+            "votes": 0
+          },
+          {
+            "id": "cat-2",
+            "name": "Category 2",
+            "emoji": "x",
+            "votes": 1
+          }
+        ],
+        "selectedCategory": "cat-3",
+        "roundNumber": 1,
+        "totalRounds": 2,
+        "isFinalRound": false,
+        "matchups": [
+          {
+            "id": "ec9c2507-f7fc-4554-8102-ac997adffd03",
+            "index": 0,
+            "promptText": "Prompt 3.7",
+            "answers": [
+              {
+                "id": "6a5f6d29-2189-4f30-9112-c8f8ef0effa0",
+                "text": "The moon, on a budget",
+                "votes": 1,
+                "authorId": "7616dfa7-1790-483c-a58b-7c776f724489",
+                "authorName": "Bot 2",
+                "isWinner": true
+              },
+              {
+                "id": "503cb8ee-b7fc-4444-b670-a787b68a7b19",
+                "text": "Whatever grandpa said it was",
+                "votes": 0,
+                "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+                "authorName": "Bot 1",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "e586dedf-0883-4544-bd5c-a1d6f2cd3889",
+            "index": 1,
+            "promptText": "Prompt 3.1",
+            "answers": [
+              {
+                "id": "d2f24de0-89cc-4f51-b82c-8bfd6b557ab4",
+                "text": "Lukewarm soup",
+                "votes": 0,
+                "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+                "authorName": "Bot 1",
+                "isWinner": true
+              },
+              {
+                "id": "82b6aa97-17ce-407c-905d-bd65d16c4a94",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "host-Host-0001",
+                "authorName": "Host",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "7b44bc15-e76b-4df7-ac4d-b9be2effec21",
+            "index": 2,
+            "promptText": "Prompt 3.5",
+            "answers": [
+              {
+                "id": "b0f47a56-c7d9-4911-bb15-bd38749cd87e",
+                "text": "A wizard who forgot his password",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "eb41c16e-f5ea-4d71-ac86-a1ae8a8701b5",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "1dd81b43-0e64-4eb3-a0d2-84233d5c9238",
+            "index": 3,
+            "promptText": "Prompt 3.0",
+            "answers": [
+              {
+                "id": "29e1786d-1c3f-4927-bfec-3651d1ca792f",
+                "text": "Lukewarm soup",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "9f9028aa-c780-46f4-a919-c5349422ebe2",
+                "text": "Whatever grandpa said it was",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": false,
+            "isClash": false
+          }
+        ],
+        "activeMatchupIndex": 1,
+        "votesCast": 0,
+        "votesExpected": 0,
+        "progress": {
+          "host-Host-0001": 0,
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": 2,
+          "7616dfa7-1790-483c-a58b-7c776f724489": 2,
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": 2
+        },
+        "answersPerPlayer": 2,
+        "rejectedTexts": 0,
+        "scoreboard": [],
+        "tieBreakers": [],
+        "tieBreakerContenders": [],
+        "bestAnswers": [],
+        "awards": [],
+        "honorWinnerNames": [],
+        "typing": {},
+        "phase": "MatchupReveal",
+        "roomCode": "DDDE",
+        "phaseEndsAt": 1793080500607,
+        "serverNow": 1793080500407,
+        "spectatorCount": 0,
+        "options": "{\"mode\":\"free\",\"totalRounds\":2,\"categoryVoteSeconds\":5,\"promptSeconds\":15,\"voteSeconds\":5,\"revealSeconds\":1,\"honorVote\":true,\"filterLevel\":\"moderate\"}",
+        "notice": "",
+        "minPlayers": 3,
+        "maxPlayers": 8,
+        "canStart": false,
+        "players": {
+          "host-Host-0001": {
+            "id": "host-Host-0001",
+            "name": "Host",
+            "role": "host",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": {
+            "id": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+            "name": "Bot 1",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "7616dfa7-1790-483c-a58b-7c776f724489": {
+            "id": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "name": "Bot 2",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": {
+            "id": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+            "name": "Bot 3",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          }
+        }
+      }
+    },
+    {
+      "seq": 43,
+      "phase": "MatchupVoting",
+      "state": {
+        "categoryOptions": [
+          {
+            "id": "cat-3",
+            "name": "Category 3",
+            "emoji": "x",
+            "votes": 2
+          },
+          {
+            "id": "cat-0",
+            "name": "Category 0",
+            "emoji": "x",
+            "votes": 0
+          },
+          {
+            "id": "cat-2",
+            "name": "Category 2",
+            "emoji": "x",
+            "votes": 1
+          }
+        ],
+        "selectedCategory": "cat-3",
+        "roundNumber": 1,
+        "totalRounds": 2,
+        "isFinalRound": false,
+        "matchups": [
+          {
+            "id": "ec9c2507-f7fc-4554-8102-ac997adffd03",
+            "index": 0,
+            "promptText": "Prompt 3.7",
+            "answers": [
+              {
+                "id": "6a5f6d29-2189-4f30-9112-c8f8ef0effa0",
+                "text": "The moon, on a budget",
+                "votes": 1,
+                "authorId": "7616dfa7-1790-483c-a58b-7c776f724489",
+                "authorName": "Bot 2",
+                "isWinner": true
+              },
+              {
+                "id": "503cb8ee-b7fc-4444-b670-a787b68a7b19",
+                "text": "Whatever grandpa said it was",
+                "votes": 0,
+                "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+                "authorName": "Bot 1",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "e586dedf-0883-4544-bd5c-a1d6f2cd3889",
+            "index": 1,
+            "promptText": "Prompt 3.1",
+            "answers": [
+              {
+                "id": "d2f24de0-89cc-4f51-b82c-8bfd6b557ab4",
+                "text": "Lukewarm soup",
+                "votes": 0,
+                "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+                "authorName": "Bot 1",
+                "isWinner": true
+              },
+              {
+                "id": "82b6aa97-17ce-407c-905d-bd65d16c4a94",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "host-Host-0001",
+                "authorName": "Host",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "7b44bc15-e76b-4df7-ac4d-b9be2effec21",
+            "index": 2,
+            "promptText": "Prompt 3.5",
+            "answers": [
+              {
+                "id": "b0f47a56-c7d9-4911-bb15-bd38749cd87e",
+                "text": "A wizard who forgot his password",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "eb41c16e-f5ea-4d71-ac86-a1ae8a8701b5",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "1dd81b43-0e64-4eb3-a0d2-84233d5c9238",
+            "index": 3,
+            "promptText": "Prompt 3.0",
+            "answers": [
+              {
+                "id": "29e1786d-1c3f-4927-bfec-3651d1ca792f",
+                "text": "Lukewarm soup",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "9f9028aa-c780-46f4-a919-c5349422ebe2",
+                "text": "Whatever grandpa said it was",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": false,
+            "isClash": false
+          }
+        ],
+        "activeMatchupIndex": 2,
+        "votesCast": 0,
+        "votesExpected": 0,
+        "progress": {
+          "host-Host-0001": 0,
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": 2,
+          "7616dfa7-1790-483c-a58b-7c776f724489": 2,
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": 2
+        },
+        "answersPerPlayer": 2,
+        "rejectedTexts": 0,
+        "scoreboard": [],
+        "tieBreakers": [],
+        "tieBreakerContenders": [],
+        "bestAnswers": [],
+        "awards": [],
+        "honorWinnerNames": [],
+        "typing": {},
+        "phase": "MatchupVoting",
+        "roomCode": "DDDE",
+        "phaseEndsAt": 1793080505609,
+        "serverNow": 1793080500407,
+        "spectatorCount": 0,
+        "options": "{\"mode\":\"free\",\"totalRounds\":2,\"categoryVoteSeconds\":5,\"promptSeconds\":15,\"voteSeconds\":5,\"revealSeconds\":1,\"honorVote\":true,\"filterLevel\":\"moderate\"}",
+        "notice": "",
+        "minPlayers": 3,
+        "maxPlayers": 8,
+        "canStart": false,
+        "players": {
+          "host-Host-0001": {
+            "id": "host-Host-0001",
+            "name": "Host",
+            "role": "host",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": {
+            "id": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+            "name": "Bot 1",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "7616dfa7-1790-483c-a58b-7c776f724489": {
+            "id": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "name": "Bot 2",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": {
+            "id": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+            "name": "Bot 3",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          }
+        }
+      }
+    },
+    {
+      "seq": 46,
+      "phase": "MatchupReveal",
+      "state": {
+        "categoryOptions": [
+          {
+            "id": "cat-3",
+            "name": "Category 3",
+            "emoji": "x",
+            "votes": 2
+          },
+          {
+            "id": "cat-0",
+            "name": "Category 0",
+            "emoji": "x",
+            "votes": 0
+          },
+          {
+            "id": "cat-2",
+            "name": "Category 2",
+            "emoji": "x",
+            "votes": 1
+          }
+        ],
+        "selectedCategory": "cat-3",
+        "roundNumber": 1,
+        "totalRounds": 2,
+        "isFinalRound": false,
+        "matchups": [
+          {
+            "id": "ec9c2507-f7fc-4554-8102-ac997adffd03",
+            "index": 0,
+            "promptText": "Prompt 3.7",
+            "answers": [
+              {
+                "id": "6a5f6d29-2189-4f30-9112-c8f8ef0effa0",
+                "text": "The moon, on a budget",
+                "votes": 1,
+                "authorId": "7616dfa7-1790-483c-a58b-7c776f724489",
+                "authorName": "Bot 2",
+                "isWinner": true
+              },
+              {
+                "id": "503cb8ee-b7fc-4444-b670-a787b68a7b19",
+                "text": "Whatever grandpa said it was",
+                "votes": 0,
+                "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+                "authorName": "Bot 1",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "e586dedf-0883-4544-bd5c-a1d6f2cd3889",
+            "index": 1,
+            "promptText": "Prompt 3.1",
+            "answers": [
+              {
+                "id": "d2f24de0-89cc-4f51-b82c-8bfd6b557ab4",
+                "text": "Lukewarm soup",
+                "votes": 0,
+                "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+                "authorName": "Bot 1",
+                "isWinner": true
+              },
+              {
+                "id": "82b6aa97-17ce-407c-905d-bd65d16c4a94",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "host-Host-0001",
+                "authorName": "Host",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "7b44bc15-e76b-4df7-ac4d-b9be2effec21",
+            "index": 2,
+            "promptText": "Prompt 3.5",
+            "answers": [
+              {
+                "id": "b0f47a56-c7d9-4911-bb15-bd38749cd87e",
+                "text": "A wizard who forgot his password",
+                "votes": 0,
+                "authorId": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+                "authorName": "Bot 3",
+                "isWinner": true
+              },
+              {
+                "id": "eb41c16e-f5ea-4d71-ac86-a1ae8a8701b5",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "host-Host-0001",
+                "authorName": "Host",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "1dd81b43-0e64-4eb3-a0d2-84233d5c9238",
+            "index": 3,
+            "promptText": "Prompt 3.0",
+            "answers": [
+              {
+                "id": "29e1786d-1c3f-4927-bfec-3651d1ca792f",
+                "text": "Lukewarm soup",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "9f9028aa-c780-46f4-a919-c5349422ebe2",
+                "text": "Whatever grandpa said it was",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": false,
+            "isClash": false
+          }
+        ],
+        "activeMatchupIndex": 2,
+        "votesCast": 0,
+        "votesExpected": 0,
+        "progress": {
+          "host-Host-0001": 0,
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": 2,
+          "7616dfa7-1790-483c-a58b-7c776f724489": 2,
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": 2
+        },
+        "answersPerPlayer": 2,
+        "rejectedTexts": 0,
+        "scoreboard": [],
+        "tieBreakers": [],
+        "tieBreakerContenders": [],
+        "bestAnswers": [],
+        "awards": [],
+        "honorWinnerNames": [],
+        "typing": {},
+        "phase": "MatchupReveal",
+        "roomCode": "DDDE",
+        "phaseEndsAt": 1793080501609,
+        "serverNow": 1793080501410,
+        "spectatorCount": 0,
+        "options": "{\"mode\":\"free\",\"totalRounds\":2,\"categoryVoteSeconds\":5,\"promptSeconds\":15,\"voteSeconds\":5,\"revealSeconds\":1,\"honorVote\":true,\"filterLevel\":\"moderate\"}",
+        "notice": "",
+        "minPlayers": 3,
+        "maxPlayers": 8,
+        "canStart": false,
+        "players": {
+          "host-Host-0001": {
+            "id": "host-Host-0001",
+            "name": "Host",
+            "role": "host",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": {
+            "id": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+            "name": "Bot 1",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "7616dfa7-1790-483c-a58b-7c776f724489": {
+            "id": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "name": "Bot 2",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": {
+            "id": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+            "name": "Bot 3",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          }
+        }
+      }
+    },
+    {
+      "seq": 50,
+      "phase": "MatchupVoting",
+      "state": {
+        "categoryOptions": [
+          {
+            "id": "cat-3",
+            "name": "Category 3",
+            "emoji": "x",
+            "votes": 2
+          },
+          {
+            "id": "cat-0",
+            "name": "Category 0",
+            "emoji": "x",
+            "votes": 0
+          },
+          {
+            "id": "cat-2",
+            "name": "Category 2",
+            "emoji": "x",
+            "votes": 1
+          }
+        ],
+        "selectedCategory": "cat-3",
+        "roundNumber": 1,
+        "totalRounds": 2,
+        "isFinalRound": false,
+        "matchups": [
+          {
+            "id": "ec9c2507-f7fc-4554-8102-ac997adffd03",
+            "index": 0,
+            "promptText": "Prompt 3.7",
+            "answers": [
+              {
+                "id": "6a5f6d29-2189-4f30-9112-c8f8ef0effa0",
+                "text": "The moon, on a budget",
+                "votes": 1,
+                "authorId": "7616dfa7-1790-483c-a58b-7c776f724489",
+                "authorName": "Bot 2",
+                "isWinner": true
+              },
+              {
+                "id": "503cb8ee-b7fc-4444-b670-a787b68a7b19",
+                "text": "Whatever grandpa said it was",
+                "votes": 0,
+                "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+                "authorName": "Bot 1",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "e586dedf-0883-4544-bd5c-a1d6f2cd3889",
+            "index": 1,
+            "promptText": "Prompt 3.1",
+            "answers": [
+              {
+                "id": "d2f24de0-89cc-4f51-b82c-8bfd6b557ab4",
+                "text": "Lukewarm soup",
+                "votes": 0,
+                "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+                "authorName": "Bot 1",
+                "isWinner": true
+              },
+              {
+                "id": "82b6aa97-17ce-407c-905d-bd65d16c4a94",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "host-Host-0001",
+                "authorName": "Host",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "7b44bc15-e76b-4df7-ac4d-b9be2effec21",
+            "index": 2,
+            "promptText": "Prompt 3.5",
+            "answers": [
+              {
+                "id": "b0f47a56-c7d9-4911-bb15-bd38749cd87e",
+                "text": "A wizard who forgot his password",
+                "votes": 0,
+                "authorId": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+                "authorName": "Bot 3",
+                "isWinner": true
+              },
+              {
+                "id": "eb41c16e-f5ea-4d71-ac86-a1ae8a8701b5",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "host-Host-0001",
+                "authorName": "Host",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "1dd81b43-0e64-4eb3-a0d2-84233d5c9238",
+            "index": 3,
+            "promptText": "Prompt 3.0",
+            "answers": [
+              {
+                "id": "29e1786d-1c3f-4927-bfec-3651d1ca792f",
+                "text": "Lukewarm soup",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "9f9028aa-c780-46f4-a919-c5349422ebe2",
+                "text": "Whatever grandpa said it was",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": false,
+            "isClash": false
+          }
+        ],
+        "activeMatchupIndex": 3,
+        "votesCast": 1,
+        "votesExpected": 2,
+        "progress": {
+          "host-Host-0001": 0,
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": 2,
+          "7616dfa7-1790-483c-a58b-7c776f724489": 2,
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": 2
+        },
+        "answersPerPlayer": 2,
+        "rejectedTexts": 0,
+        "scoreboard": [],
+        "tieBreakers": [],
+        "tieBreakerContenders": [],
+        "bestAnswers": [],
+        "awards": [],
+        "honorWinnerNames": [],
+        "typing": {},
+        "phase": "MatchupVoting",
+        "roomCode": "DDDE",
+        "phaseEndsAt": 1793080506611,
+        "serverNow": 1793080506421,
+        "spectatorCount": 0,
+        "options": "{\"mode\":\"free\",\"totalRounds\":2,\"categoryVoteSeconds\":5,\"promptSeconds\":15,\"voteSeconds\":5,\"revealSeconds\":1,\"honorVote\":true,\"filterLevel\":\"moderate\"}",
+        "notice": "",
+        "minPlayers": 3,
+        "maxPlayers": 8,
+        "canStart": false,
+        "players": {
+          "host-Host-0001": {
+            "id": "host-Host-0001",
+            "name": "Host",
+            "role": "host",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": {
+            "id": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+            "name": "Bot 1",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "7616dfa7-1790-483c-a58b-7c776f724489": {
+            "id": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "name": "Bot 2",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": {
+            "id": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+            "name": "Bot 3",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          }
+        }
+      }
+    },
+    {
+      "seq": 53,
+      "phase": "MatchupReveal",
+      "state": {
+        "categoryOptions": [
+          {
+            "id": "cat-3",
+            "name": "Category 3",
+            "emoji": "x",
+            "votes": 2
+          },
+          {
+            "id": "cat-0",
+            "name": "Category 0",
+            "emoji": "x",
+            "votes": 0
+          },
+          {
+            "id": "cat-2",
+            "name": "Category 2",
+            "emoji": "x",
+            "votes": 1
+          }
+        ],
+        "selectedCategory": "cat-3",
+        "roundNumber": 1,
+        "totalRounds": 2,
+        "isFinalRound": false,
+        "matchups": [
+          {
+            "id": "ec9c2507-f7fc-4554-8102-ac997adffd03",
+            "index": 0,
+            "promptText": "Prompt 3.7",
+            "answers": [
+              {
+                "id": "6a5f6d29-2189-4f30-9112-c8f8ef0effa0",
+                "text": "The moon, on a budget",
+                "votes": 1,
+                "authorId": "7616dfa7-1790-483c-a58b-7c776f724489",
+                "authorName": "Bot 2",
+                "isWinner": true
+              },
+              {
+                "id": "503cb8ee-b7fc-4444-b670-a787b68a7b19",
+                "text": "Whatever grandpa said it was",
+                "votes": 0,
+                "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+                "authorName": "Bot 1",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "e586dedf-0883-4544-bd5c-a1d6f2cd3889",
+            "index": 1,
+            "promptText": "Prompt 3.1",
+            "answers": [
+              {
+                "id": "d2f24de0-89cc-4f51-b82c-8bfd6b557ab4",
+                "text": "Lukewarm soup",
+                "votes": 0,
+                "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+                "authorName": "Bot 1",
+                "isWinner": true
+              },
+              {
+                "id": "82b6aa97-17ce-407c-905d-bd65d16c4a94",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "host-Host-0001",
+                "authorName": "Host",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "7b44bc15-e76b-4df7-ac4d-b9be2effec21",
+            "index": 2,
+            "promptText": "Prompt 3.5",
+            "answers": [
+              {
+                "id": "b0f47a56-c7d9-4911-bb15-bd38749cd87e",
+                "text": "A wizard who forgot his password",
+                "votes": 0,
+                "authorId": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+                "authorName": "Bot 3",
+                "isWinner": true
+              },
+              {
+                "id": "eb41c16e-f5ea-4d71-ac86-a1ae8a8701b5",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "host-Host-0001",
+                "authorName": "Host",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "1dd81b43-0e64-4eb3-a0d2-84233d5c9238",
+            "index": 3,
+            "promptText": "Prompt 3.0",
+            "answers": [
+              {
+                "id": "29e1786d-1c3f-4927-bfec-3651d1ca792f",
+                "text": "Lukewarm soup",
+                "votes": 0,
+                "authorId": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+                "authorName": "Bot 3",
+                "isWinner": false
+              },
+              {
+                "id": "9f9028aa-c780-46f4-a919-c5349422ebe2",
+                "text": "Whatever grandpa said it was",
+                "votes": 1,
+                "authorId": "7616dfa7-1790-483c-a58b-7c776f724489",
+                "authorName": "Bot 2",
+                "isWinner": true
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": false,
+            "isClash": false
+          }
+        ],
+        "activeMatchupIndex": 3,
+        "votesCast": 1,
+        "votesExpected": 2,
+        "progress": {
+          "host-Host-0001": 0,
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": 2,
+          "7616dfa7-1790-483c-a58b-7c776f724489": 2,
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": 2
+        },
+        "answersPerPlayer": 2,
+        "rejectedTexts": 0,
+        "scoreboard": [],
+        "tieBreakers": [],
+        "tieBreakerContenders": [],
+        "bestAnswers": [],
+        "awards": [],
+        "honorWinnerNames": [],
+        "typing": {},
+        "phase": "MatchupReveal",
+        "roomCode": "DDDE",
+        "phaseEndsAt": 1793080507622,
+        "serverNow": 1793080507423,
+        "spectatorCount": 0,
+        "options": "{\"mode\":\"free\",\"totalRounds\":2,\"categoryVoteSeconds\":5,\"promptSeconds\":15,\"voteSeconds\":5,\"revealSeconds\":1,\"honorVote\":true,\"filterLevel\":\"moderate\"}",
+        "notice": "",
+        "minPlayers": 3,
+        "maxPlayers": 8,
+        "canStart": false,
+        "players": {
+          "host-Host-0001": {
+            "id": "host-Host-0001",
+            "name": "Host",
+            "role": "host",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": {
+            "id": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+            "name": "Bot 1",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "7616dfa7-1790-483c-a58b-7c776f724489": {
+            "id": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "name": "Bot 2",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": {
+            "id": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+            "name": "Bot 3",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          }
+        }
+      }
+    },
+    {
+      "seq": 56,
+      "phase": "Results",
+      "state": {
+        "categoryOptions": [
+          {
+            "id": "cat-3",
+            "name": "Category 3",
+            "emoji": "x",
+            "votes": 2
+          },
+          {
+            "id": "cat-0",
+            "name": "Category 0",
+            "emoji": "x",
+            "votes": 0
+          },
+          {
+            "id": "cat-2",
+            "name": "Category 2",
+            "emoji": "x",
+            "votes": 1
+          }
+        ],
+        "selectedCategory": "cat-3",
+        "roundNumber": 1,
+        "totalRounds": 2,
+        "isFinalRound": false,
+        "matchups": [
+          {
+            "id": "ec9c2507-f7fc-4554-8102-ac997adffd03",
+            "index": 0,
+            "promptText": "Prompt 3.7",
+            "answers": [
+              {
+                "id": "6a5f6d29-2189-4f30-9112-c8f8ef0effa0",
+                "text": "The moon, on a budget",
+                "votes": 1,
+                "authorId": "7616dfa7-1790-483c-a58b-7c776f724489",
+                "authorName": "Bot 2",
+                "isWinner": true
+              },
+              {
+                "id": "503cb8ee-b7fc-4444-b670-a787b68a7b19",
+                "text": "Whatever grandpa said it was",
+                "votes": 0,
+                "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+                "authorName": "Bot 1",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "e586dedf-0883-4544-bd5c-a1d6f2cd3889",
+            "index": 1,
+            "promptText": "Prompt 3.1",
+            "answers": [
+              {
+                "id": "d2f24de0-89cc-4f51-b82c-8bfd6b557ab4",
+                "text": "Lukewarm soup",
+                "votes": 0,
+                "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+                "authorName": "Bot 1",
+                "isWinner": true
+              },
+              {
+                "id": "82b6aa97-17ce-407c-905d-bd65d16c4a94",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "host-Host-0001",
+                "authorName": "Host",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "7b44bc15-e76b-4df7-ac4d-b9be2effec21",
+            "index": 2,
+            "promptText": "Prompt 3.5",
+            "answers": [
+              {
+                "id": "b0f47a56-c7d9-4911-bb15-bd38749cd87e",
+                "text": "A wizard who forgot his password",
+                "votes": 0,
+                "authorId": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+                "authorName": "Bot 3",
+                "isWinner": true
+              },
+              {
+                "id": "eb41c16e-f5ea-4d71-ac86-a1ae8a8701b5",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "host-Host-0001",
+                "authorName": "Host",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "1dd81b43-0e64-4eb3-a0d2-84233d5c9238",
+            "index": 3,
+            "promptText": "Prompt 3.0",
+            "answers": [
+              {
+                "id": "29e1786d-1c3f-4927-bfec-3651d1ca792f",
+                "text": "Lukewarm soup",
+                "votes": 0,
+                "authorId": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+                "authorName": "Bot 3",
+                "isWinner": false
+              },
+              {
+                "id": "9f9028aa-c780-46f4-a919-c5349422ebe2",
+                "text": "Whatever grandpa said it was",
+                "votes": 1,
+                "authorId": "7616dfa7-1790-483c-a58b-7c776f724489",
+                "authorName": "Bot 2",
+                "isWinner": true
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": false,
+            "isClash": false
+          }
+        ],
+        "activeMatchupIndex": 3,
+        "votesCast": 1,
+        "votesExpected": 2,
+        "progress": {
+          "host-Host-0001": 0,
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": 2,
+          "7616dfa7-1790-483c-a58b-7c776f724489": 2,
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": 2
+        },
+        "answersPerPlayer": 2,
+        "rejectedTexts": 0,
+        "scoreboard": [
+          {
+            "playerId": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "name": "Bot 2",
+            "score": 300,
+            "roundPoints": 300,
+            "matchupsWon": 2,
+            "hadClash": false,
+            "wonTieBreaker": false,
+            "hasLeft": false
+          },
+          {
+            "playerId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+            "name": "Bot 1",
+            "score": 50,
+            "roundPoints": 50,
+            "matchupsWon": 1,
+            "hadClash": false,
+            "wonTieBreaker": false,
+            "hasLeft": false
+          },
+          {
+            "playerId": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+            "name": "Bot 3",
+            "score": 50,
+            "roundPoints": 50,
+            "matchupsWon": 1,
+            "hadClash": false,
+            "wonTieBreaker": false,
+            "hasLeft": false
+          },
+          {
+            "playerId": "host-Host-0001",
+            "name": "Host",
+            "score": 0,
+            "roundPoints": 0,
+            "matchupsWon": 0,
+            "hadClash": false,
+            "wonTieBreaker": false,
+            "hasLeft": false
+          }
+        ],
+        "tieBreakers": [],
+        "tieBreakerContenders": [],
+        "bestAnswers": [],
+        "awards": [],
+        "honorWinnerNames": [],
+        "typing": {},
+        "phase": "Results",
+        "roomCode": "DDDE",
+        "phaseEndsAt": 0,
+        "serverNow": 1793080507423,
+        "spectatorCount": 0,
+        "options": "{\"mode\":\"free\",\"totalRounds\":2,\"categoryVoteSeconds\":5,\"promptSeconds\":15,\"voteSeconds\":5,\"revealSeconds\":1,\"honorVote\":true,\"filterLevel\":\"moderate\"}",
+        "notice": "",
+        "minPlayers": 3,
+        "maxPlayers": 8,
+        "canStart": false,
+        "players": {
+          "host-Host-0001": {
+            "id": "host-Host-0001",
+            "name": "Host",
+            "role": "host",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": {
+            "id": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+            "name": "Bot 1",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "7616dfa7-1790-483c-a58b-7c776f724489": {
+            "id": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "name": "Bot 2",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": {
+            "id": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+            "name": "Bot 3",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          }
+        }
+      }
+    },
+    {
+      "seq": 62,
+      "phase": "CategorySelection",
+      "state": {
+        "categoryOptions": [
+          {
+            "id": "cat-3",
+            "name": "Category 3",
+            "emoji": "x",
+            "votes": 0
+          },
+          {
+            "id": "cat-1",
+            "name": "Category 1",
+            "emoji": "x",
+            "votes": 1
+          },
+          {
+            "id": "cat-0",
+            "name": "Category 0",
+            "emoji": "x",
+            "votes": 2
+          }
+        ],
+        "selectedCategory": "cat-0",
+        "roundNumber": 2,
+        "totalRounds": 2,
+        "isFinalRound": false,
+        "matchups": [],
+        "activeMatchupIndex": -1,
+        "votesCast": 3,
+        "votesExpected": 4,
+        "progress": {},
+        "answersPerPlayer": 0,
+        "rejectedTexts": 0,
+        "scoreboard": [],
+        "tieBreakers": [],
+        "tieBreakerContenders": [],
+        "bestAnswers": [],
+        "awards": [],
+        "honorWinnerNames": [],
+        "typing": {},
+        "phase": "CategorySelection",
+        "roomCode": "DDDE",
+        "phaseEndsAt": 1793080512626,
+        "serverNow": 1793080512437,
+        "spectatorCount": 0,
+        "options": "{\"mode\":\"free\",\"totalRounds\":2,\"categoryVoteSeconds\":5,\"promptSeconds\":15,\"voteSeconds\":5,\"revealSeconds\":1,\"honorVote\":true,\"filterLevel\":\"moderate\"}",
+        "notice": "",
+        "minPlayers": 3,
+        "maxPlayers": 8,
+        "canStart": false,
+        "players": {
+          "host-Host-0001": {
+            "id": "host-Host-0001",
+            "name": "Host",
+            "role": "host",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": {
+            "id": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+            "name": "Bot 1",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "7616dfa7-1790-483c-a58b-7c776f724489": {
+            "id": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "name": "Bot 2",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": {
+            "id": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+            "name": "Bot 3",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          }
+        }
+      }
+    },
+    {
+      "seq": 74,
+      "phase": "Prompting",
+      "state": {
+        "categoryOptions": [
+          {
+            "id": "cat-3",
+            "name": "Category 3",
+            "emoji": "x",
+            "votes": 0
+          },
+          {
+            "id": "cat-1",
+            "name": "Category 1",
+            "emoji": "x",
+            "votes": 1
+          },
+          {
+            "id": "cat-0",
+            "name": "Category 0",
+            "emoji": "x",
+            "votes": 2
+          }
+        ],
+        "selectedCategory": "cat-0",
+        "roundNumber": 2,
+        "totalRounds": 2,
+        "isFinalRound": false,
+        "matchups": [
+          {
+            "id": "c55a1cfc-9b71-422d-9763-749007a3dc49",
+            "index": 0,
+            "promptText": "Prompt 0.7",
+            "answers": [
+              {
+                "id": "ecec2223-09fc-4eaf-97a9-bda74ac11231",
+                "text": "My emotional support cactus",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "c7dc7634-7b9f-4851-91f3-e43e95fc96b2",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "cca31e08-1ec1-4cc5-8692-5d043344e60b",
+            "index": 1,
+            "promptText": "Prompt 0.6",
+            "answers": [
+              {
+                "id": "d7da87e2-4cb3-431a-9fb2-2e51e13037e6",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "bf3e17a2-b2e0-4626-87cf-709a1708a369",
+                "text": "Someone else's leftovers",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "255fa156-3c77-4014-9b82-9b177a83b433",
+            "index": 2,
+            "promptText": "Prompt 0.2",
+            "answers": [
+              {
+                "id": "2cf7b55e-2e43-4eb7-af22-4148029f697a",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "d135f832-3454-4f7e-92a3-f8e90d0bf9d1",
+                "text": "Someone else's leftovers",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "94b3a1dd-e5ac-49a1-8484-e50e301a8325",
+            "index": 3,
+            "promptText": "Prompt 0.1",
+            "answers": [
+              {
+                "id": "2739e1ad-86ef-4160-9616-c5e6e0e4cd7f",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "07bf3f23-438e-4f29-ba1c-804424c40d4c",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": true,
+            "isClash": false
+          }
+        ],
+        "activeMatchupIndex": -1,
+        "votesCast": 3,
+        "votesExpected": 4,
+        "progress": {
+          "host-Host-0001": 0,
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": 2,
+          "7616dfa7-1790-483c-a58b-7c776f724489": 2,
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": 2
+        },
+        "answersPerPlayer": 2,
+        "rejectedTexts": 0,
+        "scoreboard": [],
+        "tieBreakers": [],
+        "tieBreakerContenders": [],
+        "bestAnswers": [],
+        "awards": [],
+        "honorWinnerNames": [],
+        "typing": {},
+        "phase": "Prompting",
+        "roomCode": "DDDE",
+        "phaseEndsAt": 1793080527638,
+        "serverNow": 1793080527421,
+        "spectatorCount": 0,
+        "options": "{\"mode\":\"free\",\"totalRounds\":2,\"categoryVoteSeconds\":5,\"promptSeconds\":15,\"voteSeconds\":5,\"revealSeconds\":1,\"honorVote\":true,\"filterLevel\":\"moderate\"}",
+        "notice": "",
+        "minPlayers": 3,
+        "maxPlayers": 8,
+        "canStart": false,
+        "players": {
+          "host-Host-0001": {
+            "id": "host-Host-0001",
+            "name": "Host",
+            "role": "host",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": {
+            "id": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+            "name": "Bot 1",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "7616dfa7-1790-483c-a58b-7c776f724489": {
+            "id": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "name": "Bot 2",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": {
+            "id": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+            "name": "Bot 3",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          }
+        }
+      }
+    },
+    {
+      "seq": 78,
+      "phase": "MatchupVoting",
+      "state": {
+        "categoryOptions": [
+          {
+            "id": "cat-3",
+            "name": "Category 3",
+            "emoji": "x",
+            "votes": 0
+          },
+          {
+            "id": "cat-1",
+            "name": "Category 1",
+            "emoji": "x",
+            "votes": 1
+          },
+          {
+            "id": "cat-0",
+            "name": "Category 0",
+            "emoji": "x",
+            "votes": 2
+          }
+        ],
+        "selectedCategory": "cat-0",
+        "roundNumber": 2,
+        "totalRounds": 2,
+        "isFinalRound": false,
+        "matchups": [
+          {
+            "id": "c55a1cfc-9b71-422d-9763-749007a3dc49",
+            "index": 0,
+            "promptText": "Prompt 0.7",
+            "answers": [
+              {
+                "id": "ecec2223-09fc-4eaf-97a9-bda74ac11231",
+                "text": "My emotional support cactus",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "c7dc7634-7b9f-4851-91f3-e43e95fc96b2",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "cca31e08-1ec1-4cc5-8692-5d043344e60b",
+            "index": 1,
+            "promptText": "Prompt 0.6",
+            "answers": [
+              {
+                "id": "d7da87e2-4cb3-431a-9fb2-2e51e13037e6",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "bf3e17a2-b2e0-4626-87cf-709a1708a369",
+                "text": "Someone else's leftovers",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "255fa156-3c77-4014-9b82-9b177a83b433",
+            "index": 2,
+            "promptText": "Prompt 0.2",
+            "answers": [
+              {
+                "id": "2cf7b55e-2e43-4eb7-af22-4148029f697a",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "d135f832-3454-4f7e-92a3-f8e90d0bf9d1",
+                "text": "Someone else's leftovers",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "94b3a1dd-e5ac-49a1-8484-e50e301a8325",
+            "index": 3,
+            "promptText": "Prompt 0.1",
+            "answers": [
+              {
+                "id": "2739e1ad-86ef-4160-9616-c5e6e0e4cd7f",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "07bf3f23-438e-4f29-ba1c-804424c40d4c",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": true,
+            "isClash": false
+          }
+        ],
+        "activeMatchupIndex": 0,
+        "votesCast": 1,
+        "votesExpected": 2,
+        "progress": {
+          "host-Host-0001": 0,
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": 2,
+          "7616dfa7-1790-483c-a58b-7c776f724489": 2,
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": 2
+        },
+        "answersPerPlayer": 2,
+        "rejectedTexts": 0,
+        "scoreboard": [],
+        "tieBreakers": [],
+        "tieBreakerContenders": [],
+        "bestAnswers": [],
+        "awards": [],
+        "honorWinnerNames": [],
+        "typing": {},
+        "phase": "MatchupVoting",
+        "roomCode": "DDDE",
+        "phaseEndsAt": 1793080532673,
+        "serverNow": 1793080532432,
+        "spectatorCount": 0,
+        "options": "{\"mode\":\"free\",\"totalRounds\":2,\"categoryVoteSeconds\":5,\"promptSeconds\":15,\"voteSeconds\":5,\"revealSeconds\":1,\"honorVote\":true,\"filterLevel\":\"moderate\"}",
+        "notice": "",
+        "minPlayers": 3,
+        "maxPlayers": 8,
+        "canStart": false,
+        "players": {
+          "host-Host-0001": {
+            "id": "host-Host-0001",
+            "name": "Host",
+            "role": "host",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": {
+            "id": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+            "name": "Bot 1",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "7616dfa7-1790-483c-a58b-7c776f724489": {
+            "id": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "name": "Bot 2",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": {
+            "id": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+            "name": "Bot 3",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          }
+        }
+      }
+    },
+    {
+      "seq": 81,
+      "phase": "MatchupReveal",
+      "state": {
+        "categoryOptions": [
+          {
+            "id": "cat-3",
+            "name": "Category 3",
+            "emoji": "x",
+            "votes": 0
+          },
+          {
+            "id": "cat-1",
+            "name": "Category 1",
+            "emoji": "x",
+            "votes": 1
+          },
+          {
+            "id": "cat-0",
+            "name": "Category 0",
+            "emoji": "x",
+            "votes": 2
+          }
+        ],
+        "selectedCategory": "cat-0",
+        "roundNumber": 2,
+        "totalRounds": 2,
+        "isFinalRound": false,
+        "matchups": [
+          {
+            "id": "c55a1cfc-9b71-422d-9763-749007a3dc49",
+            "index": 0,
+            "promptText": "Prompt 0.7",
+            "answers": [
+              {
+                "id": "ecec2223-09fc-4eaf-97a9-bda74ac11231",
+                "text": "My emotional support cactus",
+                "votes": 1,
+                "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+                "authorName": "Bot 1",
+                "isWinner": true
+              },
+              {
+                "id": "c7dc7634-7b9f-4851-91f3-e43e95fc96b2",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+                "authorName": "Bot 3",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "cca31e08-1ec1-4cc5-8692-5d043344e60b",
+            "index": 1,
+            "promptText": "Prompt 0.6",
+            "answers": [
+              {
+                "id": "d7da87e2-4cb3-431a-9fb2-2e51e13037e6",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "bf3e17a2-b2e0-4626-87cf-709a1708a369",
+                "text": "Someone else's leftovers",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "255fa156-3c77-4014-9b82-9b177a83b433",
+            "index": 2,
+            "promptText": "Prompt 0.2",
+            "answers": [
+              {
+                "id": "2cf7b55e-2e43-4eb7-af22-4148029f697a",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "d135f832-3454-4f7e-92a3-f8e90d0bf9d1",
+                "text": "Someone else's leftovers",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "94b3a1dd-e5ac-49a1-8484-e50e301a8325",
+            "index": 3,
+            "promptText": "Prompt 0.1",
+            "answers": [
+              {
+                "id": "2739e1ad-86ef-4160-9616-c5e6e0e4cd7f",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "07bf3f23-438e-4f29-ba1c-804424c40d4c",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": true,
+            "isClash": false
+          }
+        ],
+        "activeMatchupIndex": 0,
+        "votesCast": 1,
+        "votesExpected": 2,
+        "progress": {
+          "host-Host-0001": 0,
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": 2,
+          "7616dfa7-1790-483c-a58b-7c776f724489": 2,
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": 2
+        },
+        "answersPerPlayer": 2,
+        "rejectedTexts": 0,
+        "scoreboard": [],
+        "tieBreakers": [],
+        "tieBreakerContenders": [],
+        "bestAnswers": [],
+        "awards": [],
+        "honorWinnerNames": [],
+        "typing": {},
+        "phase": "MatchupReveal",
+        "roomCode": "DDDE",
+        "phaseEndsAt": 1793080533684,
+        "serverNow": 1793080533435,
+        "spectatorCount": 0,
+        "options": "{\"mode\":\"free\",\"totalRounds\":2,\"categoryVoteSeconds\":5,\"promptSeconds\":15,\"voteSeconds\":5,\"revealSeconds\":1,\"honorVote\":true,\"filterLevel\":\"moderate\"}",
+        "notice": "",
+        "minPlayers": 3,
+        "maxPlayers": 8,
+        "canStart": false,
+        "players": {
+          "host-Host-0001": {
+            "id": "host-Host-0001",
+            "name": "Host",
+            "role": "host",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": {
+            "id": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+            "name": "Bot 1",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "7616dfa7-1790-483c-a58b-7c776f724489": {
+            "id": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "name": "Bot 2",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": {
+            "id": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+            "name": "Bot 3",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          }
+        }
+      }
+    },
+    {
+      "seq": 85,
+      "phase": "MatchupVoting",
+      "state": {
+        "categoryOptions": [
+          {
+            "id": "cat-3",
+            "name": "Category 3",
+            "emoji": "x",
+            "votes": 0
+          },
+          {
+            "id": "cat-1",
+            "name": "Category 1",
+            "emoji": "x",
+            "votes": 1
+          },
+          {
+            "id": "cat-0",
+            "name": "Category 0",
+            "emoji": "x",
+            "votes": 2
+          }
+        ],
+        "selectedCategory": "cat-0",
+        "roundNumber": 2,
+        "totalRounds": 2,
+        "isFinalRound": false,
+        "matchups": [
+          {
+            "id": "c55a1cfc-9b71-422d-9763-749007a3dc49",
+            "index": 0,
+            "promptText": "Prompt 0.7",
+            "answers": [
+              {
+                "id": "ecec2223-09fc-4eaf-97a9-bda74ac11231",
+                "text": "My emotional support cactus",
+                "votes": 1,
+                "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+                "authorName": "Bot 1",
+                "isWinner": true
+              },
+              {
+                "id": "c7dc7634-7b9f-4851-91f3-e43e95fc96b2",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+                "authorName": "Bot 3",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "cca31e08-1ec1-4cc5-8692-5d043344e60b",
+            "index": 1,
+            "promptText": "Prompt 0.6",
+            "answers": [
+              {
+                "id": "d7da87e2-4cb3-431a-9fb2-2e51e13037e6",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "bf3e17a2-b2e0-4626-87cf-709a1708a369",
+                "text": "Someone else's leftovers",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "255fa156-3c77-4014-9b82-9b177a83b433",
+            "index": 2,
+            "promptText": "Prompt 0.2",
+            "answers": [
+              {
+                "id": "2cf7b55e-2e43-4eb7-af22-4148029f697a",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "d135f832-3454-4f7e-92a3-f8e90d0bf9d1",
+                "text": "Someone else's leftovers",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "94b3a1dd-e5ac-49a1-8484-e50e301a8325",
+            "index": 3,
+            "promptText": "Prompt 0.1",
+            "answers": [
+              {
+                "id": "2739e1ad-86ef-4160-9616-c5e6e0e4cd7f",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "07bf3f23-438e-4f29-ba1c-804424c40d4c",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": true,
+            "isClash": false
+          }
+        ],
+        "activeMatchupIndex": 1,
+        "votesCast": 1,
+        "votesExpected": 2,
+        "progress": {
+          "host-Host-0001": 0,
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": 2,
+          "7616dfa7-1790-483c-a58b-7c776f724489": 2,
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": 2
+        },
+        "answersPerPlayer": 2,
+        "rejectedTexts": 0,
+        "scoreboard": [],
+        "tieBreakers": [],
+        "tieBreakerContenders": [],
+        "bestAnswers": [],
+        "awards": [],
+        "honorWinnerNames": [],
+        "typing": {},
+        "phase": "MatchupVoting",
+        "roomCode": "DDDE",
+        "phaseEndsAt": 1793080538686,
+        "serverNow": 1793080538400,
+        "spectatorCount": 0,
+        "options": "{\"mode\":\"free\",\"totalRounds\":2,\"categoryVoteSeconds\":5,\"promptSeconds\":15,\"voteSeconds\":5,\"revealSeconds\":1,\"honorVote\":true,\"filterLevel\":\"moderate\"}",
+        "notice": "",
+        "minPlayers": 3,
+        "maxPlayers": 8,
+        "canStart": false,
+        "players": {
+          "host-Host-0001": {
+            "id": "host-Host-0001",
+            "name": "Host",
+            "role": "host",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": {
+            "id": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+            "name": "Bot 1",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "7616dfa7-1790-483c-a58b-7c776f724489": {
+            "id": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "name": "Bot 2",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": {
+            "id": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+            "name": "Bot 3",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          }
+        }
+      }
+    },
+    {
+      "seq": 88,
+      "phase": "MatchupReveal",
+      "state": {
+        "categoryOptions": [
+          {
+            "id": "cat-3",
+            "name": "Category 3",
+            "emoji": "x",
+            "votes": 0
+          },
+          {
+            "id": "cat-1",
+            "name": "Category 1",
+            "emoji": "x",
+            "votes": 1
+          },
+          {
+            "id": "cat-0",
+            "name": "Category 0",
+            "emoji": "x",
+            "votes": 2
+          }
+        ],
+        "selectedCategory": "cat-0",
+        "roundNumber": 2,
+        "totalRounds": 2,
+        "isFinalRound": false,
+        "matchups": [
+          {
+            "id": "c55a1cfc-9b71-422d-9763-749007a3dc49",
+            "index": 0,
+            "promptText": "Prompt 0.7",
+            "answers": [
+              {
+                "id": "ecec2223-09fc-4eaf-97a9-bda74ac11231",
+                "text": "My emotional support cactus",
+                "votes": 1,
+                "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+                "authorName": "Bot 1",
+                "isWinner": true
+              },
+              {
+                "id": "c7dc7634-7b9f-4851-91f3-e43e95fc96b2",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+                "authorName": "Bot 3",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "cca31e08-1ec1-4cc5-8692-5d043344e60b",
+            "index": 1,
+            "promptText": "Prompt 0.6",
+            "answers": [
+              {
+                "id": "d7da87e2-4cb3-431a-9fb2-2e51e13037e6",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+                "authorName": "Bot 1",
+                "isWinner": false
+              },
+              {
+                "id": "bf3e17a2-b2e0-4626-87cf-709a1708a369",
+                "text": "Someone else's leftovers",
+                "votes": 1,
+                "authorId": "7616dfa7-1790-483c-a58b-7c776f724489",
+                "authorName": "Bot 2",
+                "isWinner": true
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "255fa156-3c77-4014-9b82-9b177a83b433",
+            "index": 2,
+            "promptText": "Prompt 0.2",
+            "answers": [
+              {
+                "id": "2cf7b55e-2e43-4eb7-af22-4148029f697a",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "d135f832-3454-4f7e-92a3-f8e90d0bf9d1",
+                "text": "Someone else's leftovers",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "94b3a1dd-e5ac-49a1-8484-e50e301a8325",
+            "index": 3,
+            "promptText": "Prompt 0.1",
+            "answers": [
+              {
+                "id": "2739e1ad-86ef-4160-9616-c5e6e0e4cd7f",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "07bf3f23-438e-4f29-ba1c-804424c40d4c",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": true,
+            "isClash": false
+          }
+        ],
+        "activeMatchupIndex": 1,
+        "votesCast": 1,
+        "votesExpected": 2,
+        "progress": {
+          "host-Host-0001": 0,
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": 2,
+          "7616dfa7-1790-483c-a58b-7c776f724489": 2,
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": 2
+        },
+        "answersPerPlayer": 2,
+        "rejectedTexts": 0,
+        "scoreboard": [],
+        "tieBreakers": [],
+        "tieBreakerContenders": [],
+        "bestAnswers": [],
+        "awards": [],
+        "honorWinnerNames": [],
+        "typing": {},
+        "phase": "MatchupReveal",
+        "roomCode": "DDDE",
+        "phaseEndsAt": 1793080539701,
+        "serverNow": 1793080539402,
+        "spectatorCount": 0,
+        "options": "{\"mode\":\"free\",\"totalRounds\":2,\"categoryVoteSeconds\":5,\"promptSeconds\":15,\"voteSeconds\":5,\"revealSeconds\":1,\"honorVote\":true,\"filterLevel\":\"moderate\"}",
+        "notice": "",
+        "minPlayers": 3,
+        "maxPlayers": 8,
+        "canStart": false,
+        "players": {
+          "host-Host-0001": {
+            "id": "host-Host-0001",
+            "name": "Host",
+            "role": "host",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": {
+            "id": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+            "name": "Bot 1",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "7616dfa7-1790-483c-a58b-7c776f724489": {
+            "id": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "name": "Bot 2",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": {
+            "id": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+            "name": "Bot 3",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          }
+        }
+      }
+    },
+    {
+      "seq": 90,
+      "phase": "MatchupVoting",
+      "state": {
+        "categoryOptions": [
+          {
+            "id": "cat-3",
+            "name": "Category 3",
+            "emoji": "x",
+            "votes": 0
+          },
+          {
+            "id": "cat-1",
+            "name": "Category 1",
+            "emoji": "x",
+            "votes": 1
+          },
+          {
+            "id": "cat-0",
+            "name": "Category 0",
+            "emoji": "x",
+            "votes": 2
+          }
+        ],
+        "selectedCategory": "cat-0",
+        "roundNumber": 2,
+        "totalRounds": 2,
+        "isFinalRound": false,
+        "matchups": [
+          {
+            "id": "c55a1cfc-9b71-422d-9763-749007a3dc49",
+            "index": 0,
+            "promptText": "Prompt 0.7",
+            "answers": [
+              {
+                "id": "ecec2223-09fc-4eaf-97a9-bda74ac11231",
+                "text": "My emotional support cactus",
+                "votes": 1,
+                "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+                "authorName": "Bot 1",
+                "isWinner": true
+              },
+              {
+                "id": "c7dc7634-7b9f-4851-91f3-e43e95fc96b2",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+                "authorName": "Bot 3",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "cca31e08-1ec1-4cc5-8692-5d043344e60b",
+            "index": 1,
+            "promptText": "Prompt 0.6",
+            "answers": [
+              {
+                "id": "d7da87e2-4cb3-431a-9fb2-2e51e13037e6",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+                "authorName": "Bot 1",
+                "isWinner": false
+              },
+              {
+                "id": "bf3e17a2-b2e0-4626-87cf-709a1708a369",
+                "text": "Someone else's leftovers",
+                "votes": 1,
+                "authorId": "7616dfa7-1790-483c-a58b-7c776f724489",
+                "authorName": "Bot 2",
+                "isWinner": true
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "255fa156-3c77-4014-9b82-9b177a83b433",
+            "index": 2,
+            "promptText": "Prompt 0.2",
+            "answers": [
+              {
+                "id": "2cf7b55e-2e43-4eb7-af22-4148029f697a",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "d135f832-3454-4f7e-92a3-f8e90d0bf9d1",
+                "text": "Someone else's leftovers",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "94b3a1dd-e5ac-49a1-8484-e50e301a8325",
+            "index": 3,
+            "promptText": "Prompt 0.1",
+            "answers": [
+              {
+                "id": "2739e1ad-86ef-4160-9616-c5e6e0e4cd7f",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "07bf3f23-438e-4f29-ba1c-804424c40d4c",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": true,
+            "isClash": false
+          }
+        ],
+        "activeMatchupIndex": 2,
+        "votesCast": 0,
+        "votesExpected": 0,
+        "progress": {
+          "host-Host-0001": 0,
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": 2,
+          "7616dfa7-1790-483c-a58b-7c776f724489": 2,
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": 2
+        },
+        "answersPerPlayer": 2,
+        "rejectedTexts": 0,
+        "scoreboard": [],
+        "tieBreakers": [],
+        "tieBreakerContenders": [],
+        "bestAnswers": [],
+        "awards": [],
+        "honorWinnerNames": [],
+        "typing": {},
+        "phase": "MatchupVoting",
+        "roomCode": "DDDE",
+        "phaseEndsAt": 1793080544703,
+        "serverNow": 1793080539402,
+        "spectatorCount": 0,
+        "options": "{\"mode\":\"free\",\"totalRounds\":2,\"categoryVoteSeconds\":5,\"promptSeconds\":15,\"voteSeconds\":5,\"revealSeconds\":1,\"honorVote\":true,\"filterLevel\":\"moderate\"}",
+        "notice": "",
+        "minPlayers": 3,
+        "maxPlayers": 8,
+        "canStart": false,
+        "players": {
+          "host-Host-0001": {
+            "id": "host-Host-0001",
+            "name": "Host",
+            "role": "host",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": {
+            "id": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+            "name": "Bot 1",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "7616dfa7-1790-483c-a58b-7c776f724489": {
+            "id": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "name": "Bot 2",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": {
+            "id": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+            "name": "Bot 3",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          }
+        }
+      }
+    },
+    {
+      "seq": 93,
+      "phase": "MatchupReveal",
+      "state": {
+        "categoryOptions": [
+          {
+            "id": "cat-3",
+            "name": "Category 3",
+            "emoji": "x",
+            "votes": 0
+          },
+          {
+            "id": "cat-1",
+            "name": "Category 1",
+            "emoji": "x",
+            "votes": 1
+          },
+          {
+            "id": "cat-0",
+            "name": "Category 0",
+            "emoji": "x",
+            "votes": 2
+          }
+        ],
+        "selectedCategory": "cat-0",
+        "roundNumber": 2,
+        "totalRounds": 2,
+        "isFinalRound": false,
+        "matchups": [
+          {
+            "id": "c55a1cfc-9b71-422d-9763-749007a3dc49",
+            "index": 0,
+            "promptText": "Prompt 0.7",
+            "answers": [
+              {
+                "id": "ecec2223-09fc-4eaf-97a9-bda74ac11231",
+                "text": "My emotional support cactus",
+                "votes": 1,
+                "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+                "authorName": "Bot 1",
+                "isWinner": true
+              },
+              {
+                "id": "c7dc7634-7b9f-4851-91f3-e43e95fc96b2",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+                "authorName": "Bot 3",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "cca31e08-1ec1-4cc5-8692-5d043344e60b",
+            "index": 1,
+            "promptText": "Prompt 0.6",
+            "answers": [
+              {
+                "id": "d7da87e2-4cb3-431a-9fb2-2e51e13037e6",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+                "authorName": "Bot 1",
+                "isWinner": false
+              },
+              {
+                "id": "bf3e17a2-b2e0-4626-87cf-709a1708a369",
+                "text": "Someone else's leftovers",
+                "votes": 1,
+                "authorId": "7616dfa7-1790-483c-a58b-7c776f724489",
+                "authorName": "Bot 2",
+                "isWinner": true
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "255fa156-3c77-4014-9b82-9b177a83b433",
+            "index": 2,
+            "promptText": "Prompt 0.2",
+            "answers": [
+              {
+                "id": "2cf7b55e-2e43-4eb7-af22-4148029f697a",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "host-Host-0001",
+                "authorName": "Host",
+                "isWinner": false
+              },
+              {
+                "id": "d135f832-3454-4f7e-92a3-f8e90d0bf9d1",
+                "text": "Someone else's leftovers",
+                "votes": 0,
+                "authorId": "7616dfa7-1790-483c-a58b-7c776f724489",
+                "authorName": "Bot 2",
+                "isWinner": true
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "94b3a1dd-e5ac-49a1-8484-e50e301a8325",
+            "index": 3,
+            "promptText": "Prompt 0.1",
+            "answers": [
+              {
+                "id": "2739e1ad-86ef-4160-9616-c5e6e0e4cd7f",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "07bf3f23-438e-4f29-ba1c-804424c40d4c",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": true,
+            "isClash": false
+          }
+        ],
+        "activeMatchupIndex": 2,
+        "votesCast": 0,
+        "votesExpected": 0,
+        "progress": {
+          "host-Host-0001": 0,
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": 2,
+          "7616dfa7-1790-483c-a58b-7c776f724489": 2,
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": 2
+        },
+        "answersPerPlayer": 2,
+        "rejectedTexts": 0,
+        "scoreboard": [],
+        "tieBreakers": [],
+        "tieBreakerContenders": [],
+        "bestAnswers": [],
+        "awards": [],
+        "honorWinnerNames": [],
+        "typing": {},
+        "phase": "MatchupReveal",
+        "roomCode": "DDDE",
+        "phaseEndsAt": 1793080540704,
+        "serverNow": 1793080540404,
+        "spectatorCount": 0,
+        "options": "{\"mode\":\"free\",\"totalRounds\":2,\"categoryVoteSeconds\":5,\"promptSeconds\":15,\"voteSeconds\":5,\"revealSeconds\":1,\"honorVote\":true,\"filterLevel\":\"moderate\"}",
+        "notice": "",
+        "minPlayers": 3,
+        "maxPlayers": 8,
+        "canStart": false,
+        "players": {
+          "host-Host-0001": {
+            "id": "host-Host-0001",
+            "name": "Host",
+            "role": "host",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": {
+            "id": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+            "name": "Bot 1",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "7616dfa7-1790-483c-a58b-7c776f724489": {
+            "id": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "name": "Bot 2",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": {
+            "id": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+            "name": "Bot 3",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          }
+        }
+      }
+    },
+    {
+      "seq": 95,
+      "phase": "MatchupVoting",
+      "state": {
+        "categoryOptions": [
+          {
+            "id": "cat-3",
+            "name": "Category 3",
+            "emoji": "x",
+            "votes": 0
+          },
+          {
+            "id": "cat-1",
+            "name": "Category 1",
+            "emoji": "x",
+            "votes": 1
+          },
+          {
+            "id": "cat-0",
+            "name": "Category 0",
+            "emoji": "x",
+            "votes": 2
+          }
+        ],
+        "selectedCategory": "cat-0",
+        "roundNumber": 2,
+        "totalRounds": 2,
+        "isFinalRound": false,
+        "matchups": [
+          {
+            "id": "c55a1cfc-9b71-422d-9763-749007a3dc49",
+            "index": 0,
+            "promptText": "Prompt 0.7",
+            "answers": [
+              {
+                "id": "ecec2223-09fc-4eaf-97a9-bda74ac11231",
+                "text": "My emotional support cactus",
+                "votes": 1,
+                "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+                "authorName": "Bot 1",
+                "isWinner": true
+              },
+              {
+                "id": "c7dc7634-7b9f-4851-91f3-e43e95fc96b2",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+                "authorName": "Bot 3",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "cca31e08-1ec1-4cc5-8692-5d043344e60b",
+            "index": 1,
+            "promptText": "Prompt 0.6",
+            "answers": [
+              {
+                "id": "d7da87e2-4cb3-431a-9fb2-2e51e13037e6",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+                "authorName": "Bot 1",
+                "isWinner": false
+              },
+              {
+                "id": "bf3e17a2-b2e0-4626-87cf-709a1708a369",
+                "text": "Someone else's leftovers",
+                "votes": 1,
+                "authorId": "7616dfa7-1790-483c-a58b-7c776f724489",
+                "authorName": "Bot 2",
+                "isWinner": true
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "255fa156-3c77-4014-9b82-9b177a83b433",
+            "index": 2,
+            "promptText": "Prompt 0.2",
+            "answers": [
+              {
+                "id": "2cf7b55e-2e43-4eb7-af22-4148029f697a",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "host-Host-0001",
+                "authorName": "Host",
+                "isWinner": false
+              },
+              {
+                "id": "d135f832-3454-4f7e-92a3-f8e90d0bf9d1",
+                "text": "Someone else's leftovers",
+                "votes": 0,
+                "authorId": "7616dfa7-1790-483c-a58b-7c776f724489",
+                "authorName": "Bot 2",
+                "isWinner": true
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "94b3a1dd-e5ac-49a1-8484-e50e301a8325",
+            "index": 3,
+            "promptText": "Prompt 0.1",
+            "answers": [
+              {
+                "id": "2739e1ad-86ef-4160-9616-c5e6e0e4cd7f",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              },
+              {
+                "id": "07bf3f23-438e-4f29-ba1c-804424c40d4c",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "",
+                "authorName": "",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": false,
+            "isForfeit": true,
+            "isClash": false
+          }
+        ],
+        "activeMatchupIndex": 3,
+        "votesCast": 0,
+        "votesExpected": 0,
+        "progress": {
+          "host-Host-0001": 0,
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": 2,
+          "7616dfa7-1790-483c-a58b-7c776f724489": 2,
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": 2
+        },
+        "answersPerPlayer": 2,
+        "rejectedTexts": 0,
+        "scoreboard": [],
+        "tieBreakers": [],
+        "tieBreakerContenders": [],
+        "bestAnswers": [],
+        "awards": [],
+        "honorWinnerNames": [],
+        "typing": {},
+        "phase": "MatchupVoting",
+        "roomCode": "DDDE",
+        "phaseEndsAt": 1793080545705,
+        "serverNow": 1793080540404,
+        "spectatorCount": 0,
+        "options": "{\"mode\":\"free\",\"totalRounds\":2,\"categoryVoteSeconds\":5,\"promptSeconds\":15,\"voteSeconds\":5,\"revealSeconds\":1,\"honorVote\":true,\"filterLevel\":\"moderate\"}",
+        "notice": "",
+        "minPlayers": 3,
+        "maxPlayers": 8,
+        "canStart": false,
+        "players": {
+          "host-Host-0001": {
+            "id": "host-Host-0001",
+            "name": "Host",
+            "role": "host",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": {
+            "id": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+            "name": "Bot 1",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "7616dfa7-1790-483c-a58b-7c776f724489": {
+            "id": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "name": "Bot 2",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": {
+            "id": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+            "name": "Bot 3",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          }
+        }
+      }
+    },
+    {
+      "seq": 98,
+      "phase": "MatchupReveal",
+      "state": {
+        "categoryOptions": [
+          {
+            "id": "cat-3",
+            "name": "Category 3",
+            "emoji": "x",
+            "votes": 0
+          },
+          {
+            "id": "cat-1",
+            "name": "Category 1",
+            "emoji": "x",
+            "votes": 1
+          },
+          {
+            "id": "cat-0",
+            "name": "Category 0",
+            "emoji": "x",
+            "votes": 2
+          }
+        ],
+        "selectedCategory": "cat-0",
+        "roundNumber": 2,
+        "totalRounds": 2,
+        "isFinalRound": false,
+        "matchups": [
+          {
+            "id": "c55a1cfc-9b71-422d-9763-749007a3dc49",
+            "index": 0,
+            "promptText": "Prompt 0.7",
+            "answers": [
+              {
+                "id": "ecec2223-09fc-4eaf-97a9-bda74ac11231",
+                "text": "My emotional support cactus",
+                "votes": 1,
+                "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+                "authorName": "Bot 1",
+                "isWinner": true
+              },
+              {
+                "id": "c7dc7634-7b9f-4851-91f3-e43e95fc96b2",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+                "authorName": "Bot 3",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "cca31e08-1ec1-4cc5-8692-5d043344e60b",
+            "index": 1,
+            "promptText": "Prompt 0.6",
+            "answers": [
+              {
+                "id": "d7da87e2-4cb3-431a-9fb2-2e51e13037e6",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+                "authorName": "Bot 1",
+                "isWinner": false
+              },
+              {
+                "id": "bf3e17a2-b2e0-4626-87cf-709a1708a369",
+                "text": "Someone else's leftovers",
+                "votes": 1,
+                "authorId": "7616dfa7-1790-483c-a58b-7c776f724489",
+                "authorName": "Bot 2",
+                "isWinner": true
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "255fa156-3c77-4014-9b82-9b177a83b433",
+            "index": 2,
+            "promptText": "Prompt 0.2",
+            "answers": [
+              {
+                "id": "2cf7b55e-2e43-4eb7-af22-4148029f697a",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "host-Host-0001",
+                "authorName": "Host",
+                "isWinner": false
+              },
+              {
+                "id": "d135f832-3454-4f7e-92a3-f8e90d0bf9d1",
+                "text": "Someone else's leftovers",
+                "votes": 0,
+                "authorId": "7616dfa7-1790-483c-a58b-7c776f724489",
+                "authorName": "Bot 2",
+                "isWinner": true
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "94b3a1dd-e5ac-49a1-8484-e50e301a8325",
+            "index": 3,
+            "promptText": "Prompt 0.1",
+            "answers": [
+              {
+                "id": "2739e1ad-86ef-4160-9616-c5e6e0e4cd7f",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+                "authorName": "Bot 3",
+                "isWinner": true
+              },
+              {
+                "id": "07bf3f23-438e-4f29-ba1c-804424c40d4c",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "host-Host-0001",
+                "authorName": "Host",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": true,
+            "isClash": false
+          }
+        ],
+        "activeMatchupIndex": 3,
+        "votesCast": 0,
+        "votesExpected": 0,
+        "progress": {
+          "host-Host-0001": 0,
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": 2,
+          "7616dfa7-1790-483c-a58b-7c776f724489": 2,
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": 2
+        },
+        "answersPerPlayer": 2,
+        "rejectedTexts": 0,
+        "scoreboard": [],
+        "tieBreakers": [],
+        "tieBreakerContenders": [],
+        "bestAnswers": [
+          {
+            "text": "The moon, on a budget",
+            "authorId": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "authorName": "Bot 2",
+            "promptText": "Prompt 3.7",
+            "votes": 1
+          },
+          {
+            "text": "Whatever grandpa said it was",
+            "authorId": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "authorName": "Bot 2",
+            "promptText": "Prompt 3.0",
+            "votes": 1
+          },
+          {
+            "text": "My emotional support cactus",
+            "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+            "authorName": "Bot 1",
+            "promptText": "Prompt 0.7",
+            "votes": 1
+          },
+          {
+            "text": "Someone else's leftovers",
+            "authorId": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "authorName": "Bot 2",
+            "promptText": "Prompt 0.6",
+            "votes": 1
+          }
+        ],
+        "awards": [],
+        "honorWinnerNames": [],
+        "typing": {},
+        "phase": "MatchupReveal",
+        "roomCode": "DDDE",
+        "phaseEndsAt": 1793080541706,
+        "serverNow": 1793080541406,
+        "spectatorCount": 0,
+        "options": "{\"mode\":\"free\",\"totalRounds\":2,\"categoryVoteSeconds\":5,\"promptSeconds\":15,\"voteSeconds\":5,\"revealSeconds\":1,\"honorVote\":true,\"filterLevel\":\"moderate\"}",
+        "notice": "",
+        "minPlayers": 3,
+        "maxPlayers": 8,
+        "canStart": false,
+        "players": {
+          "host-Host-0001": {
+            "id": "host-Host-0001",
+            "name": "Host",
+            "role": "host",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": {
+            "id": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+            "name": "Bot 1",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "7616dfa7-1790-483c-a58b-7c776f724489": {
+            "id": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "name": "Bot 2",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": {
+            "id": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+            "name": "Bot 3",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          }
+        }
+      }
+    },
+    {
+      "seq": 104,
+      "phase": "HonorVote",
+      "state": {
+        "categoryOptions": [
+          {
+            "id": "cat-3",
+            "name": "Category 3",
+            "emoji": "x",
+            "votes": 0
+          },
+          {
+            "id": "cat-1",
+            "name": "Category 1",
+            "emoji": "x",
+            "votes": 1
+          },
+          {
+            "id": "cat-0",
+            "name": "Category 0",
+            "emoji": "x",
+            "votes": 2
+          }
+        ],
+        "selectedCategory": "cat-0",
+        "roundNumber": 2,
+        "totalRounds": 2,
+        "isFinalRound": false,
+        "matchups": [
+          {
+            "id": "c55a1cfc-9b71-422d-9763-749007a3dc49",
+            "index": 0,
+            "promptText": "Prompt 0.7",
+            "answers": [
+              {
+                "id": "ecec2223-09fc-4eaf-97a9-bda74ac11231",
+                "text": "My emotional support cactus",
+                "votes": 1,
+                "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+                "authorName": "Bot 1",
+                "isWinner": true
+              },
+              {
+                "id": "c7dc7634-7b9f-4851-91f3-e43e95fc96b2",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+                "authorName": "Bot 3",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "cca31e08-1ec1-4cc5-8692-5d043344e60b",
+            "index": 1,
+            "promptText": "Prompt 0.6",
+            "answers": [
+              {
+                "id": "d7da87e2-4cb3-431a-9fb2-2e51e13037e6",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+                "authorName": "Bot 1",
+                "isWinner": false
+              },
+              {
+                "id": "bf3e17a2-b2e0-4626-87cf-709a1708a369",
+                "text": "Someone else's leftovers",
+                "votes": 1,
+                "authorId": "7616dfa7-1790-483c-a58b-7c776f724489",
+                "authorName": "Bot 2",
+                "isWinner": true
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": false,
+            "isClash": false
+          },
+          {
+            "id": "255fa156-3c77-4014-9b82-9b177a83b433",
+            "index": 2,
+            "promptText": "Prompt 0.2",
+            "answers": [
+              {
+                "id": "2cf7b55e-2e43-4eb7-af22-4148029f697a",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "host-Host-0001",
+                "authorName": "Host",
+                "isWinner": false
+              },
+              {
+                "id": "d135f832-3454-4f7e-92a3-f8e90d0bf9d1",
+                "text": "Someone else's leftovers",
+                "votes": 0,
+                "authorId": "7616dfa7-1790-483c-a58b-7c776f724489",
+                "authorName": "Bot 2",
+                "isWinner": true
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": true,
+            "isClash": false
+          },
+          {
+            "id": "94b3a1dd-e5ac-49a1-8484-e50e301a8325",
+            "index": 3,
+            "promptText": "Prompt 0.1",
+            "answers": [
+              {
+                "id": "2739e1ad-86ef-4160-9616-c5e6e0e4cd7f",
+                "text": "An aggressively average sandwich",
+                "votes": 0,
+                "authorId": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+                "authorName": "Bot 3",
+                "isWinner": true
+              },
+              {
+                "id": "07bf3f23-438e-4f29-ba1c-804424c40d4c",
+                "text": "(no answer)",
+                "votes": 0,
+                "authorId": "host-Host-0001",
+                "authorName": "Host",
+                "isWinner": false
+              }
+            ],
+            "isRevealed": true,
+            "isForfeit": true,
+            "isClash": false
+          }
+        ],
+        "activeMatchupIndex": 3,
+        "votesCast": 3,
+        "votesExpected": 4,
+        "progress": {
+          "host-Host-0001": 0,
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": 2,
+          "7616dfa7-1790-483c-a58b-7c776f724489": 2,
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": 2
+        },
+        "answersPerPlayer": 2,
+        "rejectedTexts": 0,
+        "scoreboard": [],
+        "tieBreakers": [],
+        "tieBreakerContenders": [],
+        "bestAnswers": [
+          {
+            "text": "The moon, on a budget",
+            "authorId": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "authorName": "Bot 2",
+            "promptText": "Prompt 3.7",
+            "votes": 1
+          },
+          {
+            "text": "Whatever grandpa said it was",
+            "authorId": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "authorName": "Bot 2",
+            "promptText": "Prompt 3.0",
+            "votes": 1
+          },
+          {
+            "text": "My emotional support cactus",
+            "authorId": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+            "authorName": "Bot 1",
+            "promptText": "Prompt 0.7",
+            "votes": 1
+          },
+          {
+            "text": "Someone else's leftovers",
+            "authorId": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "authorName": "Bot 2",
+            "promptText": "Prompt 0.6",
+            "votes": 1
+          }
+        ],
+        "awards": [],
+        "honorWinnerNames": ["Bot 2"],
+        "typing": {},
+        "phase": "HonorVote",
+        "roomCode": "DDDE",
+        "phaseEndsAt": 1793080546708,
+        "serverNow": 1793080546417,
+        "spectatorCount": 0,
+        "options": "{\"mode\":\"free\",\"totalRounds\":2,\"categoryVoteSeconds\":5,\"promptSeconds\":15,\"voteSeconds\":5,\"revealSeconds\":1,\"honorVote\":true,\"filterLevel\":\"moderate\"}",
+        "notice": "",
+        "minPlayers": 3,
+        "maxPlayers": 8,
+        "canStart": false,
+        "players": {
+          "host-Host-0001": {
+            "id": "host-Host-0001",
+            "name": "Host",
+            "role": "host",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17": {
+            "id": "3df3c1e3-ec51-4879-bbc5-9bb9334f5e17",
+            "name": "Bot 1",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "7616dfa7-1790-483c-a58b-7c776f724489": {
+            "id": "7616dfa7-1790-483c-a58b-7c776f724489",
+            "name": "Bot 2",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          },
+          "ce86e31a-a01c-4618-9c60-cc6643775b26": {
+            "id": "ce86e31a-a01c-4618-9c60-cc6643775b26",
+            "name": "Bot 3",
+            "role": "player",
+            "isReady": true,
+            "isConnected": true,
+            "isActive": true
+          }
+        }
+      }
+    }
+  ]
+}

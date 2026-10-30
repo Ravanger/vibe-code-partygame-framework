@@ -37,6 +37,16 @@ describe("Podium", () => {
     await expectNoViolations(container, "Podium");
   });
 
+  it("hides the visible you marker from screen readers and keeps the sr-only text", () => {
+    const { container } = render(Podium, { steps: steps() });
+    const marker = container.querySelector<HTMLElement>(".you");
+    if (marker === null) throw new Error("the you marker did not render");
+    const visible = [...marker.querySelectorAll("span")].find((s) => s.textContent === "you");
+    expect(visible).not.toBeUndefined();
+    expect(visible).toHaveAttribute("aria-hidden", "true");
+    expect(marker.querySelector(".sr-only")?.textContent).toBe("This is you");
+  });
+
   it("sizes stickers by tier, smaller when a tie shares a step", async () => {
     const sizes = (container: HTMLElement): string[] =>
       [...container.querySelectorAll<SVGElement>(".player-sticker")].map((s) =>
@@ -62,5 +72,17 @@ describe("Podium", () => {
     expect(screen.getByText("Ann!")).toBeInTheDocument();
     expect(screen.getByText("Cy!")).toBeInTheDocument();
     await expectNoViolations(container, "Podium");
+  });
+
+  it("reads block heights from custom properties and never styles main.tv", () => {
+    render(Podium, { steps: steps() });
+    const sheet = [...document.querySelectorAll("style")]
+      .map((s) => s.textContent ?? "")
+      .filter((css) => css.includes(".podium"))
+      .join("\n");
+    expect(sheet).not.toContain("main.tv");
+    for (const tier of [1, 2, 3]) {
+      expect(sheet).toContain(`var(--podium-block-height-${tier}`);
+    }
   });
 });

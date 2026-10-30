@@ -30,8 +30,9 @@ const readPackageJson = (folder: string): unknown => {
 const records: FolderRecord[] = readdirSync(join(root, "games"), { withFileTypes: true })
   .filter((entry) => entry.isDirectory())
   .map((entry) => ({ folder: entry.name, packageJson: readPackageJson(entry.name) }));
-const { games, ignored } = discoverGames(records);
+const { games, ignored, manifestErrors } = discoverGames(records);
 for (const folder of ignored) console.error(`games/${folder} ignored: reserved name`);
+for (const { folder, problem } of manifestErrors) console.error(`games/${folder}: ${problem}`);
 
 const ask = async (choices: Game[]): Promise<string | undefined> => {
   const lines = createInterface({ input: process.stdin, output: process.stdout });

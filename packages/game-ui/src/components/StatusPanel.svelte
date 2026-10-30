@@ -29,11 +29,11 @@ const {
   }
 
   .tone-info {
-    --tape: var(--tape-sky);
+    --tape: var(--tape-4);
   }
 
   .tone-done {
-    --tape: var(--tape-mint);
+    --tape: var(--tape-3);
   }
 
   .title {
@@ -50,7 +50,7 @@ const {
   }
 
   .done-sticker {
-    background: var(--mint);
+    background: var(--color-3);
   }
 
   .dots {
@@ -63,7 +63,7 @@ const {
     height: 12px;
     border: 2px solid var(--ink);
     border-radius: 50%;
-    background: var(--pink);
+    background: var(--color-1);
   }
 
   @keyframes bounce {

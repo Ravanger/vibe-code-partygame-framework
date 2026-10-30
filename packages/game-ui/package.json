@@ -17,7 +17,8 @@
       "types": "./src/components/index.ts",
       "svelte": "./src/components/index.ts",
       "default": "./src/components/index.ts"
-    }
+    },
+    "./theme-contract.css": "./theme-contract.css"
   },
   "scripts": {
     "test": "vitest run",

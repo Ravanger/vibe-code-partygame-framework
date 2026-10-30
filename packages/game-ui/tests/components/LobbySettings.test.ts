@@ -61,6 +61,22 @@ describe("LobbySettings", () => {
     await expectNoViolations(container, "LobbySettings");
   });
 
+  it("gives every instance distinct input ids that its own labels target", () => {
+    const a = setup({ role: "host" });
+    const b = setup({ role: "host" });
+    const first = render(LobbySettings, { vm: a.vm });
+    const second = render(LobbySettings, { vm: b.vm });
+    const inputs = [
+      ...first.container.querySelectorAll<HTMLInputElement>("input[id]"),
+      ...second.container.querySelectorAll<HTMLInputElement>("input[id]"),
+    ];
+    expect(inputs.length).toBeGreaterThan(1);
+    expect(new Set(inputs.map((input) => input.id)).size).toBe(inputs.length);
+    for (const input of inputs) {
+      expect(document.querySelector(`label[for="${input.id}"]`)).not.toBeNull();
+    }
+  });
+
   it("renders editable rows as a list, never a definition list", async () => {
     const { vm } = setup({ role: "host" });
     const { container } = render(LobbySettings, { vm });

@@ -1,24 +1,26 @@
 /* Theme for this game. The CSS variables are consumed by the @partygame/game-ui
    components; the base styles below are shared by every screen. Restyle freely. */
+@import "@partygame/game-ui/theme-contract.css";
+
 :root {
   color-scheme: light;
   --paper: #fbf3e4;
   --white: #ffffff;
   --ink: #2b2235;
   --ink-soft: #5a4f66;
-  --pink: #ff5fa2;
-  --sun: #ffd23f;
-  --mint: #3ddc97;
-  --sky: #4cc9f0;
-  --grape: #7b5cff;
+  --color-1: #ff5fa2;
+  --color-2: #ffd23f;
+  --color-3: #3ddc97;
+  --color-4: #4cc9f0;
+  --accent: #7b5cff;
   --danger: #e5383b;
   --disabled: #ddd3c2;
   --fill: #fff8ea;
   --spark: #ff9ecb;
-  --tape-pink: rgb(255 95 162 / 0.7);
-  --tape-sun: rgb(255 210 63 / 0.75);
-  --tape-mint: rgb(61 220 151 / 0.7);
-  --tape-sky: rgb(76 201 240 / 0.7);
+  --tape-1: rgb(255 95 162 / 0.7);
+  --tape-2: rgb(255 210 63 / 0.75);
+  --tape-3: rgb(61 220 151 / 0.7);
+  --tape-4: rgb(76 201 240 / 0.7);
   --outline: 3px solid var(--ink);
   --radius-card: 6px;
   --radius-btn: 12px;
@@ -55,7 +57,7 @@ h3 {
 }
 
 :where(button, a, input, textarea, select, summary, [tabindex]):focus-visible {
-  outline: 3px dashed var(--grape);
+  outline: 3px dashed var(--accent);
   outline-offset: 3px;
 }
 
@@ -82,7 +84,7 @@ h3 {
   padding: 0.1rem 0.7rem;
   border: 2px solid var(--ink);
   border-radius: var(--radius-pill);
-  background: var(--sun);
+  background: var(--color-2);
   color: var(--ink);
   font-family: var(--font-display);
   font-size: calc(var(--fs-1) * var(--scale, 1));
@@ -128,7 +130,7 @@ h3 {
 
 .btn--primary {
   min-height: 48px;
-  background: var(--pink);
+  background: var(--color-1);
   font-size: calc(var(--fs-3) * var(--scale, 1));
 }
 

@@ -69,7 +69,7 @@ const hasVoted = $derived(choices.some((choice) => choice.isMine));
   }
 
   .answer.picked {
-    background: var(--sun);
+    background: var(--color-2);
   }
 
   .words {
@@ -92,7 +92,7 @@ const hasVoted = $derived(choices.some((choice) => choice.isMine));
     padding: 0.1rem 0.85rem;
     border: var(--outline);
     border-radius: var(--radius-pill);
-    background: var(--pink);
+    background: var(--color-1);
     color: var(--ink);
     box-shadow: 2px 3px 0 var(--ink);
     font-family: var(--font-display);

@@ -32,6 +32,8 @@ export interface TestJoinOptions {
   playerId: string;
   name?: string;
   spectator?: boolean;
+  /** Bounded data for the game's `canJoin` hook, forwarded to the room as `joinData`. */
+  joinData?: Record<string, string | number | boolean>;
 }
 
 /** Servers booted by {@link bootTestServer} that have not been shut down yet. */

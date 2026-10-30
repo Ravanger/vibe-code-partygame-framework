@@ -122,7 +122,7 @@
   }
 
   .answer.picked {
-    background: var(--sun);
+    background: var(--color-2);
   }
 
   .who {

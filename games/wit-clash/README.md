@@ -15,7 +15,7 @@ src/
   phases/            one PhaseDefinition per file; answering.ts holds the answer actions shared by both answering phases, endGame.ts the host-only END_GAME every phase accepts
   round.ts           writes rule results into the synced state
   tieBreakerFlow.ts  the final tie-breaker: contenders, prompt, answers, votes, verdict
-  matchups.ts  categoryVote.ts  eligibility.ts  drafts.ts  scoring.ts  scoreboard.ts  tieBreaker.ts  bestAnswers.ts
+  matchups.ts  categoryVote.ts  eligibility.ts  drafts.ts  scoring.ts  scoreboard.ts  tieBreaker.ts  bestAnswers.ts  highlights.ts
                      pure rules: plain data and the rng in, plain data out
   dailySeed.ts       daily mode's date seed: `utcDay` and `dailyRng` (FNV-1a into `mulberry32`)
   content/           category files (.jsonc) loader
@@ -163,6 +163,7 @@ who cast them is not.
 | `tieBreakers` | `Matchup[]` | One per tie-breaker attempt; `answers` hide authors and votes until `isRevealed`; `isForfeit` for a lone answer |
 | `tieBreakerContenders` | `string[]` of playerIds | Who is in the current tie-breaker |
 | `bestAnswers` | `BestAnswer[]` `{text,authorId,authorName,promptText,votes}` | Empty until the final Results; several entries when the award is shared |
+| `highlights` | `Highlight[]` `{kind,promptText,answers}` with `answers[]` as `{authorName,text,votes}` | Empty until the final Results; `kind` is `biggestMargin`, `closestMatch` or `fastestAnswer`; tied winners each get their own card |
 | `awards` | `Award[]` `{id,title,winnerNames,detail}` | Empty until the final Results; one entry per award with data (see Awards) |
 | `honorWinnerNames` | `string[]` of names | The honor-vote winner(s); empty until (and unless) an honor vote produces one |
 | `typing` | `map<playerId, boolean>` | Present and `true` while that player is typing an answer |
@@ -202,6 +203,7 @@ Passed when the room is created or changed by the host in the lobby with `SET_OP
 | `voteSeconds` | 20 | 5 to 120 |
 | `revealSeconds` | 5 | 1 to 30 |
 | `filterLevel` | `moderate` | `off`, `moderate` or `strict` |
+| `contentRating` | `any` | `any` or `family`; a `family` room never offers mature categories (see the content README) |
 | `honorVote` | `false` | boolean; the optional funniest-answer vote before the final Results |
 
 ### Daily mode
@@ -261,10 +263,12 @@ You answer and vote by typing; `q` quits (`/q` while writing an answer). `play` 
 ## Client (`ui/`)
 
 ```
-main.ts             builds the GameConnectionManager<WitClashState> (storagePrefix "witclash"), resumes, mounts App
+main.ts             builds the GameConnectionManager<WitClashState> (storagePrefix "witclash"), resumes, mounts App;
+                    `?replay` in the URL instead mounts ReplayApp with no manager (no server connection)
 config.ts           server endpoints from the page's host (VITE_SERVER_HOST, VITE_GAME_PORT, VITE_API_PORT) and the `?code=` share link
 manager.ts          the WitClashManager type
 App.svelte          screen router, error toast, "reconnecting" indicator, Leave game / End game controls outside the lobby
+ReplayApp.svelte    offline replay viewer: opens an exported bundle file and steps through it with the phase screens
 screens/            one component per screen: Welcome, WaitingRoom, JoinNextRound, CategoryVote, Prompting,
                     MatchupVote, MatchupReveal, TieBreakerPrompting, TieBreakerVote, TieBreakerReveal, Results
 components/         WitClash-only pieces: MatchupCard, Scoreboard, ProgressBadges, VoteBoard, AnswerBox, NextUpBar, ScreenTitle
@@ -277,10 +281,12 @@ viewmodels/         one viewmodel per game screen (the name field, welcome, wait
   `manager.sendAction(ACTION.X, payload)` with the constants and payload types from `src/actionNames.ts` / `src/actions.ts`.
 - The client never recomputes rules. Winners (`answer.isWinner`), clashes (`matchup.isClash`), author names (`answer.authorName`), turnout
   (`votesCast`/`votesExpected`, also in CategorySelection), eligibility (`mine.canVote`) and limits (`minPlayers`, `maxPlayers`, `options`) are published by the server.
-- Results shows a podium (top three places; tied players share a step, leavers are marked, `wonTieBreaker` gets a badge), the best-answer award (`state.bestAnswers`; several entries read "Shared best answer"), then the scoreboard. Prompting shows the winning category and tells a player who was dealt no prompt that they sit this round out and vote. Prompting and TieBreakerPrompting list each answering player's `n/answersPerPlayer`, a done tick and a "typing…" marker; the answer boxes send `SET_TYPING` once on the first keystroke and once after 2.5 s idle or on submit. All of it renders large in the TV layout.
+- Results shows a podium (top three places; tied players share a step, leavers are marked, `wonTieBreaker` gets a badge), the best-answer award (`state.bestAnswers`; several entries read "Shared best answer"), the Highlights section (`state.highlights`: biggest margin, closest match and fastest voted answer, one card per tied winner) when any highlight was picked, then the scoreboard. Prompting shows the winning category and tells a player who was dealt no prompt that they sit this round out and vote. Prompting and TieBreakerPrompting list each answering player's `n/answersPerPlayer`, a done tick and a "typing…" marker; the answer boxes send `SET_TYPING` once on the first keystroke and once after 2.5 s idle or on submit. All of it renders large in the TV layout.
 - Votes stay hidden while voting: only `votesCast`/`votesExpected` and your own highlighted vote show. Counts and authors appear in `MatchupReveal`.
 - Shared components (StatusPanel, Timer, PlayerSticker, QrCode, ActionBar, NameInput, LobbySettings, GameControls, Podium) come from `@partygame/game-ui/components` and take their look from the CSS variables and classes in `ui/app.css`. Results passes the "Won the tie-breaker" chip to `Podium` through its `extra` snippet.
 - Add a phase screen: a viewmodel, a screen component and one `PHASE_SCREENS` entry in `ui/screens/index.ts`.
+- Replay viewer: open the client with `?replay` in the URL to get `ReplayApp` instead of the game — no manager is built, so no server connection is ever opened. Pick an exported bundle file (the JSON the host downloads from Results) and step through it with previous/next, play/pause auto-advance or the scrubber; each snapshot renders that phase's own screen read-only (`isSpectator`, no seat). The snapshot is the final state of the phase being left, so its timer counts down from at most 1s and reads 0 almost immediately. A malformed file shows the viewer's error instead of a screen, and a phase without a `PHASE_SCREENS` entry gets a fallback line.
+- On Results, the host sees an **Export replay** button (mid-round and final): it sends the host-only `EXPORT_REPLAY` request through `manager.exportReplay()` and downloads the bundle as `<game>-replay.json`. A non-host's refusal is remembered in `lastServerError` like any rejected action.
 
 ## Tests
 

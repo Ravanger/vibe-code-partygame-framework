@@ -28,17 +28,20 @@ export const manager = new GameConnectionManager<ButtonState>({
 void manager.resume();       // page load: stored token, then stored room code
 ```
 
-`resolveEndpoints(overrides, pageHost)` takes string overrides `{ host?, gamePort?, apiPort? }` (for example from `VITE_*` env vars), so a phone on `http://192.168.1.50:5173` talks to `192.168.1.50:2567`.
+`resolveEndpoints(overrides, pageHost, pageProtocol?)` takes string overrides `{ host?, gamePort?, apiPort?, endpoint?, apiBase? }` (for example from `VITE_*` env vars) and an optional page protocol (`window.location.protocol`, default `"http:"`), so a phone on `http://192.168.1.50:5173` talks to `192.168.1.50:2567` — and an HTTPS page gets `https://…` instead of a mixed-content `http://…`. An `endpoint` override is returned verbatim (for example `wss://your-origin/game` behind a reverse proxy); an `apiBase` override is returned verbatim, and the manager prefers it over `apiPort`: it calls `<apiBase>/api/resolve-code` with no port appended. See [HOSTING.md](../../docs/HOSTING.md#behind-https-and-a-reverse-proxy).
 
 ## Join a room
 
 ```ts
 await manager.create();                  // new room, you are the host; optional create options
 await manager.join("ABCD");              // by room code; throws with the server's reason
+await manager.join("ABCD", { joinData: { invite: "X" } }); // bounded data for the game's canJoin hook
 await manager.joinAsSpectator("ABCD");   // TV display, no seat
 manager.setName("Ada");                  // readies the seat
 await manager.leave();                   // forgets the room
 ```
+
+`join` options (`JoinOptions`): `name`, `spectator`, and `joinData` (string/number/boolean values; at most 8 keys, keys up to 32 characters, strings up to 256). `joinData` is sent once per join and never stored or logged by the manager.
 
 ```ts
 import { readCodeParam } from "@partygame/game-client";
@@ -82,6 +85,15 @@ manager.onMessage("FIRST", (payload) => { /* pushed by ctx.send; returns an unsu
 ```ts
 const manager = new GameConnectionManager<MyState, { TURN: { id: string } }>();
 manager.onMessage("TURN", (turn) => turn.id); // typed; other names are a compile error
+```
+
+## Export the replay
+
+`exportReplay()` is the client route to the host-only `EXPORT_REPLAY` request (#19's server child). It resolves with an `ExportReplayResponse` from `@partygame/shared`: the room's replay bundle for the host, or a refusal — the server's well-formed refusal (for example `UNAUTHORIZED` for a non-host) is passed through and remembered in `lastServerError`, while a malformed reply becomes a fixed `BAD_REPLY`. A request that cannot be sent or answered fails locally with `NOT_CONNECTED` (no room) or `CONNECTION_LOST` (the exception goes to the `logger` option, default `console.warn`).
+
+```ts
+const response = await manager.exportReplay(); // host: the bundle; non-host: { ok: false, error }
+if (response.ok === false) console.warn(manager.lastServerError?.message);
 ```
 
 ## Show the phase clock
