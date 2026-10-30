@@ -5,6 +5,18 @@ import { describe, expect, it, vi } from "vitest";
 import App from "../ui/App.svelte";
 import { addMine, addSeat, connectedClient, option } from "./helpers/client.js";
 
+/** The outer overscan band, as a percentage of the viewport. */
+const OVERSCAN_BAND_PCT = 5;
+
+/** The % of the viewport axis in a declared `vh`/`vw` padding; throws when not viewport-relative on `axis`. */
+function viewportPct(declared: string, axis: "h" | "w"): number {
+  const match = /^(\d+(?:\.\d+)?)v([hw])$/.exec(declared);
+  if (match === null || match[2] !== axis) {
+    throw new Error(`expected a ${axis === "h" ? "vh" : "vw"} padding, got "${declared}"`);
+  }
+  return Number(match[1]);
+}
+
 describe("App", () => {
   it("shows the welcome screen until a room is joined", () => {
     const { manager } = connectedClient();
@@ -179,6 +191,20 @@ describe("App", () => {
     const c = connectedClient();
     const { container } = render(App, { manager: c.manager });
     expect(container.querySelector("main")).not.toHaveClass("tv");
+  });
+
+  it("keeps the TV header out of the outer 5% viewport band", () => {
+    const c = connectedClient({}, "Prompting");
+    c.state.players.delete(c.manager.playerId);
+    const { container } = render(App, { manager: c.manager });
+    const header = container.querySelector<HTMLElement>("header");
+    if (header === null) throw new Error("the TV header did not render");
+    const cs = getComputedStyle(header);
+    // jsdom returns the declared values, not pixels: assert that the declared padding is
+    // viewport-relative and clears the outer 5% overscan band on its own axis, at any resolution.
+    expect(viewportPct(cs.paddingTop, "h")).toBeGreaterThanOrEqual(OVERSCAN_BAND_PCT);
+    expect(viewportPct(cs.paddingLeft, "w")).toBeGreaterThanOrEqual(OVERSCAN_BAND_PCT);
+    expect(viewportPct(cs.paddingRight, "w")).toBeGreaterThanOrEqual(OVERSCAN_BAND_PCT);
   });
 
   it("keeps the TV game view out of the outer 5% viewport band", () => {
