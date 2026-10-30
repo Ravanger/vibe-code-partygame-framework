@@ -106,6 +106,6 @@ process.exit(passed ? 0 : 1);
 
 `ScriptedIo` (from `@partygame/terminal/testing`) is a `Prompter` that records `asked` and `printed` lines; `await io.type("text")` answers the pending question. Pass it to `TerminalPlayer` or `PlaySession`.
 
-Depends on: `@partygame/bots`, `@partygame/server`, `@partygame/shared`
+Depends on: `@partygame/bots`, `@partygame/client-utils`, `@partygame/server`, `@partygame/shared`, `@colyseus/sdk`
 
 Guide: [docs/framework/README.md#terminal](../../docs/framework/README.md#terminal)

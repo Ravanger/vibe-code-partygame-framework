@@ -7,7 +7,7 @@ Dependency direction: `games/* -> @partygame/server -> @partygame/core -> @party
 
 Known traps (build, coverage, reconnects, Schema 5): [troubleshooting.md](troubleshooting.md).
 
-**Security:** What the framework protects and what it does not: [threat model](security/threat-model.md).
+**Security:** What the framework protects and what it does not: [threat model](../security/threat-model.md).
 
 **Design:** Six architecture decisions that explain why the framework is shaped this way: [ADRs](../adr/).
 
@@ -572,8 +572,11 @@ Client-visible error strings are fixed and table-driven; raw Zod or exception te
   | 4403 | `KICKED_REJOIN` | `KICKED` | Removed by the host |
   | 4403 | `JOIN_REFUSED` | `NOT_ALLOWED` | the game's refusal message (shares 4403) |
   | 4404 | `WATCH_ONLY` | `NOT_ALLOWED` | This room is watch-only |
+  | 4405 | `CONTENT_REJECTED` | `CONTENT_REJECTED` | That text was not allowed |
   | 4406 | `SEAT_TAKEN` | `UNAUTHORIZED` | Seat is taken |
   | 4409 | `SEAT_TAKEN_OVER` | `KICKED` | Your seat was opened on another device |
+  | 4426 | `VERSION_MISMATCH` | `NOT_ALLOWED` | filled by the server with both protocol versions (a template, not a fixed message) |
+  | 4429 | `SERVER_FULL` | `NOT_ALLOWED` | Server is full |
   | 4500 | `INTERNAL` | `INTERNAL` | The server could not handle the request |
 
 - Invalid create or join options are `safeParse`d and refused with the close code above, so a bad option never
@@ -770,7 +773,7 @@ Rate limits are configured with `rateLimits`: actions per player (default 10/s, 
 
 Clients join with `{ playerId, name?, seatSecret? }` (`spectator: true` for a TV display: no seat, counted in `spectatorCount`; spectators need no secret).
 Create a watch-only room with the framework option `seats: string[]` (the playerIds allowed to take a seat): any other non-spectator join is refused with `4404 "This room is watch-only"`, spectators still join. It is not a game option and is not published in `state.options`.
-`SET_NAME` readies a seat (a name another seat has is refused with `NAME_TAKEN`; a join-time `name` that is taken is ignored and the seat joins unnamed). With a `textFilter` on `createGameServer`, names are also checked against it at the level of the game's `filterLevel` over the room's current options (default `"off"`): a join with a filtered name is refused with close code 4405 (`CONTENT_REJECTED`) and a `SET_NAME` with one is refused with `CONTENT_REJECTED` and the filter's reason, keeping the old name; a level raised mid-lobby applies to the next `SET_NAME`, not to names already set. A room is kept alive only by connected seats: once the last one is gone for `emptyRoomGraceMs`, the room is disposed and any spectators are disconnected. `ACTION` carries your actions (`room.send` or `room.request`, see Actions). `EXPORT_REPLAY` (host only, via `room.request`) answers with the room's replay bundle — see Bundles below; a non-host gets an `UNAUTHORIZED` refusal. A dropped connection holds the seat for `reconnectMs`: a token reconnect, or a new session presenting the same `playerId` and that seat's `seatSecret`, resumes it.
+`SET_NAME` readies a seat (a name another seat has is refused with `NAME_TAKEN`; a join-time `name` that is taken is ignored and the seat joins unnamed). With a `textFilter` on `createGameServer`, names are also checked against it at the level of the game's `filterLevel` over the room's current options (default `"off"`): a join with a filtered name is refused with close code 4405 (`CONTENT_REJECTED`) and a `SET_NAME` with one is refused with `CONTENT_REJECTED` and the filter's reason, keeping the old name; a level raised mid-lobby applies to the next `SET_NAME`, not to names already set. A room is kept alive only by connected seats: once the last one is gone for `emptyRoomGraceMs`, the room is disposed and any spectators are disconnected. `ACTION` carries your actions (`room.send` or `room.request`, see Actions). `EXPORT_REPLAY` (host only, via `room.request`) answers with the room's replay bundle — see **Bundles** under Action log and replay; a non-host gets an `UNAUTHORIZED` refusal. A dropped connection holds the seat for `reconnectMs`: a token reconnect, or a new session presenting the same `playerId` and that seat's `seatSecret`, resumes it.
 Every non-spectator join must present a `seatSecret`: the server stores its sha256 per seat (never in synced state) and refuses a missing or wrong one with `4406 "Seat is taken"` — including the first join of a new player, so there is no migration for secretless clients.
 A matching secret takes the seat over even while the old owner is still connected: the new session binds to it and the old one is closed with `4409 "Your seat was opened on another device"`.
 A mid-game joiner is seated inactive.

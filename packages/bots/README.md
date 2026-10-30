@@ -4,7 +4,7 @@ Bot players for any game: you write the strategy, the package handles joining, n
 
 | Import | What |
 |---|---|
-| `@partygame/bots` | `joinBots`, `BotTable`, `DemoTable` to seat bots, `ColyseusConnector` to open rooms; types `BotStrategy`, `BotKit`, `BotRoom` for your game |
+| `@partygame/bots` | `joinBots`, `BotTable`, `DemoTable` to seat bots, `BotPlayer` (one named, paced bot), `ColyseusConnector` to open rooms; types `BotStrategy`, `BotKit`, `BotRoom` for your game |
 
 ## Write a strategy
 
@@ -93,6 +93,6 @@ await demo.leave();
 
 `BotOptions` (the `bot` option, or `bot` on the launcher's `create`): `thinkMs` (default `[2000, 6000]`), `reactMs` (`[500, 2500]`), `rng`, `schedule`, `log`, `onOutcome`, `host.expectedPlayers`. `joinBots` also takes `nameFor(n)` (default `Bot n`), `playerIds` and `timeoutMs`; `DemoTable` takes `hostName`, `roomOptions` and `isFinished`.
 
-Depends on: `@partygame/shared`
+Depends on: `@partygame/client-utils`, `@partygame/shared`, `@colyseus/sdk`
 
 Guide: [docs/framework/README.md#bots](../../docs/framework/README.md#bots)

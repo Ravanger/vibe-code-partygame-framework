@@ -4,13 +4,13 @@
 
 ```bash
 bun install
-bun run launch
+bun run launch wit-clash
 ```
 
-`bun run launch` starts the game server, the code-lookup API and the Vite client, waits until each answers, and opens
+`bun run launch <game>` starts the game server, the code-lookup API and the Vite client, waits until each answers, and opens
 `http://localhost:5173`. Click **Host Game**: you get a room code and a share link
-(`http://<host>:5173/?code=ABCD`) that joins a guest straight into your room. Each player enters a name. The game takes 3 to 8 players: the host presses **Start Game** once at least 3
-players are in and every one of them has entered a name.
+(`http://<host>:5173/?code=ABCD`) that joins a guest straight into your room. Each player enters a name. Player limits are per game (WitClash and Bluff take 3 to 8, Crew 3 to 5, Rush 2 to 8): the host presses **Start Game** once the minimum is met
+and every seated player has entered a name.
 
 The launcher lives in `packages/launcher`; each game's `launch.ts` configures it and the root `scripts/game.ts` runs it (`bun run launch [game]`, the game name is needed only when `games/` holds several).
 
@@ -20,12 +20,14 @@ Press Ctrl+C to stop everything. If any of the three processes dies, the launche
 
 | Command | What it does |
 |---|---|
-| `bun run launch` | Dev mode: game server, API and Vite with hot reload on `http://localhost:5173` |
-| `bun run launch:dev` | Same as `launch` |
-| `bun run launch:host` | Dev mode, and prints this machine's LAN addresses for guests |
-| `bun run launch:prod` | Builds the client, then serves it on `http://localhost:3000` next to the game server |
+| `bun run launch <game>` | Dev mode (the default): game server, API and Vite with hot reload on `http://localhost:5173` |
+| `bun run launch <game> dev` | Same as `bun run launch <game>` |
+| `bun run launch <game> host` | Dev mode, and prints this machine's LAN addresses for guests |
+| `bun run launch <game> prod` | Builds the client, then serves it on `http://localhost:3000` next to the game server |
 
-Add `--no-browser` to any of them to skip opening a browser tab, for example `bun run launch --no-browser`.
+The root scripts `launch:dev`, `launch:host` and `launch:prod` do the same; with several games under `games/` they first ask which game to launch.
+
+Add `--no-browser` to any of them to skip opening a browser tab, for example `bun run launch <game> --no-browser`.
 The launcher refuses to start if one of its ports is already in use.
 
 | Port | Used for |
@@ -40,13 +42,13 @@ The launcher refuses to start if one of its ports is already in use.
 Players on the same network open `http://<YOUR-LAN-IP>:5173` (`:3000` with `launch:prod`). The client talks to the game server and the API
 on the same host name as the page, so no configuration is needed. Make sure your firewall lets other machines reach the client port, 2567 and 3001.
 
-The room-code API binds to your own machine by default, so strangers cannot look up codes; for LAN play use `bun run launch:host`,
+The room-code API binds to your own machine by default, so strangers cannot look up codes; for LAN play use `bun run launch <game> host`,
 which starts it on every interface and allows any origin (`HOST=0.0.0.0`, `ALLOWED_ORIGINS=*`). The game server (2567) is reachable from the LAN either way.
 For internet play put a TLS-terminating proxy in front — what the framework does and does not protect is listed in the [threat model](security/threat-model.md).
 
 ### Finding your LAN IP
 
-`bun run launch:host` prints it. Otherwise:
+`bun run launch <game> host` prints it. Otherwise:
 
 ```bash
 # Windows
@@ -62,28 +64,28 @@ hostname -I
 ## Playtesting alone
 
 ```bash
-bun run launch:bots          # dev stack + your room; 3 bots join once you enter your name
-bun run bots ABCD 3          # add 3 bots (1 to 7) to a room you already created
+bun run launch wit-clash --bots   # dev stack + your room; 3 bots join once you enter your name
+bun run bots wit-clash ABCD 3     # add 3 bots to a room you already created
 ```
 
-You are the host: press Start Game (3 or more players, bots included) and Next Round; the game does not start by itself. The bots answer and vote on their own.
-For another number of bots use `bun run launch --bots=N` (1 to 7); `bun run bots` takes `--endpoint` and `--api-port`. Ctrl+C removes the bots.
+You are the host: press Start Game (the game's minimum, bots included) and Next Round; the game does not start by itself. The bots answer and vote on their own.
+For another number of bots use `bun run launch <game> --bots=N` (1 to the game's max players - 1); `bun run bots` takes `--endpoint` and `--api-port`. Ctrl+C removes the bots.
 
 ```bash
-bun run launch:demo          # watch-only room: bots play one game, the browser opens its TV view
+bun run launch wit-clash --demo   # watch-only room: bots play one game, the browser opens its TV view
 ```
 
-`--demo=N` sets the bots (2 to 7, default 3), plus a host bot. Nobody can take a seat; the TV stays on the final results. Ctrl+C stops it. Not combinable with `--bots`.
+`--demo=N` sets the bots (the game's min players - 1 to max players - 1, default 3), plus a host bot. Nobody can take a seat; the TV stays on the final results. Ctrl+C stops it. Not combinable with `--bots`.
 
 ## Play in the terminal
 
 ```bash
-bun run play                      # host a room; 3 bots join; uses the server on 2567/3001 or starts its own
-bun run play --join=ABCD          # join a room as a normal player
-bun run --cwd games/wit-clash demo  # all-bot game, narrated; prints PASS/FAIL (--bots=N bots, 2 to 7, default 3)
+bun run play wit-clash              # host a room; 3 bots join; uses the server on 2567/3001 or starts its own
+bun run play wit-clash --join=ABCD  # join a room as a normal player
+bun run --cwd games/wit-clash demo  # all-bot game, narrated; prints PASS/FAIL (--bots=N bots, 2 to 7, default 3) — WitClash-only
 ```
 
-You are the host in `play`; browser players can join the same room with the printed code while Vite runs.
+`play` needs a game with a terminal entry: WitClash has one, the other bundled games do not. You are the host in `play`; browser players can join the same room with the printed code while Vite runs.
 
 ## Joining by QR Code
 
@@ -96,20 +98,20 @@ page joins the code straight away. The address is the one the host's browser use
 A TV (or any big screen) can watch a room without taking a player seat:
 
 1. Open the game on the TV browser and enter the room code, then press "Watch on a TV". Or open `http://<YOUR-LAN-IP>:5173/?tv=ABCD` directly.
-2. The TV shows the room code, the QR code and the players in the lobby, and then the prompts, matchups, votes and scoreboard in large type. It has
+2. The TV shows the room code, the QR code and the players in the lobby, and then each phase's screen and the scoreboard in large type. It has
    no controls and does not count as a player (the lobby lists how many TVs are watching).
 
 ## Host Controls in the Lobby
 
 - Remove a player: press "Remove" beside their name, then "Yes". A removed player cannot rejoin the room and sees the reason on the welcome screen.
-- Settings: the host edits the number of rounds and every timer; limits are enforced by the server and a rejected value is shown and reverted.
+- Settings: the host edits the game's lobby options (the form is generated from the game's options schema, so what appears depends on the game); limits are enforced by the server and a rejected value is shown and reverted.
   Other players see the settings read-only.
 
-## Adding Categories and Prompts
+## Adding Categories and Prompts (WitClash)
 
-Categories live in `games/wit-clash/content/categories/`. Drop a `.jsonc` file in and restart the server; there is no code change.
+WitClash's content is its category files in `games/wit-clash/content/categories/`. Drop a `.jsonc` file in and restart the server; there is no code change.
 The file format and rules are in [`games/wit-clash/content/categories/README.md`](../games/wit-clash/content/categories/README.md).
-The server refuses to start with fewer than 3 categories.
+The server refuses to start with fewer than 3 categories. Other games load their own content (Bluff: `content/prompts.jsonc`).
 
 ## Behind HTTPS and a reverse proxy
 
@@ -142,7 +144,7 @@ The reverse proxy itself is not exercised by this repo's tests. The forwarding r
 | `API_PORT` | `3001` | Room-code lookup API port |
 | `HOST` | `127.0.0.1` | Interface the room-code API binds; `0.0.0.0` for every interface (the game server listens on all of them anyway) |
 | `ALLOWED_ORIGINS` | loopback origins, any port | Comma-separated browser origins allowed to read the API; `*` for all. Needed when guests' pages are not on localhost |
-| `WITCLASH_CONTENT_DIR` | `games/wit-clash/content/categories` | Directory holding the category files |
+| `WITCLASH_CONTENT_DIR` (WitClash) | `games/wit-clash/content/categories` | Directory holding WitClash's category files |
 
 Other server limits are set as options of `createGameServer` (see the [framework README](framework/README.md)), not environment variables: for example `maxRooms` caps the number of concurrent rooms (default 100); a create beyond the cap is refused with "Server is full". Rate limits (`rateLimits`) throttle player actions, name changes and `/api/resolve-code` per remote address; an exhausted address gets HTTP 429 with `Retry-After`.
 
@@ -162,6 +164,8 @@ The launcher always uses the default ports. To move them, start the pieces yours
 
 ## Manual Launch
 
+Shown for WitClash; the same two steps work for any game with a `server.ts` (WitClash and Bluff) in its folder:
+
 ```bash
 # Terminal 1: game server and API (PORT and API_PORT optional)
 cd games/wit-clash && bun server.ts          # or: bun run dev:server (hot reload)
@@ -170,14 +174,14 @@ cd games/wit-clash && bun server.ts          # or: bun run dev:server (hot reloa
 cd games/wit-clash && bun run dev            # Vite on http://localhost:5173
 ```
 
-For a production client, run `bun run build` in `games/wit-clash` and serve `games/wit-clash/dist` with any static file server.
+For a production client, run `bun run build` in the game's folder and serve its `dist/` with any static file server.
 
 ## Maintainer: branch protection
 
 CI cannot stop a direct push to `main` on its own. In the GitHub repository settings (Settings, Branches, rule for `main`) enable:
 
 - Require a pull request before merging.
-- Require status checks to pass before merging, and select every job by name: `lint`, `agents`, `boundaries`, `conventions`, `exports`, `unused`, `typecheck`, `test`, `template-smoke`, `gates`, `mutation`.
+- Require status checks to pass before merging, and select every job by name: `lint`, `agents`, `boundaries`, `conventions`, `exports`, `unused`, `typecheck`, `test`, `template-smoke`, `bundle`, `gates`, `mutation`.
 - Require branches to be up to date before merging.
 - Do not allow bypassing the above settings.
 
