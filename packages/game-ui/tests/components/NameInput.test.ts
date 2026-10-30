@@ -28,4 +28,17 @@ describe("NameInput", () => {
     expect(f.draft).toBe("Ann");
     f.destroy();
   });
+
+  it("gives every instance a distinct input id that its own label targets", () => {
+    const first = render(NameInput, { field: field() });
+    const second = render(NameInput, { field: field() });
+    const inputs = screen.getAllByLabelText("Your name");
+    expect(inputs).toHaveLength(2);
+    expect(new Set(inputs.map((input) => input.id)).size).toBe(2);
+    for (const input of inputs) {
+      expect(document.querySelector(`label[for="${input.id}"]`)).not.toBeNull();
+    }
+    first.unmount();
+    second.unmount();
+  });
 });

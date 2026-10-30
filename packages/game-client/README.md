@@ -28,7 +28,7 @@ export const manager = new GameConnectionManager<ButtonState>({
 void manager.resume();       // page load: stored token, then stored room code
 ```
 
-`resolveEndpoints(overrides, pageHost)` takes string overrides `{ host?, gamePort?, apiPort? }` (for example from `VITE_*` env vars), so a phone on `http://192.168.1.50:5173` talks to `192.168.1.50:2567`.
+`resolveEndpoints(overrides, pageHost, pageProtocol?)` takes string overrides `{ host?, gamePort?, apiPort?, endpoint?, apiBase? }` (for example from `VITE_*` env vars) and an optional page protocol (`window.location.protocol`, default `"http:"`), so a phone on `http://192.168.1.50:5173` talks to `192.168.1.50:2567` — and an HTTPS page gets `https://…` instead of a mixed-content `http://…`. An `endpoint` override is returned verbatim (for example `wss://your-origin/game` behind a reverse proxy); an `apiBase` override is returned verbatim, and the manager prefers it over `apiPort`: it calls `<apiBase>/api/resolve-code` with no port appended. See [HOSTING.md](../../docs/HOSTING.md#behind-https-and-a-reverse-proxy).
 
 ## Join a room
 

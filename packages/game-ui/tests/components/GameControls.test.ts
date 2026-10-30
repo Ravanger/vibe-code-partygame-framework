@@ -1,6 +1,6 @@
 import { connectedClient } from "@partygame/game-client/testing";
 import { BaseGameState } from "@partygame/shared/schema";
-import { fireEvent, render, screen } from "@testing-library/svelte";
+import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import { describe, expect, it, vi } from "vitest";
 import { GameControls } from "../../src/components/index.js";
 import { GameControlsViewModel } from "../../src/GameControlsViewModel.svelte.js";
@@ -60,6 +60,53 @@ describe("GameControls", () => {
     await fireEvent.click(document.body);
     expect(leaveButton()).not.toBeInTheDocument();
     await fireEvent.click(document.body);
+  });
+
+  it("wires the menu to its popover and moves focus on open and back on close", async () => {
+    const { vm } = setup();
+    render(GameControls, { vm });
+    await fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(menu()).not.toHaveFocus();
+    await fireEvent.click(menu());
+    const controls = document.getElementById(menu().getAttribute("aria-controls") as string);
+    expect(controls).toBe((leaveButton() as HTMLElement).parentElement);
+    await waitFor(() => expect(leaveButton()).toHaveFocus());
+    await fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(leaveButton()).not.toBeInTheDocument();
+    expect(menu()).toHaveFocus();
+    await fireEvent.click(menu());
+    expect(leaveButton()).toBeInTheDocument();
+    await fireEvent.click(menu());
+    expect(leaveButton()).not.toBeInTheDocument();
+  });
+
+  it("closes the menu when Tab leaves the last item, and not otherwise", async () => {
+    const { vm } = setup("host");
+    render(GameControls, { vm });
+    await fireEvent.click(menu());
+    await waitFor(() => expect(endGame()).toHaveFocus());
+    await fireEvent.keyDown(endGame() as HTMLElement, { key: "a" });
+    expect(leaveButton()).toBeInTheDocument();
+    await fireEvent.keyDown(endGame() as HTMLElement, { key: "Tab" });
+    expect(leaveButton()).toBeInTheDocument();
+    (leaveButton() as HTMLElement).focus();
+    await fireEvent.keyDown(leaveButton() as HTMLElement, { key: "Tab", shiftKey: true });
+    expect(leaveButton()).toBeInTheDocument();
+    await fireEvent.keyDown(leaveButton() as HTMLElement, { key: "Tab" });
+    expect(leaveButton()).not.toBeInTheDocument();
+    expect(menu()).toHaveFocus();
+  });
+
+  it("presents the end-game confirm as a labelled alertdialog", async () => {
+    const { vm } = setup("host");
+    render(GameControls, { vm });
+    await fireEvent.click(menu());
+    await fireEvent.click(endGame() as HTMLElement);
+    const dialog = screen.getByRole("alertdialog");
+    expect(dialog).toHaveAttribute(
+      "aria-labelledby",
+      screen.getByText("End the game for everyone?").id,
+    );
   });
 
   it("gives a spectator a leave button and no menu", async () => {

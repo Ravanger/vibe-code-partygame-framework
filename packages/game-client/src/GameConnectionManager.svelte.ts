@@ -39,6 +39,8 @@ export interface GameConnectionOptions<TState> {
   roomName: string;
   /** Port of the `/api/resolve-code` API on the same host. Default 3001. */
   apiPort?: number;
+  /** Base URL of the room-code API; the client appends exactly `/api/resolve-code`, so a bare origin reaches an API that answers at `/api/resolve-code`. Preferred over `apiPort`. */
+  apiBase?: string;
   /** Namespaces the browser storage keys, so several games (or several test clients) never share a session. */
   storagePrefix: string;
   /** The game's state class; without it the client decodes the state from the server's reflection. */
@@ -110,9 +112,13 @@ export class GameConnectionManager<
     this.client = new Client(options.endpoint);
     this.session = new PersistedSession(options.storagePrefix);
     this.playerId = this.session.playerId;
-    const url = new URL(options.endpoint);
-    const port = options.apiPort ?? DEFAULT_API_PORT;
-    this.apiBase = `${url.protocol.replace("ws", "http")}//${url.hostname}:${port}`;
+    if (options.apiBase !== undefined) {
+      this.apiBase = options.apiBase;
+    } else {
+      const url = new URL(options.endpoint);
+      const port = options.apiPort ?? DEFAULT_API_PORT;
+      this.apiBase = `${url.protocol.replace("ws", "http")}//${url.hostname}:${port}`;
+    }
     const matchMedia = options.matchMedia ?? ((query: string) => window.matchMedia(query));
     this.feedback = new FeedbackBus(() => matchMedia("(prefers-reduced-motion: reduce)").matches);
     // The state watchers only run while someone listens for phase or urgent events.
