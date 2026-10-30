@@ -106,8 +106,10 @@
           "default": "./dist/index.js"
         },
         "symbols": {
+          "ContentFile": {},
           "LoadJsoncDirOptions": {},
           "loadJsoncDir": {},
+          "loadJsoncDirWithFiles": {},
           "stripJsonComments": {}
         }
       },
