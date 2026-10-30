@@ -11,6 +11,8 @@ export type {
   CanJoinResult,
   GameContext,
   GameDefinition,
+  HostMigration,
+  HostPicker,
   MiddlewareContext,
   MiddlewareEvent,
   PhaseAction,
