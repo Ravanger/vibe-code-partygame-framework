@@ -16,10 +16,10 @@ const idPrefix = nextId("lobby-settings");
     <ul class="settings-list">
       {#each vm.fields as field (field.key)}
         <li class="setting">
-          {#if field.options}
+          {#if field.kind === "select"}
             <span class="setting-label">{field.label}</span>
             <fieldset class="choices" aria-label={field.label}>
-              {#each field.options as choice (choice)}
+              {#each field.choices as choice (choice)}
                 <button
                   type="button"
                   class:active={vm.valueOf(field.key) === choice}
@@ -30,6 +30,25 @@ const idPrefix = nextId("lobby-settings");
                 </button>
               {/each}
             </fieldset>
+          {:else if field.kind === "boolean"}
+            <label for={`${idPrefix}-${field.key}`}>{field.label}</label>
+            <input
+              id={`${idPrefix}-${field.key}`}
+              type="checkbox"
+              checked={vm.valueOf(field.key) === "true"}
+              oninput={(e) => vm.setDraft(field.key, String(e.currentTarget.checked))}
+              onchange={() => vm.commit(field.key)}
+            />
+          {:else if field.kind === "text"}
+            <label for={`${idPrefix}-${field.key}`}>{field.label}</label>
+            <input
+              id={`${idPrefix}-${field.key}`}
+              type="text"
+              maxlength={field.maxLength}
+              value={vm.valueOf(field.key)}
+              oninput={(e) => vm.setDraft(field.key, e.currentTarget.value)}
+              onchange={() => vm.commit(field.key)}
+            />
           {:else}
             <label for={`${idPrefix}-${field.key}`}>{field.label}</label>
             <input
@@ -37,7 +56,7 @@ const idPrefix = nextId("lobby-settings");
               type="number"
               min={field.min}
               max={field.max}
-              step="1"
+              step={field.step}
               value={vm.valueOf(field.key)}
               oninput={(e) => vm.setDraft(field.key, e.currentTarget.value)}
               onchange={() => vm.commit(field.key)}
@@ -138,6 +157,15 @@ const idPrefix = nextId("lobby-settings");
     font-family: var(--font-display);
     font-size: var(--fs-3);
     text-align: center;
+  }
+
+  input[type="text"] {
+    width: 8rem;
+  }
+
+  input[type="checkbox"] {
+    width: auto;
+    padding: 0;
   }
 
   .setting-label {

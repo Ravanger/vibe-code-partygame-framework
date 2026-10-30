@@ -69,7 +69,7 @@ Build the waiting room the same way and call `vm.destroy()` on teardown: `$effec
 
 ## Settings from your options schema
 
-`LobbySettingsViewModel` takes the zod schema you pass to `defineGame`. Every bounded numeric option becomes a labelled number input for the host and a read-only line for everyone else; every string-enum option becomes a row of choice buttons, one per value (a commit that is not one of them is dropped without sending); `labels` overrides the generated names.
+`LobbySettingsViewModel` takes the zod schema you pass to `defineGame`. Every bounded numeric option (`.min()` and `.max()`) becomes a labelled number input for the host — step 1 for integers, the schema's `multipleOf` when present, else `any` — and a read-only line for everyone else; every boolean option becomes a checkbox; every string-enum option becomes a row of choice buttons, one per value (a commit that is not one of them is dropped without sending); every plain string option becomes a text input, bounded by `maxlength` when the schema bounds it. Options the form cannot render (unbounded numbers, arrays, objects, enums with non-string choices) are skipped and reported to the optional `onUnsupported(key, reason)` config — by default a console warning, once per key per instance; `labels` overrides the generated names.
 
 ```ts
 import type { GameConnectionManager } from "@partygame/game-client";

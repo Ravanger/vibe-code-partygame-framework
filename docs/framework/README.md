@@ -914,7 +914,7 @@ export class GameControlsViewModel extends GameControlsBase<ButtonState> {
 }
 ```
 
-`LobbySettingsViewModel` takes the same options schema you pass to `defineGame`, optional `defaults` shown until the server publishes valid options, and optional `labels`. Every bounded numeric option (`.min()` and `.max()`) appears in the form with no UI work; a string-enum option (`z.enum([...])`) appears as a row of choice buttons, one per value, also with no UI work; a field is labelled from its camelCase key ("Turn seconds") unless `labels` overrides it:
+`LobbySettingsViewModel` takes the same options schema you pass to `defineGame`, optional `defaults` shown until the server publishes valid options, and optional `labels`. Every bounded numeric option (`.min()` and `.max()`) appears as a number input — step 1 for integers, the schema's `multipleOf` when present, else `any`; every boolean option appears as a checkbox; a string-enum option (`z.enum([...])`) appears as a row of choice buttons, one per value; every plain string option appears as a text input (bounded by `maxlength` when the schema bounds it) — all with no UI work. Options the form cannot render (unbounded numbers, arrays, objects, enums with non-string choices) are skipped and reported to the optional `onUnsupported(key, reason)` config — by default a console warning, once per key per instance. A field is labelled from its camelCase key ("Turn seconds") unless `labels` overrides it:
 
 ```ts
 import { LobbySettingsViewModel as LobbySettingsBase } from "@partygame/game-ui";
