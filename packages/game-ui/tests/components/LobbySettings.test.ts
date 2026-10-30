@@ -47,11 +47,35 @@ describe("LobbySettings", () => {
     ]);
   });
 
+  it("gives every instance distinct input ids that its own labels target", () => {
+    const a = setup({ role: "host" });
+    const b = setup({ role: "host" });
+    const first = render(LobbySettings, { vm: a.vm });
+    const second = render(LobbySettings, { vm: b.vm });
+    const inputs = [
+      ...first.container.querySelectorAll<HTMLInputElement>("input[id]"),
+      ...second.container.querySelectorAll<HTMLInputElement>("input[id]"),
+    ];
+    expect(inputs.length).toBeGreaterThan(1);
+    expect(new Set(inputs.map((input) => input.id)).size).toBe(inputs.length);
+    for (const input of inputs) {
+      expect(document.querySelector(`label[for="${input.id}"]`)).not.toBeNull();
+    }
+  });
+
+  it("renders editable rows as a list, never a definition list", () => {
+    const { vm } = setup({ role: "host" });
+    const { container } = render(LobbySettings, { vm });
+    expect(container.querySelector("dl")).not.toBeInTheDocument();
+    expect(container.querySelectorAll("ul li.setting").length).toBeGreaterThan(0);
+  });
+
   it("shows everyone else read-only lines, collapsed", () => {
     const { vm } = setup();
     const { container } = render(LobbySettings, { vm });
     expect(screen.getByText("Game settings")).toBeInTheDocument();
     expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
+    expect(container.querySelector("dl > div")).not.toBeInTheDocument();
     expect(screen.getByText("Turn seconds").tagName).toBe("DT");
     expect(screen.getByText("30").tagName).toBe("DD");
     expect(container.querySelector("details")).not.toHaveAttribute("open");

@@ -25,9 +25,23 @@ describe("Podium", () => {
     for (const label of ["1st", "2nd", "3rd"]) expect(screen.getByText(label)).toBeInTheDocument();
     for (const name of ["Ann", "Bo", "Cy"]) expect(screen.getByText(name)).toBeInTheDocument();
     expect(screen.getByText("30 pts")).toBeInTheDocument();
-    expect(screen.getAllByText("← you")).toHaveLength(1);
+    const marker = container.querySelector<HTMLElement>(".you");
+    expect(marker).not.toBeNull();
+    expect(marker?.querySelector('[aria-hidden="true"]')?.textContent).toBe("←");
+    expect(marker?.querySelector(".sr-only")?.textContent).toBe("This is you");
+    expect(screen.getByText("you")).toBeInTheDocument();
     expect(container.querySelectorAll(".star")).toHaveLength(1);
     expect(container.querySelector(".tier-1 .star")).toBeInTheDocument();
+  });
+
+  it("hides the visible you marker from screen readers and keeps the sr-only text", () => {
+    const { container } = render(Podium, { steps: steps() });
+    const marker = container.querySelector<HTMLElement>(".you");
+    if (marker === null) throw new Error("the you marker did not render");
+    const visible = [...marker.querySelectorAll("span")].find((s) => s.textContent === "you");
+    expect(visible).not.toBeUndefined();
+    expect(visible).toHaveAttribute("aria-hidden", "true");
+    expect(marker.querySelector(".sr-only")?.textContent).toBe("This is you");
   });
 
   it("sizes stickers by tier, smaller when a tie shares a step", () => {
