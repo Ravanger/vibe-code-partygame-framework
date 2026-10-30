@@ -62,6 +62,9 @@ export function categoriesFromArray(categories: Category[]): CategoryRepository 
 
 const PROMPT_LISTS = ["prompts", "tieBreakers"] as const;
 
+/** The loader's error prefix for this content kind; duplicate-prompt errors carry it too. */
+const LABEL = "Category";
+
 /** Prompt ids are remembered across the whole game and prompts and tie-breakers share one id space,
  * so a repeat anywhere is an error; every repeat is listed in one throw. */
 function checkPromptIds(files: ContentFile<Category>[]): void {
@@ -77,7 +80,7 @@ function checkPromptIds(files: ContentFile<Category>[]): void {
           return;
         }
         problems.push(
-          `Duplicate prompt id "${prompt.id}" at ${where} in ${file} (category "${value.id}"); already used at ${first.where} in ${first.file} (category "${first.categoryId}")`,
+          `[${LABEL}] Duplicate prompt id "${prompt.id}" at ${where} in ${file} (category "${value.id}"); already used at ${first.where} in ${first.file} (category "${first.categoryId}")`,
         );
       });
     }
@@ -89,7 +92,7 @@ function checkPromptIds(files: ContentFile<Category>[]): void {
 export async function loadCategoriesFromDir(dir: string): Promise<CategoryRepository> {
   const files = await loadJsoncDirWithFiles(dir, CategorySchema, {
     idOf: (c) => c.id,
-    label: "Category",
+    label: LABEL,
   });
   checkPromptIds(files);
   return new CategoryRepository(files.map((f) => f.value));

@@ -63,7 +63,7 @@ once per game. A category without any simply adds nothing to the pool.
 A prompt id repeated in two files (every repeat is listed, one per line):
 
 ```text
-Duplicate prompt id "animals-1" at tieBreakers[0] in afterlife-support.jsonc (category "afterlife"); already used at prompts[0] in animals.jsonc (category "animals")
+[Category] Duplicate prompt id "animals-1" at tieBreakers[0] in afterlife-support.jsonc (category "afterlife"); already used at prompts[0] in animals.jsonc (category "animals")
 ```
 
 An unknown field in a category file:

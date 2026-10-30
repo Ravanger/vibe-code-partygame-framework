@@ -131,7 +131,7 @@ describe("loadCategoriesFromDir", () => {
     );
     const error = await loadCategoriesFromDir(dir).catch((e) => e);
     expect(error).toBeInstanceOf(Error);
-    expect(error.message).toContain('Duplicate prompt id "shared"');
+    expect(error.message).toContain('[Category] Duplicate prompt id "shared"');
     expect(error.message).toContain("one.json");
     expect(error.message).toContain("two.json");
     expect(error.message).toContain('(category "one")');
@@ -154,7 +154,7 @@ describe("loadCategoriesFromDir", () => {
     );
     const error = await loadCategoriesFromDir(dir).catch((e) => e);
     expect(error).toBeInstanceOf(Error);
-    expect(error.message).toContain('Duplicate prompt id "shared"');
+    expect(error.message).toContain('[Category] Duplicate prompt id "shared"');
     expect(error.message).toContain("one.json");
     expect(error.message).toContain('(category "one")');
     expect(error.message).toContain("prompts[0]");
@@ -188,6 +188,9 @@ describe("loadCategoriesFromDir", () => {
     expect(error).toBeInstanceOf(Error);
     expect(error.message).toContain('"dup-1"');
     expect(error.message).toContain('"dup-2"');
+    for (const line of error.message.split("\n")) {
+      expect(line).toMatch(/^\[Category\] /); // every listed problem carries the loader's prefix
+    }
   });
 });
 
