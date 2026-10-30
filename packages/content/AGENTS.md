@@ -17,7 +17,7 @@ Game-agnostic content tooling: JSONC parsing and content-directory loading, vali
 
 ## Public entry points
 
-- `.`: `stripJsonComments`, `loadJsoncDir`.
+- `.`: `stripJsonComments`, `loadJsoncDir`, `loadJsoncDirWithFiles`, type `ContentFile`.
 - `./filter`: `TextFilter`, `FilterLevel`, `FilterResult`, `createTextFilter`.
 
 ## Tests

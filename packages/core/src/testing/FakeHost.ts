@@ -37,6 +37,13 @@ export class FakeHost implements RuntimeHost {
     warn: (event, fields) => this.record("warn", event, fields),
     error: (event, fields) => this.record("error", event, fields),
   };
+  /** Promotes the seat and demotes the current host (#36); delete it to simulate a host without `setHost`. */
+  setHost?: (playerId: string) => void = (id) => {
+    for (const seat of this.seats) {
+      if (seat.id === id) seat.role = "host";
+      else if (seat.role === "host") seat.role = "player";
+    }
+  };
   /** The room RNG seed; an unseeded host is `seedFromNumber(0)`, a deterministic stream. */
   readonly seed: Seed;
   private rngFn: () => number;

@@ -4,6 +4,11 @@
   "private": true,
   "license": "Apache-2.0",
   "type": "module",
+  "partygame": {
+    "name": "__DisplayNameJsonText__",
+    "description": "A party game",
+    "icon": "🎮"
+  },
   "dependencies": {
     "@colyseus/schema": "^5.0.35",
     "@partygame/bots": "workspace:*",

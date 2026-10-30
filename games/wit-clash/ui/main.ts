@@ -15,11 +15,12 @@ const target = document.getElementById("app") ?? document.body;
 if (new URLSearchParams(window.location.search).has("replay")) {
   mount(ReplayApp, { target });
 } else {
-  const { endpoint, apiPort } = resolveEndpoints();
+  const { endpoint, apiPort, apiBase } = resolveEndpoints();
   const manager = new GameConnectionManager<WitClashState>({
     endpoint,
     roomName: META.roomName,
     apiPort,
+    ...(apiBase === undefined ? {} : { apiBase }),
     storagePrefix: "witclash",
     rootSchema: WitClashState,
   });
