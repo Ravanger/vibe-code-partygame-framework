@@ -595,6 +595,8 @@ number. Both live in `packages/shared/src/errors.ts`, the single source for the 
 
 The protocol does not change: errors keep their `ErrorCode` and English `message`, and the text is decided on the client. `GameConnectionManager` takes an optional `strings` table (`Partial<ClientStrings>`, defaults in `defaultClientStrings`, both from `@partygame/game-client`) that replaces every client-owned message — the room-code validation text, the client-side codes `NOT_CONNECTED`, `INVALID_ACTION`, `BAD_REPLY`, `CONNECTION_LOST`, `ROOM_NOT_FOUND`, and the two state-sync rejection messages (`syncDisconnected`, `syncTimedOut`). In addition, `strings.errors[code]` overrides the text of any code that lands in `lastServerError`; the server's own `message` is used only as a fallback when the table has no entry for the code.
 
+The generic `@partygame/game-ui` components read their labels from one more table, `defaultUiStrings`, set with `setStrings(partial)` at the app root (GameControls menu and dialog, LobbySettings summary, NameInput, Podium, QrCode, and the `PhaseClock` announcement through its `secondsRemaining(n)` function entry). The table carries a `clientStrings` field: pass the same object to both the manager's `strings` option and `setStrings`, and one table localises both layers. Server error text resolves as `clientStrings.errors[code] ?? message`, so codes you do not translate keep the server's own message.
+
 ## Minimal game: first to press the button
 
 ```ts

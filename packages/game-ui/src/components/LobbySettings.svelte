@@ -2,16 +2,18 @@
 import type { LobbySettingsViewModel } from "@partygame/game-ui";
 // biome-ignore lint/correctness/noUnusedImports: used by the generics attribute
 import type { BaseGameState } from "@partygame/shared/schema";
+import { getStrings } from "../strings.js";
 import { nextId } from "./uniqueId.js";
 
 const { vm }: { vm: LobbySettingsViewModel<TState> } = $props();
+const strings = getStrings();
 
 // One id namespace per mounted instance, so two instances never share input ids.
 const idPrefix = nextId("lobby-settings");
 </script>
 
 <details class="settings card" open={vm.startsOpen}>
-  <summary class="summary-with-marker">Game settings</summary>
+  <summary class="summary-with-marker">{strings.gameSettings}</summary>
   {#if vm.canEdit}
     <ul class="settings-list">
       {#each vm.fields as field (field.key)}

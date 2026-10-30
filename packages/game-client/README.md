@@ -6,11 +6,7 @@ Ships source (`.ts`/`.svelte.ts`); consumers need the Svelte plugin — Vite wit
 
 | Import | What |
 |---|---|
-<<<<<<< HEAD
-| `@partygame/game-client` | `GameConnectionManager<TState>`: connect, sync, send actions; `Countdown`, `resolveEndpoints`, `readCodeParam`; `ClientStrings`, `defaultClientStrings` for the manager's `strings` option |
-=======
-| `@partygame/game-client` | `GameConnectionManager<TState>`: connect, sync, send actions; `Countdown`, `FeedbackBus`, `resolveEndpoints`, `readCodeParam` |
->>>>>>> origin/main
+| `@partygame/game-client` | `GameConnectionManager<TState>`: connect, sync, send actions; `Countdown`, `FeedbackBus`, `resolveEndpoints`, `readCodeParam`; `ClientStrings`, `defaultClientStrings` for the manager's `strings` option |
 | `@partygame/game-client/testing` | `StubRoom`, `connectedClient`, `fakeFetch` for UI tests without a server |
 | `@partygame/game-client/test-setup` | jsdom setup (shims storage, fixes WebSocket for the SDK) |
 

@@ -3,9 +3,11 @@ import type { GameControlsViewModel } from "@partygame/game-ui";
 // biome-ignore lint/correctness/noUnusedImports: used by the generics attribute
 import type { BaseGameState } from "@partygame/shared/schema";
 import { tick } from "svelte";
+import { getStrings } from "../strings.js";
 import { nextId } from "./uniqueId.js";
 
 const { vm }: { vm: GameControlsViewModel<TState> } = $props();
+const strings = getStrings();
 
 let root = $state<HTMLElement>();
 let menuBtn = $state<HTMLButtonElement>();
@@ -50,12 +52,14 @@ async function onMenuClick(): Promise<void> {
 {#if vm.isVisible}
   <div class="game-controls" bind:this={root}>
     {#if vm.isSpectator}
-      <button type="button" class="btn btn--ghost leave-small" onclick={() => vm.leave()}>Leave game</button>
+      <button type="button" class="btn btn--ghost leave-small" onclick={() => vm.leave()}>
+        {strings.leaveGame}
+      </button>
     {:else}
       <button
         type="button"
         class="btn menu-btn"
-        aria-label="Game menu"
+        aria-label={strings.gameMenu}
         aria-haspopup="true"
         aria-expanded={vm.menuOpen}
         aria-controls={popoverId}
@@ -67,10 +71,12 @@ async function onMenuClick(): Promise<void> {
           {#if vm.canEndGame}
             {#if vm.confirmingEnd}
               <div class="confirm-dialog" role="alertdialog" aria-labelledby={confirmTitleId}>
-                <p id={confirmTitleId} class="confirm">End the game for everyone?</p>
+                <p id={confirmTitleId} class="confirm">{strings.confirmEndGame}</p>
                 <div class="confirm-actions">
-                  <button type="button" class="btn btn--danger" onclick={() => vm.confirmEnd()}>Yes</button>
-                  <button type="button" class="btn" onclick={() => vm.cancelEnd()}>No</button>
+                  <button type="button" class="btn btn--danger" onclick={() => vm.confirmEnd()}>
+                    {strings.yes}
+                  </button>
+                  <button type="button" class="btn" onclick={() => vm.cancelEnd()}>{strings.no}</button>
                 </div>
               </div>
             {:else}
@@ -79,10 +85,12 @@ async function onMenuClick(): Promise<void> {
                 class="btn btn--danger"
                 bind:this={endBtn}
                 onclick={() => vm.askEnd()}
-              >End game</button>
+              >{strings.endGame}</button>
             {/if}
           {/if}
-          <button type="button" class="btn" bind:this={leaveBtn} onclick={() => vm.leave()}>Leave game</button>
+          <button type="button" class="btn" bind:this={leaveBtn} onclick={() => vm.leave()}>
+            {strings.leaveGame}
+          </button>
         </div>
       {/if}
     {/if}
