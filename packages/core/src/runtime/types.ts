@@ -48,6 +48,48 @@ export interface PhaseState {
   notice?: string;
 }
 
+/** The level of a log line. */
+export type LogLevel = "info" | "warn" | "error";
+
+/**
+ * The field map of a log line: strings, numbers or booleans only — never player names, payloads
+ * or free text (see the framework guide's Logging section).
+ */
+export type LogFields = Record<string, string | number | boolean>;
+
+/**
+ * A structured log sink. Each call carries an event name and optional {@link LogFields}. Hosts
+ * bind the room id and timestamp before writing.
+ */
+export interface Logger {
+  info(event: string, fields?: LogFields): void;
+  warn(event: string, fields?: LogFields): void;
+  error(event: string, fields?: LogFields): void;
+}
+
+/** One logged line as captured by `FakeHost.logs`. */
+export interface LogLine {
+  level: LogLevel;
+  event: string;
+  fields?: LogFields;
+}
+
+/**
+ * The logger game code gets as `ctx.log`: call it for an `info` line, or use `.warn`/`.error`.
+ */
+export interface ContextLogger {
+  (event: string, fields?: LogFields): void;
+  warn(event: string, fields?: LogFields): void;
+  error(event: string, fields?: LogFields): void;
+}
+
+/** A no-op logger, usable as a host sink (`RuntimeHost.log`) or a context logger (`GameContext.log`): drops every line. */
+export const noopLogger: Logger & ContextLogger = Object.assign(() => {}, {
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+});
+
 /** What every hook receives. */
 export interface GameContext<TState extends PhaseState, TPrivate, TOptions> {
   /** Synced to every client. */
@@ -83,6 +125,8 @@ export interface GameContext<TState extends PhaseState, TPrivate, TOptions> {
   newId(): string;
   /** Epoch ms. */
   now(): number;
+  /** Logs a structured line for this room, e.g. `ctx.log("custom.event", { n: 1 })` (info) or `ctx.log.warn(...)`. Field values are strings, numbers or booleans; never names or payloads. */
+  log: ContextLogger;
   /** The definition's name; recorded in the action log header for replay sanity checks. */
   readonly gameName: string;
   /** The definition's version; recorded in the action log header for replay sanity checks. */
@@ -334,6 +378,8 @@ export interface RuntimeHost {
   setHost?(playerId: string): void;
   /** Make the (validated) room options visible to clients. */
   publishOptions(options: unknown): void;
+  /** Sinks the room's log lines; when omitted the runtime uses {@link noopLogger}. */
+  log?: Logger;
   now(): number;
   rng(): number;
   /** The room RNG seed (see `sfc32`); recorded in the action log header. */

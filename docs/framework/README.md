@@ -608,6 +608,21 @@ const game = defineGame<ButtonState, Priv>({
 
 Function entries receive their arguments (`needAtLeast(minPlayers)`, `notAllowedToSend(action)`). The client-visible entries reach players in `ERROR` payloads or `state.notice`; the log-only ones are `FrameworkError` messages, where clients see the fixed `CLIENT_MESSAGES` text for the code. Your own game-authored `ctx.reject` text is not part of this table.
 
+### Logging
+
+The runtime logs through an injected `Logger` (`@partygame/core`): `info`, `warn` and `error`, each taking an event name and optional fields. Phase code and middleware log through the context — `ctx.log("custom.event", { n: 1 })`. A host that provides no logger gets a no-op, so games run and replay without one; tests assert on `FakeHost.logs`. The logger is injected per host, never process-global.
+
+Log lines are structured: `{ ts, level, event, roomId, ...fields }`, where field values are strings, numbers or booleans only. Lines carry event names and `playerId` — no player names, no action payloads, no free text. The server's default logger writes one line per event to stdout; a host may swap in its own implementation (for example pino). The room lifecycle events the server emits:
+
+| Event | When | Extra fields |
+|---|---|---|
+| `room.created` | A room is created | — |
+| `player.joined` | A player joins the room | `playerId` |
+| `player.reconnected` | A disconnected seat reconnects | `playerId` |
+| `player.left` | A player leaves or is kicked | `playerId` |
+| `action.rejected` | The runtime rejects an action | `code`, `action` (the action's type) |
+| `room.disposed` | A room is disposed | — |
+
 ## Minimal game: first to press the button
 
 ```ts

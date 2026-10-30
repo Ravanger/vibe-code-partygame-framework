@@ -1,7 +1,13 @@
 import { ErrorCode, FrameworkError, START_GAME } from "@partygame/shared";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { defineGame, type GameDefinition, GameRuntime, type PhaseState } from "../../src/index.js";
+import {
+  defineGame,
+  type GameDefinition,
+  GameRuntime,
+  noopLogger,
+  type PhaseState,
+} from "../../src/index.js";
 import { DispatchPipeline } from "../../src/runtime/DispatchPipeline.js";
 import { Lobby } from "../../src/runtime/lobby.js";
 import {
@@ -194,6 +200,7 @@ describe("log-only core strings", () => {
     rng: () => 0,
     newId: () => "id",
     now: () => 0,
+    log: noopLogger,
     gameName: "Test",
     gameVersion: "1",
     seed: [0, 0, 0, 0],

@@ -10,10 +10,15 @@ export type {
   AudienceScope,
   CanJoinInput,
   CanJoinResult,
+  ContextLogger,
   GameContext,
   GameDefinition,
   HostMigration,
   HostPicker,
+  LogFields,
+  Logger,
+  LogLevel,
+  LogLine,
   MiddlewareContext,
   MiddlewareEvent,
   PhaseAction,
@@ -26,3 +31,4 @@ export type {
   RuntimeHost,
   TimerHandle,
 } from "./types.js";
+export { noopLogger } from "./types.js";
