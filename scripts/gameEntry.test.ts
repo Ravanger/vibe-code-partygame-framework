@@ -148,6 +148,14 @@ describe("discoverGames manifests", () => {
     expect(result.games[0]?.icon).toBeUndefined();
   });
 
+  it("reports manifest errors in folder order, not input order", () => {
+    const result = discoverGames([
+      { folder: "zeta", packageJson: { name: "@partygame/zeta", partygame: "text" } },
+      { folder: "alpha", packageJson: { name: "@partygame/alpha", partygame: [1] } },
+    ]);
+    expect(result.manifestErrors.map((error) => error.folder)).toEqual(["alpha", "zeta"]);
+  });
+
   it("lists a game with no manifest as before", () => {
     const result = discoverGames([{ folder: "alpha", packageJson: { name: "alpha" } }]);
     expect(result.games).toEqual([{ folder: "alpha", label: "alpha", name: "alpha" }]);

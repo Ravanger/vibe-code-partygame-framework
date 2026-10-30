@@ -120,6 +120,8 @@ export const discoverGames = (
   const ignored = candidates
     .map((record) => record.folder)
     .filter((folder) => RESERVED_SLUGS.includes(folder));
+  // Errors are reported in the same folder order as the sorted games, not input order.
+  manifestErrors.sort((a, b) => a.folder.localeCompare(b.folder));
   return { games, ignored, manifestErrors };
 };
 
