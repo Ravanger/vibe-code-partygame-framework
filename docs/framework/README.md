@@ -38,6 +38,19 @@ display name (override the display name with `--name`).
 Once it runs, replace the wave ruleset in `games/<slug>/src/` with your own game; the phases, actions, state, UI,
 terminal, bots and the declaration are small, self-contained files you can edit. The rest of this guide explains how each piece works.
 
+Each game describes itself once in a `partygame` key of its own `package.json`, which `bun run games` and the
+interactive picker read — adding a game needs no edit to dispatch code:
+
+```json
+"partygame": { "name": "WitClash", "description": "A word-prompt party game for 3 to 8 players", "icon": "🧠" }
+```
+
+`name` and `description` must be non-empty; `icon` must be exactly one emoji grapheme (a multi-code-point emoji
+like a family is fine, two emojis are not). The template ships the key with the display name already filled in. A
+game with no manifest still lists under its package name; a malformed manifest is reported on stderr and the game
+falls back to its package name too. Player counts are not part of the manifest — `defineGame` already requires
+`minPlayers`/`maxPlayers`.
+
 ## Concepts
 
 ### Phases
