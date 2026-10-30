@@ -1,8 +1,9 @@
-import { matchMaker } from "@colyseus/core";
+import { matchMaker, type Room } from "@colyseus/core";
 import { CLIENT_MESSAGES, CLOSE_CODES, PROTOCOL_VERSION, RoomCodeSchema } from "@partygame/shared";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { collectMessages, type TestServer, waitUntil } from "../src/testing/index.js";
-import { bootBuzzer, clientState, pid, seat, stateOf } from "./support.js";
+import { LOCKED_PASSWORD } from "./fixtures/locked.js";
+import { bootBuzzer, clientState, lockedStateOf, pid, seat, stateOf } from "./support.js";
 
 let t: TestServer;
 beforeAll(async () => {
@@ -276,6 +277,76 @@ describe("GameRoom protocol versioning", () => {
     await waitUntil(() => stateOf(room).players.get(pid(2))?.isConnected === false, "dropped");
     const back = await t.sdk.reconnect(token);
     await waitUntil(() => stateOf(room).players.get(pid(2))?.isConnected === true, "back");
+    expect(back.roomId).toBe(room.roomId);
+  });
+});
+
+describe("GameRoom canJoin", () => {
+  // `joinData` is a join option; a create without it leaves the room empty for the joins below.
+  const createLocked = () => t.createRoom("locked", {});
+
+  it("evaluates the room creator through their join and admits one with the right password", async () => {
+    await expect(
+      t.sdk.create("locked", { playerId: pid(5), protocolVersion: PROTOCOL_VERSION }),
+    ).rejects.toMatchObject({ code: CLOSE_CODES.JOIN_REFUSED.code, message: "Wrong password" });
+    const creator = await t.sdk.create("locked", {
+      playerId: pid(1),
+      seatSecret: t.seatSecretFor(pid(1)),
+      joinData: { password: LOCKED_PASSWORD },
+      protocolVersion: PROTOCOL_VERSION,
+    });
+    const room = matchMaker.getLocalRoomById(creator.roomId) as Room;
+    await waitUntil(() => lockedStateOf(room).players.get(pid(1)) !== undefined, "creator seated");
+    expect(lockedStateOf(room).players.get(pid(1))).toMatchObject({ role: "host" });
+  });
+
+  it("refuses a wrong password with the game's message and changes nothing", async () => {
+    const room = await createLocked();
+    await expect(
+      t.join(room, { playerId: pid(2), joinData: { password: "nope" } }),
+    ).rejects.toMatchObject({ code: CLOSE_CODES.JOIN_REFUSED.code, message: "Wrong password" });
+    expect(lockedStateOf(room).players.size).toBe(0);
+    expect(lockedStateOf(room).spectatorCount).toBe(0);
+  });
+
+  it("seats a joiner with the right password and their name", async () => {
+    const room = await createLocked();
+    await t.join(room, { playerId: pid(2), name: "Bo", joinData: { password: LOCKED_PASSWORD } });
+    await waitUntil(() => lockedStateOf(room).players.get(pid(2)) !== undefined, "seated");
+    expect(lockedStateOf(room).players.get(pid(2))).toMatchObject({ id: pid(2), name: "Bo" });
+  });
+
+  it("evaluates spectators with the spectator flag and admits one with the right password", async () => {
+    const room = await createLocked();
+    await expect(t.join(room, { playerId: pid(9), spectator: true })).rejects.toMatchObject({
+      code: CLOSE_CODES.JOIN_REFUSED.code,
+      message: "Spectators need the password too",
+    });
+    expect(lockedStateOf(room).spectatorCount).toBe(0);
+    await t.join(room, {
+      playerId: pid(9),
+      spectator: true,
+      joinData: { password: LOCKED_PASSWORD },
+    });
+    await waitUntil(() => lockedStateOf(room).spectatorCount === 1, "counted");
+    expect(lockedStateOf(room).players.size).toBe(0);
+  });
+
+  it("lets a seated player rejoin after a reload without the hook running again", async () => {
+    const room = await createLocked();
+    const p2 = await t.join(room, { playerId: pid(2), joinData: { password: LOCKED_PASSWORD } });
+    await waitUntil(() => lockedStateOf(room).players.get(pid(2)) !== undefined, "seated");
+    await p2.leave(false);
+    await waitUntil(
+      () => lockedStateOf(room).players.get(pid(2))?.isConnected === false,
+      "dropped",
+    );
+    const back = await t.sdk.joinById(room.roomId, {
+      playerId: pid(2),
+      seatSecret: t.seatSecretFor(pid(2)),
+      protocolVersion: PROTOCOL_VERSION,
+    });
+    await waitUntil(() => lockedStateOf(room).players.get(pid(2))?.isConnected === true, "back");
     expect(back.roomId).toBe(room.roomId);
   });
 });

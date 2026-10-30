@@ -2,16 +2,20 @@
 import type { LobbySettingsViewModel } from "@partygame/game-ui";
 // biome-ignore lint/correctness/noUnusedImports: used by the generics attribute
 import type { BaseGameState } from "@partygame/shared/schema";
+import { nextId } from "./uniqueId.js";
 
 const { vm }: { vm: LobbySettingsViewModel<TState> } = $props();
+
+// One id namespace per mounted instance, so two instances never share input ids.
+const idPrefix = nextId("lobby-settings");
 </script>
 
 <details class="settings card" open={vm.startsOpen}>
   <summary class="summary-with-marker">Game settings</summary>
-  <dl>
-    {#each vm.fields as field (field.key)}
-      <div class="setting">
-        {#if vm.canEdit}
+  {#if vm.canEdit}
+    <ul class="settings-list">
+      {#each vm.fields as field (field.key)}
+        <li class="setting">
           {#if field.kind === "select"}
             <span class="setting-label">{field.label}</span>
             <fieldset class="choices" aria-label={field.label}>
@@ -27,18 +31,18 @@ const { vm }: { vm: LobbySettingsViewModel<TState> } = $props();
               {/each}
             </fieldset>
           {:else if field.kind === "boolean"}
-            <label for={`opt-${field.key}`}>{field.label}</label>
+            <label for={`${idPrefix}-${field.key}`}>{field.label}</label>
             <input
-              id={`opt-${field.key}`}
+              id={`${idPrefix}-${field.key}`}
               type="checkbox"
               checked={vm.valueOf(field.key) === "true"}
               oninput={(e) => vm.setDraft(field.key, String(e.currentTarget.checked))}
               onchange={() => vm.commit(field.key)}
             />
           {:else if field.kind === "text"}
-            <label for={`opt-${field.key}`}>{field.label}</label>
+            <label for={`${idPrefix}-${field.key}`}>{field.label}</label>
             <input
-              id={`opt-${field.key}`}
+              id={`${idPrefix}-${field.key}`}
               type="text"
               maxlength={field.maxLength}
               value={vm.valueOf(field.key)}
@@ -46,9 +50,9 @@ const { vm }: { vm: LobbySettingsViewModel<TState> } = $props();
               onchange={() => vm.commit(field.key)}
             />
           {:else}
-            <label for={`opt-${field.key}`}>{field.label}</label>
+            <label for={`${idPrefix}-${field.key}`}>{field.label}</label>
             <input
-              id={`opt-${field.key}`}
+              id={`${idPrefix}-${field.key}`}
               type="number"
               min={field.min}
               max={field.max}
@@ -58,13 +62,17 @@ const { vm }: { vm: LobbySettingsViewModel<TState> } = $props();
               onchange={() => vm.commit(field.key)}
             />
           {/if}
-        {:else}
-          <dt>{field.label}</dt>
-          <dd>{vm.valueOf(field.key)}</dd>
-        {/if}
-      </div>
-    {/each}
-  </dl>
+        </li>
+      {/each}
+    </ul>
+  {:else}
+    <dl>
+      {#each vm.fields as field (field.key)}
+        <dt>{field.label}</dt>
+        <dd>{vm.valueOf(field.key)}</dd>
+      {/each}
+    </dl>
+  {/if}
 </details>
 
 <style>
@@ -102,6 +110,17 @@ const { vm }: { vm: LobbySettingsViewModel<TState> } = $props();
   dl {
     margin: 0.5rem 0 0;
     display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 12px;
+    row-gap: 0.5rem;
+    align-items: center;
+  }
+
+  .settings-list {
+    margin: 0.5rem 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
     gap: 0.5rem;
   }
 
@@ -116,10 +135,13 @@ const { vm }: { vm: LobbySettingsViewModel<TState> } = $props();
   dt,
   label {
     color: var(--ink-soft);
+    min-height: 44px;
   }
 
   dd {
     margin: 0;
+    justify-self: end;
+    min-height: 44px;
     font-family: var(--font-display);
     font-size: calc(var(--fs-3) * var(--scale, 1));
   }
@@ -171,6 +193,6 @@ const { vm }: { vm: LobbySettingsViewModel<TState> } = $props();
   }
 
   .choices button.active {
-    background: var(--sun);
+    background: var(--color-2);
   }
 </style>

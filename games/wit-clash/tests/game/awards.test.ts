@@ -86,6 +86,7 @@ const record = (authorId: string, votes: number): AnswerRecord => ({
   promptText: "Q",
   votes,
   matchupVotes: 2,
+  matchupId: "m1",
 });
 
 describe("mostVotesReceived", () => {

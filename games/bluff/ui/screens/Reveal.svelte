@@ -61,7 +61,7 @@ const vm = untrack(() => new RevealViewModel(manager));
 }
 
 .truth {
-  outline: 3px solid var(--sun, #ffd23f);
+  outline: 3px solid var(--color-2, #ffd23f);
 }
 
 .text {

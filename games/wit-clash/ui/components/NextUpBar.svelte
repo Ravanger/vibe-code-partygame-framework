@@ -36,7 +36,7 @@ const fraction = $derived(total > 0 ? Math.min(1, Math.max(0, seconds / total)) 
 
   .drain {
     height: 100%;
-    background: var(--pink);
+    background: var(--color-1);
   }
 
   @media (prefers-reduced-motion: no-preference) {

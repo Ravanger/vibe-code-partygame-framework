@@ -21,6 +21,8 @@ export class WitClashPrivate {
   categoryVotes = new Map<string, string>();
   assignments = new Map<string, string[]>();
   drafts = new Map<string, Map<string, string>>();
+  /** For each draft, ms after the answering phase started that the author last submitted it; playerId → matchupId. */
+  submitTimes = new Map<string, Map<string, number>>();
   authors = new Map<string, string>();
   placeholders = new Set<string>();
   matchupVotes = new Map<string, string>();
@@ -42,6 +44,7 @@ export class WitClashPrivate {
     this.categoryVotes.clear();
     this.assignments.clear();
     this.drafts.clear();
+    this.submitTimes.clear();
     this.authors.clear();
     this.placeholders.clear();
     this.matchupVotes.clear();

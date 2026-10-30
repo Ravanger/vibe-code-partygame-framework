@@ -1,6 +1,12 @@
 import { Client } from "@colyseus/sdk";
 import { RoomCodeError } from "@partygame/client-utils";
-import { CLIENT_MESSAGES, CLOSE_CODES, ErrorCode, PROTOCOL_VERSION } from "@partygame/shared";
+import {
+  CLIENT_MESSAGES,
+  CLOSE_CODES,
+  ClientMessage,
+  ErrorCode,
+  PROTOCOL_VERSION,
+} from "@partygame/shared";
 import { BaseGameState, PlayerSchema } from "@partygame/shared/schema";
 import { flushSync } from "svelte";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -292,6 +298,132 @@ describe("sendAction", () => {
   });
 });
 
+describe("exportReplay", () => {
+  it("resolves with the bundle and records the host-only request", async () => {
+    const manager = newManager();
+    const { room } = seated(manager, "host");
+    const bundle = { bundleVersion: 1, name: "stub-game", snapshots: [] };
+    room.reply = bundle;
+    manager.attach(room);
+    await expect(manager.exportReplay()).resolves.toEqual(bundle);
+    expect(room.requests).toEqual([{ type: ClientMessage.EXPORT_REPLAY, payload: undefined }]);
+  });
+
+  it("hands a server refusal through and remembers it", async () => {
+    const manager = newManager();
+    const { room } = seated(manager);
+    room.reply = {
+      ok: false,
+      error: { code: ErrorCode.UNAUTHORIZED, message: "only the host can export" },
+    };
+    manager.attach(room);
+    await expect(manager.exportReplay()).resolves.toEqual({
+      ok: false,
+      error: { code: ErrorCode.UNAUTHORIZED, message: "only the host can export" },
+    });
+    expect(manager.lastServerError).toEqual({
+      code: ErrorCode.UNAUTHORIZED,
+      message: "only the host can export",
+    });
+  });
+
+  it("refuses with NOT_CONNECTED when not in a room", async () => {
+    const manager = newManager();
+    await expect(manager.exportReplay()).resolves.toEqual({
+      ok: false,
+      error: { code: ErrorCode.NOT_CONNECTED, message: CLIENT_MESSAGES.NOT_CONNECTED },
+    });
+  });
+
+  it("does not trust a malformed refusal", async () => {
+    const manager = newManager();
+    const { room } = seated(manager, "host");
+    room.reply = { ok: false, error: "garbage" };
+    manager.attach(room);
+    await expect(manager.exportReplay()).resolves.toEqual({
+      ok: false,
+      error: { code: ErrorCode.BAD_REPLY, message: CLIENT_MESSAGES.BAD_REPLY },
+    });
+  });
+
+  it("does not trust a non-object reply", async () => {
+    const manager = newManager();
+    const { room } = seated(manager, "host");
+    room.reply = "yes";
+    manager.attach(room);
+    await expect(manager.exportReplay()).resolves.toEqual({
+      ok: false,
+      error: { code: ErrorCode.BAD_REPLY, message: CLIENT_MESSAGES.BAD_REPLY },
+    });
+  });
+
+  it("does not trust a bundle-shaped reply that is missing its version or snapshots", async () => {
+    const manager = newManager();
+    const { room } = seated(manager, "host");
+    manager.attach(room);
+    for (const bad of [
+      { name: "stub-game" },
+      { bundleVersion: "1", snapshots: [] },
+      { bundleVersion: 1, snapshots: {} },
+    ]) {
+      room.reply = bad;
+      await expect(manager.exportReplay()).resolves.toEqual({
+        ok: false,
+        error: { code: ErrorCode.BAD_REPLY, message: CLIENT_MESSAGES.BAD_REPLY },
+      });
+    }
+    expect(manager.lastServerError).toEqual({
+      code: ErrorCode.BAD_REPLY,
+      message: CLIENT_MESSAGES.BAD_REPLY,
+    });
+  });
+
+  it("does not trust a null or an array reply", async () => {
+    const manager = newManager();
+    const { room } = seated(manager, "host");
+    manager.attach(room);
+    room.reply = null;
+    await expect(manager.exportReplay()).resolves.toEqual({
+      ok: false,
+      error: { code: ErrorCode.BAD_REPLY, message: CLIENT_MESSAGES.BAD_REPLY },
+    });
+    room.reply = [];
+    await expect(manager.exportReplay()).resolves.toEqual({
+      ok: false,
+      error: { code: ErrorCode.BAD_REPLY, message: CLIENT_MESSAGES.BAD_REPLY },
+    });
+  });
+
+  it("turns a request rejection into CONNECTION_LOST and hands the exception to the logger only", async () => {
+    const logger = vi.fn();
+    const manager = new GameConnectionManager({
+      endpoint: "ws://localhost:2567",
+      roomName: "stub",
+      storagePrefix: `unit${++counter}`,
+      logger,
+    });
+    const { room } = seated(manager, "host");
+    const cause = new Error("socket gone");
+    room.request = () => Promise.reject(cause);
+    manager.attach(room);
+    await expect(manager.exportReplay()).resolves.toEqual({
+      ok: false,
+      error: { code: ErrorCode.CONNECTION_LOST, message: CLIENT_MESSAGES.CONNECTION_LOST },
+    });
+    expect(logger).toHaveBeenCalledWith(expect.any(String), cause);
+  });
+
+  it("logs a request rejection with console.warn by default", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const manager = newManager();
+    const { room } = seated(manager, "host");
+    room.request = () => Promise.reject(new Error("down"));
+    manager.attach(room);
+    await manager.exportReplay();
+    expect(warn).toHaveBeenCalledOnce();
+  });
+});
+
 describe("refused joins", () => {
   it("records a refused join as the fixed close-code error and keeps rejecting", async () => {
     const manager = newManager();
@@ -320,18 +452,32 @@ describe("refused joins", () => {
     });
   });
 
-  it.each([CLOSE_CODES.KICKED_REJOIN, CLOSE_CODES.WATCH_ONLY])(
-    "records a refused join closed with $code as its own fixed message",
-    async (entry) => {
-      const manager = newManager();
-      vi.stubGlobal("fetch", fakeFetch({ roomId: "room-1" }).fetch);
-      vi.spyOn(Client.prototype, "joinById").mockRejectedValue(
-        Object.assign(new Error("internal detail"), { code: entry.code }),
-      );
-      await expect(manager.join("ABCD")).rejects.toThrow();
-      expect(manager.lastServerError).toEqual({ code: entry.errorCode, message: entry.message });
-    },
-  );
+  it("records a refused join closed with WATCH_ONLY as its own fixed message", async () => {
+    const manager = newManager();
+    vi.stubGlobal("fetch", fakeFetch({ roomId: "room-1" }).fetch);
+    vi.spyOn(Client.prototype, "joinById").mockRejectedValue(
+      Object.assign(new Error("internal detail"), { code: CLOSE_CODES.WATCH_ONLY.code }),
+    );
+    await expect(manager.join("ABCD")).rejects.toThrow();
+    expect(manager.lastServerError).toEqual({
+      code: CLOSE_CODES.WATCH_ONLY.errorCode,
+      message: CLOSE_CODES.WATCH_ONLY.message,
+    });
+  });
+
+  it("passes the game's canJoin refusal message through on a 4403 close", async () => {
+    const manager = newManager();
+    vi.stubGlobal("fetch", fakeFetch({ roomId: "room-1" }).fetch);
+    vi.spyOn(Client.prototype, "joinById").mockRejectedValue(
+      Object.assign(new Error("Wrong password"), { code: CLOSE_CODES.JOIN_REFUSED.code }),
+    );
+    await expect(manager.join("ABCD")).rejects.toThrow();
+    expect(manager.lastServerError).toEqual({
+      // 4403 is shared with KICKED_REJOIN; the client keeps its error code and shows the received message.
+      code: CLOSE_CODES.KICKED_REJOIN.errorCode,
+      message: "Wrong password",
+    });
+  });
 
   it("records a rejection without a close code as CONNECTION_LOST, logs it and rethrows it", async () => {
     const logger = vi.fn();
@@ -387,6 +533,45 @@ describe("refused joins", () => {
     await manager.leave();
     await expect(stale).rejects.toThrow();
     expect(manager.lastServerError).toBeUndefined();
+  });
+});
+
+describe("api base", () => {
+  it("calls the given apiBase verbatim, appending /api/resolve-code", async () => {
+    const manager = new GameConnectionManager({
+      endpoint: "wss://proxy.example/game",
+      roomName: "stub",
+      storagePrefix: `unit${++counter}`,
+      apiBase: "https://proxy.example",
+    });
+    const network = stubFetchReply(new Error("fetch failed"));
+    await expect(manager.join("WXYZ")).rejects.toThrow("Could not reach the game server");
+    expect(network.urls).toEqual(["https://proxy.example/api/resolve-code?code=WXYZ"]);
+  });
+
+  it("prefers apiBase over apiPort when both are set", async () => {
+    const manager = new GameConnectionManager({
+      endpoint: "wss://proxy.example/game",
+      roomName: "stub",
+      storagePrefix: `unit${++counter}`,
+      apiBase: "https://proxy.example",
+      apiPort: 8080,
+    });
+    const network = stubFetchReply(new Error("fetch failed"));
+    await expect(manager.join("WXYZ")).rejects.toThrow("Could not reach the game server");
+    expect(network.urls).toEqual(["https://proxy.example/api/resolve-code?code=WXYZ"]);
+  });
+
+  it("builds the API base from the endpoint and apiPort when no apiBase is given", async () => {
+    const manager = new GameConnectionManager({
+      endpoint: "ws://localhost:2567",
+      roomName: "stub",
+      storagePrefix: `unit${++counter}`,
+      apiPort: 8080,
+    });
+    const network = stubFetchReply(new Error("fetch failed"));
+    await expect(manager.join("WXYZ")).rejects.toThrow("Could not reach the game server");
+    expect(network.urls).toEqual(["http://localhost:8080/api/resolve-code?code=WXYZ"]);
   });
 });
 
@@ -912,4 +1097,21 @@ describe("protocol versioning", () => {
       });
     },
   );
+});
+
+describe("joinData", () => {
+  it("sends joinData with the join and never stores it", async () => {
+    const manager = newManager();
+    const { room } = seated(manager);
+    stubFetchReply({ roomId: "room-1" });
+    const joined = vi.spyOn(Client.prototype, "joinById").mockResolvedValue(room as never);
+    await manager.join("WXYZ", { joinData: { invite: "s3cret", seats: 4, vip: true } });
+    expect(joined).toHaveBeenCalledWith(
+      "room-1",
+      expect.objectContaining({ joinData: { invite: "s3cret", seats: 4, vip: true } }),
+      undefined,
+    );
+    const stored = [...Object.values(localStorage), ...Object.values(sessionStorage)].join("\n");
+    expect(stored).not.toContain("s3cret");
+  });
 });
