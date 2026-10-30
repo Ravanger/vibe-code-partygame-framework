@@ -15,6 +15,7 @@ describe("WitClashOptionsSchema", () => {
       revealSeconds: 5,
       filterLevel: "moderate",
       honorVote: false,
+      contentRating: "any",
     });
   });
 
@@ -30,6 +31,7 @@ describe("WitClashOptionsSchema", () => {
     { revealSeconds: 60 },
     { filterLevel: "loud" },
     { honorVote: "maybe" },
+    { contentRating: "strict" },
   ])("rejects %o", (bad) => {
     expect(WitClashOptionsSchema.safeParse(bad).success).toBe(false);
   });

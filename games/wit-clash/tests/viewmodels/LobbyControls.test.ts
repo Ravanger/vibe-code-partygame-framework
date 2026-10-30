@@ -14,6 +14,7 @@ describe("LobbySettingsViewModel", () => {
       "voteSeconds",
       "revealSeconds",
       "filterLevel",
+      "contentRating",
     ]);
     expect(vm.fields[0]).toEqual({ key: "mode", label: "Mode", options: ["free", "daily"] });
     expect(vm.fields[1]).toEqual({ key: "totalRounds", label: "Total rounds", min: 1, max: 10 });
@@ -22,10 +23,16 @@ describe("LobbySettingsViewModel", () => {
       label: "Filter level",
       options: ["off", "moderate", "strict"],
     });
+    expect(vm.fields[7]).toEqual({
+      key: "contentRating",
+      label: "Content rating",
+      options: ["any", "family"],
+    });
     expect(vm.valueOf("mode")).toBe("free");
     expect(vm.valueOf("totalRounds")).toBe("3");
     expect(vm.valueOf("voteSeconds")).toBe("20");
     expect(vm.valueOf("filterLevel")).toBe("moderate");
+    expect(vm.valueOf("contentRating")).toBe("any");
   });
 });
 

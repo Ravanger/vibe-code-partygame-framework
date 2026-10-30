@@ -81,6 +81,12 @@ export interface LoadJsoncDirOptions<T> {
 const DEFAULT_MAX_FILES = 256;
 const DEFAULT_MAX_FILE_BYTES = 1_048_576;
 
+/** One content file from `loadJsoncDirWithFiles`: its name in the directory and the validated value. */
+export interface ContentFile<T> {
+  file: string;
+  value: T;
+}
+
 /**
  * Every regular `.json`/`.jsonc` file in `dir`, in name order, parsed with `schema`. Symlinks and
  * subdirectories are ignored. A missing directory, a duplicate id, more files than `maxFiles` or a
@@ -92,6 +98,15 @@ export async function loadJsoncDir<S extends z.ZodType>(
   schema: S,
   options: LoadJsoncDirOptions<z.output<S>>,
 ): Promise<z.output<S>[]> {
+  return (await loadJsoncDirWithFiles(dir, schema, options)).map((entry) => entry.value);
+}
+
+/** Like `loadJsoncDir`, but each item also carries the file it was loaded from. */
+export async function loadJsoncDirWithFiles<S extends z.ZodType>(
+  dir: string,
+  schema: S,
+  options: LoadJsoncDirOptions<z.output<S>>,
+): Promise<ContentFile<z.output<S>>[]> {
   const onInvalid = options.onInvalid ?? "throw";
   const maxFiles = options.maxFiles ?? DEFAULT_MAX_FILES;
   const maxFileBytes = options.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES;
@@ -112,7 +127,7 @@ export async function loadJsoncDir<S extends z.ZodType>(
       `[${options.label}] ${files.length} content files in ${dir} exceed the maximum of ${maxFiles}`,
     );
   }
-  const loaded: z.output<S>[] = [];
+  const loaded: ContentFile<z.output<S>>[] = [];
   const seen = new Set<string>();
   for (const file of files) {
     if ((await stat(join(dir, file))).size > maxFileBytes) {
@@ -143,7 +158,7 @@ export async function loadJsoncDir<S extends z.ZodType>(
     const id = options.idOf(parsed.data);
     if (seen.has(id)) throw new Error(`Duplicate ${options.label} id "${id}" in ${file}`);
     seen.add(id);
-    loaded.push(parsed.data);
+    loaded.push({ file, value: parsed.data });
   }
   return loaded;
 }
