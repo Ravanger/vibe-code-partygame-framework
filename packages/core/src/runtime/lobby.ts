@@ -1,6 +1,5 @@
 import {
   CLIENT_MESSAGES,
-  END_GAME,
   ErrorCode,
   FrameworkError,
   LOBBY_PHASE,
@@ -9,6 +8,7 @@ import {
   START_GAME,
 } from "@partygame/shared";
 import { z } from "zod";
+import { type CoreStrings, mergeCoreStrings } from "./strings.js";
 import type {
   ActionDefinition,
   GameContext,
@@ -30,7 +30,12 @@ export interface LobbyBindings<TState extends PhaseState, TPrivate, TOptions> {
 
 /** The built-in `Lobby` phase (`START_GAME`, `SET_OPTIONS`, optional auto-start) and the `KICK_PLAYER` and `END_GAME` actions. */
 export class Lobby<TState extends PhaseState, TPrivate, TOptions> {
-  constructor(private readonly bindings: LobbyBindings<TState, TPrivate, TOptions>) {}
+  /** The definition's `strings` over the defaults; the built-in refusals come from it. */
+  private readonly strings: CoreStrings;
+
+  constructor(private readonly bindings: LobbyBindings<TState, TPrivate, TOptions>) {
+    this.strings = mergeCoreStrings(bindings.definition.strings);
+  }
 
   /** The rule `START_GAME` enforces; published to clients as `state.canStart`. */
   canStart(ctx: GameContext<TState, TPrivate, TOptions>): boolean {
@@ -57,9 +62,9 @@ export class Lobby<TState extends PhaseState, TPrivate, TOptions> {
       handler: (ctx) => {
         const { playerId } = ctx.payload;
         if (playerId === ctx.playerId) {
-          ctx.reject(ErrorCode.NOT_ALLOWED, "You cannot kick yourself");
+          ctx.reject(ErrorCode.NOT_ALLOWED, this.strings.cannotKickSelf);
         } else if (!ctx.player(playerId)) {
-          ctx.reject(ErrorCode.NOT_ALLOWED, "No such player");
+          ctx.reject(ErrorCode.NOT_ALLOWED, this.strings.noSuchPlayer);
         } else {
           this.bindings.host.kick(playerId);
           this.bindings.rosterChanged();
@@ -75,10 +80,7 @@ export class Lobby<TState extends PhaseState, TPrivate, TOptions> {
       payload: z.object({}),
       handler: (ctx) => {
         if (ctx.phase === LOBBY_PHASE) {
-          throw new FrameworkError(
-            ErrorCode.WRONG_PHASE,
-            `${END_GAME} is not allowed in ${LOBBY_PHASE}`,
-          );
+          throw new FrameworkError(ErrorCode.WRONG_PHASE, this.strings.endGameInLobby);
         }
         definition.onEndGame?.(ctx);
         ctx.returnToLobby();
@@ -95,7 +97,7 @@ export class Lobby<TState extends PhaseState, TPrivate, TOptions> {
         if (!this.canStart(ctx)) {
           throw new FrameworkError(
             ErrorCode.NOT_ENOUGH_PLAYERS,
-            `Need at least ${definition.minPlayers} players to start`,
+            this.strings.needAtLeast(definition.minPlayers),
           );
         }
         if (ctx.state.notice) ctx.state.notice = "";

@@ -4,7 +4,7 @@ Generic Colyseus server: host any game defined with `@partygame/core`.
 
 | Import | What |
 |---|---|
-| `@partygame/server` | `createGameServer`, `GameRoom`, `createApiHandler`, `RoomCodeService` |
+| `@partygame/server` | `createGameServer`, `jsonLineLogger`, `GameRoom`, `createApiHandler`, `RoomCodeService` |
 | `@partygame/server/bun` | `startServer`: Bun entry point (WebSocket on 2567, API on 3001) |
 | `@partygame/server/node` | `startNodeServer`, `serveApi`: in-process Node hosting (game server plus code API) |
 | `@partygame/server/probe` | `ServerProbe` (`isGameServer`, `canConnect`, `answers`), `freePort`, `closeHttpServer`: port probing, no Colyseus |
@@ -29,7 +29,7 @@ await startServer({
 });
 ```
 
-Clients join with `{ playerId, name? }`; `spectator: true` gives a TV display with no seat. A dropped player keeps the seat for `reconnectMs` (default 60 s); an empty room lives `emptyRoomGraceMs` (default 120 s). A room admits at most `maxPlayers + audienceSlots` connections (default 32, `DEFAULT_AUDIENCE_SLOTS`). With a `textFilter`, names are checked at join and on `SET_NAME` at the game's `filterLevel` option (default `"off"`); a refused join closes with code 4405.
+Clients join with `{ playerId, name? }`; `spectator: true` gives a TV display with no seat. A dropped player keeps the seat for `reconnectMs` (default 60 s); an empty room lives `emptyRoomGraceMs` (default 120 s). A room admits at most `maxPlayers + audienceSlots` connections (default 32, `DEFAULT_AUDIENCE_SLOTS`). With a `textFilter`, names are checked at join and on `SET_NAME` at the game's `filterLevel` option (default `"off"`); a refused join closes with code 4405. Every room writes one structured JSON line per lifecycle event (`room.created`, `player.joined`, `player.reconnected`, `player.left`, `action.rejected`, `room.disposed`) through the `logger` option — by default `jsonLineLogger`, one object per line on stdout; pass any `Logger` to route lines elsewhere. The framework guide's Logging section lists the events and field rules.
 
 ## Host without Bun
 

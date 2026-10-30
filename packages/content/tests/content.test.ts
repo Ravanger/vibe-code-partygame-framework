@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { loadJsoncDir, stripJsonComments } from "../src/index.js";
+import { loadJsoncDir, loadJsoncDirWithFiles, stripJsonComments } from "../src/index.js";
 
 describe("stripJsonComments", () => {
   it("removes line comments", () => {
@@ -152,6 +152,29 @@ describe("loadJsoncDir", () => {
   it("names a missing directory", async () => {
     await expect(loadJsoncDir(join(tmpdir(), "no-such-dir-xyz"), Item, byId)).rejects.toThrow(
       "Item directory not found",
+    );
+  });
+});
+
+describe("loadJsoncDirWithFiles", () => {
+  it("returns each item with the file it came from, in name order", async () => {
+    const dir = await dirWith({
+      "b.json": '{ "id": "b", "n": 2 }',
+      "a.jsonc": '// a comment\n{ "id": "a", "n": 1 }',
+    });
+    expect(await loadJsoncDirWithFiles(dir, Item, byId)).toEqual([
+      { file: "a.jsonc", value: { id: "a", n: 1 } },
+      { file: "b.json", value: { id: "b", n: 2 } },
+    ]);
+  });
+
+  it("throws like loadJsoncDir on a duplicate id, naming the file", async () => {
+    const dir = await dirWith({
+      "a.json": '{ "id": "x", "n": 1 }',
+      "b.json": '{ "id": "x", "n": 2 }',
+    });
+    await expect(loadJsoncDirWithFiles(dir, Item, byId)).rejects.toThrow(
+      'Duplicate Item id "x" in b.json',
     );
   });
 });

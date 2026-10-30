@@ -2,7 +2,6 @@ import { Client } from "@colyseus/sdk";
 import { RoomCodeError, resolveRoomCode } from "@partygame/client-utils";
 import {
   type ActionResult,
-  CLIENT_MESSAGES,
   CLOSE_CODES,
   ClientMessage,
   closeCodeEntry,
@@ -11,7 +10,6 @@ import {
   isActionResult,
   isServerError,
   PROTOCOL_VERSION,
-  ROOM_CODE_LENGTH,
   RoomCodeSchema,
   type ServerError,
   ServerMessage,
@@ -19,10 +17,12 @@ import {
 import type { BaseGameState, PlayerSchema } from "@partygame/shared/schema";
 import { createSubscriber } from "svelte/reactivity";
 import { Countdown } from "./countdown.svelte.js";
+import { FeedbackBus } from "./FeedbackBus.js";
 import { CANCELLED, JoinCoordinator } from "./JoinCoordinator.js";
 import { MessageBus } from "./MessageBus.js";
 import { PersistedSession } from "./PersistedSession.js";
 import type { RoomLike } from "./RoomLike.js";
+import { type ClientStrings, defaultClientStrings, resolveClientMessages } from "./strings.js";
 
 export type ConnectionStatus =
   | "idle"
@@ -38,6 +38,8 @@ export interface GameConnectionOptions<TState> {
   roomName: string;
   /** Port of the `/api/resolve-code` API on the same host. Default 3001. */
   apiPort?: number;
+  /** Base URL of the room-code API; the client appends exactly `/api/resolve-code`, so a bare origin reaches an API that answers at `/api/resolve-code`. Preferred over `apiPort`. */
+  apiBase?: string;
   /** Namespaces the browser storage keys, so several games (or several test clients) never share a session. */
   storagePrefix: string;
   /** The game's state class; without it the client decodes the state from the server's reflection. */
@@ -46,6 +48,10 @@ export interface GameConnectionOptions<TState> {
   syncTimeoutMs?: number;
   /** Receives the exception behind a local action failure, never shown to the UI. Default `console.warn`. */
   logger?: (message: string, error: unknown) => void;
+  /** Replaces the manager's client-owned messages; unspecified keys keep the English defaults. */
+  strings?: Partial<ClientStrings>;
+  /** Browser `matchMedia`, injected for tests. Default `window.matchMedia`. */
+  matchMedia?: (query: string) => { matches: boolean };
 }
 
 /** Options for {@link GameConnectionManager.join}; the manager adds `playerId`, `seatSecret` and `protocolVersion` itself. */
@@ -60,6 +66,9 @@ export interface JoinOptions {
 
 const DEFAULT_API_PORT = 3001;
 const DEFAULT_SYNC_TIMEOUT_MS = 10_000;
+// Same cadence as the Countdown's own ticker.
+const URGENCY_TICK_MS = 250;
+const URGENCY_WINDOW_MS = 10_000;
 
 /**
  * Connection to one game room: lifecycle, the reactive state, and the player's actions.
@@ -73,12 +82,23 @@ export class GameConnectionManager<
   lastServerError: ServerError | undefined = $state.raw(undefined);
   readonly playerId: string;
 
+  /** Sound and animation events derived from the room's state and registered server broadcasts. */
+  readonly feedback: FeedbackBus;
   private room: RoomLike<TState> | undefined = $state.raw(undefined);
   private readonly client: Client;
   private readonly session: PersistedSession;
   private readonly apiBase: string;
+  private readonly strings: ClientStrings;
+  private readonly messages: Record<ErrorCode, string>;
   private readonly bus = new MessageBus<TState>();
   private readonly coordinator = new JoinCoordinator();
+  private lastPhase: string | undefined;
+  private phaseWatcher: { room: RoomLike<TState>; callback: () => void } | undefined;
+  private urgencyTimer: ReturnType<typeof setInterval> | undefined;
+  private urgentFired = false;
+  private lastServerNow = 0;
+  private lastServerNowAt = 0;
+  private readonly messageRelays = new Map<string, { count: number; off: () => void }>();
   private spectating = false;
   private notify: (() => void) | undefined;
   private bound: { room: RoomLike<TState>; callback: () => void } | undefined;
@@ -95,10 +115,21 @@ export class GameConnectionManager<
     this.client = new Client(options.endpoint);
     this.session = new PersistedSession(options.storagePrefix);
     this.playerId = this.session.playerId;
-    const url = new URL(options.endpoint);
-    const port = options.apiPort ?? DEFAULT_API_PORT;
-    this.apiBase = `${url.protocol.replace("ws", "http")}//${url.hostname}:${port}`;
-    this.onMessage(ServerMessage.ERROR, (payload) => this.serverErrorReceived(payload));
+    if (options.apiBase !== undefined) {
+      this.apiBase = options.apiBase;
+    } else {
+      const url = new URL(options.endpoint);
+      const port = options.apiPort ?? DEFAULT_API_PORT;
+      this.apiBase = `${url.protocol.replace("ws", "http")}//${url.hostname}:${port}`;
+    }
+    this.strings = { ...defaultClientStrings, ...options.strings };
+    this.messages = resolveClientMessages(this.strings);
+    const matchMedia = options.matchMedia ?? ((query: string) => window.matchMedia(query));
+    this.feedback = new FeedbackBus(() => matchMedia("(prefers-reduced-motion: reduce)").matches);
+    // The state watchers only run while someone listens for phase or urgent events.
+    this.feedback.onChange(() => this.syncStateWatchers());
+    // Protocol errors are internal plumbing, not a game broadcast: no feedback relay.
+    this.bus.on(ServerMessage.ERROR, (payload) => this.serverErrorReceived(payload));
   }
 
   /** The room's state, or `undefined` while not in a room. Reading it inside `$derived`/`$effect`/templates re-runs on every patch. */
@@ -157,7 +188,7 @@ export class GameConnectionManager<
   async join(code: string, options: JoinOptions = {}): Promise<void> {
     const clean = code.trim().toUpperCase();
     if (!RoomCodeSchema.safeParse(clean).success) {
-      throw new Error(`Game code must be ${ROOM_CODE_LENGTH} letters (A-Z)`);
+      throw new Error(this.strings.invalidRoomCode);
     }
     const spectator = options.spectator === true;
     if (this.room && this.roomCode === clean && this.spectating === spectator) return;
@@ -286,13 +317,34 @@ export class GameConnectionManager<
     }
   }
 
-  /** Listens for a pushed message type; survives room changes. Register before connecting so the SDK does not warn. */
+  /** Listens for a pushed message type; survives room changes. Register before connecting so the SDK does not warn. While at least one listener is registered, broadcasts of the name are also relayed to `feedback`. */
   onMessage<K extends keyof TEvents & string>(
     type: K,
     callback: (payload: TEvents[K]) => void,
   ): () => void {
     // The bus stores untyped callbacks; the typed contract lives at this public boundary.
-    return this.bus.on(type, callback as (payload: unknown) => void);
+    const offBus = this.bus.on(type, callback as (payload: unknown) => void);
+    let relay = this.messageRelays.get(type);
+    if (relay === undefined) {
+      relay = {
+        count: 0,
+        off: this.bus.on(type, (payload) => this.feedback.emitMessage(type, payload)),
+      };
+      this.messageRelays.set(type, relay);
+    }
+    const registered = relay; // the entry cannot change while a live listener holds it
+    registered.count += 1;
+    let done = false;
+    return () => {
+      if (done) return; // an unsubscribe removes only its own listener, once
+      done = true;
+      offBus();
+      registered.count -= 1;
+      if (registered.count === 0) {
+        registered.off();
+        this.messageRelays.delete(type);
+      }
+    };
   }
 
   dismissError(): void {
@@ -320,6 +372,7 @@ export class GameConnectionManager<
         this.detach("disconnected");
       }),
     );
+    this.syncStateWatchers();
     this.status = "connected";
     this.rememberToken(room);
     this.rememberRoomCode(room);
@@ -375,12 +428,12 @@ export class GameConnectionManager<
       // `settle` removes this listener, so it can only fire while the wait is still open.
       const onLeave = (): void => {
         settle();
-        reject(new Error("Disconnected before the game state arrived"));
+        reject(new Error(this.strings.syncDisconnected));
       };
       const timer = setTimeout(() => {
         settle();
         this.leaveQuietly(room);
-        reject(new Error("Timed out waiting for the game state"));
+        reject(new Error(this.strings.syncTimedOut));
       }, this.options.syncTimeoutMs ?? DEFAULT_SYNC_TIMEOUT_MS);
       room.onStateChange(check);
       room.onLeave(onLeave);
@@ -403,9 +456,75 @@ export class GameConnectionManager<
 
   private detach(status?: ConnectionStatus): void {
     this.unbindState();
+    this.stopStateWatchers();
     this.bus.unbind();
     this.room = undefined;
     if (status) this.status = status;
+  }
+
+  /** Starts the phase watcher and urgency timer when someone listens for `phase` or `urgent` events, and stops them when the last such listener leaves. The first observation after starting is the silent baseline, so a late subscriber only sees transitions it actually observed. */
+  private syncStateWatchers(): void {
+    const room = this.room;
+    if (room === undefined) return;
+    if (!this.feedback.hasListeners("phase") && !this.feedback.hasListeners("urgent")) {
+      this.stopStateWatchers();
+      return;
+    }
+    if (this.phaseWatcher !== undefined) return; // already running
+    const watchPhase = () => this.observePhase(room);
+    room.onStateChange(watchPhase);
+    this.phaseWatcher = { room, callback: watchPhase };
+    this.startUrgencyTimer(room);
+    watchPhase(); // establish the baseline at the moment listening begins
+  }
+
+  /** Stops the phase watcher and urgency timer and resets the phase baseline so a later (re)start re-establishes it silently. */
+  private stopStateWatchers(): void {
+    this.phaseWatcher?.room.onStateChange.remove(this.phaseWatcher.callback);
+    this.phaseWatcher = undefined;
+    // Reset the phase baseline so a reconnect re-establishes it silently, like the urgency side.
+    this.lastPhase = undefined;
+    this.stopUrgencyTimer();
+  }
+
+  /** Emits a phase event when `state.phase` changes; the first observation after connecting is the silent baseline. */
+  private observePhase(room: RoomLike<TState>): void {
+    const phase = room.state.phase;
+    const from = this.lastPhase;
+    this.lastPhase = phase;
+    if (from === undefined || from === phase) return;
+    this.urgentFired = false;
+    this.feedback.emitPhase(from, phase);
+  }
+
+  private startUrgencyTimer(room: RoomLike<TState>): void {
+    this.stopUrgencyTimer();
+    this.urgentFired = false;
+    this.lastServerNow = 0;
+    this.lastServerNowAt = 0;
+    this.urgencyTimer = setInterval(() => this.observeUrgency(room), URGENCY_TICK_MS);
+  }
+
+  private stopUrgencyTimer(): void {
+    if (this.urgencyTimer !== undefined) clearInterval(this.urgencyTimer);
+    this.urgencyTimer = undefined;
+  }
+
+  /** Fires the once-per-phase urgent event while the phase's countdown is in its last ten seconds, skew-corrected like `Countdown`. */
+  private observeUrgency(room: RoomLike<TState>): void {
+    const state = room.state;
+    const ends = state.phaseEndsAt;
+    if (state.serverNow !== this.lastServerNow) {
+      this.lastServerNow = state.serverNow;
+      this.lastServerNowAt = Date.now();
+    }
+    if (!ends || !this.lastServerNow) return;
+    const estimatedNow = this.lastServerNow + (Date.now() - this.lastServerNowAt);
+    const remainingMs = ends - estimatedNow;
+    if (!this.urgentFired && remainingMs > 0 && remainingMs <= URGENCY_WINDOW_MS) {
+      this.urgentFired = true;
+      this.feedback.emitUrgent();
+    }
   }
 
   private bindState(): void {
@@ -437,9 +556,18 @@ export class GameConnectionManager<
     if (isServerError(payload)) this.setLastError(payload);
   }
 
-  /** The single writer for `lastServerError`: server ERROR payloads, failed actions and close codes all land here. */
+  /**
+   * The single writer for `lastServerError`: server ERROR payloads, failed actions, close codes and
+   * `dismissError()` (undefined) all land here. When the strings table has an entry for the code, it
+   * replaces the message.
+   */
   private setLastError(error: ServerError | undefined): void {
-    this.lastServerError = error;
+    if (error === undefined) {
+      this.lastServerError = error;
+      return;
+    }
+    const text = this.strings.errors?.[error.code];
+    this.lastServerError = text === undefined ? error : { ...error, message: text };
   }
 
   /** Records a numeric close code when it is in CLOSE_CODES; unknown codes leave `lastServerError` untouched. */
@@ -489,9 +617,9 @@ export class GameConnectionManager<
     return { code: entry.errorCode, message: entry.message };
   }
 
-  /** A client-side action failure: the fixed message for `code`, never the raw exception text. */
+  /** A client-side action failure: the strings table's message for `code`, never the raw exception text. */
   private fail(code: ErrorCode): ActionResult {
-    const error: ServerError = { code, message: CLIENT_MESSAGES[code] };
+    const error: ServerError = { code, message: this.messages[code] };
     this.setLastError(error);
     return { ok: false, error };
   }
