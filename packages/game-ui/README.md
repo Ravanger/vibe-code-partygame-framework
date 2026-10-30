@@ -6,7 +6,7 @@ Ships Svelte source; consumers need the Svelte plugin — Vite with `@sveltejs/v
 
 | Import | What |
 |---|---|
-| `@partygame/game-ui` | `createAppRouter`, `AppRouter`, `WelcomeViewModel`, `WaitingRoomViewModel`, `LobbySettingsViewModel`, `OptionsReader`, `PhaseClock`, `TypingReporter`, `GameControlsViewModel`, `NameField`, `ReplayViewModel`, `snapshotManager`; `OptionFields`, `qrCode`, `playerSticker`, `rankRows`, `podiumSteps` |
+| `@partygame/game-ui` | `createAppRouter`, `AppRouter`, `WelcomeViewModel`, `WaitingRoomViewModel`, `LobbySettingsViewModel`, `OptionsReader`, `PhaseClock`, `TypingReporter`, `GameControlsViewModel`, `NameField`, `ReplayViewModel`, `snapshotManager`; `OptionFields`, `qrCode`, `playerSticker`, `rankRows`, `podiumSteps`; `setStrings`, `defaultUiStrings`, `UiStrings` |
 | `@partygame/game-ui/components` | Svelte 5 source: `StatusPanel`, `Timer`, `PlayerSticker`, `QrCode`, `ActionBar`, `NameInput`, `LobbySettings`, `GameControls`, `Podium` |
 
 Viewmodels are typed on `GameConnectionManager<TState>` and read its state reactively. Import through the `svelte` export condition (Vite with the Svelte plugin). Build one in a component with `untrack(() => new Vm(manager))`.
@@ -69,7 +69,7 @@ Build the waiting room the same way and call `vm.destroy()` on teardown: `$effec
 
 ## Settings from your options schema
 
-`LobbySettingsViewModel` takes the zod schema you pass to `defineGame`. Every bounded numeric option becomes a labelled number input for the host and a read-only line for everyone else; every string-enum option becomes a row of choice buttons, one per value (a commit that is not one of them is dropped without sending); `labels` overrides the generated names.
+`LobbySettingsViewModel` takes the zod schema you pass to `defineGame`. Every bounded numeric option (`.min()` and `.max()`) becomes a labelled number input for the host — step 1 for integers, the schema's `multipleOf` when present, else `any` — and a read-only line for everyone else; every boolean option becomes a checkbox; every string-enum option becomes a row of choice buttons, one per value (a commit that is not one of them is dropped without sending); every plain string option becomes a text input, bounded by `maxlength` when the schema bounds it. Options the form cannot render (unbounded numbers, arrays, objects, enums with non-string choices) are skipped and reported to the optional `onUnsupported(key, reason)` config — by default a console warning, once per key per instance; `labels` overrides the generated names.
 
 ```ts
 import type { GameConnectionManager } from "@partygame/game-client";
@@ -171,6 +171,20 @@ Props (all render in plain markup, e.g. `<Timer seconds={12} total={30} />`): `L
 </Podium>
 ```
 
+## Localisation
+
+Every label the generic components render (the GameControls menu and dialog, the LobbySettings summary, NameInput, Podium, QrCode and the `PhaseClock` announcement through its `secondsRemaining(n)` function entry) comes from `defaultUiStrings`. Call `setStrings(partial)` once at the app root to replace any of them; unspecified keys keep the English default.
+
+```svelte
+<script lang="ts">
+  import { setStrings } from "@partygame/game-ui";
+
+  setStrings({ leaveGame: "Spiel verlassen", secondsRemaining: (n) => `Noch ${n} Sekunden` });
+</script>
+```
+
+The table also carries a `clientStrings` field (`Partial<ClientStrings>` from `@partygame/game-client`): pass the same object to both the manager's `strings` option and `setStrings`, and one table localises both layers. Server error text resolves as `clientStrings.errors[code] ?? message`, so codes you do not translate keep the server's own message.
+
 ## Theme
 
 The package ships `theme-contract.css`: a baseline for every contract variable (the `CONTRACT_VARIABLES` list in `src/themeContract.ts`) plus the `.sr-only` utility. Import it first in your game's `app.css`, then override any variable you want to change:
@@ -183,6 +197,12 @@ The package ships `theme-contract.css`: a baseline for every contract variable (
 - Sticker colours: `PlayerSticker` sets `data-color` to a palette index (0–3); the contract maps `[data-color="0"]` to `--color-1` through `[data-color="3"]` to `--color-4`.
 - Global classes: `card`, `taped`, `sticker`, `hand`, `sr-only` (shipped with the contract), `btn` (`btn--ghost`, `btn--danger`); `action-bar` is rendered by `ActionBar`, which styles nothing.
 - Chrome vs artwork: chrome — the framework components' look (lobby, join overlays, scoreboard/podium, game controls, timer) — is themed through these variables; artwork — your screens and cards — is yours to design.
+
+## Accessibility
+
+Every component is checked by axe in the jsdom tests via `expectNoViolations(container, "Component")` from `tests/support/a11y.ts`; zero violations is the gate. `color-contrast` is disabled there because jsdom cannot compute it — contrast stays a game-level test (#57). Interactive components are also driven with `userEvent` for tab order and Escape handling, and `tests/reducedMotion.test.ts` fails on any `transition`/`animation` declaration outside an `@media (prefers-reduced-motion: no-preference)` block.
+
+A violation that cannot be fixed yet goes into `tests/support/a11yAllowList.ts`: one entry per rule and component, each with a comment explaining why it is acceptable and the issue that tracks the fix.
 
 Depends on: `@partygame/game-client`, `@partygame/shared`, `svelte`, `uqr`, `zod`
 

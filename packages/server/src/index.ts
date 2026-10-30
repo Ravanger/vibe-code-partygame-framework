@@ -14,6 +14,7 @@ export {
   type GameServerOptions,
   type HostedGame,
 } from "./createGameServer.js";
+export { jsonLineLogger } from "./logger.js";
 export { RateLimiter, type RateLimits, type TokenBucket } from "./RateLimiter.js";
 export { GameRoom, type GameRoomConfig } from "./rooms/GameRoom.js";
 export { RoomCodeService } from "./services/RoomCodeService.js";

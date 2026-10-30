@@ -18,7 +18,7 @@ The generic Colyseus host that runs any `defineGame` definition: rooms, seats, r
 
 ## Public entry points
 
-- `.`: `createGameServer`, `GameRoom`, `createApiHandler`, `RoomCodeService`.
+- `.`: `createGameServer` (optionally takes a `logger`; defaults to `jsonLineLogger`), `jsonLineLogger`, `GameRoom`, `createApiHandler`, `RoomCodeService`.
 - `./bun`: `startServer`.
 - `./node`: `serveApi`, `startNodeServer`.
 - `./probe`: `ServerProbe`, `freePort`, `closeHttpServer`.

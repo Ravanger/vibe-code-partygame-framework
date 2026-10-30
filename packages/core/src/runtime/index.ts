@@ -1,6 +1,7 @@
 export { actionFactory, defineGame, GameDefinitionError } from "./defineGame.js";
 export { GameRuntime, type GameRuntimeConfig, InvalidPrivateStateError } from "./GameRuntime.js";
 export { evaluateJoin, type JoinGate } from "./join.js";
+export { type CoreStrings, defaultCoreStrings } from "./strings.js";
 export type {
   ActionContext,
   ActionDefinition,
@@ -9,8 +10,15 @@ export type {
   AudienceScope,
   CanJoinInput,
   CanJoinResult,
+  ContextLogger,
   GameContext,
   GameDefinition,
+  HostMigration,
+  HostPicker,
+  LogFields,
+  Logger,
+  LogLevel,
+  LogLine,
   MiddlewareContext,
   MiddlewareEvent,
   PhaseAction,
@@ -23,3 +31,4 @@ export type {
   RuntimeHost,
   TimerHandle,
 } from "./types.js";
+export { noopLogger } from "./types.js";

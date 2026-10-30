@@ -12,7 +12,13 @@ describe("OptionsReader", () => {
     const c = client();
     c.state.options = JSON.stringify({ turnSeconds: 45 });
     const reader = new OptionsReader(c.manager, TestOptionsSchema);
-    expect(reader.current).toEqual({ turnSeconds: 45, label: "x", loose: 1 });
+    expect(reader.current).toEqual({
+      turnSeconds: 45,
+      tolerance: 0.5,
+      soundOn: true,
+      level: "moderate",
+      label: "x",
+    });
   });
 
   it("returns the defaults for malformed JSON", () => {
@@ -41,10 +47,18 @@ describe("OptionsReader", () => {
     c.state.options = "{not json";
     const reader = new OptionsReader(c.manager, TestOptionsSchema, {
       turnSeconds: 11,
+      tolerance: 0.2,
+      soundOn: false,
+      level: "strict",
       label: "y",
-      loose: 2,
     });
-    expect(reader.current).toEqual({ turnSeconds: 11, label: "y", loose: 2 });
+    expect(reader.current).toEqual({
+      turnSeconds: 11,
+      tolerance: 0.2,
+      soundOn: false,
+      level: "strict",
+      label: "y",
+    });
   });
 
   it("throws when no defaults are given and the schema has none of its own", () => {
@@ -57,8 +71,20 @@ describe("OptionsReader", () => {
     c.state.options = JSON.stringify({ turnSeconds: 45 });
     const reader = new OptionsReader(c.manager, TestOptionsSchema);
     const parse = vi.spyOn(JSON, "parse");
-    expect(reader.current).toEqual({ turnSeconds: 45, label: "x", loose: 1 });
-    expect(reader.current).toEqual({ turnSeconds: 45, label: "x", loose: 1 });
+    expect(reader.current).toEqual({
+      turnSeconds: 45,
+      tolerance: 0.5,
+      soundOn: true,
+      level: "moderate",
+      label: "x",
+    });
+    expect(reader.current).toEqual({
+      turnSeconds: 45,
+      tolerance: 0.5,
+      soundOn: true,
+      level: "moderate",
+      label: "x",
+    });
     expect(parse).toHaveBeenCalledTimes(1);
     c.state.options = JSON.stringify({ turnSeconds: 50 });
     c.room.patch();

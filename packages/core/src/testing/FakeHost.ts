@@ -1,4 +1,11 @@
-import type { PlayerInfo, RuntimeHost, TimerHandle } from "../runtime/types.js";
+import type {
+  Logger,
+  LogLevel,
+  LogLine,
+  PlayerInfo,
+  RuntimeHost,
+  TimerHandle,
+} from "../runtime/types.js";
 import { type Seed, seedFromNumber, sfc32 } from "../utils.js";
 
 interface Timer {
@@ -23,6 +30,20 @@ export class FakeHost implements RuntimeHost {
   readonly kicked: string[] = [];
   readonly published: unknown[] = [];
   readonly transitions: Array<{ from: string; to: string }> = [];
+  /** Every line `ctx.log` wrote, in order. */
+  readonly logs: LogLine[] = [];
+  readonly log: Logger = {
+    info: (event, fields) => this.record("info", event, fields),
+    warn: (event, fields) => this.record("warn", event, fields),
+    error: (event, fields) => this.record("error", event, fields),
+  };
+  /** Promotes the seat and demotes the current host (#36); delete it to simulate a host without `setHost`. */
+  setHost?: (playerId: string) => void = (id) => {
+    for (const seat of this.seats) {
+      if (seat.id === id) seat.role = "host";
+      else if (seat.role === "host") seat.role = "player";
+    }
+  };
   /** The room RNG seed; an unseeded host is `seedFromNumber(0)`, a deterministic stream. */
   readonly seed: Seed;
   private rngFn: () => number;
@@ -145,5 +166,9 @@ export class FakeHost implements RuntimeHost {
 
   clearTimeout(handle: TimerHandle): void {
     this.timers = this.timers.filter((t) => t.id !== handle);
+  }
+
+  private record(level: LogLevel, event: string, fields?: LogLine["fields"]): void {
+    this.logs.push({ level, event, ...(fields !== undefined ? { fields } : {}) });
   }
 }
