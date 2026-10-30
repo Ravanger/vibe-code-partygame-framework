@@ -69,13 +69,17 @@ describe("OptionFields", () => {
     ]);
   });
 
-  it("warns once per key by default", () => {
+  it("warns once per key per instance by default", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
-      new OptionFields().from({ properties: { tags: { type: "array" } } });
-      new OptionFields().from({ properties: { tags: { type: "object" } } });
-      expect(warn).toHaveBeenCalledTimes(1);
+      const a = new OptionFields();
+      const b = new OptionFields();
+      a.from({ properties: { tags: { type: "array" } } });
+      b.from({ properties: { tags: { type: "object" } } });
+      expect(warn).toHaveBeenCalledTimes(2); // each instance warns once for the same key
       expect(warn.mock.calls[0]?.[0]).toContain("tags");
+      a.from({ properties: { tags: { type: "array" } } });
+      expect(warn).toHaveBeenCalledTimes(2); // a second call on the same instance does not warn again
     } finally {
       warn.mockRestore();
     }

@@ -42,15 +42,6 @@ export type OptionField =
 
 type OptionProperty = z.core.JSONSchema.JSONSchema;
 
-const warnedKeys = new Set<string>();
-
-/** The default unsupported-option report: a console warning, once per key. */
-const warnOnce = (key: string, reason: string): void => {
-  if (warnedKeys.has(key)) return;
-  warnedKeys.add(key);
-  console.warn(`settings form: option "${key}" is not rendered - ${reason}`);
-};
-
 /** Why an option cannot be rendered in the settings form. */
 const reasonFor = (property: OptionProperty): string => {
   if (property.type === "integer" || property.type === "number") {
@@ -62,10 +53,17 @@ const reasonFor = (property: OptionProperty): string => {
 
 /** Builds form fields from a JSON Schema object. */
 export class OptionFields {
+  /** Keys already reported by this instance's default `onUnsupported`. */
+  private readonly warnedKeys = new Set<string>();
+
   constructor(
     private readonly labels: Readonly<Record<string, string>> = {},
-    /** Reports each option the form cannot render; default warns once per key. */
-    private readonly onUnsupported: (key: string, reason: string) => void = warnOnce,
+    /** Reports each option the form cannot render; the default is a console warning, once per key per instance. */
+    private readonly onUnsupported: (key: string, reason: string) => void = (key, reason) => {
+      if (this.warnedKeys.has(key)) return;
+      this.warnedKeys.add(key);
+      console.warn(`settings form: option "${key}" is not rendered - ${reason}`);
+    },
   ) {}
 
   /** One field per renderable option (bounded number, boolean, string enum, string); anything else goes to `onUnsupported`. */

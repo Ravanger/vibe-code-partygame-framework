@@ -12,7 +12,7 @@ export interface LobbySettingsConfig {
   defaults?: Readonly<Record<string, unknown>>;
   /** Overrides the generated label of a field. */
   labels?: Readonly<Record<string, string>>;
-  /** Reports each option the form cannot render; default warns once per key. */
+  /** Reports each option the form cannot render; the default is a console warning, once per key per instance. */
   onUnsupported?: (key: string, reason: string) => void;
 }
 
