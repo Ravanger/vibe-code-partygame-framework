@@ -30,7 +30,7 @@ void manager.resume();       // page load: stored token, then stored room code
 
 `resolveEndpoints(overrides, pageHost)` takes string overrides `{ host?, gamePort?, apiPort? }` (for example from `VITE_*` env vars), so a phone on `http://192.168.1.50:5173` talks to `192.168.1.50:2567`.
 
-Every client-owned message is replaceable through the `strings` option: pass a partial `ClientStrings` table (defaults in `defaultClientStrings`) — the room-code validation text and the `NOT_CONNECTED`, `INVALID_ACTION`, `BAD_REPLY`, `CONNECTION_LOST`, `ROOM_NOT_FOUND` errors. `strings.errors[code]` overrides the text of any code that lands in `lastServerError`; the server's own `message` is used only as a fallback when the table has no entry for the code.
+Every client-owned message is replaceable through the `strings` option: pass a partial `ClientStrings` table (defaults in `defaultClientStrings`) — the room-code validation text, the `NOT_CONNECTED`, `INVALID_ACTION`, `BAD_REPLY`, `CONNECTION_LOST`, `ROOM_NOT_FOUND` errors, and the two state-sync rejection messages (`syncDisconnected`, `syncTimedOut`). `strings.errors[code]` overrides the text of any code that lands in `lastServerError`; the server's own `message` is used only as a fallback when the table has no entry for the code.
 
 ## Join a room
 

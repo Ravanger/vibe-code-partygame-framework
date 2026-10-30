@@ -17,6 +17,10 @@ export interface ClientStrings {
   connectionLost: string;
   /** The resolve-code API knows no room for the typed code (`ROOM_NOT_FOUND`). */
   roomNotFound: string;
+  /** The room dropped before the initial state sync landed. */
+  syncDisconnected: string;
+  /** The initial state sync did not arrive within `syncTimeoutMs`. */
+  syncTimedOut: string;
   /** Per-code text applied to every error that lands in `lastServerError`, over any other source. */
   errors?: Partial<Record<ErrorCode, string>>;
 }
@@ -29,6 +33,8 @@ export const defaultClientStrings: ClientStrings = {
   badReply: CLIENT_MESSAGES[ErrorCode.BAD_REPLY],
   connectionLost: CLIENT_MESSAGES[ErrorCode.CONNECTION_LOST],
   roomNotFound: CLIENT_MESSAGES[ErrorCode.ROOM_NOT_FOUND],
+  syncDisconnected: "Disconnected before the game state arrived",
+  syncTimedOut: "Timed out waiting for the game state",
 };
 
 /** The client message for every error code: the table's named keys over `CLIENT_MESSAGES`. */

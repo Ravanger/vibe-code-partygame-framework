@@ -570,7 +570,7 @@ number. Both live in `packages/shared/src/errors.ts`, the single source for the 
 
 ### Localisation
 
-The protocol does not change: errors keep their `ErrorCode` and English `message`, and the text is decided on the client. `GameConnectionManager` takes an optional `strings` table (`Partial<ClientStrings>`, defaults in `defaultClientStrings`, both from `@partygame/game-client`) that replaces every client-owned message — the room-code validation text and the client-side codes `NOT_CONNECTED`, `INVALID_ACTION`, `BAD_REPLY`, `CONNECTION_LOST`, `ROOM_NOT_FOUND`. In addition, `strings.errors[code]` overrides the text of any code that lands in `lastServerError`; the server's own `message` is used only as a fallback when the table has no entry for the code.
+The protocol does not change: errors keep their `ErrorCode` and English `message`, and the text is decided on the client. `GameConnectionManager` takes an optional `strings` table (`Partial<ClientStrings>`, defaults in `defaultClientStrings`, both from `@partygame/game-client`) that replaces every client-owned message — the room-code validation text, the client-side codes `NOT_CONNECTED`, `INVALID_ACTION`, `BAD_REPLY`, `CONNECTION_LOST`, `ROOM_NOT_FOUND`, and the two state-sync rejection messages (`syncDisconnected`, `syncTimedOut`). In addition, `strings.errors[code]` overrides the text of any code that lands in `lastServerError`; the server's own `message` is used only as a fallback when the table has no entry for the code.
 
 ## Minimal game: first to press the button
 

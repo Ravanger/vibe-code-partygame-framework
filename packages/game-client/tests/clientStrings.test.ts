@@ -1,11 +1,16 @@
+import { Client } from "@colyseus/sdk";
 import { CLIENT_MESSAGES, ErrorCode, ROOM_CODE_LENGTH } from "@partygame/shared";
-import { afterEach, describe, expect, it } from "vitest";
+import { BaseGameState } from "@partygame/shared/schema";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { GameConnectionManager } from "../src/GameConnectionManager.svelte.js";
 import { defaultClientStrings } from "../src/strings.js";
+import { StubRoom } from "../src/testing.js";
 
 interface Strings {
   notConnected?: string;
   invalidRoomCode?: string;
+  syncDisconnected?: string;
+  syncTimedOut?: string;
   errors?: Partial<Record<ErrorCode, string>>;
 }
 
@@ -18,7 +23,17 @@ const newManager = (strings?: Strings) =>
     ...(strings === undefined ? {} : { strings }),
   });
 
+/** A room whose state has not synced yet (no roomCode), standing in for the SDK's create. */
+const unsyncedRoom = (): StubRoom<BaseGameState> => {
+  const room = new StubRoom(new BaseGameState());
+  vi.spyOn(Client.prototype, "create").mockResolvedValue(room as never);
+  return room;
+};
+
+const settle = () => new Promise((resolve) => setTimeout(resolve));
+
 afterEach(() => {
+  vi.restoreAllMocks();
   localStorage.clear();
   sessionStorage.clear();
 });
@@ -65,5 +80,33 @@ describe("client strings", () => {
     const manager = newManager({ errors: { [ErrorCode.KICKED]: "Entfernt" } });
     await manager.sendAction("PRESS");
     expect(manager.lastServerError?.message).toBe(CLIENT_MESSAGES.NOT_CONNECTED);
+  });
+
+  it("keeps the untilSynced rejection defaults in the table", () => {
+    expect(defaultClientStrings.syncDisconnected).toBe(
+      "Disconnected before the game state arrived",
+    );
+    expect(defaultClientStrings.syncTimedOut).toBe("Timed out waiting for the game state");
+  });
+
+  it("replaces the disconnect-before-sync rejection when the table has it", async () => {
+    const manager = newManager({ syncDisconnected: "Verbindung abgebrochen" });
+    const room = unsyncedRoom();
+    const created = manager.create();
+    await settle();
+    room.closed();
+    await expect(created).rejects.toThrow("Verbindung abgebrochen");
+  });
+
+  it("replaces the sync-timeout rejection when the table has it", async () => {
+    const manager = new GameConnectionManager({
+      endpoint: "ws://localhost:2567",
+      roomName: "stub",
+      storagePrefix: `strings${++counter}`,
+      syncTimeoutMs: 20,
+      strings: { syncTimedOut: "Zeitüberschreitung" },
+    });
+    unsyncedRoom();
+    await expect(manager.create()).rejects.toThrow("Zeitüberschreitung");
   });
 });

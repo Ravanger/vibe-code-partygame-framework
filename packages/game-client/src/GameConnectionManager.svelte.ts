@@ -380,12 +380,12 @@ export class GameConnectionManager<
       // `settle` removes this listener, so it can only fire while the wait is still open.
       const onLeave = (): void => {
         settle();
-        reject(new Error("Disconnected before the game state arrived"));
+        reject(new Error(this.strings.syncDisconnected));
       };
       const timer = setTimeout(() => {
         settle();
         this.leaveQuietly(room);
-        reject(new Error("Timed out waiting for the game state"));
+        reject(new Error(this.strings.syncTimedOut));
       }, this.options.syncTimeoutMs ?? DEFAULT_SYNC_TIMEOUT_MS);
       room.onStateChange(check);
       room.onLeave(onLeave);
