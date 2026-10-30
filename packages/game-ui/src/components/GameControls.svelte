@@ -111,7 +111,7 @@ async function onMenuClick(): Promise<void> {
 
   .leave-small {
     min-height: 36px;
-    font-size: var(--fs-1);
+    font-size: calc(var(--fs-1) * var(--scale, 1));
     padding: 0.2rem 0.7rem;
   }
 
