@@ -2,8 +2,12 @@
 import type { LobbySettingsViewModel } from "@partygame/game-ui";
 // biome-ignore lint/correctness/noUnusedImports: used by the generics attribute
 import type { BaseGameState } from "@partygame/shared/schema";
+import { nextId } from "./uniqueId.js";
 
 const { vm }: { vm: LobbySettingsViewModel<TState> } = $props();
+
+// One id namespace per mounted instance, so two instances never share input ids.
+const idPrefix = nextId("lobby-settings");
 </script>
 
 <details class="settings card" open={vm.startsOpen}>
@@ -27,9 +31,9 @@ const { vm }: { vm: LobbySettingsViewModel<TState> } = $props();
               {/each}
             </fieldset>
           {:else}
-            <label for={`opt-${field.key}`}>{field.label}</label>
+            <label for={`${idPrefix}-${field.key}`}>{field.label}</label>
             <input
-              id={`opt-${field.key}`}
+              id={`${idPrefix}-${field.key}`}
               type="number"
               min={field.min}
               max={field.max}

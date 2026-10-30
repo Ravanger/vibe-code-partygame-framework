@@ -26,7 +26,7 @@ const stickerSize = (step: PodiumStep<TRow>): number => {
               <span class="occupant-name">{player.name}</span>
               {#if player.isMe}
                 <span class="you hand"
-                  ><span aria-hidden="true">&larr;</span> <span>you</span
+                  ><span aria-hidden="true">&larr;</span> <span aria-hidden="true">you</span
                   ><span class="sr-only">This is you</span></span
                 >
               {/if}

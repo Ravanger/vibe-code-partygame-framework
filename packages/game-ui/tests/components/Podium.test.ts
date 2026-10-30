@@ -34,6 +34,16 @@ describe("Podium", () => {
     expect(container.querySelector(".tier-1 .star")).toBeInTheDocument();
   });
 
+  it("hides the visible you marker from screen readers and keeps the sr-only text", () => {
+    const { container } = render(Podium, { steps: steps() });
+    const marker = container.querySelector<HTMLElement>(".you");
+    if (marker === null) throw new Error("the you marker did not render");
+    const visible = [...marker.querySelectorAll("span")].find((s) => s.textContent === "you");
+    expect(visible).not.toBeUndefined();
+    expect(visible).toHaveAttribute("aria-hidden", "true");
+    expect(marker.querySelector(".sr-only")?.textContent).toBe("This is you");
+  });
+
   it("sizes stickers by tier, smaller when a tie shares a step", () => {
     const sizes = (container: HTMLElement): string[] =>
       [...container.querySelectorAll<SVGElement>(".player-sticker")].map((s) =>
