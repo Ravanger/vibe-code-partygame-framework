@@ -300,6 +300,7 @@
           "default": "./src/index.ts"
         },
         "symbols": {
+          "ClientStrings": {},
           "ConnectionStatus": {},
           "Countdown": {},
           "EndpointOverrides": {},
@@ -312,6 +313,7 @@
           "PhaseFeedbackEvent": {},
           "RoomLike": {},
           "UrgentFeedbackEvent": {},
+          "defaultClientStrings": {},
           "readCodeParam": {},
           "resolveEndpoints": {}
         },
