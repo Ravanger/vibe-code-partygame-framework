@@ -13,9 +13,24 @@ const { manager }: { manager: WitClashManager } = $props();
 const vm = untrack(() => new AppViewModel(manager));
 const controls = untrack(() => new GameControlsViewModel(manager));
 const route = $derived(vm.screen);
+
+let lastScreenKey: string | null = null;
+let root: HTMLElement | undefined;
+
+$effect(() => {
+  const key = vm.screenKey;
+  if (key === lastScreenKey) return;
+  const first = lastScreenKey === null;
+  lastScreenKey = key;
+  if (first) return;
+  // a form field that just mounted takes its own focus; don't steal it
+  if (document.activeElement?.matches("input, textarea, select")) return;
+  root?.querySelector<HTMLElement>(".screen h1, .screen h2")?.focus();
+});
 </script>
 
-<main class:tv={vm.isSpectator}>
+<main bind:this={root} class:tv={vm.isSpectator}>
+  <p class="sr-only" role="log" aria-live="polite" aria-label="Phase updates">{vm.banner}</p>
   {#if route.kind !== 'welcome'}
     <header>
       <span class="wordmark">WitClash</span>
@@ -84,7 +99,7 @@ const route = $derived(vm.screen);
     padding: 0 0.7rem;
     border: var(--outline);
     border-radius: var(--radius-card);
-    background: var(--color-1);
+    background: var(--wordmark);
     color: var(--white);
     -webkit-text-stroke: 1.5px var(--ink);
     paint-order: stroke fill;
@@ -174,7 +189,6 @@ const route = $derived(vm.screen);
     max-width: 560px;
     margin: 0 auto;
     padding: 12px 16px 24px;
-    transition: opacity 0.2s;
   }
 
   .game-view.dimmed {
@@ -260,6 +274,10 @@ const route = $derived(vm.screen);
   }
 
   @media (prefers-reduced-motion: no-preference) {
+    .game-view {
+      transition: opacity 0.2s;
+    }
+
     .phase-banner {
       animation: banner 1.2s ease-out forwards;
     }

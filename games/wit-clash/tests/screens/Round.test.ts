@@ -1,6 +1,8 @@
 import { ErrorCode } from "@partygame/shared";
 import { fireEvent, render, screen, within } from "@testing-library/svelte";
+import { flushSync } from "svelte";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import App from "../../ui/App.svelte";
 import CategoryVote from "../../ui/screens/CategoryVote.svelte";
 import MatchupReveal from "../../ui/screens/MatchupReveal.svelte";
 import MatchupVote from "../../ui/screens/MatchupVote.svelte";
@@ -495,5 +497,35 @@ describe("Results screen", () => {
       render(Results, { manager: results("player", true).manager });
       expect(screen.queryByRole("button", { name: "Export replay" })).not.toBeInTheDocument();
     });
+  });
+});
+
+describe("Focus on screen change", () => {
+  it("does not move focus on the initial mount, leaving a name input alone", () => {
+    const c = connectedClient({ isReady: false });
+    render(App, { manager: c.manager });
+    expect(screen.getByLabelText(/your name/i)).toHaveFocus();
+  });
+
+  it("moves focus to the new screen's heading when the phase changes", () => {
+    const c = connectedClient({ role: "host" });
+    render(App, { manager: c.manager });
+    c.state.phase = "CategorySelection";
+    c.state.categoryOptions.push(option("a"), option("b"));
+    addMine(c.state, c.manager.playerId);
+    c.patch();
+    flushSync();
+    expect(screen.getByRole("heading", { name: /pick a category/i })).toHaveFocus();
+  });
+
+  it("keeps focus on the name input when a screen mounts one", () => {
+    const c = connectedClient({}, "Prompting");
+    addMine(c.state, c.manager.playerId);
+    render(App, { manager: c.manager });
+    c.me.isActive = false;
+    c.me.isReady = false;
+    c.patch();
+    flushSync();
+    expect(screen.getByLabelText(/your name/i)).toHaveFocus();
   });
 });
