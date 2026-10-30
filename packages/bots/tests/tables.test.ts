@@ -1,7 +1,7 @@
 import { type SchemaType, t as schemaField } from "@colyseus/schema";
 import { Client, type Room } from "@colyseus/sdk";
 import { claimName, resolveRoomCode } from "@partygame/client-utils";
-import { defineGame } from "@partygame/core";
+import { actionFactory, defineGame } from "@partygame/core";
 import { RoomCodeService } from "@partygame/server";
 import { bootTestServer, type TestServer, waitUntil } from "@partygame/server/testing";
 import {
@@ -13,6 +13,7 @@ import {
 } from "@partygame/shared";
 import { PlayerSchema } from "@partygame/shared/schema";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import type { BotPlayer } from "../src/BotPlayer.js";
 import { BotTable } from "../src/BotTable.js";
 import { DemoTable } from "../src/DemoTable.js";
@@ -41,13 +42,16 @@ const tapper: BotKit<TapState> = {
   strategy: { play: (turn) => turn.once("tap", () => turn.later("react", () => turn.act("TAP"))) },
 };
 
-// A tap game whose initial state is ~4 MB: the post-join state sync then lands well past
-// waitFor's 20 ms poll floor, so a 1 ms join budget forwarded to joinBots reliably times out.
-const PaddedState = TapState.extend(
-  { pad: schemaField.string().default("x".repeat(4_000_000)) },
-  "PaddedTapState",
-);
+// A tap game whose state can be padded to ~4 MB after open(). A bot that joins once the pad has
+// landed receives a sync that blocks the event loop well past waitFor's 20 ms poll floor, so a
+// 1 ms join budget forwarded to joinBots expires in joinOne. The pad stays out of open()'s own
+// sync: under CI load its multi-megabyte decode exhausted claimName's 5 s budget before
+// seatBots began (#294).
+const PaddedState = TapState.extend({ pad: schemaField.string().default("") }, "PaddedTapState");
 type PaddedState = SchemaType<typeof PaddedState>;
+
+const PAD_BYTES = 4_000_000;
+const paddedAction = actionFactory<PaddedState, Record<string, never>, Record<string, never>>();
 
 const PaddedGame = defineGame<PaddedState, Record<string, never>, Record<string, never>>({
   name: "TapPadded",
@@ -55,8 +59,23 @@ const PaddedGame = defineGame<PaddedState, Record<string, never>, Record<string,
   minPlayers: 1,
   maxPlayers: 6,
   startPhase: "Idle",
+  // The room leaves the built-in Lobby as soon as its first player claims a name, so PAD (an
+  // Idle-phase action) is reachable right after open()'s claimName; games cannot add lobby actions.
+  autoStart: true,
   createPrivateState: () => ({}),
-  phases: { Idle: {} },
+  phases: {
+    Idle: {
+      actions: {
+        PAD: paddedAction({
+          from: "player",
+          payload: z.object({}),
+          handler: (ctx) => {
+            ctx.state.pad = "x".repeat(PAD_BYTES);
+          },
+        }),
+      },
+    },
+  },
 });
 
 const PAD_ROOM = "tap-padded";
@@ -66,8 +85,16 @@ const paddedKit: BotKit<PaddedState> = {
   strategy: { play: (turn) => turn.once("tap", () => turn.later("react", () => turn.act("TAP"))) },
 };
 
+/** A DemoTable that pads its own state after open(), so open() never decodes the ~4 MB payload. */
+class PaddedDemoTable extends DemoTable<PaddedState> {
+  async pad(): Promise<unknown> {
+    if (!this.seat) throw new Error("the table is not open");
+    return this.seat.room.request(ClientMessage.ACTION, { type: "PAD" });
+  }
+}
+
 /** Simulates the wire-level decode hiccup that clobbers a synced field after open(). */
-class ClobberingDemoTable extends DemoTable<PaddedState> {
+class ClobberingDemoTable extends PaddedDemoTable {
   clobberRoomCode(): void {
     if (!this.seat) throw new Error("the table is not open");
     this.seat.room.state.roomCode = "";
@@ -458,8 +485,12 @@ describe("table overrides", () => {
   });
 
   it("BotTable and DemoTable forward timeoutMs to joinBots", async () => {
-    // The padded room's ~4 MB initial state sync lands well past waitFor's 20 ms poll floor, so a
-    // 1 ms budget forwarded to joinBots times out in joinOne; the 5000 ms default would resolve.
+    // The pad is applied after open(): a bot that joins once it has landed receives the ~4 MB
+    // sync that blocks the event loop well past waitFor's 20 ms poll floor, so a 1 ms budget
+    // forwarded to joinBots expires in joinOne — in whichever of its two waits (the pending poll
+    // and the synced state race); the 5000 ms default would resolve. open() itself must stay on
+    // the small state: under CI load the multi-megabyte decode exhausted claimName's 5 s budget
+    // before seatBots began (#294).
     const table = new BotTable({ ...paddedKit, endpoint: t.endpoint, apiPort, timeoutMs: 1 });
     leavers.push(table);
     const code = await table.open();
@@ -474,11 +505,13 @@ describe("table overrides", () => {
     );
     leavers.push({ leave: () => room.leave(true) });
     await claimName(room, "human-zed-0005", "Zed");
+    expect(await room.request(ClientMessage.ACTION, { type: "PAD" })).toEqual({ ok: true });
+    // Either of joinOne's two waits can carry the timeout (see above); both prove forwarding.
     await expect(table.seatBots({ count: 1 })).rejects.toThrow(
-      "Timed out waiting for the room state",
+      /Timed out waiting for (the room state|your name to be accepted)/,
     );
 
-    const demo = new DemoTable({
+    const demo = new PaddedDemoTable({
       ...paddedKit,
       endpoint: t.endpoint,
       apiPort,
@@ -488,7 +521,10 @@ describe("table overrides", () => {
     });
     leavers.push(demo);
     await demo.open();
-    await expect(demo.seatBots()).rejects.toThrow("Timed out waiting for the room state");
+    expect(await demo.pad()).toEqual({ ok: true });
+    await expect(demo.seatBots()).rejects.toThrow(
+      /Timed out waiting for (the room state|your name to be accepted)/,
+    );
   }, 20_000);
 
   it("DemoTable keeps the code open() verified when synced state is later clobbered", async () => {
@@ -504,15 +540,19 @@ describe("table overrides", () => {
     });
     leavers.push(demo);
     await demo.open();
+    expect(await demo.pad()).toEqual({ ok: true });
     demo.clobberRoomCode();
-    await expect(demo.seatBots()).rejects.toThrow("Timed out waiting for the room state");
+    // The 1 ms budget can expire in either of joinOne's two waits; both prove forwarding.
+    await expect(demo.seatBots()).rejects.toThrow(
+      /Timed out waiting for (the room state|your name to be accepted)/,
+    );
   }, 20_000);
 
   it("DemoTable keeps a code observed before claimName when state is clobbered mid-open", async () => {
     // Second CI observation of the padded-state hiccup: the clobber landed while open() was still
     // inside claimName, so a read taken after it captured "". The capture must be atomic with its
     // first well-formed observation, before any round trip.
-    const demo = new DemoTable({
+    const demo = new PaddedDemoTable({
       ...paddedKit,
       endpoint: t.endpoint,
       apiPort,
@@ -550,7 +590,11 @@ describe("table overrides", () => {
       } as never);
       const code = await demo.open();
       expect(RoomCodeSchema.safeParse(code).success).toBe(true);
-      await expect(demo.seatBots()).rejects.toThrow("Timed out waiting for the room state");
+      expect(await demo.pad()).toEqual({ ok: true });
+      // The 1 ms budget can expire in either of joinOne's two waits; both prove forwarding.
+      await expect(demo.seatBots()).rejects.toThrow(
+        /Timed out waiting for (the room state|your name to be accepted)/,
+      );
     } finally {
       createSpy.mockRestore();
     }

@@ -39,6 +39,17 @@ describe("claimName with a scripted room", () => {
     );
   });
 
+  it("times out instead of crashing when a decode hiccup left the players map missing", async () => {
+    const state = new BaseGameState();
+    state.roomCode = "ABCD";
+    // CI observed a wire-level decode hiccup on large states that leaves a synced field missing.
+    (state as { players?: unknown }).players = undefined;
+    const room: SeatRoom = { state, onMessage: () => () => undefined, send: () => undefined };
+    await expect(claimName(room, "p1", "Ann", 30)).rejects.toThrow(
+      "Timed out waiting for your name to be accepted",
+    );
+  });
+
   it("times out when the initial state has not arrived", async () => {
     const room: PreSyncSeatRoom = {
       state: undefined,

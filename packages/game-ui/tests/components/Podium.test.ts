@@ -53,4 +53,16 @@ describe("Podium", () => {
     expect(screen.getByText("Ann!")).toBeInTheDocument();
     expect(screen.getByText("Cy!")).toBeInTheDocument();
   });
+
+  it("reads block heights from custom properties and never styles main.tv", () => {
+    render(Podium, { steps: steps() });
+    const sheet = [...document.querySelectorAll("style")]
+      .map((s) => s.textContent ?? "")
+      .filter((css) => css.includes(".podium"))
+      .join("\n");
+    expect(sheet).not.toContain("main.tv");
+    for (const tier of [1, 2, 3]) {
+      expect(sheet).toContain(`var(--podium-block-height-${tier}`);
+    }
+  });
 });

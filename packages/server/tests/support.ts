@@ -1,5 +1,6 @@
 import type { Room } from "@colyseus/core";
 import type { Room as ClientRoom } from "@colyseus/sdk";
+import { BaseGameState } from "@partygame/shared/schema";
 import type { GameServerOptions } from "../src/createGameServer.js";
 import {
   bootTestServer,
@@ -8,6 +9,7 @@ import {
   waitUntil,
 } from "../src/testing/index.js";
 import { BUZZER_PUBLIC_FIELDS, BuzzerGame, BuzzerState } from "./fixtures/buzzer.js";
+import { LockedGame } from "./fixtures/locked.js";
 import { POLL_PUBLIC_FIELDS, PollGame, PollState } from "./fixtures/poll.js";
 
 /** Waits a fixed time; only for timing windows with no observable condition — prefer `waitUntil`. */
@@ -20,6 +22,11 @@ export const GAMES = [
     definition: BuzzerGame,
     stateClass: BuzzerState,
     publicFields: BUZZER_PUBLIC_FIELDS,
+  },
+  {
+    roomName: "locked",
+    definition: LockedGame,
+    stateClass: BaseGameState,
   },
 ];
 
@@ -39,6 +46,7 @@ export const bootPoll = (options: Partial<GameServerOptions> = {}): Promise<Test
   bootTestServer({ games: POLL_GAMES, ...options });
 
 export const stateOf = (room: Room): BuzzerState => room.state as BuzzerState;
+export const lockedStateOf = (room: Room): BaseGameState => room.state as BaseGameState;
 export const pollStateOf = (room: Room): PollState => room.state as PollState;
 export const clientState = (client: ClientRoom): BuzzerState =>
   client.state as unknown as BuzzerState;

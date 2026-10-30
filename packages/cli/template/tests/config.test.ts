@@ -5,6 +5,8 @@ const mockEnv = (over = {}) => ({
   VITE_SERVER_HOST: undefined,
   VITE_GAME_PORT: undefined,
   VITE_API_PORT: undefined,
+  VITE_SERVER_ENDPOINT: undefined,
+  VITE_API_BASE: undefined,
   ...over,
 });
 
@@ -26,6 +28,27 @@ describe("resolveEndpoints", () => {
         mockEnv({ VITE_SERVER_HOST: "10.0.0.1", VITE_GAME_PORT: "7777", VITE_API_PORT: "8888" }),
       ),
     ).toEqual({ endpoint: "http://10.0.0.1:7777", apiPort: 8888 });
+  });
+
+  it("returns VITE_SERVER_ENDPOINT and VITE_API_BASE verbatim", () => {
+    vi.stubGlobal("window", { location: { hostname: "localhost" } });
+    expect(
+      resolveEndpoints(
+        mockEnv({
+          VITE_SERVER_ENDPOINT: "wss://proxy.example/game",
+          VITE_API_BASE: "https://proxy.example/api",
+        }),
+      ),
+    ).toEqual({
+      endpoint: "wss://proxy.example/game",
+      apiPort: 3001,
+      apiBase: "https://proxy.example/api",
+    });
+  });
+
+  it("uses the page protocol for the endpoint", () => {
+    vi.stubGlobal("window", { location: { hostname: "example.com", protocol: "https:" } });
+    expect(resolveEndpoints(mockEnv()).endpoint).toBe("https://example.com:2567");
   });
 });
 

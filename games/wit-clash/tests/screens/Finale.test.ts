@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/svelte";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { Award, BestAnswer } from "../../src/state.js";
+import { Award, BestAnswer, Highlight, HighlightAnswer } from "../../src/state.js";
 import Prompting from "../../ui/screens/Prompting.svelte";
 import Results from "../../ui/screens/Results.svelte";
 import TieBreakerPrompting from "../../ui/screens/TieBreakerPrompting.svelte";
@@ -38,6 +38,26 @@ describe("Results podium and awards", () => {
     expect(screen.queryByLabelText("Podium")).not.toBeInTheDocument();
     expect(screen.queryByText(/best answer/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Awards")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Highlights")).not.toBeInTheDocument();
+  });
+
+  it("shows the highlights with kind, prompt and answers, seatless", () => {
+    const c = connectedClient({}, "Results");
+    const h = Object.assign(new Highlight(), {
+      kind: "biggestMargin",
+      promptText: "What do you call a fake noodle?",
+    });
+    h.answers.push(
+      Object.assign(new HighlightAnswer(), { authorName: "Ann", text: "A spaghetto.", votes: 3 }),
+      Object.assign(new HighlightAnswer(), { authorName: "Bo", text: "Pasta fraud.", votes: 1 }),
+    );
+    c.state.highlights.push(h);
+    render(Results, { manager: c.manager });
+    const section = within(screen.getByLabelText("Highlights"));
+    expect(section.getByText("Biggest margin")).toBeInTheDocument();
+    expect(section.getByText("What do you call a fake noodle?")).toBeInTheDocument();
+    expect(section.getByText("A spaghetto.")).toBeInTheDocument();
+    expect(section.getByText("by Ann")).toBeInTheDocument();
   });
 
   it("gives tied players one step and the next tier the next step", () => {

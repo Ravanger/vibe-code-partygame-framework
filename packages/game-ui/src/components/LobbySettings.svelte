@@ -143,6 +143,6 @@ const { vm }: { vm: LobbySettingsViewModel<TState> } = $props();
   }
 
   .choices button.active {
-    background: var(--sun);
+    background: var(--color-2);
   }
 </style>

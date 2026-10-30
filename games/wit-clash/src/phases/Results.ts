@@ -12,6 +12,7 @@ export const Results: WitClashPhase = {
     round.writeScoreboard();
     if (ctx.state.isFinalRound) {
       round.writeBestAnswers();
+      round.writeHighlights();
       writeAwards(ctx);
     }
   },

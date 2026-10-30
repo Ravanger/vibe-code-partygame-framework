@@ -89,7 +89,7 @@ $effect(() => () => vm.destroy());
   }
 
   .pick.selected {
-    background: var(--sun);
+    background: var(--color-2);
   }
 
   .stamp {
@@ -132,7 +132,7 @@ $effect(() => () => vm.destroy());
     height: 12px;
     border: 2px solid var(--ink);
     border-radius: 50%;
-    background: var(--pink);
+    background: var(--color-1);
   }
 
   .turnout {
