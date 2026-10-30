@@ -37,7 +37,7 @@ Optional: `stageOf(state)`; `narrate(state)` returns lines printed on every stat
 
 ## Wire `terminal/play.ts`
 
-`parsePlayArgs` reads `--bots`, `--name`, `--join`, `--endpoint`, `--api-port`. `parseDemoArgs(argv, { minBots, maxBots, usage })` reads `--bots=N` for an all-bot demo (default 3, clamped into the range; the space form and unknown flags are rejected with `usage`). Entries exit 2 on bad arguments. `PlaySession` finds or starts a server, creates or joins a room and seats bots from your `BotKit`.
+`parsePlayArgs` reads `--bots`, `--name`, `--join`, `--endpoint`, `--api-port`. `parseDemoArgs(argv, { minBots, maxBots, usage })` reads `--bots=N` for an all-bot demo (default 3, clamped into the range; the space form and unknown flags are rejected with `usage`). Entries exit 2 on bad arguments. `PlaySession` finds or starts a server, creates or joins a room and seats bots from your `BotKit`; rooms are opened through `GameClient`, a thin wrapper over `ColyseusConnector` from `@partygame/bots`.
 
 ```ts
 import { createInterface } from "node:readline/promises";
