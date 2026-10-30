@@ -38,6 +38,19 @@ display name (override the display name with `--name`).
 Once it runs, replace the wave ruleset in `games/<slug>/src/` with your own game; the phases, actions, state, UI,
 terminal, bots and the declaration are small, self-contained files you can edit. The rest of this guide explains how each piece works.
 
+Each game describes itself once in a `partygame` key of its own `package.json`, which `bun run games` and the
+interactive picker read — adding a game needs no edit to dispatch code:
+
+```json
+"partygame": { "name": "WitClash", "description": "A word-prompt party game for 3 to 8 players", "icon": "🧠" }
+```
+
+`name` and `description` must be non-empty; `icon` must be exactly one emoji grapheme (a multi-code-point emoji
+like a family is fine, two emojis are not). The template ships the key with the display name already filled in. A
+game with no manifest still lists under its package name; a malformed manifest is reported on stderr and the game
+falls back to its package name too. Player counts are not part of the manifest — `defineGame` already requires
+`minPlayers`/`maxPlayers`.
+
 ## Concepts
 
 ### Phases
@@ -132,6 +145,16 @@ The runtime handles these host-only actions for you; do not declare them (`defin
 - `KICK_PLAYER { playerId }`: any phase, not yourself. The host implementation removes the seat, then `onRosterChange` runs. The ban is per `playerId` and per the kicked seat's secret hash: a kicked client that rejoins with a fresh id but its stored secret is refused with `KICKED_REJOIN` too (IPs are not used — they are shared on a LAN). A player who leaves normally can rejoin.
 - `SET_OPTIONS { ...partial }`: Lobby only. If the game declares no `definition.options` schema, it rejects any key but `type` (`INVALID_ACTION`); a room for such a game also refuses create options. Otherwise the partial is merged into the current options and validated, then published; a failed parse or a result whose JSON is longer than `MAX_OPTIONS_JSON_LENGTH` is `INVALID_ACTION` and keeps the previous options. `ctx.options` reflects the new value.
 - `END_GAME`: any phase but the Lobby (`WRONG_PHASE` there). It runs `onEndGame(ctx)`, where a game can set a notice for the players, and then returns everyone to the Lobby as `ctx.returnToLobby()` does (`onReturnToLobby` runs, waiting joiners are let in). The hook cannot veto it.
+
+The first seat of a room is host by acquisition. After that, when the current host is not connected — or no seat holds the role any more (their seat was removed) — the runtime migrates it to one of the connected seats, in seat order, per `definition.hostMigration`:
+
+- `"next-seated"` (the default): the first connected seat that is active and ready, else the first connected ready seat, else the first connected seat — the historical behaviour.
+- `"oldest"`: the first connected seat regardless of ready or active.
+- `"random"`: one drawn with the room's seeded RNG, so a replay makes the same draw.
+- `"none"`: nobody — the room stays host-less until the old host returns; if their seat is removed (reconnect window expired, kicked) it stays host-less, and there is no recovery.
+- A `HostPicker` function `(candidates, rng) => playerId | undefined` for a game-defined pick among the connected seats; returning `undefined` leaves the room host-less like `"none"`, and an id that is not among the candidates is ignored (the current host stays in place).
+
+Migration runs before the phase's `onRosterChange`, so the hook sees the new role.
 
 ### Roster changes and mid-game joiners
 Joins, leaves, disconnects, reconnects and ready changes call the current phase's `onRosterChange(ctx)`.
@@ -829,6 +852,15 @@ A client that joined with `joinAsSpectator` is remembered as a spectator and `re
 `leave()` forgets the room code, token and spectator flag (a reload does not rejoin) and sets `status` to `"disconnected"`.
 Joins are de-duplicated per code and mode, so watching and playing the same room are different joins and the newest wins.
 
+### Sound and animation hooks
+`manager.feedback` is a typed event stream for attaching sound or animation; the framework ships no assets. Every event carries a `reducedMotion`
+flag (read live from `prefers-reduced-motion`, injectable through the `matchMedia` option for tests) so a game can choose quiet or subtle feedback:
+`{ type: "phase", from, to }` when `state.phase` changes (the first phase observed after connecting — or after the first listener subscribes — is the
+silent baseline), `{ type: "urgent" }` once per phase when the countdown enters its last ten seconds, and `{ type: "message", name, payload }` for
+server broadcasts whose name the game registered with `onMessage`. `manager.feedback.on(type, callback)` returns an unsubscribe. The manager runs
+its state watchers (phase observation and urgency timer) only while at least one `phase` or `urgent` listener exists — they start on the first
+subscription and stop when the last one leaves; `hasListeners(type)` reports subscribers and `onChange(callback)` fires on every count change.
+
 ### Testing UI code
 `@partygame/game-client/testing` has `StubRoom`, an in-memory room around a real state object. `manager.attach(new StubRoom(state))`, mutate the state,
 call `room.patch()`. `room.requests`/`room.sent` record what the UI sent, `room.reply` sets the answer to `request`, and `push`, `dropConnection`,
@@ -888,7 +920,7 @@ export class GameControlsViewModel extends GameControlsBase<ButtonState> {
 }
 ```
 
-`LobbySettingsViewModel` takes the same options schema you pass to `defineGame`, optional `defaults` shown until the server publishes valid options, and optional `labels`. Every bounded numeric option (`.min()` and `.max()`) appears in the form with no UI work; a string-enum option (`z.enum([...])`) appears as a row of choice buttons, one per value, also with no UI work; a field is labelled from its camelCase key ("Turn seconds") unless `labels` overrides it:
+`LobbySettingsViewModel` takes the same options schema you pass to `defineGame`, optional `defaults` shown until the server publishes valid options, and optional `labels`. Every bounded numeric option (`.min()` and `.max()`) appears as a number input — step 1 for integers, the schema's `multipleOf` when present, else `any`; every boolean option appears as a checkbox; a string-enum option (`z.enum([...])`) appears as a row of choice buttons, one per value; every plain string option appears as a text input (bounded by `maxlength` when the schema bounds it) — all with no UI work. Options the form cannot render (unbounded numbers, arrays, objects, enums with non-string choices) are skipped and reported to the optional `onUnsupported(key, reason)` config — by default a console warning, once per key per instance. A field is labelled from its camelCase key ("Turn seconds") unless `labels` overrides it:
 
 ```ts
 import { LobbySettingsViewModel as LobbySettingsBase } from "@partygame/game-ui";
@@ -1017,7 +1049,12 @@ await demo.leave();
 Overridable: `BotOptions` `thinkMs` (default `[2000, 6000]`), `reactMs` (`[500, 2500]`), `rng`, `schedule(run, ms) => cancel`,
 `log`, `onOutcome`, `host.expectedPlayers`; `joinBots` `nameFor(n)` (default `Bot n`, taken names skipped), `playerIds`,
 `timeoutMs` (`BotTable` and `DemoTable` also take `nameFor` and `timeoutMs`); `DemoTable` `hostName`, `roomOptions`, `isFinished`. Every failure leaves the seats it took.
-Example: `games/wit-clash/bots/witClashBot.ts`.
+
+Every entry point opens rooms through a `RoomConnector` (the interface and option types live in `@partygame/client-utils`):
+pass `connector` to any of them, or let it default to this package's `ColyseusConnector`, which holds the join flow (`joinById`,
+wait for the state sync, claim a name) over one Colyseus client. The room code is resolved to an id once per batch — by default
+`resolveRoomCode` against `apiBaseOf(endpoint, apiPort)` (injectable as `resolveCode`) — and the id goes to every join. A table
+reuses its connector for the bots it seats. Example: `games/wit-clash/bots/witClashBot.ts`.
 
 A game declares its kit once as the `botKit` field of its declaration (`gamePackage.ts`) and never joins bots by hand:
 the `bun run bots <CODE> [count]` entry is a stub calling `botsCli(gamePackage)` from `@partygame/game-kit`, which seats
@@ -1027,7 +1064,8 @@ the bots in a room made elsewhere (usage bounded by `meta.maxPlayers - 1`) and r
 
 `@partygame/terminal` lets a human play at a prompt. You write a `TerminalStrategy` (what to ask in each stage); the kit's `play`
 entry drives it through a `TerminalPlayer` that keeps the lobby, the countdown, action replies and quitting, and a `PlaySession` that
-finds or starts a server, creates or joins a room and seats bots. The samples here and in Launcher reuse `buttonKit`, `ButtonState` and `ButtonGame` from Bots and Minimal game.
+finds or starts a server, creates or joins a room and seats bots. Rooms are opened through `GameClient`, a thin wrapper over
+`ColyseusConnector` (Bots). The samples here and in Launcher reuse `buttonKit`, `ButtonState` and `ButtonGame` from Bots and Minimal game.
 
 ```ts
 import { type TerminalStrategy } from "@partygame/terminal";

@@ -31,6 +31,8 @@ export interface UiStrings {
   podium: string;
   /** The "you" marker next to the player's own podium entry. */
   you: string;
+  /** Screen-reader text of the podium you-marker. */
+  thisIsYou: string;
   /** The score unit after a podium score. */
   scoreUnit: string;
   /** `aria-label` of the QrCode image. */
@@ -57,6 +59,7 @@ export const defaultUiStrings: UiStrings = {
   enterYourName: "Enter your name",
   podium: "Podium",
   you: "you",
+  thisIsYou: "This is you",
   scoreUnit: "pts",
   qrCode: "QR code that opens the join link",
   secondsRemaining: (seconds) => `${seconds} seconds remaining`,

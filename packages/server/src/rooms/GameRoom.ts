@@ -280,6 +280,8 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     seat.id = playerId;
     seat.name = name && !this.nameTaken(playerId, name) ? name : "";
     seat.isActive = this.state.phase === LOBBY_PHASE;
+    // The first seat is host by acquisition (as in FakeHost); `hostMigration` only governs handover.
+    if (this.state.players.size === 0) seat.role = "host";
     this.state.players.set(playerId, seat);
     this.seatSecrets.set(playerId, sha256(seatSecret));
     this.bind(playerId, client.sessionId);
@@ -364,6 +366,12 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
       this.dropSeat(playerId, true);
       this.scheduleDisposeIfEmpty();
       client?.leave();
+    },
+    setHost: (playerId) => {
+      for (const seat of this.state.players.values()) {
+        if (seat.id === playerId) seat.role = "host";
+        else if (seat.role === "host") seat.role = "player";
+      }
     },
     publishOptions: (options) => {
       this.roomOptions = options as Record<string, unknown>;
@@ -587,25 +595,8 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
   }
 
   private rosterChanged(): void {
-    const seats = [...this.state.players.values()];
-    const host = seats.find((seat) => seat.role === "host");
-    if (!host?.isConnected) {
-      const next = this.nextHost(seats);
-      if (next) {
-        if (host) host.role = "player";
-        next.role = "host";
-      }
-    }
+    // Host migration (who becomes host when the current one disconnects) is the runtime's call (#36).
     this.safely(() => this.runtime.rosterChanged());
-  }
-
-  private nextHost(seats: PlayerSchema[]): PlayerSchema | undefined {
-    const connected = seats.filter((seat) => seat.isConnected);
-    return (
-      connected.find((seat) => seat.isActive && seat.isReady) ??
-      connected.find((seat) => seat.isReady) ??
-      connected[0]
-    );
   }
 
   private scheduleDisposeIfEmpty(): void {

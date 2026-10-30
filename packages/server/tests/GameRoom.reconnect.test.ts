@@ -179,6 +179,21 @@ describe("GameRoom host handover", () => {
   });
 });
 
+describe("GameRoom host migration policy", () => {
+  it("keeps the room host-less while the old host is away and restores them on return ('none')", async () => {
+    const { room, p1 } = await startedRoom(t, {}, "buzzer-none");
+    const token = p1.client.reconnectionToken;
+    await p1.client.leave(false);
+    await waitUntil(() => stateOf(room).players.get(pid(1))?.isConnected === false, "dropped");
+    expect(stateOf(room).players.get(pid(1))?.role).toBe("host");
+    expect(stateOf(room).players.get(pid(2))?.role).toBe("player");
+    await t.sdk.reconnect(token);
+    await waitUntil(() => stateOf(room).players.get(pid(1))?.isConnected === true, "back");
+    expect(stateOf(room).players.get(pid(1))?.role).toBe("host");
+    expect(stateOf(room).players.get(pid(2))?.role).toBe("player");
+  });
+});
+
 describe("seat secret", () => {
   // Schema-valid (16+ characters) but not pid(2)'s.
   const wrongSecret = "hijacker-secret-0000";
