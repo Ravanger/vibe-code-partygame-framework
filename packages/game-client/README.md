@@ -6,7 +6,7 @@ Ships source (`.ts`/`.svelte.ts`); consumers need the Svelte plugin — Vite wit
 
 | Import | What |
 |---|---|
-| `@partygame/game-client` | `GameConnectionManager<TState>`: connect, sync, send actions; `Countdown`, `resolveEndpoints`, `readCodeParam`; `ClientStrings`, `defaultClientStrings` for the manager's `strings` option |
+| `@partygame/game-client` | `GameConnectionManager<TState>`: connect, sync, send actions; `Countdown`, `FeedbackBus`, `resolveEndpoints`, `readCodeParam`; `ClientStrings`, `defaultClientStrings` for the manager's `strings` option |
 | `@partygame/game-client/testing` | `StubRoom`, `connectedClient`, `fakeFetch` for UI tests without a server |
 | `@partygame/game-client/test-setup` | jsdom setup (shims storage, fixes WebSocket for the SDK) |
 
@@ -28,7 +28,7 @@ export const manager = new GameConnectionManager<ButtonState>({
 void manager.resume();       // page load: stored token, then stored room code
 ```
 
-`resolveEndpoints(overrides, pageHost)` takes string overrides `{ host?, gamePort?, apiPort? }` (for example from `VITE_*` env vars), so a phone on `http://192.168.1.50:5173` talks to `192.168.1.50:2567`.
+`resolveEndpoints(overrides, pageHost, pageProtocol?)` takes string overrides `{ host?, gamePort?, apiPort?, endpoint?, apiBase? }` (for example from `VITE_*` env vars) and an optional page protocol (`window.location.protocol`, default `"http:"`), so a phone on `http://192.168.1.50:5173` talks to `192.168.1.50:2567` — and an HTTPS page gets `https://…` instead of a mixed-content `http://…`. An `endpoint` override is returned verbatim (for example `wss://your-origin/game` behind a reverse proxy); an `apiBase` override is returned verbatim, and the manager prefers it over `apiPort`: it calls `<apiBase>/api/resolve-code` with no port appended. See [HOSTING.md](../../docs/HOSTING.md#behind-https-and-a-reverse-proxy).
 
 Every client-owned message is replaceable through the `strings` option: pass a partial `ClientStrings` table (defaults in `defaultClientStrings`) — the room-code validation text, the `NOT_CONNECTED`, `INVALID_ACTION`, `BAD_REPLY`, `CONNECTION_LOST`, `ROOM_NOT_FOUND` errors, and the two state-sync rejection messages (`syncDisconnected`, `syncTimedOut`). `strings.errors[code]` overrides the text of any code that lands in `lastServerError`; the server's own `message` is used only as a fallback when the table has no entry for the code.
 
@@ -106,6 +106,26 @@ if (response.ok === false) console.warn(manager.lastServerError?.message);
 const clock = manager.countdown();
 clock.secondsLeft; clock.isUrgent; clock.isExpired; // reactive
 ```
+
+## Sound and animation feedback
+
+`manager.feedback` is a typed event stream for attaching sound or animation, without the framework shipping assets. Every event carries a `reducedMotion` flag (read live from `prefers-reduced-motion`) so a game can choose quiet or subtle feedback:
+
+- `{ type: "phase", from, to }` — when `state.phase` changes; the first phase observed after connecting (or after the first listener subscribes) is the silent baseline.
+- `{ type: "urgent" }` — once per phase, when the countdown enters its last ten seconds.
+- `{ type: "message", name, payload }` — a server broadcast for a name registered with `onMessage`.
+
+```ts
+manager.feedback.on("phase", (event) => {
+  if (!event.reducedMotion) playWhoosh(event.to);
+});
+manager.feedback.on("urgent", () => tickSound());
+const off = manager.feedback.on("message", (event) => chime(event.name)); // returns an unsubscribe
+```
+
+The manager runs its state watchers (phase observation and the urgency timer) only while at least one `phase` or `urgent` listener exists: they start on the first subscription, stop when the last one leaves, and a late subscriber's first observed phase becomes its silent baseline. `hasListeners(type)` reports whether a kind has subscribers; `onChange(callback)` (returns an unsubscribe) fires on every subscriber-count change — that is how the manager keeps the watchers in step.
+
+`matchMedia` is injectable through the `matchMedia` option for tests; it defaults to `window.matchMedia`.
 
 ## Test UI without a server
 

@@ -40,6 +40,7 @@ describe("defaultUiStrings and the table", () => {
     expect(strings.enterYourName).toBe("Enter your name");
     expect(strings.podium).toBe("Podium");
     expect(strings.you).toBe("you");
+    expect(strings.thisIsYou).toBe("This is you");
     expect(strings.scoreUnit).toBe("pts");
     expect(strings.qrCode).toBe("QR code that opens the join link");
     expect(strings.secondsRemaining(5)).toBe("5 seconds remaining");
@@ -159,17 +160,21 @@ describe("Podium", () => {
   }
 
   it("renders the English aria-label, you-marker and score unit without a provider", () => {
-    render(Podium, { steps: steps() });
+    const { container } = render(Podium, { steps: steps() });
     expect(screen.getByRole("list", { name: "Podium" })).toBeInTheDocument();
-    expect(screen.getAllByText("← you")).toHaveLength(1);
+    const marker = container.querySelector(".you");
+    if (marker === null) throw new Error("the you marker did not render");
+    expect(marker.querySelector(".sr-only")?.textContent).toBe("This is you");
     expect(screen.getByText("30 pts")).toBeInTheDocument();
   });
 
   it("renders the replaced aria-label, you-marker and score unit from the table", () => {
     setStrings({ podium: "Treppchen", you: "du", scoreUnit: "Punkte" });
-    render(Podium, { steps: steps() });
+    const { container } = render(Podium, { steps: steps() });
     expect(screen.getByRole("list", { name: "Treppchen" })).toBeInTheDocument();
-    expect(screen.getAllByText("← du")).toHaveLength(1);
+    const marker = container.querySelector(".you");
+    if (marker === null) throw new Error("the you marker did not render");
+    expect([...marker.querySelectorAll("span")].some((s) => s.textContent === "du")).toBe(true);
     expect(screen.getByText("30 Punkte")).toBeInTheDocument();
   });
 });

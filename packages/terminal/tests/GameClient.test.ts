@@ -82,6 +82,21 @@ describe("GameClient", () => {
     }
   });
 
+  it("lets a playerId passed in room options win over the explicit argument", async () => {
+    const createSpy = vi.spyOn(Client.prototype, "create");
+    try {
+      createSpy.mockRejectedValue(new Error("stop"));
+      await expect(client.create("explicit-id", "Ann", { playerId: "options-id" })).rejects.toThrow(
+        "stop",
+      );
+      expect(createSpy.mock.calls[0]?.[1]).toEqual(
+        expect.objectContaining({ playerId: "options-id" }),
+      );
+    } finally {
+      createSpy.mockRestore();
+    }
+  });
+
   it("sends the current protocol version when creating and joining", async () => {
     const createSpy = vi.spyOn(Client.prototype, "create");
     const joinSpy = vi.spyOn(Client.prototype, "joinById");
