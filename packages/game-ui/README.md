@@ -184,6 +184,12 @@ The package ships `theme-contract.css`: a baseline for every contract variable (
 - Global classes: `card`, `taped`, `sticker`, `hand`, `sr-only` (shipped with the contract), `btn` (`btn--ghost`, `btn--danger`); `action-bar` is rendered by `ActionBar`, which styles nothing.
 - Chrome vs artwork: chrome — the framework components' look (lobby, join overlays, scoreboard/podium, game controls, timer) — is themed through these variables; artwork — your screens and cards — is yours to design.
 
+## Accessibility
+
+Every component is checked by axe in the jsdom tests via `expectNoViolations(container, "Component")` from `tests/support/a11y.ts`; zero violations is the gate. `color-contrast` is disabled there because jsdom cannot compute it — contrast stays a game-level test (#57). Interactive components are also driven with `userEvent` for tab order and Escape handling, and `tests/reducedMotion.test.ts` fails on any `transition`/`animation` declaration outside an `@media (prefers-reduced-motion: no-preference)` block.
+
+A violation that cannot be fixed yet goes into `tests/support/a11yAllowList.ts`: one entry per rule and component, each with a comment explaining why it is acceptable and the issue that tracks the fix.
+
 Depends on: `@partygame/game-client`, `@partygame/shared`, `svelte`, `uqr`, `zod`
 
 Guide: [docs/framework/README.md#game-ui-viewmodels](../../docs/framework/README.md#game-ui-viewmodels) ([Components](../../docs/framework/README.md#components))
