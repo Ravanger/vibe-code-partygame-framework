@@ -2,21 +2,50 @@
 import type { GameControlsViewModel } from "@partygame/game-ui";
 // biome-ignore lint/correctness/noUnusedImports: used by the generics attribute
 import type { BaseGameState } from "@partygame/shared/schema";
+import { tick } from "svelte";
+import { nextId } from "./uniqueId.js";
 
 const { vm }: { vm: GameControlsViewModel<TState> } = $props();
 
 let root = $state<HTMLElement>();
+let menuBtn = $state<HTMLButtonElement>();
+let endBtn = $state<HTMLButtonElement>();
+let leaveBtn = $state<HTMLButtonElement>();
+const popoverId = nextId("game-controls-popover");
+const confirmTitleId = nextId("game-controls-confirm-title");
 
 function closeOnOutsideClick(event: MouseEvent): void {
-  if (vm.menuOpen && !event.composedPath().some((node) => node === root)) vm.closeMenu();
+  if (!vm.menuOpen || event.composedPath().some((node) => node === root)) return;
+  vm.closeMenu();
+  menuBtn?.focus();
 }
 
-function closeOnEscape(event: KeyboardEvent): void {
-  if (event.key === "Escape") vm.closeMenu();
+function onWindowKeydown(event: KeyboardEvent): void {
+  if (!vm.menuOpen) return;
+  if (event.key === "Escape") {
+    vm.closeMenu();
+    menuBtn?.focus();
+    return;
+  }
+  // Tab from the last item closes the menu instead of leaving it.
+  if (event.key !== "Tab" || event.shiftKey) return;
+  if (document.activeElement === leaveBtn) {
+    event.preventDefault();
+    vm.closeMenu();
+    menuBtn?.focus();
+  }
+}
+
+async function onMenuClick(): Promise<void> {
+  const opening = !vm.menuOpen;
+  vm.toggleMenu();
+  if (!opening) return;
+  await tick();
+  (vm.canEndGame ? endBtn : leaveBtn)?.focus();
 }
 </script>
 
-<svelte:window onclick={closeOnOutsideClick} onkeydown={closeOnEscape} />
+<svelte:window onclick={closeOnOutsideClick} onkeydown={onWindowKeydown} />
 
 {#if vm.isVisible}
   <div class="game-controls" bind:this={root}>
@@ -29,22 +58,31 @@ function closeOnEscape(event: KeyboardEvent): void {
         aria-label="Game menu"
         aria-haspopup="true"
         aria-expanded={vm.menuOpen}
-        onclick={() => vm.toggleMenu()}
+        aria-controls={popoverId}
+        bind:this={menuBtn}
+        onclick={() => onMenuClick()}
       >&#8943;</button>
       {#if vm.menuOpen}
-        <div class="popover card">
+        <div class="popover card" id={popoverId}>
           {#if vm.canEndGame}
             {#if vm.confirmingEnd}
-              <p class="confirm">End the game for everyone?</p>
-              <div class="confirm-actions">
-                <button type="button" class="btn btn--danger" onclick={() => vm.confirmEnd()}>Yes</button>
-                <button type="button" class="btn" onclick={() => vm.cancelEnd()}>No</button>
+              <div class="confirm-dialog" role="alertdialog" aria-labelledby={confirmTitleId}>
+                <p id={confirmTitleId} class="confirm">End the game for everyone?</p>
+                <div class="confirm-actions">
+                  <button type="button" class="btn btn--danger" onclick={() => vm.confirmEnd()}>Yes</button>
+                  <button type="button" class="btn" onclick={() => vm.cancelEnd()}>No</button>
+                </div>
               </div>
             {:else}
-              <button type="button" class="btn btn--danger" onclick={() => vm.askEnd()}>End game</button>
+              <button
+                type="button"
+                class="btn btn--danger"
+                bind:this={endBtn}
+                onclick={() => vm.askEnd()}
+              >End game</button>
             {/if}
           {/if}
-          <button type="button" class="btn" onclick={() => vm.leave()}>Leave game</button>
+          <button type="button" class="btn" bind:this={leaveBtn} onclick={() => vm.leave()}>Leave game</button>
         </div>
       {/if}
     {/if}
@@ -79,6 +117,12 @@ function closeOnEscape(event: KeyboardEvent): void {
     gap: 0.75rem;
     min-width: 220px;
     padding: 0.9rem;
+  }
+
+  .confirm-dialog {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
   }
 
   .confirm {

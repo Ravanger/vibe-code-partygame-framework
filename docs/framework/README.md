@@ -38,6 +38,19 @@ display name (override the display name with `--name`).
 Once it runs, replace the wave ruleset in `games/<slug>/src/` with your own game; the phases, actions, state, UI,
 terminal, bots and the declaration are small, self-contained files you can edit. The rest of this guide explains how each piece works.
 
+Each game describes itself once in a `partygame` key of its own `package.json`, which `bun run games` and the
+interactive picker read — adding a game needs no edit to dispatch code:
+
+```json
+"partygame": { "name": "WitClash", "description": "A word-prompt party game for 3 to 8 players", "icon": "🧠" }
+```
+
+`name` and `description` must be non-empty; `icon` must be exactly one emoji grapheme (a multi-code-point emoji
+like a family is fine, two emojis are not). The template ships the key with the display name already filled in. A
+game with no manifest still lists under its package name; a malformed manifest is reported on stderr and the game
+falls back to its package name too. Player counts are not part of the manifest — `defineGame` already requires
+`minPlayers`/`maxPlayers`.
+
 ## Concepts
 
 ### Phases
@@ -832,6 +845,15 @@ reconnection token in `sessionStorage`, then falls back to the room code in `loc
 A client that joined with `joinAsSpectator` is remembered as a spectator and `resume()` rejoins it as one by code, never as a seated player.
 `leave()` forgets the room code, token and spectator flag (a reload does not rejoin) and sets `status` to `"disconnected"`.
 Joins are de-duplicated per code and mode, so watching and playing the same room are different joins and the newest wins.
+
+### Sound and animation hooks
+`manager.feedback` is a typed event stream for attaching sound or animation; the framework ships no assets. Every event carries a `reducedMotion`
+flag (read live from `prefers-reduced-motion`, injectable through the `matchMedia` option for tests) so a game can choose quiet or subtle feedback:
+`{ type: "phase", from, to }` when `state.phase` changes (the first phase observed after connecting — or after the first listener subscribes — is the
+silent baseline), `{ type: "urgent" }` once per phase when the countdown enters its last ten seconds, and `{ type: "message", name, payload }` for
+server broadcasts whose name the game registered with `onMessage`. `manager.feedback.on(type, callback)` returns an unsubscribe. The manager runs
+its state watchers (phase observation and urgency timer) only while at least one `phase` or `urgent` listener exists — they start on the first
+subscription and stop when the last one leaves; `hasListeners(type)` reports subscribers and `onChange(callback)` fires on every count change.
 
 ### Testing UI code
 `@partygame/game-client/testing` has `StubRoom`, an in-memory room around a real state object. `manager.attach(new StubRoom(state))`, mutate the state,

@@ -106,8 +106,10 @@
           "default": "./dist/index.js"
         },
         "symbols": {
+          "ContentFile": {},
           "LoadJsoncDirOptions": {},
           "loadJsoncDir": {},
+          "loadJsoncDirWithFiles": {},
           "stripJsonComments": {}
         }
       },
@@ -296,10 +298,15 @@
           "ConnectionStatus": {},
           "Countdown": {},
           "EndpointOverrides": {},
+          "FeedbackBus": {},
+          "FeedbackEvent": {},
           "GameConnectionManager": {},
           "GameConnectionOptions": {},
           "JoinOptions": {},
+          "MessageFeedbackEvent": {},
+          "PhaseFeedbackEvent": {},
           "RoomLike": {},
+          "UrgentFeedbackEvent": {},
           "readCodeParam": {},
           "resolveEndpoints": {}
         },
