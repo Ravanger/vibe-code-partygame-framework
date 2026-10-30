@@ -93,7 +93,7 @@ const {
     padding: 0.1rem 0.85rem;
     border: var(--outline);
     border-radius: var(--radius-pill);
-    background: var(--pink);
+    background: var(--color-1);
     box-shadow: 2px 3px 0 var(--ink);
     font-family: var(--font-display);
     font-size: calc(var(--fs-3) * var(--scale, 1));
@@ -108,7 +108,7 @@ const {
   }
 
   .reply.winner {
-    background: var(--sun);
+    background: var(--color-2);
   }
 
   .stickers {
@@ -127,11 +127,11 @@ const {
   }
 
   .sticker--clash {
-    background: var(--pink);
+    background: var(--color-1);
   }
 
   .sticker--pick {
-    background: var(--sky);
+    background: var(--color-4);
   }
 
   .sticker--out {

@@ -13,6 +13,8 @@ export const WitClashOptionsSchema = z.object({
   honorVote: z.boolean().default(false),
   /** How strictly answers and names are filtered. */
   filterLevel: z.enum(["off", "moderate", "strict"]).default("moderate"),
+  /** Which categories free play may offer: "any" includes mature ones, "family" never does. */
+  contentRating: z.enum(["any", "family"]).default("any"),
 });
 
 export type WitClashOptions = z.output<typeof WitClashOptionsSchema>;

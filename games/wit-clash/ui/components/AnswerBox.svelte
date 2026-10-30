@@ -59,6 +59,6 @@ function handleKeydown(e: KeyboardEvent) {
   }
 
   .counter.low {
-    background: var(--pink);
+    background: var(--color-1);
   }
 </style>

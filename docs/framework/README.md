@@ -38,6 +38,19 @@ display name (override the display name with `--name`).
 Once it runs, replace the wave ruleset in `games/<slug>/src/` with your own game; the phases, actions, state, UI,
 terminal, bots and the declaration are small, self-contained files you can edit. The rest of this guide explains how each piece works.
 
+Each game describes itself once in a `partygame` key of its own `package.json`, which `bun run games` and the
+interactive picker read — adding a game needs no edit to dispatch code:
+
+```json
+"partygame": { "name": "WitClash", "description": "A word-prompt party game for 3 to 8 players", "icon": "🧠" }
+```
+
+`name` and `description` must be non-empty; `icon` must be exactly one emoji grapheme (a multi-code-point emoji
+like a family is fine, two emojis are not). The template ships the key with the display name already filled in. A
+game with no manifest still lists under its package name; a malformed manifest is reported on stderr and the game
+falls back to its package name too. Player counts are not part of the manifest — `defineGame` already requires
+`minPlayers`/`maxPlayers`.
+
 ## Concepts
 
 ### Phases
@@ -133,6 +146,16 @@ The runtime handles these host-only actions for you; do not declare them (`defin
 - `SET_OPTIONS { ...partial }`: Lobby only. If the game declares no `definition.options` schema, it rejects any key but `type` (`INVALID_ACTION`); a room for such a game also refuses create options. Otherwise the partial is merged into the current options and validated, then published; a failed parse or a result whose JSON is longer than `MAX_OPTIONS_JSON_LENGTH` is `INVALID_ACTION` and keeps the previous options. `ctx.options` reflects the new value.
 - `END_GAME`: any phase but the Lobby (`WRONG_PHASE` there). It runs `onEndGame(ctx)`, where a game can set a notice for the players, and then returns everyone to the Lobby as `ctx.returnToLobby()` does (`onReturnToLobby` runs, waiting joiners are let in). The hook cannot veto it.
 
+The first seat of a room is host by acquisition. After that, when the current host is not connected — or no seat holds the role any more (their seat was removed) — the runtime migrates it to one of the connected seats, in seat order, per `definition.hostMigration`:
+
+- `"next-seated"` (the default): the first connected seat that is active and ready, else the first connected ready seat, else the first connected seat — the historical behaviour.
+- `"oldest"`: the first connected seat regardless of ready or active.
+- `"random"`: one drawn with the room's seeded RNG, so a replay makes the same draw.
+- `"none"`: nobody — the room stays host-less until the old host returns; if their seat is removed (reconnect window expired, kicked) it stays host-less, and there is no recovery.
+- A `HostPicker` function `(candidates, rng) => playerId | undefined` for a game-defined pick among the connected seats; returning `undefined` leaves the room host-less like `"none"`, and an id that is not among the candidates is ignored (the current host stays in place).
+
+Migration runs before the phase's `onRosterChange`, so the hook sees the new role.
+
 ### Roster changes and mid-game joiners
 Joins, leaves, disconnects, reconnects and ready changes call the current phase's `onRosterChange(ctx)`.
 Use it to re-check completion ("everyone has answered") so a leaver cannot stall the game.
@@ -142,6 +165,22 @@ Call `ctx.activateWaitingPlayers()` at a natural break in your game to let them 
 an unnamed seat stays waiting, and in the Lobby a seat that sets its name is activated at once.
 A seat that joined the Lobby is active, but when the game leaves the Lobby (`START_GAME` or auto-start) every seat that is still unnamed is benched (`RuntimeHost.benchUnreadyPlayers`) and waits for the next activation.
 After a player reconnects, `onPlayerSync(ctx, playerId)` runs so you can resend their private messages.
+
+### Join control
+A game declares an optional synchronous `canJoin(input): CanJoinResult` on the definition to gate every join — including spectators and creation joins (there is no separate `canCreate`; creating a room joins through `onJoin`). The input carries `playerId`, the proposed `name`, the `spectator` flag, the client's `joinData` (string/number/boolean values) and the current `roster`. Return `{ ok: true }` to admit, or `{ ok: false, code, message }` to refuse with a game-authored message (for example `code: "ROOM_LOCKED"`); the refusal is not an `ErrorCode`, it is shown to the joining client as-is. The hook must be synchronous — core stays deterministic and Colyseus-free, so external auth stays out of it.
+
+The client sends `joinData` with `manager.join(code, { joinData })`: at most 8 keys, keys up to 32 characters, string values up to 256 characters (numbers and booleans unbounded) — enforced by `JoinOptionsSchema`. It is a one-shot per join: the framework never stores or logs it (it may hold a password), so it is not resent when a client resumes after a reload.
+
+The runtime evaluates it through the pure `evaluateJoin(definition, input)`: no hook accepts; a refusal message is trimmed and capped at 200 characters; a throwing hook yields the generic refusal `{ ok: false, code: "JOIN_REFUSED", message: "You cannot join this room." }` instead of crashing the join.
+
+The server enforces it in `GameRoom` on every join — after the kicked and watch-only checks, before a seat is given out; a reload-rejoin of an already-seated player skips the hook. A refusal closes the connection with close code 4403 (`CLOSE_CODES.JOIN_REFUSED`) carrying the game's message:
+
+```ts
+canJoin: (input) =>
+  input.joinData.password === "sesame"
+    ? { ok: true }
+    : { ok: false, code: "NO_PASSWORD", message: "Wrong password" },
+```
 
 ### Timers
 `duration` is milliseconds, or a function of the context. The timer restarts on every entry (including re-entry).
@@ -343,8 +382,12 @@ a snapshot never carries `ctx.priv` or per-client data. Each snapshot names the 
 `transition` entry it belongs to and shows that transition's `from` phase — the final state of the phase
 being left.
 
-The host exports with `room.request(ClientMessage.EXPORT_REPLAY)`; the answer is an `ExportReplayResponse`
-(from `@partygame/shared`) — the bundle, or a refusal shaped like a rejected `ActionResult`: `UNAUTHORIZED`
+The host exports with `room.request(ClientMessage.EXPORT_REPLAY)` — on a game client, `manager.exportReplay()`
+from `@partygame/game-client`, which normalizes the answer the same way `sendAction` does (a well-formed
+refusal is passed through and remembered in `lastServerError`; a malformed reply — including a bundle-shaped
+reply without a number `bundleVersion` or an array `snapshots` — or a failed request becomes a fixed
+`BAD_REPLY`/`CONNECTION_LOST` result). The raw answer is an `ExportReplayResponse` (from
+`@partygame/shared`) — the bundle, or a refusal shaped like a rejected `ActionResult`: `UNAUTHORIZED`
 for a non-host (including spectators), `NOT_ALLOWED` when the game records no action log or its logged
 transitions do not match the recorded snapshots (a middleware that drops transition events makes export
 impossible), and `INTERNAL` if building the bundle throws. The bundle's `frameworkVersion` is
@@ -371,7 +414,9 @@ missing or malformed snapshots set its `error` and leave no snapshots) and steps
 `state` is a fresh `stateClass` instance filled from the current snapshot (via `syncedStateFromJson`, the
 inverse of `syncedJsonOf`, from `@partygame/shared/schema`), and `isSpectator` is always true — so a game's
 existing screens render a replay read-only. Snapshots hold synced state only: no private or per-client data,
-and player ids are the live ones (no `p1..pN` remapping).
+and player ids are the live ones (no `p1..pN` remapping). A game wires its own viewer on top (WitClash ships
+one at the `?replay` URL parameter — see its README); screens that read manager members beyond `state` and
+`isSpectator` while mounting (for example a countdown or the seat) need those supplied by the game's adapter.
 
 **Limitations in v1.** Mid-game roster changes are not replayed: `replayLog` throws naming the first such
 entry. Lobby-phase roster changes are skipped — the table is already seated — except the one that
@@ -525,6 +570,7 @@ Client-visible error strings are fixed and table-driven; raw Zod or exception te
   | 4401 | `ROOM_FULL` | `NOT_ALLOWED` | Room is full |
   | 4402 | `SEAT_REMOVED` | `KICKED` | Your seat was removed |
   | 4403 | `KICKED_REJOIN` | `KICKED` | Removed by the host |
+  | 4403 | `JOIN_REFUSED` | `NOT_ALLOWED` | the game's refusal message (shares 4403) |
   | 4404 | `WATCH_ONLY` | `NOT_ALLOWED` | This room is watch-only |
   | 4406 | `SEAT_TAKEN` | `UNAUTHORIZED` | Seat is taken |
   | 4409 | `SEAT_TAKEN_OVER` | `KICKED` | Your seat was opened on another device |
@@ -537,7 +583,7 @@ Client-visible error strings are fixed and table-driven; raw Zod or exception te
 - `ctx.reject(code, message)` is the one game-authored exception: your message is passed through to the client.
   Keep it short and player-facing; the code still comes from `ErrorCode`.
 - The client keeps one `lastServerError` (`GameConnectionManager.lastServerError`): server `ERROR` payloads,
-  failed action answers, refused joins (looked up by close code), a failed `join`/`create` (`ROOM_NOT_FOUND`, `BAD_REPLY` or `CONNECTION_LOST`; the exception goes to the `logger` option and the promise still rejects) and a fixed `NOT_CONNECTED`, `CONNECTION_LOST` or `BAD_REPLY` message for local action failures (the exception goes to the manager's `logger` option, default `console.warn`).
+  failed action answers, refused joins (looked up by close code; a `VERSION_MISMATCH` template and a 4403 `canJoin` refusal keep the server-filled text), a failed `join`/`create` (`ROOM_NOT_FOUND`, `BAD_REPLY` or `CONNECTION_LOST`; the exception goes to the `logger` option and the promise still rejects) and a fixed `NOT_CONNECTED`, `CONNECTION_LOST` or `BAD_REPLY` message for local action failures (the exception goes to the manager's `logger` option, default `console.warn`).
   The welcome screen moves a failed join's message into its own error line and clears the toast, so exactly one renders.
   `ServerError.action` is set only by `ctx.reject` and invalid-payload rejections; framework rejections omit it.
   Clear it with `dismissError()`.
@@ -800,6 +846,15 @@ A client that joined with `joinAsSpectator` is remembered as a spectator and `re
 `leave()` forgets the room code, token and spectator flag (a reload does not rejoin) and sets `status` to `"disconnected"`.
 Joins are de-duplicated per code and mode, so watching and playing the same room are different joins and the newest wins.
 
+### Sound and animation hooks
+`manager.feedback` is a typed event stream for attaching sound or animation; the framework ships no assets. Every event carries a `reducedMotion`
+flag (read live from `prefers-reduced-motion`, injectable through the `matchMedia` option for tests) so a game can choose quiet or subtle feedback:
+`{ type: "phase", from, to }` when `state.phase` changes (the first phase observed after connecting — or after the first listener subscribes — is the
+silent baseline), `{ type: "urgent" }` once per phase when the countdown enters its last ten seconds, and `{ type: "message", name, payload }` for
+server broadcasts whose name the game registered with `onMessage`. `manager.feedback.on(type, callback)` returns an unsubscribe. The manager runs
+its state watchers (phase observation and urgency timer) only while at least one `phase` or `urgent` listener exists — they start on the first
+subscription and stop when the last one leaves; `hasListeners(type)` reports subscribers and `onChange(callback)` fires on every count change.
+
 ### Testing UI code
 `@partygame/game-client/testing` has `StubRoom`, an in-memory room around a real state object. `manager.attach(new StubRoom(state))`, mutate the state,
 call `room.patch()`. `room.requests`/`room.sent` record what the UI sent, `room.reply` sets the answer to `request`, and `push`, `dropConnection`,
@@ -841,6 +896,7 @@ vitest `setupFiles`: it shims the storages and makes the SDK use `ws` under jsdo
 | `OptionsReader` | The published options, parsed once per state change: `new OptionsReader(manager, schema, defaults?)` exposes reactive `current`, falling back to `defaults` or the schema's `.default()`s. |
 | `PhaseClock` | A phase's server countdown plus its configured length: `new PhaseClock(manager, totalSeconds, announceAt?)` exposes `secondsLeft`, `isUrgent`, `announcement` (30/10/5 by default) and your `totalSeconds` getter. |
 | `TypingReporter` | One typing message per change: `new TypingReporter(send, idleMs = 2500)`; call `keystroke()` per key and `stop()` on submit or teardown. |
+| `SoundPolicy` | The sound gate: off by default, one persisted toggle (stored under the game's `storagePrefix`), nothing plays before the first tap. `new SoundPolicy({ storage, storagePrefix, target })`; reactive `enabled`, `unlocked`, `canPlay` and `toggle()`; `dispose()` removes the gesture listeners. A throwing or empty storage degrades to off. |
 | `AppRouter` | Routes the connection status and room phase to a screen of your screen table (see below). `createAppRouter(manager, screens)` builds one. |
 | `WaitingRoomViewModel` | The lobby: seats (`LobbyPlayer`), ready count, host-only start and kick (with confirmation), name field, share URL, copy code, `notice`. An optional second argument `{ location?, clipboard? }` replaces the defaults (`window.location`, `navigator.clipboard`, read lazily) for non-browser hosts and tests. |
 
@@ -858,7 +914,7 @@ export class GameControlsViewModel extends GameControlsBase<ButtonState> {
 }
 ```
 
-`LobbySettingsViewModel` takes the same options schema you pass to `defineGame`, optional `defaults` shown until the server publishes valid options, and optional `labels`. Every bounded numeric option (`.min()` and `.max()`) appears in the form with no UI work; a string-enum option (`z.enum([...])`) appears as a row of choice buttons, one per value, also with no UI work; a field is labelled from its camelCase key ("Turn seconds") unless `labels` overrides it:
+`LobbySettingsViewModel` takes the same options schema you pass to `defineGame`, optional `defaults` shown until the server publishes valid options, and optional `labels`. Every bounded numeric option (`.min()` and `.max()`) appears as a number input — step 1 for integers, the schema's `multipleOf` when present, else `any`; every boolean option appears as a checkbox; a string-enum option (`z.enum([...])`) appears as a row of choice buttons, one per value; every plain string option appears as a text input (bounded by `maxlength` when the schema bounds it) — all with no UI work. Options the form cannot render (unbounded numbers, arrays, objects, enums with non-string choices) are skipped and reported to the optional `onUnsupported(key, reason)` config — by default a console warning, once per key per instance. A field is labelled from its camelCase key ("Turn seconds") unless `labels` overrides it:
 
 ```ts
 import { LobbySettingsViewModel as LobbySettingsBase } from "@partygame/game-ui";
@@ -919,6 +975,7 @@ To change a rule, subclass it and override a member, for example `banner`: `clas
 | `QrCode` | `text: string` |
 | `ActionBar` | `children: Snippet` |
 | `NameInput` | `field: NameField`, `focus?: boolean` |
+| `SoundToggle` | `policy: SoundPolicy`, `on?: string`, `off?: string` (labels, default "Sound on"/"Sound off"); a native `type="button"` with `aria-pressed` |
 | `LobbySettings` | `vm: LobbySettingsViewModel<TState>` |
 | `GameControls` | `vm: GameControlsViewModel<TState>` |
 
@@ -934,9 +991,9 @@ To change a rule, subclass it and override a member, for example `banner`: `clas
 <ActionBar><button type="button" class="btn">Go</button></ActionBar>
 ```
 
-Theming contract: the package ships no stylesheet. The game's CSS defines these, and the components read them.
+Theming contract: the package ships `@partygame/game-ui/theme-contract.css`. Import it first in your `app.css` for a working baseline of every variable below (plus `.sr-only`), then override what you want to change. Chrome — the framework components' look (lobby, join overlays, scoreboard/podium, game controls, timer) — is themed through these variables; artwork — your screens and cards — is yours to design.
 
-- Custom properties: `--ink`, `--ink-soft`, `--white`, `--pink`, `--sun`, `--mint`, `--sky`, `--disabled`, `--tape-sky`, `--tape-mint` (`StatusPanel` sets `--tape` itself), `--fs-3`, `--fs-4`, `--fs-5`, `--font-display`, `--outline`, `--radius-card`, `--scrap-shadow`, `--scale` (optional multiplier, default 1), `--timer-size` (optional, default 96px).
+- Custom properties: `--ink`, `--ink-soft`, `--white`, `--paper`, `--color-1` to `--color-4`, `--accent`, `--danger`, `--disabled`, `--tape-1` to `--tape-4` (`StatusPanel` sets `--tape` itself), `--fs-1` to `--fs-5`, `--font-display`, `--outline`, `--radius-card`, `--radius-btn`, `--scrap-shadow`, `--podium-block-height-1`, `--podium-block-height-2`, `--podium-block-height-3`, `--scale`, `--timer-size`.
 - Global classes: `card`, `taped`, `sticker`, `hand` (`StatusPanel`); `sr-only` (`Timer`); `action-bar` (`ActionBar` renders it and styles nothing, so the game styles the bar, e.g. `.action-bar > .btn` and `main.tv .action-bar`).
 
 ## Bots

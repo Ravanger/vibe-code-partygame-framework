@@ -69,7 +69,7 @@ $effect(() => {
     padding: 0.1em 0.5em;
     border: var(--outline);
     border-radius: var(--radius-card);
-    background: var(--pink);
+    background: var(--color-1);
     color: var(--white);
     -webkit-text-stroke: 2px var(--ink);
     paint-order: stroke fill;
@@ -88,7 +88,7 @@ $effect(() => {
     left: 50%;
     width: 96px;
     height: 26px;
-    background: var(--tape-sun);
+    background: var(--tape-2);
     transform: translateX(-50%) rotate(3deg);
   }
 

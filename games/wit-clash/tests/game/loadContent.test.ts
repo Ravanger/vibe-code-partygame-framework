@@ -44,6 +44,61 @@ describe("loadContent", () => {
     await expect(loadContent(dir)).rejects.toThrow(`Need at least ${MIN_CATEGORIES} categories`);
   });
 
+  it("refuses to start with enough categories but too few family-rated ones", async () => {
+    const mature = (id: string) =>
+      JSON.stringify({
+        id,
+        name: id,
+        rating: "mature",
+        prompts: [{ id: `${id}-1`, text: "Say something." }],
+      });
+    await writeFile(join(dir, "a.json"), category("a"));
+    await writeFile(join(dir, "b.json"), category("b"));
+    await writeFile(join(dir, "m1.json"), mature("m1"));
+    await writeFile(join(dir, "m2.json"), mature("m2"));
+    await expect(loadContent(dir)).rejects.toThrow(
+      `Need at least ${MIN_CATEGORIES} family-rated categories`,
+    );
+  });
+
+  it("refuses to start when every category has weight 0", async () => {
+    const zeroWeight = (id: string) =>
+      JSON.stringify({
+        id,
+        name: id,
+        weight: 0,
+        prompts: [{ id: `${id}-1`, text: "Say something." }],
+      });
+    for (const id of ["a", "b", "c"]) await writeFile(join(dir, `${id}.json`), zeroWeight(id));
+    await expect(loadContent(dir)).rejects.toThrow(`Need at least ${MIN_CATEGORIES} categories`);
+  });
+
+  it("counts only offerable (weight > 0) categories for the family minimum", async () => {
+    const mature = (id: string) =>
+      JSON.stringify({
+        id,
+        name: id,
+        rating: "mature",
+        prompts: [{ id: `${id}-1`, text: "Say something." }],
+      });
+    const zeroWeightFamily = (id: string) =>
+      JSON.stringify({
+        id,
+        name: id,
+        weight: 0,
+        prompts: [{ id: `${id}-1`, text: "Say something." }],
+      });
+    await writeFile(join(dir, "m1.json"), mature("m1"));
+    await writeFile(join(dir, "m2.json"), mature("m2"));
+    await writeFile(join(dir, "m3.json"), mature("m3"));
+    await writeFile(join(dir, "f1.json"), zeroWeightFamily("f1"));
+    await writeFile(join(dir, "f2.json"), zeroWeightFamily("f2"));
+    await writeFile(join(dir, "f3.json"), zeroWeightFamily("f3"));
+    await expect(loadContent(dir)).rejects.toThrow(
+      `Need at least ${MIN_CATEGORIES} family-rated categories`,
+    );
+  });
+
   it("reports a missing directory", async () => {
     await expect(loadContent(join(dir, "missing"))).rejects.toThrow(/not found/);
   });

@@ -6,7 +6,7 @@ Ships source (`.ts`/`.svelte.ts`); consumers need the Svelte plugin — Vite wit
 
 | Import | What |
 |---|---|
-| `@partygame/game-client` | `GameConnectionManager<TState>`: connect, sync, send actions; `Countdown`, `resolveEndpoints`, `readCodeParam` |
+| `@partygame/game-client` | `GameConnectionManager<TState>`: connect, sync, send actions; `Countdown`, `FeedbackBus`, `resolveEndpoints`, `readCodeParam` |
 | `@partygame/game-client/testing` | `StubRoom`, `connectedClient`, `fakeFetch` for UI tests without a server |
 | `@partygame/game-client/test-setup` | jsdom setup (shims storage, fixes WebSocket for the SDK) |
 
@@ -28,17 +28,20 @@ export const manager = new GameConnectionManager<ButtonState>({
 void manager.resume();       // page load: stored token, then stored room code
 ```
 
-`resolveEndpoints(overrides, pageHost)` takes string overrides `{ host?, gamePort?, apiPort? }` (for example from `VITE_*` env vars), so a phone on `http://192.168.1.50:5173` talks to `192.168.1.50:2567`.
+`resolveEndpoints(overrides, pageHost, pageProtocol?)` takes string overrides `{ host?, gamePort?, apiPort?, endpoint?, apiBase? }` (for example from `VITE_*` env vars) and an optional page protocol (`window.location.protocol`, default `"http:"`), so a phone on `http://192.168.1.50:5173` talks to `192.168.1.50:2567` — and an HTTPS page gets `https://…` instead of a mixed-content `http://…`. An `endpoint` override is returned verbatim (for example `wss://your-origin/game` behind a reverse proxy); an `apiBase` override is returned verbatim, and the manager prefers it over `apiPort`: it calls `<apiBase>/api/resolve-code` with no port appended. See [HOSTING.md](../../docs/HOSTING.md#behind-https-and-a-reverse-proxy).
 
 ## Join a room
 
 ```ts
 await manager.create();                  // new room, you are the host; optional create options
 await manager.join("ABCD");              // by room code; throws with the server's reason
+await manager.join("ABCD", { joinData: { invite: "X" } }); // bounded data for the game's canJoin hook
 await manager.joinAsSpectator("ABCD");   // TV display, no seat
 manager.setName("Ada");                  // readies the seat
 await manager.leave();                   // forgets the room
 ```
+
+`join` options (`JoinOptions`): `name`, `spectator`, and `joinData` (string/number/boolean values; at most 8 keys, keys up to 32 characters, strings up to 256). `joinData` is sent once per join and never stored or logged by the manager.
 
 ```ts
 import { readCodeParam } from "@partygame/game-client";
@@ -84,6 +87,15 @@ const manager = new GameConnectionManager<MyState, { TURN: { id: string } }>();
 manager.onMessage("TURN", (turn) => turn.id); // typed; other names are a compile error
 ```
 
+## Export the replay
+
+`exportReplay()` is the client route to the host-only `EXPORT_REPLAY` request (#19's server child). It resolves with an `ExportReplayResponse` from `@partygame/shared`: the room's replay bundle for the host, or a refusal — the server's well-formed refusal (for example `UNAUTHORIZED` for a non-host) is passed through and remembered in `lastServerError`, while a malformed reply becomes a fixed `BAD_REPLY`. A request that cannot be sent or answered fails locally with `NOT_CONNECTED` (no room) or `CONNECTION_LOST` (the exception goes to the `logger` option, default `console.warn`).
+
+```ts
+const response = await manager.exportReplay(); // host: the bundle; non-host: { ok: false, error }
+if (response.ok === false) console.warn(manager.lastServerError?.message);
+```
+
 ## Show the phase clock
 
 `countdown()` counts down to `state.phaseEndsAt`, corrected for client clock skew. It ticks only while something reads it inside a Svelte effect and stops when the last reader goes away — no cleanup needed. `destroy()` is a deprecated no-op kept for existing callers.
@@ -92,6 +104,26 @@ manager.onMessage("TURN", (turn) => turn.id); // typed; other names are a compil
 const clock = manager.countdown();
 clock.secondsLeft; clock.isUrgent; clock.isExpired; // reactive
 ```
+
+## Sound and animation feedback
+
+`manager.feedback` is a typed event stream for attaching sound or animation, without the framework shipping assets. Every event carries a `reducedMotion` flag (read live from `prefers-reduced-motion`) so a game can choose quiet or subtle feedback:
+
+- `{ type: "phase", from, to }` — when `state.phase` changes; the first phase observed after connecting (or after the first listener subscribes) is the silent baseline.
+- `{ type: "urgent" }` — once per phase, when the countdown enters its last ten seconds.
+- `{ type: "message", name, payload }` — a server broadcast for a name registered with `onMessage`.
+
+```ts
+manager.feedback.on("phase", (event) => {
+  if (!event.reducedMotion) playWhoosh(event.to);
+});
+manager.feedback.on("urgent", () => tickSound());
+const off = manager.feedback.on("message", (event) => chime(event.name)); // returns an unsubscribe
+```
+
+The manager runs its state watchers (phase observation and the urgency timer) only while at least one `phase` or `urgent` listener exists: they start on the first subscription, stop when the last one leaves, and a late subscriber's first observed phase becomes its silent baseline. `hasListeners(type)` reports whether a kind has subscribers; `onChange(callback)` (returns an unsubscribe) fires on every subscriber-count change — that is how the manager keeps the watchers in step.
+
+`matchMedia` is injectable through the `matchMedia` option for tests; it defaults to `window.matchMedia`.
 
 ## Test UI without a server
 

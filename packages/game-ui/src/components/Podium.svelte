@@ -25,7 +25,10 @@ const stickerSize = (step: PodiumStep<TRow>): number => {
               <PlayerSticker name={player.name} playerId={player.playerId} size={stickerSize(step)} />
               <span class="occupant-name">{player.name}</span>
               {#if player.isMe}
-                <span class="you hand">&larr; you</span>
+                <span class="you hand"
+                  ><span aria-hidden="true">&larr;</span> <span aria-hidden="true">you</span
+                  ><span class="sr-only">This is you</span></span
+                >
               {/if}
               {#if extra}{@render extra(player)}{/if}
               <span class="occupant-score">{`${player.score} pts`}</span>
@@ -77,7 +80,7 @@ const stickerSize = (step: PodiumStep<TRow>): number => {
   }
 
   .star {
-    color: var(--sun);
+    color: var(--color-2);
     -webkit-text-stroke: 2px var(--ink);
     paint-order: stroke fill;
     font-size: calc(var(--fs-4) * var(--scale, 1));
@@ -95,7 +98,7 @@ const stickerSize = (step: PodiumStep<TRow>): number => {
   }
 
   .is-me .occupant-name {
-    text-decoration: underline wavy var(--pink) 3px;
+    text-decoration: underline wavy var(--color-1) 3px;
     text-underline-offset: 4px;
   }
 
@@ -119,7 +122,7 @@ const stickerSize = (step: PodiumStep<TRow>): number => {
     border: var(--outline);
     border-bottom: none;
     border-radius: var(--radius-card) var(--radius-card) 0 0;
-    background: var(--sky);
+    background: var(--color-4);
     color: var(--ink);
     box-shadow: var(--scrap-shadow);
     font-family: var(--font-display);
@@ -127,29 +130,17 @@ const stickerSize = (step: PodiumStep<TRow>): number => {
   }
 
   .tier-1 .block {
-    height: calc(150px * var(--scale, 1));
-    background: var(--sun);
+    height: var(--podium-block-height-1, calc(150px * var(--scale, 1)));
+    background: var(--color-2);
   }
 
   .tier-2 .block {
-    height: calc(108px * var(--scale, 1));
+    height: var(--podium-block-height-2, calc(108px * var(--scale, 1)));
   }
 
   .tier-3 .block {
-    height: calc(78px * var(--scale, 1));
-    background: var(--pink);
-  }
-
-  :global(main.tv) .tier-1 .block {
-    height: 17dvh;
-  }
-
-  :global(main.tv) .tier-2 .block {
-    height: 12dvh;
-  }
-
-  :global(main.tv) .tier-3 .block {
-    height: 8dvh;
+    height: var(--podium-block-height-3, calc(78px * var(--scale, 1)));
+    background: var(--color-1);
   }
 
   @keyframes rise {

@@ -33,11 +33,11 @@ const tip = $derived(STICK_START + STICK_LENGTH * fraction);
     align-items: center;
     gap: 0.35rem;
     flex-shrink: 0;
-    --spark: var(--sun);
+    --spark: var(--color-2);
   }
 
   .sparkler.urgent {
-    --spark: var(--pink);
+    --spark: var(--color-1);
   }
 
   svg {
@@ -80,7 +80,7 @@ const tip = $derived(STICK_START + STICK_LENGTH * fraction);
 
   .urgent .number {
     color: var(--ink);
-    text-shadow: 2px 2px 0 var(--pink);
+    text-shadow: 2px 2px 0 var(--color-1);
   }
 
   @keyframes flicker {

@@ -19,6 +19,23 @@ export interface PlayerInfo {
   isActive: boolean;
 }
 
+/** What a game's `canJoin` hook receives about one join attempt. */
+export interface CanJoinInput {
+  /** The stable client-generated id of the joining seat. */
+  playerId: string;
+  /** The name the client proposes, if any. */
+  name?: string;
+  /** True when the client joins without a seat (for example a TV display). */
+  spectator: boolean;
+  /** String/number/boolean data the client sent with the join. */
+  joinData: Readonly<Record<string, string | number | boolean>>;
+  /** The seats as reported before this join is admitted. */
+  roster: PlayerInfo[];
+}
+
+/** The outcome of a `canJoin` check: an accept or a refusal with a game-authored message. */
+export type CanJoinResult = { ok: true } | { ok: false; code: string; message: string };
+
 /** Fields the runtime writes into the synced state. */
 export interface PhaseState {
   phase: string;
@@ -193,6 +210,16 @@ type DurationFn<TState extends PhaseState, TPrivate, TOptions> = {
   compute(ctx: GameContext<TState, TPrivate, TOptions>): number;
 }["compute"];
 
+/**
+ * Picks the next host from the connected seats in seat order; return `undefined` to leave the room
+ * without a host. An id that is not among `candidates` (stale, disconnected or never seated) is
+ * ignored and the current host stays in place.
+ */
+export type HostPicker = (candidates: PlayerInfo[], rng: () => number) => string | undefined;
+
+/** How the runtime picks a new host when the current one disconnects (`GameDefinition.hostMigration`). */
+export type HostMigration = "oldest" | "next-seated" | "random" | "none" | HostPicker;
+
 /** One phase of a game. */
 export interface PhaseDefinition<TState extends PhaseState, TPrivate, TOptions> {
   /** Milliseconds, or computed on entry. The timer restarts on every entry. */
@@ -237,10 +264,21 @@ export interface GameDefinition<
   startPhase: string;
   /** Start as soon as everyone is ready and `minPlayers` is met, without the host pressing Start. Default false. */
   autoStart?: boolean;
+  /**
+   * Who becomes host when the current one disconnects. `"next-seated"` (the default) keeps the
+   * historical order: first connected seat that is active and ready, else the first connected
+   * ready seat, else the first connected seat. `"oldest"` takes the first connected seat
+   * regardless of ready or active; `"random"` draws one with the room's seeded RNG (replayable);
+   * `"none"` leaves the room without a host until the old host returns (a removed old host keeps
+   * it that way — there is no recovery); a function picks from the connected seats itself.
+   */
+  hostMigration?: HostMigration;
   /** Parses the room-create options. Omit for a game without options. */
   options?: z.ZodType<TOptions>;
   /** The room's text-filter level, from the parsed options (e.g. a host-picked lobby option). Default `"off"`. */
   filterLevel?(options: TOptions): FilterLevel;
+  /** Synchronously gates every join, including spectators and creation joins (which come through `onJoin`); see {@link CanJoinInput}. */
+  canJoin?(input: CanJoinInput): CanJoinResult;
   /** Called once per room (and per replay table); must return a fresh object each call, never a shared one: the action log and phase timings are keyed by it. */
   createPrivateState(): TPrivate;
   /** `"Lobby"` is reserved and built in. */
@@ -289,6 +327,8 @@ export interface RuntimeHost {
   hideFrom(playerId: string, ref: object): void;
   /** Remove the seat and tell the player they were kicked. */
   kick(playerId: string): void;
+  /** Make `playerId` the host and demote the current one; the runtime's host migration calls it (#36). Hosts that omit it (replay) never migrate. */
+  setHost?(playerId: string): void;
   /** Make the (validated) room options visible to clients. */
   publishOptions(options: unknown): void;
   now(): number;
