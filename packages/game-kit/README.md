@@ -68,7 +68,7 @@ The pure parts of `launch`: the `LaunchConfig`, and the per-connection `DemoTabl
 
 ### `GameKitIo`
 
-The injectable process: `env`, `argv`, `exit`, `log`, `error`, `onSignal` and the `prompter`/`startServer`/`runLauncher` seams, all required. `defaultIo()` binds the real process (readline prompter, Bun server starter, `runLauncher`), so entries have no process-bound branch and tests pass fakes. `serve`, `play` and `demoCli` print one line and exit 1 when loading content or running fails.
+The injectable process: `env`, `argv`, `exit`, `log`, `error`, `onSignal` and the `prompter`/`startServer`/`runLauncher` seams, all required. The entry functions take it as an optional argument; when omitted they use an internal default that binds the real process (readline prompter, Bun server starter, `runLauncher`), so entries have no process-bound branch and tests pass fakes. `serve`, `play` and `demoCli` print one line and exit 1 when loading content or running fails.
 
 ## Types
 

@@ -7,6 +7,7 @@ Build and test presets so a game's config files are one-liners. Add it as a devD
 | `@partygame/config/vite` | `defineGameViteConfig({ port?, overrides? })`: Svelte, LAN dev server, `development` condition only for `vite serve` |
 | `@partygame/config/vitest` | `uiTestConfig`, `nodeTestConfig`: jsdom + Svelte or node test projects |
 | `@partygame/config/svelte` | `svelteConfig`: `vitePreprocess()`, runes mode |
+| `@partygame/config/node-test-setup` | vitest setup file (the default `setupFiles` of `nodeTestConfig`): defines a global `WebSocket` on Node < 21, where Colyseus's reconnect path reads it |
 | `@partygame/config/tsconfig.base.json`, `/tsconfig.game.json` | compiler options for a game (`game` extends `base`) |
 
 ## Vite
