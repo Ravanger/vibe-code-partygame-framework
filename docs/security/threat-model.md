@@ -114,7 +114,7 @@ What the framework does and does not protect, for game authors and maintainers. 
 **Abuse case.** A player sets the name `<img src=x onerror=…>` (names are capped at 20 characters, which shortens but does not eliminate payloads) or types a script tag into a free-text answer that the UI renders.
 
 **Today.**
-- Names: `SetNameSchema` trims and enforces 1–`NAME_MAX_LENGTH` (20) characters with no control characters (`packages/shared/src/protocol.ts:137`, `packages/shared/src/limits.ts:2`); duplicate names are refused (`NAME_TAKEN`), a taken join-time name is dropped.
+- Names: `SetNameSchema` trims and enforces 1–`NAME_MAX_LENGTH` (20) code points with no control, format or separator characters and at least one visible character — invisible-only names (zero-width spaces) and bidi overrides (U+202E) are refused (`packages/shared/src/protocol.ts:139`, `packages/shared/src/limits.ts:2`); duplicate names are refused (`NAME_TAKEN`), a taken join-time name is dropped.
 - Optional profanity filtering: a `TextFilter` from `@partygame/content` wired into `createGameServer`; names are checked at join (close 4405) and on `SET_NAME`, and action text fields via `textFilterMiddleware` (`packages/core/src/middleware.ts:121`) at the game's `filterLevel` (`off`/`moderate`/`strict`, default `off`). Filtered rejections are recorded **without** the offending text (`redactPayload`; `packages/core/src/actionLog.ts:220-226`). Tests: `packages/server/tests/GameRoom.filter.test.ts`.
 - The framework does not sanitize HTML. Svelte escapes text interpolation by default; rendering user content with `@html` would be an unsanitized XSS hole and is the game's responsibility.
 

@@ -1,4 +1,7 @@
-/** Longest player name `SET_NAME` accepts, after trimming. */
+/**
+ * Longest player name `SET_NAME` accepts, after trimming, counted in Unicode code points (one
+ * emoji is one character). The web client (`NameField`) and the terminal count the same way.
+ */
 export const NAME_MAX_LENGTH = 20;
 
 /** Most playerIds the `seats` room option may list; a room also rejects more than its game's `maxPlayers`. */

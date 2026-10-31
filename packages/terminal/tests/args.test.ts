@@ -47,11 +47,17 @@ describe("parsePlayArgs", () => {
     expect(portOnly.ok && portOnly.value.usesDefaults).toBe(false);
   });
 
+  it("counts the name in code points, so one emoji is one character", () => {
+    const ok = parsePlayArgs([`--name=${"🚀".repeat(20)}`], play);
+    expect(ok.ok && ok.value.name).toBe("🚀".repeat(20));
+  });
+
   it.each([
     ["--bots=8"],
     ["--bots=-1"],
     ["--name="],
     ["--name=123456789012345678901"],
+    [`--name=${"🚀".repeat(21)}`],
     ["--join=AB"],
     ["--api-port=0"],
     ["--endpoint=nonsense"],

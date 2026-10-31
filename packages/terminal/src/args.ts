@@ -79,7 +79,7 @@ export const parsePlayArgs = (argv: string[], limits: ArgsLimits): Parsed<PlayAr
   const endpoint = values.endpoint ?? DEFAULT_ENDPOINT;
   const valid =
     between(bots, 0, limits.maxBots) &&
-    between(name.length, 1, NAME_MAX_LENGTH) &&
+    between([...name].length, 1, NAME_MAX_LENGTH) && // code points: one emoji is one character
     between(apiPort, 1, 65535) &&
     URL.canParse(endpoint) &&
     (join === undefined || RoomCodeSchema.safeParse(join).success);

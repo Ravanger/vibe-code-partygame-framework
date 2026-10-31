@@ -136,13 +136,19 @@ export const ActionEnvelopeSchema = z
     }
   });
 
-/** Payload of `SET_NAME`: trimmed, 1 to {@link NAME_MAX_LENGTH} characters, no control characters. */
+/**
+ * Payload of `SET_NAME`: trimmed, 1 to {@link NAME_MAX_LENGTH} code points (one emoji is one
+ * character), no control, format or line/paragraph separator characters, and at least one
+ * visible character. Format characters include zero-width spaces and bidi overrides.
+ */
 export const SetNameSchema = z
   .string()
   .trim()
   .min(1)
-  .max(NAME_MAX_LENGTH)
-  .refine((name) => /^[^\p{Cc}]+$/u.test(name));
+  .refine((name) =>
+    /^[^\p{Cc}\p{Cf}\p{Zl}\p{Zp}]*[^\p{Cc}\p{Cf}\p{Z}][^\p{Cc}\p{Cf}\p{Zl}\p{Zp}]*$/u.test(name),
+  )
+  .refine((name) => [...name].length <= NAME_MAX_LENGTH);
 
 const ROOM_CODE_PATTERN = new RegExp(`^[${ROOM_CODE_ALPHABET}]` + `{${ROOM_CODE_LENGTH}}$`);
 

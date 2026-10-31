@@ -114,8 +114,24 @@ describe("SetNameSchema", () => {
     expect(SetNameSchema.safeParse("Ada\x00Bob").success).toBe(false);
     expect(SetNameSchema.safeParse("Ada\nBob").success).toBe(false);
   });
+  it("rejects invisible and bidi-control characters", () => {
+    expect(SetNameSchema.safeParse("\u200B").success).toBe(false); // zero-width space only
+    expect(SetNameSchema.safeParse("Ada\u200B").success).toBe(false); // visible plus invisible
+    expect(SetNameSchema.safeParse("Ada\u202EBob").success).toBe(false); // right-to-left override
+    expect(SetNameSchema.safeParse("Ada\u2028Bob").success).toBe(false); // line separator
+    expect(SetNameSchema.safeParse("Ada\u2029Bob").success).toBe(false); // paragraph separator
+  });
+  it("accepts accented, emoji and CJK names", () => {
+    expect(SetNameSchema.parse("José")).toBe("José");
+    expect(SetNameSchema.parse("🚀")).toBe("🚀");
+    expect(SetNameSchema.parse("你好")).toBe("你好");
+  });
   it("accepts 20 characters", () =>
     expect(SetNameSchema.safeParse("x".repeat(20)).success).toBe(true));
+  it("counts the length in code points, so one emoji is one character", () => {
+    expect(SetNameSchema.safeParse("🚀".repeat(20)).success).toBe(true);
+    expect(SetNameSchema.safeParse("🚀".repeat(21)).success).toBe(false);
+  });
 });
 
 describe("RoomCodeSchema", () => {

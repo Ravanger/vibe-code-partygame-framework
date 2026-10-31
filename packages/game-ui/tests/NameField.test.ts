@@ -29,6 +29,15 @@ describe("NameField", () => {
     expect(c.room.sent).toEqual([{ type: "SET_NAME", payload: "x".repeat(NAME_MAX_LENGTH) }]);
   });
 
+  it("caps at code points without splitting a surrogate pair", () => {
+    const c = connectedClient({ stateClass: BaseGameState });
+    const field = new NameField(c.manager);
+    const name = `a${"b".repeat(NAME_MAX_LENGTH - 2)}🚀`; // 20 code points, 21 UTF-16 units
+    field.set(name);
+    vi.advanceTimersByTime(250);
+    expect(c.room.sent).toEqual([{ type: "SET_NAME", payload: name }]);
+  });
+
   it("sends nothing for a blank name", () => {
     const c = connectedClient({ stateClass: BaseGameState });
     const field = new NameField(c.manager);
