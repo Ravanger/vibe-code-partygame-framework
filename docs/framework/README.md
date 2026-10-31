@@ -255,6 +255,9 @@ outside the chain), no cancelling queued transitions.
 `actionLogMiddleware()` records everything the middleware sees into an append-only, JSON-serializable log
 kept alongside `ctx.priv` — a server-side record of the whole room session. Register it like any other
 middleware; unregistered games pay nothing (the chain early-returns on an empty array).
+Register exactly one instance per game: a second instance recording for the same priv throws
+`DuplicateActionLogMiddlewareError` instead of silently double-recording every event (colliding `seq`s,
+broken replay).
 
 ```ts
 import { actionLogMiddleware, getActionLog } from "@partygame/core";

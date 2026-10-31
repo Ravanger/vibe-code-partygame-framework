@@ -11,6 +11,23 @@ import { deepFreeze, type Seed } from "./utils.js";
 /** One log per `ctx.priv` object; the priv itself never gains a framework key. */
 const logs = new WeakMap<object, ActionLog>();
 
+/** The middleware instance that created each log; a second instance must fail loudly. */
+const owners = new WeakMap<object, symbol>();
+
+/**
+ * Thrown when a second `actionLogMiddleware()` instance records an event for a priv whose log
+ * already exists: both instances would append to the same log, colliding `seq`s and breaking
+ * replay silently. Register the middleware once per game.
+ */
+export class DuplicateActionLogMiddlewareError extends Error {
+  constructor() {
+    super(
+      "actionLogMiddleware is registered more than once for one game; every event would be recorded twice",
+    );
+    this.name = "DuplicateActionLogMiddlewareError";
+  }
+}
+
 /** The kind of event an {@link ActionLogEntry} records. */
 export type ActionLogEntryKind = "action" | "transition" | "enter" | "timeout" | "roster-change";
 
@@ -148,7 +165,7 @@ export function getActionLog(priv: unknown): ActionLog | undefined {
   return logs.get(priv);
 }
 
-function logOf(ctx: MiddlewareContext<PhaseState, unknown, unknown>): ActionLog {
+function logOf(ctx: MiddlewareContext<PhaseState, unknown, unknown>, instance: symbol): ActionLog {
   const priv = ctx.priv;
   if (typeof priv !== "object" || priv === null) throw new InvalidPrivateStateError();
   let log = logs.get(priv);
@@ -164,6 +181,9 @@ function logOf(ctx: MiddlewareContext<PhaseState, unknown, unknown>): ActionLog 
       entries: [],
     };
     logs.set(priv, log);
+    owners.set(priv, instance);
+  } else if (owners.get(priv) !== instance) {
+    throw new DuplicateActionLogMiddlewareError();
   }
   return log;
 }
@@ -181,10 +201,13 @@ function logOf(ctx: MiddlewareContext<PhaseState, unknown, unknown>): ActionLog 
  * the action before the handler ran, like the text filter) is logged with `rejected: true` and
  * `redacted: true` and no `payload`; `replayLog` skips such entries. See "Action log and replay" in
  * the framework guide.
+ * Register exactly one instance per game: a second instance recording for the same priv throws
+ * {@link DuplicateActionLogMiddlewareError} instead of double-recording every event.
  */
 export function actionLogMiddleware(): PhaseMiddleware<PhaseState, unknown, unknown> {
+  const instance = Symbol("actionLogMiddleware");
   return (ctx, next) => {
-    const log = logOf(ctx);
+    const log = logOf(ctx, instance);
     const event = ctx.event;
     // The seats when the game starts, in seat order — what replay pre-seats. The flags are
     // recorded too: replay restores them so its bench-on-start matches live's exactly. An

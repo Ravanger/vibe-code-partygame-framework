@@ -153,6 +153,7 @@
           "CanJoinResult": {},
           "ContextLogger": {},
           "CoreStrings": {},
+          "DuplicateActionLogMiddlewareError": {},
           "GameContext": {},
           "GameDefinition": {},
           "GameDefinitionError": {},

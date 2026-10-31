@@ -6,6 +6,7 @@ import {
   type ActionLog,
   actionFactory,
   actionLogMiddleware,
+  DuplicateActionLogMiddlewareError,
   defineGame,
   getActionLog,
   getPhaseTimings,
@@ -135,6 +136,41 @@ describe("actionLogMiddleware", () => {
     const layer = actionLogMiddleware();
     expect(() => layer(rawContext(42), () => {})).toThrow(InvalidPrivateStateError);
     expect(() => layer(rawContext(null), () => {})).toThrow(InvalidPrivateStateError);
+  });
+
+  it("refuses a second registration for a priv that already has a log", () => {
+    const priv = { secret: "s" };
+    actionLogMiddleware()(rawContext(priv), () => {}); // the first instance claims the priv
+    expect(() => actionLogMiddleware()(rawContext(priv), () => {})).toThrow(
+      DuplicateActionLogMiddlewareError,
+    );
+  });
+
+  it("refuses loudly instead of double-recording when a definition registers it twice", () => {
+    const reports: unknown[] = [];
+    const table = new TestTable<PhaseState, Record<string, never>, Record<string, never>>({
+      definition: defineGame<PhaseState, Record<string, never>, Record<string, never>>({
+        name: "DoubleLogged",
+        version: "1",
+        minPlayers: 1,
+        maxPlayers: 4,
+        startPhase: "Play",
+        createPrivateState: () => ({}),
+        phases: { Play: {} },
+        onError: (_ctx, error) => reports.push(error),
+        middleware: [actionLogMiddleware(), actionLogMiddleware()],
+      }),
+      state: { phase: "", phaseEndsAt: 0, canStart: false },
+      options: {},
+      players: 2,
+    });
+    // The construction-time Lobby enter already hit the second instance...
+    expect(reports).toEqual([expect.any(DuplicateActionLogMiddlewareError)]);
+    // ...and every dispatch fails loudly with the named error.
+    expect(() => table.start()).toThrow(DuplicateActionLogMiddlewareError);
+    expect(reports).toHaveLength(2);
+    // No double-recording: the first instance recorded each event exactly once.
+    expect(getActionLog(table.priv)?.entries.map((e) => e.kind)).toEqual(["enter", "action"]);
   });
 
   it("writes the header on the first entry and starts with the Lobby enter", () => {
