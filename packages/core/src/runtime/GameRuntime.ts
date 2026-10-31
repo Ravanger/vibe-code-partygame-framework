@@ -384,7 +384,8 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
 
   /**
    * Arms the first `onTick` of a ticking phase, one interval after entry. Each tick reschedules
-   * the next, so tick k fires at enter + k·tickMs (the replay clock reproduces exactly those).
+   * the next anchored to the entry time, so tick k is due at enter + k·tickMs and a late delivery
+   * is not carried into the next tick (#327; the replay clock reproduces exactly those ticks).
    * Ticks stop when the phase is left: every transition and `stop()` clears the pending timer,
    * including one scheduled by a tick that itself queued the transition.
    */
@@ -392,10 +393,16 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     const onTick = phase.onTick;
     if (onTick === undefined) return;
     const dtMs = phase.tickMs ?? DEFAULT_TICK_MS;
+    const enterAt = this.host.now();
+    let k = 0;
     const step = (): void => {
       this.run(() => {
         onTick(this.context(), dtMs);
-        this.tickHandle = this.host.setTimeout(step, dtMs);
+        ++k;
+        this.tickHandle = this.host.setTimeout(
+          step,
+          Math.max(0, enterAt + (k + 1) * dtMs - this.host.now()),
+        );
       });
     };
     this.tickHandle = this.host.setTimeout(step, dtMs);

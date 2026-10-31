@@ -30,6 +30,8 @@ export class FakeHost implements RuntimeHost {
   readonly kicked: string[] = [];
   readonly published: unknown[] = [];
   readonly transitions: Array<{ from: string; to: string }> = [];
+  /** Delivery lateness added to every timer, in ms — models a host clock that fires on a grid. 0 fires exactly on time. */
+  timerLatenessMs = 0;
   /** Every line `ctx.log` wrote, in order. */
   readonly logs: LogLine[] = [];
   readonly log: Logger = {
@@ -160,7 +162,7 @@ export class FakeHost implements RuntimeHost {
 
   setTimeout(callback: () => void, ms: number): TimerHandle {
     const id = this.nextId++;
-    this.timers.push({ id, at: this.time + ms, callback });
+    this.timers.push({ id, at: this.time + ms + this.timerLatenessMs, callback });
     return id as TimerHandle;
   }
 

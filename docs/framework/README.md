@@ -188,10 +188,10 @@ canJoin: (input) =>
 The server owns the clock: clients render a countdown from `phaseEndsAt`.
 
 A real-time phase declares `onTick(ctx, dtMs)`, called every `tickMs` while the phase is active — default 100 ms (10 Hz); it must be an integer >= 1 and is rejected at definition time without `onTick`.
-`dtMs` is that nominal interval, not wall-clock elapsed time, so integrating state by it (`pos += speed * dtMs / 1000`) is deterministic: tick k fires at enter + k·tickMs, and `replayLog` reproduces exactly those ticks because the replay clock advances fire precisely the ones due between logged entries.
+`dtMs` is that nominal interval, not wall-clock elapsed time, so integrating state by it (`pos += speed * dtMs / 1000`) is deterministic: tick k is due at enter + k·tickMs, and `replayLog` reproduces exactly those ticks because the replay clock advances fire precisely the ones due between logged entries.
 Ticks stop as soon as the phase is left — including a transition queued from within `onTick` — and on shutdown; leaving and re-entering restarts the cadence.
 Like `onPlayerSync`, ticks are not wrapped by phase middleware.
-On a live room the Colyseus clock quantizes delivery to its ~16 ms grid, so a tick can land up to one grid step late relative to enter + k·tickMs: an action in that window sees one fewer tick than a replay would. Timeouts have the same skew and the log corrects them; ticks are too chatty to log; closing the gap is tracked in #246.
+On a live room the Colyseus clock quantizes delivery to its ~16 ms grid. Ticks are anchored to the phase entry — tick k is scheduled for enter + k·tickMs regardless of when tick k−1 actually fired — so a tick can land up to one grid step late but never more: lateness is not carried into the next tick, and an action in that window sees at most one fewer tick than a replay would. Timeouts have the same skew and the log corrects them; ticks are too chatty to log; closing the gap is tracked in #246.
 
 ### Lobby
 Built in. `START_GAME` is host only and needs `minPlayers` active players (else `NOT_ENOUGH_PLAYERS`).
@@ -705,6 +705,7 @@ host.advance(3_000);                                      // fires due phase tim
 host.errorsTo("p1");                                      // rejections the player received
 host.views, host.sent, host.broadcasts, host.kicked, host.published   // everything the host was asked to do
 host.rng = () => 0.99;                                    // steer random choices
+host.timerLatenessMs = 16;                                // make every timer fire late, like a grid-quantized clock
 ```
 
 `TestTable` wraps that setup (seats `p1..pN`, the real runtime, a manual clock). Extend it with your game's scenario steps:

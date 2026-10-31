@@ -278,11 +278,13 @@ export interface PhaseDefinition<TState extends PhaseState, TPrivate, TOptions> 
   /**
    * Called every {@link PhaseDefinition.tickMs} while the phase is active (for real-time phases),
    * with the tick interval in ms as `dtMs` — a fixed nominal value, not wall-clock elapsed time,
-   * so integrating state by it (`pos += speed * dtMs / 1000`) is deterministic. Tick k fires at
-   * enter + k·tickMs; `replayLog` reproduces the same ticks because replay clock advances fire
-   * exactly the due ones between logged entries. Stops as soon as the phase is left (including a
-   * transition queued from within `onTick`) and on `GameRuntime.stop`. Not wrapped by phase
-   * middleware, like `onPlayerSync`; read absolute time with `ctx.now()` when you need it.
+   * so integrating state by it (`pos += speed * dtMs / 1000`) is deterministic. Tick k is due at
+   * enter + k·tickMs: ticks are anchored to the phase entry, so a late delivery on a live host is
+   * not carried into the next tick (#327). `replayLog` reproduces the same ticks because replay
+   * clock advances fire exactly the due ones between logged entries (replay exactness under
+   * quantized delivery remains #246). Stops as soon as the phase is left (including a transition
+   * queued from within `onTick`) and on `GameRuntime.stop`. Not wrapped by phase middleware, like
+   * `onPlayerSync`; read absolute time with `ctx.now()` when you need it.
    */
   onTick?(ctx: GameContext<TState, TPrivate, TOptions>, dtMs: number): void;
   /** Required when `duration` is set. */
