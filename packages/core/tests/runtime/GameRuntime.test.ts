@@ -1428,27 +1428,31 @@ describe("KICK_PLAYER", () => {
 
   it("kicks in any phase and then notifies the roster change", () => {
     const { runtime, host, state } = inPlay();
-    runtime.dispatch("p1", { type: "KICK_PLAYER", playerId: "p2" });
-    expect(host.kicked).toEqual(["p2"]);
+    host.seat("player-two");
+    runtime.dispatch("p1", { type: "KICK_PLAYER", playerId: "player-two" });
+    expect(host.kicked).toEqual(["player-two"]);
     expect(state.log).toEqual(["roster:Play"]);
     runtime.dispatch("p1", { type: "HOME" });
-    host.seat("p3");
-    runtime.dispatch("p1", { type: "KICK_PLAYER", playerId: "p3" });
-    expect(host.kicked).toEqual(["p2", "p3"]);
+    host.seat("player-three");
+    runtime.dispatch("p1", { type: "KICK_PLAYER", playerId: "player-three" });
+    expect(host.kicked).toEqual(["player-two", "player-three"]);
   });
 
   it("kicking in a phase without a roster hook is fine", () => {
     const { runtime, host } = setup2({ startPhase: "Bare" });
     runtime.dispatch("p1", { type: "START_GAME" });
-    runtime.dispatch("p1", { type: "KICK_PLAYER", playerId: "p2" });
-    expect(host.kicked).toEqual(["p2"]);
+    host.seat("player-two");
+    runtime.dispatch("p1", { type: "KICK_PLAYER", playerId: "player-two" });
+    expect(host.kicked).toEqual(["player-two"]);
   });
 
   it("refuses to kick yourself or a stranger", () => {
     const { runtime, host } = inPlay();
-    runtime.dispatch("p1", { type: "KICK_PLAYER", playerId: "p1" });
-    runtime.dispatch("p1", { type: "KICK_PLAYER", playerId: "ghost" });
-    expect(host.errorsTo("p1")).toEqual([
+    host.seat("player-one");
+    host.setHost?.("player-one");
+    runtime.dispatch("player-one", { type: "KICK_PLAYER", playerId: "player-one" });
+    runtime.dispatch("player-one", { type: "KICK_PLAYER", playerId: "ghost-player" });
+    expect(host.errorsTo("player-one")).toEqual([
       { code: "NOT_ALLOWED", message: expect.any(String), action: "KICK_PLAYER" },
       { code: "NOT_ALLOWED", message: expect.any(String), action: "KICK_PLAYER" },
     ]);
@@ -1459,6 +1463,21 @@ describe("KICK_PLAYER", () => {
     const { runtime, host } = inPlay();
     runtime.dispatch("p1", { type: "KICK_PLAYER" });
     expect(host.errorsTo("p1")[0]).toMatchObject({ code: "INVALID_ACTION" });
+  });
+
+  it("refuses a malformed or oversized playerId with INVALID_ACTION", () => {
+    const { runtime, host } = inPlay();
+    expect(runtime.dispatch("p1", { type: "KICK_PLAYER", playerId: "short" })).toMatchObject({
+      code: "INVALID_ACTION",
+      action: "KICK_PLAYER",
+    });
+    expect(
+      runtime.dispatch("p1", { type: "KICK_PLAYER", playerId: `a${"b".repeat(64)}` }),
+    ).toMatchObject({
+      code: "INVALID_ACTION",
+      action: "KICK_PLAYER",
+    });
+    expect(host.kicked).toEqual([]);
   });
 });
 

@@ -143,7 +143,7 @@ gets fresh scopes — so audience votes count participation, not commitments.
 The runtime handles these host-only actions for you; do not declare them (`defineGame` rejects the names):
 
 - `START_GAME` (Lobby), see Lobby below.
-- `KICK_PLAYER { playerId }`: any phase, not yourself. The host implementation removes the seat, then `onRosterChange` runs. The ban is per `playerId` and per the kicked seat's secret hash: a kicked client that rejoins with a fresh id but its stored secret is refused with `KICKED_REJOIN` too (IPs are not used — they are shared on a LAN). A player who leaves normally can rejoin.
+- `KICK_PLAYER { playerId }`: any phase, not yourself; `playerId` is validated as a player id (a malformed or oversized one gets `INVALID_ACTION`, an unknown but well-formed one the "no such player" refusal). The host implementation removes the seat, then `onRosterChange` runs. The ban is per `playerId` and per the kicked seat's secret hash: a kicked client that rejoins with a fresh id but its stored secret is refused with `KICKED_REJOIN` too (IPs are not used — they are shared on a LAN). A player who leaves normally can rejoin.
 - `SET_OPTIONS { ...partial }`: Lobby only. If the game declares no `definition.options` schema, it rejects any key but `type` (`INVALID_ACTION`); a room for such a game also refuses create options. Otherwise the partial is merged into the current options and validated, then published; a failed parse or a result whose JSON is longer than `MAX_OPTIONS_JSON_LENGTH` is `INVALID_ACTION` and keeps the previous options. `ctx.options` reflects the new value.
 - `END_GAME`: any phase but the Lobby (`WRONG_PHASE` there). It runs `onEndGame(ctx)`, where a game can set a notice for the players, and then returns everyone to the Lobby as `ctx.returnToLobby()` does (`onReturnToLobby` runs, waiting joiners are let in). The hook cannot veto it.
 
@@ -546,7 +546,7 @@ mismatch is a close, not a negotiation.
 
 ### Errors at definition time
 `defineGame` throws `GameDefinitionError` listing every problem: empty `name` or `version`, reserved or unknown
-phase names, missing `startPhase`, `duration` without `onTimeout`, `tickMs` without `onTick` or a non-integer `tickMs` below 1, bad player limits, bad action names.
+phase names, missing `startPhase`, `duration` without `onTimeout` or a numeric `duration` that is not a finite number > 0, `tickMs` without `onTick` or a non-integer `tickMs` below 1, bad player limits (non-integer, below 1, or `maxPlayers` < `minPlayers`), bad action names.
 A `ctx.transition()` to an undeclared phase throws at the call site.
 
 ### Errors at runtime

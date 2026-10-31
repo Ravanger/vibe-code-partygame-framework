@@ -4,6 +4,7 @@ import {
   FrameworkError,
   LOBBY_PHASE,
   MAX_OPTIONS_JSON_LENGTH,
+  PlayerIdSchema,
   SET_OPTIONS,
   START_GAME,
 } from "@partygame/shared";
@@ -58,7 +59,7 @@ export class Lobby<TState extends PhaseState, TPrivate, TOptions> {
   kickAction(): ActionDefinition<TState, TPrivate, TOptions, { playerId: string }> {
     return {
       from: "host",
-      payload: z.object({ playerId: z.string() }),
+      payload: z.object({ playerId: PlayerIdSchema }),
       handler: (ctx) => {
         const { playerId } = ctx.payload;
         if (playerId === ctx.playerId) {

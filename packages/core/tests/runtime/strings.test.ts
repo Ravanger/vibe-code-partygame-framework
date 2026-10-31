@@ -106,9 +106,11 @@ describe("client-visible core strings through the runtime", () => {
 
   it("keeps the English defaults without a strings table", () => {
     const { host, runtime } = started();
-    runtime.dispatch("p1", { type: "KICK_PLAYER", playerId: "p1" });
-    runtime.dispatch("p1", { type: "KICK_PLAYER", playerId: "ghost" });
-    expect(host.errorsTo("p1")).toEqual([
+    host.seat("player-one");
+    host.setHost?.("player-one");
+    runtime.dispatch("player-one", { type: "KICK_PLAYER", playerId: "player-one" });
+    runtime.dispatch("player-one", { type: "KICK_PLAYER", playerId: "ghost-player" });
+    expect(host.errorsTo("player-one")).toEqual([
       { code: ErrorCode.NOT_ALLOWED, message: "You cannot kick yourself", action: "KICK_PLAYER" },
       { code: ErrorCode.NOT_ALLOWED, message: "No such player", action: "KICK_PLAYER" },
     ]);
@@ -124,9 +126,11 @@ describe("client-visible core strings through the runtime", () => {
       cannotKickSelf: "Du kannst dich nicht selbst rausschmeißen",
       stopped: "Das Spiel ist vorbei",
     });
-    runtime.dispatch("p1", { type: "KICK_PLAYER", playerId: "p1" });
-    runtime.dispatch("p1", { type: "KICK_PLAYER", playerId: "ghost" });
-    expect(host.errorsTo("p1")).toEqual([
+    host.seat("player-one");
+    host.setHost?.("player-one");
+    runtime.dispatch("player-one", { type: "KICK_PLAYER", playerId: "player-one" });
+    runtime.dispatch("player-one", { type: "KICK_PLAYER", playerId: "ghost-player" });
+    expect(host.errorsTo("player-one")).toEqual([
       {
         code: ErrorCode.NOT_ALLOWED,
         message: "Du kannst dich nicht selbst rausschmeißen",

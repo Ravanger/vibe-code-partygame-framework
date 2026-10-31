@@ -55,7 +55,7 @@ export const ButtonGame = defineGame<ButtonState, Priv>({
 
 ## Localisation
 
-Every message the core owns (the lobby built-ins' refusals, the failure notice in `state.notice`, the stopped-runtime error and the runtime's refusal log messages) comes from `defaultCoreStrings`. Pass a partial table as the definition's `strings` field to replace any of it; `defineGame` fills in the defaults:
+Every message the core owns (the lobby built-ins' refusals, the failure notice in `state.notice`, the stopped-runtime error, the text-filter rejection and the runtime's refusal log messages) comes from `defaultCoreStrings`. Pass a partial table as the definition's `strings` field to replace any of it; `defineGame` fills in the defaults:
 
 ```ts
 const game = defineGame<ButtonState, Priv>({
