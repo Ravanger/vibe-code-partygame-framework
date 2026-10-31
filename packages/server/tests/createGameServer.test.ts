@@ -1,5 +1,7 @@
 import { t as schemaField } from "@colyseus/schema";
+import { ColyseusSDK } from "@colyseus/sdk";
 import { WebSocketTransport } from "@colyseus/ws-transport";
+import { noopLogger } from "@partygame/core";
 import { RoomCodeSchema } from "@partygame/shared";
 import { BaseGameState } from "@partygame/shared/schema";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -10,9 +12,11 @@ import {
   resolveRateLimits,
   warnRateLimit,
 } from "../src/createGameServer.js";
+import { listenGameServer } from "../src/gameTransport.js";
+import { freePort } from "../src/probe.js";
 import { RoomCodeService } from "../src/services/RoomCodeService.js";
-import { bootTestServer, type TestServer, waitUntil } from "../src/testing/index.js";
-import { PlainGame } from "./fixtures/buzzer.js";
+import { bootTestServer, TestServer, waitUntil } from "../src/testing/index.js";
+import { BuzzerState, PlainGame } from "./fixtures/buzzer.js";
 import { bootBuzzer, GAMES, startedRoom, stateOf } from "./support.js";
 
 let t: TestServer | undefined;
@@ -38,6 +42,25 @@ describe("createGameServer", () => {
       emptyRoomGraceMs: 20,
     });
     expect(server).toBeDefined();
+  });
+
+  it("boots with an explicit transport and lets a client join", async () => {
+    const roomCodeService = new RoomCodeService();
+    const server = createGameServer({
+      games: GAMES,
+      roomCodeService,
+      transport: new WebSocketTransport(),
+      reconnectMs: 1000,
+      emptyRoomGraceMs: 30_000,
+      logger: noopLogger,
+    });
+    const port = await freePort();
+    await listenGameServer(server, port);
+    const endpoint = `ws://127.0.0.1:${port}`;
+    t = new TestServer(server, new ColyseusSDK(endpoint), roomCodeService, endpoint);
+    const room = await t.createRoom("buzzer");
+    const client = await t.joinAs(room, { playerId: "player-0001" }, BuzzerState);
+    expect(client.state.buzzCount).toBe(0);
   });
 
   it("boots the test helper with a shared code service", async () => {
