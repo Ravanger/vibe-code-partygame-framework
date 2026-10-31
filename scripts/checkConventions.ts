@@ -21,6 +21,7 @@ const ROOT_FILES = new Set([
   "LICENSE",
   "package.json",
   "bun.lock",
+  "bunfig.toml",
   "biome.json",
   "knip.json",
   "turbo.json",

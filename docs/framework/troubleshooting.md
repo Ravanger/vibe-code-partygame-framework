@@ -13,6 +13,14 @@ Known traps in this repo, with the cause and the rule that keeps each one fixed.
 - **Limits:** 63 fields per schema class; primitive collection elements are type names (`t.map("number")`).
 - **Reference:** `packages/shared/src/schema/BaseGameState.ts`, `.AGENTS/docs/libraries/colyseus-schema.md`
 
+## Two copies of `@colyseus/core` under the isolated linker
+- **Symptom:** a hand-constructed transport (e.g. `new WebSocketTransport()`) cannot see the server's rooms; every join fails with `MatchMakeError: seat reservation expired` (#95).
+- **Cause:** bun's isolated linker resolves the `core` <-> `ws-transport` peer cycle to two fixed points — core marks ws-transport an *optional* peer while ws-transport's core peer is *required* — so the store holds two copies of each under different peer hashes. A hand-built transport binds to the other core instance, whose `matchMaker` singleton has no rooms. No declaration layout avoids the split (eight tried in #256).
+- **Fix:** the root `bunfig.toml` sets `[install] linker = "hoisted"` — one flat copy per version, so a static `WebSocketTransport` import shares the server's core and its `matchMaker`. Do not delete `bunfig.toml`; it is allowlisted in `scripts/checkConventions.ts` for exactly this reason.
+- **Do not** "fix" this with `[install] peer = false`: it dedupes too, but drops auto-installed optional peers and silently breaks typecheck in five packages — their `@types/node` arrives through a d.ts chain (`@colyseus/core`'s `Server.d.ts` imports express's types, which reference node).
+- **Phantom dependencies:** under hoisting, tsc, vitest and the runtime resolve undeclared packages from the flat tree. Whether a package declares its dependencies is enforced only by `check:boundaries` (which reads `package.json`) and knip, not by module resolution; configs and scripts outside knip's scan silently work with missing declarations.
+- **Reference:** `bunfig.toml`, `packages/server/tests/createGameServer.test.ts`, `.AGENTS/docs/libraries/colyseus.md` (Transports)
+
 ## Browser shows "Connection Error / Disconnected from server" on every load
 - **Cause (was):** the component that starts a connection was mounted only after a connection existed, so nothing could ever connect.
 - **Rule:** `AppRouter.screen` routes every non-connected status to the Welcome screen; errors render as a dismissible toast, never as a destination. Do not re-debug the backend for this symptom.

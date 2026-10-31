@@ -56,6 +56,7 @@ Authoritative multiplayer server. `GameRoom` (`packages/server/src/rooms/GameRoo
 | Vitest (Node) | No transport passed, so the default `@colyseus/ws-transport` is used | `@colyseus/bun-websockets` imports `bun`. `createGameServer({ transport })` is optional and omitted in tests. |
 
 - `@colyseus/ws-transport` is an optional peer of `@colyseus/core`, satisfied by the server devDependencies. Production does not use it.
+- The root `bunfig.toml` sets `[install] linker = "hoisted"`: bun's isolated linker resolves the core <-> ws-transport peer cycle to two copies each (optional-peer asymmetry), and a hand-built transport then binds to a different core instance whose `matchMaker` has no rooms — every join fails with "seat reservation expired" (#95, #256). Do not delete `bunfig.toml`, and do not replace it with `[install] peer = false` (dedupes, but breaks typecheck through the `@types/node` d.ts chain in five packages). Under hoisting, undeclared dependencies resolve silently; declared deps are enforced only by `check:boundaries` and knip. See `docs/framework/troubleshooting.md` ("Two copies of `@colyseus/core` under the isolated linker").
 - Never import `@colyseus/bun-websockets` from code that tests load (`bun.ts` is the only importer).
 - The SDK endpoint has no path suffix because the Bun transport is mounted at `/`.
 - The room-code HTTP API (`/api/resolve-code`) is a separate `Bun.serve` on port 3001.

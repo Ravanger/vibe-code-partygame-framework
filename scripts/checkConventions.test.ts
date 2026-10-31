@@ -63,6 +63,7 @@ describe("checkConventions", () => {
       },
     ]);
     expect(rules("package.json", "{}")).toEqual([]);
+    expect(rules("bunfig.toml", '[install]\nlinker = "hoisted"\n')).toEqual([]);
     expect(rules(".gitignore", "")).toEqual([]);
     expect(rules("docs/NOTES.md", "x")).toEqual([]);
   });
