@@ -375,6 +375,16 @@ drives: a minimal `RuntimeHost` with a manual clock (`advance(ms)`), seats and t
 recording or assertion helpers — client traffic is dropped. Build one directly to drive a `GameRuntime`
 over a log yourself.
 
+**Input limits.** A log may come from anywhere, so validation bounds it before anything runs: `t` and
+`header.startedAt` are non-negative safe integers, `seq` a safe integer from 1 (an out-of-range value is
+rejected naming its allowed range), `entries` holds at most `MAX_ACTION_LOG_ENTRIES` (100,000) entries —
+more throws a named error, and an empty log throws "the log has no entries" — and an action entry's
+`payload`, when present, must be a plain object (redacted entries carry none and stay valid). Timer
+firing is budgeted the same way: one `advance` fires at most `MAX_TIMER_FIRES_PER_ADVANCE` (10,000)
+timers and a whole `replayLog` run at most `MAX_TIMER_FIRES_PER_REPLAY` (1,000,000); a log whose time
+gaps would fire more throws a named error instead of doing unbounded work (`FakeHost.advance` enforces
+the per-advance budget for tests).
+
 **Bundles.** A `ReplayBundle` (from `@partygame/core/replay`) is what a finished session is shared as: the
 action log plus `name`, `frameworkVersion`, `gameVersion` and a game-supplied `contentHash`, and
 `snapshots` — one synced-state snapshot per phase transition, for viewing without re-running the runtime.

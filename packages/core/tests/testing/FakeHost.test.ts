@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { seedFromNumber, sfc32 } from "../../src/index.js";
 import { FakeHost } from "../../src/testing/index.js";
+import { MAX_TIMER_FIRES_PER_ADVANCE, TimerLimitError } from "../../src/timers.js";
 
 describe("FakeHost", () => {
   it("seats the first player as host and the rest as players, ready and active", () => {
@@ -42,6 +43,19 @@ describe("FakeHost", () => {
     host.clearTimeout(first);
     host.advance(20);
     expect(order).toEqual(["second"]);
+  });
+
+  it("caps the timers one advance may fire, throwing after exactly the budget", () => {
+    const host = new FakeHost();
+    let fired = 0;
+    for (let i = 0; i < MAX_TIMER_FIRES_PER_ADVANCE + 1; ++i) {
+      host.setTimeout(() => {
+        fired += 1;
+      }, 0);
+    }
+    expect(host.pendingTimers).toBe(MAX_TIMER_FIRES_PER_ADVANCE + 1);
+    expect(() => host.advance(1)).toThrow(TimerLimitError);
+    expect(fired).toBe(MAX_TIMER_FIRES_PER_ADVANCE);
   });
 
   it("records messages, view changes, kicks, activations and published options", () => {

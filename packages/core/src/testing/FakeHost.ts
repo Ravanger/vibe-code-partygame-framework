@@ -6,13 +6,8 @@ import type {
   RuntimeHost,
   TimerHandle,
 } from "../runtime/types.js";
+import { MAX_TIMER_FIRES_PER_ADVANCE, TimerLimitError, TimerQueue } from "../timers.js";
 import { type Seed, seedFromNumber, sfc32 } from "../utils.js";
-
-interface Timer {
-  id: number;
-  at: number;
-  callback: () => void;
-}
 
 export interface Sent {
   playerId: string;
@@ -49,7 +44,7 @@ export class FakeHost implements RuntimeHost {
   /** The room RNG seed; an unseeded host is `seedFromNumber(0)`, a deterministic stream. */
   readonly seed: Seed;
   private rngFn: () => number;
-  private timers: Timer[] = [];
+  private queue = new TimerQueue();
   private nextId = 1;
   /** Scopes each audience key has already used; cleared on every transition. */
   private readonly audienceScopes = new Map<string, Set<string>>();
@@ -74,7 +69,7 @@ export class FakeHost implements RuntimeHost {
   }
 
   get pendingTimers(): number {
-    return this.timers.length;
+    return this.queue.size;
   }
 
   errorsTo(playerId: string): unknown[] {
@@ -83,16 +78,26 @@ export class FakeHost implements RuntimeHost {
       .map((s) => s.payload);
   }
 
+  /**
+   * Advances the clock to `time + ms`, firing every due timer in `(at, id)` order. One advance
+   * fires at most {@link MAX_TIMER_FIRES_PER_ADVANCE} timers; a larger jump throws
+   * {@link TimerLimitError} instead of doing unbounded work.
+   */
   advance(ms: number): void {
     const target = this.time + ms;
+    let fired = 0;
     for (;;) {
-      const due = this.timers
-        .filter((t) => t.at <= target)
-        .sort((a, b) => a.at - b.at || a.id - b.id)[0];
-      if (!due) break;
-      this.timers = this.timers.filter((t) => t !== due);
-      this.time = due.at;
-      due.callback();
+      const head = this.queue.peek();
+      if (head === undefined || head.at > target) break;
+      ++fired;
+      if (fired > MAX_TIMER_FIRES_PER_ADVANCE) {
+        throw new TimerLimitError(
+          `FakeHost.advance would fire more than ${MAX_TIMER_FIRES_PER_ADVANCE} timers in one advance`,
+        );
+      }
+      this.queue.shift();
+      this.time = head.at;
+      head.callback();
     }
     this.time = target;
   }
@@ -162,12 +167,12 @@ export class FakeHost implements RuntimeHost {
 
   setTimeout(callback: () => void, ms: number): TimerHandle {
     const id = this.nextId++;
-    this.timers.push({ id, at: this.time + ms + this.timerLatenessMs, callback });
+    this.queue.push({ id, at: this.time + ms + this.timerLatenessMs, callback });
     return id as TimerHandle;
   }
 
   clearTimeout(handle: TimerHandle): void {
-    this.timers = this.timers.filter((t) => t.id !== handle);
+    this.queue.remove((t) => t.id === handle);
   }
 
   private record(level: LogLevel, event: string, fields?: LogLine["fields"]): void {

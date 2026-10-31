@@ -28,6 +28,9 @@ export class DuplicateActionLogMiddlewareError extends Error {
   }
 }
 
+/** The most entries one log may hold; `ActionLogSchema` rejects longer logs. */
+export const MAX_ACTION_LOG_ENTRIES = 100_000;
+
 /** The kind of event an {@link ActionLogEntry} records. */
 export type ActionLogEntryKind = "action" | "transition" | "enter" | "timeout" | "roster-change";
 
@@ -117,18 +120,28 @@ const RosterSeatSchema = z.strictObject({
   isActive: z.boolean(),
 });
 
+/** A non-negative safe integer — the bound every recorded timestamp obeys. */
+const nonNegativeSafeInt = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
+
+/** True for the plain-object payloads action entries carry (never an array, never a primitive). */
+function isPlainObjectPayload(value: unknown): boolean {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 /**
  * One recorded event. `kind` is declared first and the fields follow the order replay's shape
- * check has always reported them, so a corrupt entry fails on the same field it used to.
+ * check has always reported them, so a corrupt entry fails on the same field it used to. The
+ * numeric fields are bounded (non-negative safe integers, `seq` from 1) and an action's `payload`
+ * must be a plain object when present — redacted entries carry none.
  */
 const ActionLogEntrySchema = z.strictObject({
   kind: z.enum(["action", "transition", "enter", "timeout", "roster-change"]),
-  t: z.number(),
-  seq: z.number(),
+  t: nonNegativeSafeInt,
+  seq: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER),
   phase: z.string(),
   actionType: z.string().optional(),
   senderId: z.string().optional(),
-  payload: z.unknown().optional(),
+  payload: z.unknown().refine(isPlainObjectPayload).optional(),
   rejected: z.boolean().optional(),
   redacted: z.boolean().optional(),
   from: z.string().optional(),
@@ -141,16 +154,19 @@ const ActionLogHeaderSchema = z.strictObject({
   seed: z.tuple([z.number(), z.number(), z.number(), z.number()]),
   version: z.string().optional(),
   protocolVersion: z.number().int().optional(),
-  startedAt: z.number(),
+  startedAt: nonNegativeSafeInt,
 });
 
 /**
  * The wire shape of an {@link ActionLog}: strict objects, so a hand-edited log with unknown
- * fields is rejected as well. `replayLog` validates every log against this before reading it;
- * bundle and spectator code (#19) validates untrusted logs with it too.
+ * fields is rejected as well. Bounded for untrusted input: `t` and `header.startedAt` are
+ * non-negative safe integers, `seq` a safe integer from 1, `entries` at most
+ * {@link MAX_ACTION_LOG_ENTRIES} long, and an action entry's `payload` (when present) a plain
+ * object. `replayLog` validates every log against this before reading it; bundle and spectator
+ * code (#19) validates untrusted logs with it too.
  */
 export const ActionLogSchema = z.strictObject({
-  entries: z.array(ActionLogEntrySchema),
+  entries: z.array(ActionLogEntrySchema).max(MAX_ACTION_LOG_ENTRIES),
   header: ActionLogHeaderSchema,
   roster: z.array(RosterSeatSchema).optional(),
 });

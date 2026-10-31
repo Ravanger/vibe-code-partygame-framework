@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+import { MAX_ACTION_LOG_ENTRIES } from "../src/actionLog.js";
 import {
   type ActionLog,
   ActionLogSchema,
@@ -8,6 +9,7 @@ import {
   defineGame,
   getActionLog,
   type PhaseState,
+  required,
 } from "../src/index.js";
 import { TestTable } from "../src/testing/TestTable.js";
 
@@ -210,6 +212,47 @@ describe("ActionLogSchema rejects", () => {
     expect(ActionLogSchema.safeParse(patchEntryAt(log, 1, { t: "100" })).success).toBe(false);
     expect(ActionLogSchema.safeParse(patchEntryAt(log, 1, { seq: "second" })).success).toBe(false);
     expect(ActionLogSchema.safeParse(patchEntryAt(log, 1, { phase: 42 })).success).toBe(false);
+  });
+
+  it("an entry whose t or seq is outside the safe-integer bounds", () => {
+    const log = raw();
+    for (const patch of [
+      { t: -1 },
+      { t: 1.5 },
+      { t: Number.MAX_SAFE_INTEGER + 1 },
+      { seq: 0 },
+      { seq: -3 },
+      { seq: 2.5 },
+    ]) {
+      expect(ActionLogSchema.safeParse(patchEntryAt(log, 1, patch)).success).toBe(false);
+    }
+  });
+
+  it("a header whose startedAt is outside the safe-integer bounds", () => {
+    const log = raw();
+    for (const patch of [
+      { startedAt: -1 },
+      { startedAt: 1.5 },
+      { startedAt: Number.MAX_SAFE_INTEGER + 1 },
+    ]) {
+      expect(ActionLogSchema.safeParse(withHeader(log, patch)).success).toBe(false);
+    }
+  });
+
+  it("a log with more than MAX_ACTION_LOG_ENTRIES entries", () => {
+    const log = raw() as { entries: unknown[] };
+    const entry = required(log.entries[0], "first log entry");
+    const padded = [...log.entries];
+    const extra = MAX_ACTION_LOG_ENTRIES - padded.length + 1;
+    for (let i = 0; i < extra; ++i) padded.push(entry);
+    expect(ActionLogSchema.safeParse({ ...(log as object), entries: padded }).success).toBe(false);
+  });
+
+  it("an action entry whose payload is not a plain object", () => {
+    const log = raw();
+    for (const payload of ["abc", [1, 2], 42, null]) {
+      expect(ActionLogSchema.safeParse(patchEntryAt(log, 1, { payload })).success).toBe(false);
+    }
   });
 
   it("unknown fields (strict objects)", () => {

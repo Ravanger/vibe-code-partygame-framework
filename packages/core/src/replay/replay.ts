@@ -1,5 +1,10 @@
 import { LOBBY_PHASE, PROTOCOL_VERSION, type ServerError } from "@partygame/shared";
-import { type ActionLog, type ActionLogEntry, ActionLogSchema } from "../actionLog.js";
+import {
+  type ActionLog,
+  type ActionLogEntry,
+  ActionLogSchema,
+  MAX_ACTION_LOG_ENTRIES,
+} from "../actionLog.js";
 import {
   type GameDefinition,
   GameRuntime,
@@ -7,6 +12,7 @@ import {
   type PhaseState,
   type PlayerInfo,
 } from "../runtime/index.js";
+import { TimerLimitError } from "../timers.js";
 import { required, type Seed } from "../utils.js";
 import { ReplayHost } from "./ReplayHost.js";
 
@@ -43,6 +49,8 @@ function failedRunGuard(
   try {
     return step();
   } catch (cause) {
+    // A budget breach is a verdict on the log itself; rethrow it as-is so its message stands.
+    if (cause instanceof TimerLimitError) throw cause;
     throw new Error(
       `replayLog: entry ${entry.seq} re-ran into a failed run (${String(cause)}); logs containing a failed run are not replayable in v1`,
       { cause },
@@ -63,6 +71,22 @@ interface ShapeIssue {
   path: readonly PropertyKey[];
 }
 
+/** The integer range of each bounded numeric field, for out-of-range shape messages. */
+const FIELD_RANGES: Record<string, readonly [number, number]> = {
+  t: [0, Number.MAX_SAFE_INTEGER],
+  seq: [1, Number.MAX_SAFE_INTEGER],
+  startedAt: [0, Number.MAX_SAFE_INTEGER],
+};
+
+/** The "must be" text for a field, naming its integer range when the issue is an out-of-range value. */
+function mustBe(field: string, code: string, typeText: string): string {
+  const range = FIELD_RANGES[field];
+  if (range !== undefined && (code === "too_small" || code === "too_big")) {
+    return `an integer between ${range[0]} and ${range[1]}`;
+  }
+  return typeText;
+}
+
 /** The type text for an entry field in a shape error, mirroring the messages replay has always thrown. */
 function entryFieldType(field: string): string {
   switch (field) {
@@ -71,6 +95,8 @@ function entryFieldType(field: string): string {
     case "t":
     case "seq":
       return "a number";
+    case "payload":
+      return "a plain object";
     case "rejected":
     case "redacted":
       return "a boolean";
@@ -106,7 +132,11 @@ function shapeMessage(issues: readonly ShapeIssue[], log: unknown): string {
   const issue = required(issues[0], "shape issue");
   const [section, index, field] = issue.path;
   if (section === "entries") {
-    if (typeof index !== "number") return "log.entries must be an array";
+    if (typeof index !== "number") {
+      return issue.code === "too_big"
+        ? `log.entries has more than ${MAX_ACTION_LOG_ENTRIES} entries`
+        : "log.entries must be an array";
+    }
     // A path of ["entries", i] means the schema saw an array there, so this cannot miss.
     const entry = (log as { entries: readonly unknown[] }).entries[index];
     if (field === undefined) {
@@ -114,7 +144,7 @@ function shapeMessage(issues: readonly ShapeIssue[], log: unknown): string {
         ? `malformed log entry ${JSON.stringify(entry)}: has unrecognized fields`
         : `malformed log entry ${JSON.stringify(entry)}: must be an object`;
     }
-    return `malformed log entry ${JSON.stringify(entry)}: "${String(field)}" must be ${entryFieldType(String(field))}`;
+    return `malformed log entry ${JSON.stringify(entry)}: "${String(field)}" must be ${mustBe(String(field), issue.code, entryFieldType(String(field)))}`;
   }
   if (section === "header") {
     if (index === undefined) {
@@ -122,7 +152,7 @@ function shapeMessage(issues: readonly ShapeIssue[], log: unknown): string {
         ? "log.header has unrecognized fields"
         : "log.header must be an object";
     }
-    return `log.header.${String(index)} must be ${headerFieldType(String(index))}`;
+    return `log.header.${String(index)} must be ${mustBe(String(index), issue.code, headerFieldType(String(index)))}`;
   }
   if (section === "roster") {
     if (typeof index !== "number") return "log.roster must be an array";
@@ -251,10 +281,15 @@ function authoritativeDurations<TState extends PhaseState, TPrivate, TOptions>(
  * are asserted against the replayed
  * runtime — a log that contradicts what this definition actually does throws, naming the mismatch.
  * The log's shape is validated up front against {@link ActionLogSchema} (strict objects: `entries`
- * an array of objects each with a known `kind`, numeric `t` and `seq` and a string `phase`;
- * `header` with a string `game`, four-number `seed` and number `startedAt`; roster entries carrying
- * `id` plus the seat flags; no unknown fields anywhere) — a malformed log throws a named error
- * before anything runs. See "Action log and replay" in the framework guide.
+ * an array of at most {@link MAX_ACTION_LOG_ENTRIES} objects each with a known `kind`, non-negative
+ * safe-integer `t` and `seq` (from 1) and a string `phase`; an action's `payload`, when present,
+ * a plain object; `header` with a string `game`, four-number `seed` and non-negative safe-integer
+ * `startedAt`; roster entries carrying `id` plus the seat flags; no unknown fields anywhere) — a
+ * malformed log throws a named error before anything runs, and an empty `entries` array throws
+ * "the log has no entries". Timer firing is budgeted too: one advance fires at most
+ * MAX_TIMER_FIRES_PER_ADVANCE timers and the whole run at most MAX_TIMER_FIRES_PER_REPLAY; a log
+ * whose time gaps would fire more throws a named error instead of doing unbounded work. See
+ * "Action log and replay" in the framework guide.
  */
 export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
   definition: GameDefinition<TState, TPrivate, TOptions>,
@@ -262,6 +297,11 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
   init: ReplayInit<TState, TOptions>,
 ): ReplayResult<TState> {
   assertLogShape(log);
+  // The schema allows an empty array (it cannot know a session always records at least the
+  // construction-time Lobby enter); refuse it with a named error instead of an index miss.
+  if (log.entries.length === 0) {
+    throw new Error("replayLog: the log has no entries");
+  }
   if (definition.name !== log.header.game) {
     throw new Error(
       `replayLog: log was recorded for game "${log.header.game}", not "${definition.name}"`,

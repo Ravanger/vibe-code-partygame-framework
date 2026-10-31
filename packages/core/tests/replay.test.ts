@@ -2,6 +2,7 @@ import type { TextFilter } from "@partygame/content/filter";
 import { PROTOCOL_VERSION } from "@partygame/shared";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+import { MAX_ACTION_LOG_ENTRIES } from "../src/actionLog.js";
 import {
   type ActionLog,
   type ActionLogEntry,
@@ -18,6 +19,7 @@ import {
 } from "../src/index.js";
 import { replayLog } from "../src/replay/index.js";
 import { TestTable } from "../src/testing/TestTable.js";
+import { MAX_TIMER_FIRES_PER_ADVANCE, MAX_TIMER_FIRES_PER_REPLAY } from "../src/timers.js";
 
 interface S extends PhaseState {
   taps: number;
@@ -612,6 +614,29 @@ describe("replayLog log-shape validation", () => {
     ).toThrow("replayLog: log.header must be an object");
   });
 
+  it("throws a named error when the log has no entries", () => {
+    const log = liveLog();
+    const empty: ActionLog = { header: log.header, entries: [] };
+    expect(() => replayLog(definition, empty, init)).toThrow("replayLog: the log has no entries");
+  });
+
+  it("names the allowed range for an out-of-bounds t, seq or startedAt", () => {
+    const max = Number.MAX_SAFE_INTEGER;
+    const log = liveLog();
+    expect(() =>
+      replayLog(definition, withEntry(log, 1, { ...log.entries[1], t: -1 }), init),
+    ).toThrow(`"t" must be an integer between 0 and ${max}`);
+    expect(() =>
+      replayLog(definition, withEntry(log, 1, { ...log.entries[1], t: max + 1 }), init),
+    ).toThrow(`"t" must be an integer between 0 and ${max}`);
+    expect(() =>
+      replayLog(definition, withEntry(log, 1, { ...log.entries[1], seq: 0 }), init),
+    ).toThrow(`"seq" must be an integer between 1 and ${max}`);
+    expect(() =>
+      replayLog(definition, { ...log, header: { ...log.header, startedAt: -1 } }, init),
+    ).toThrow(`log.header.startedAt must be an integer between 0 and ${max}`);
+  });
+
   it("throws a named error when header.game is not a string", () => {
     const log = liveLog();
     expect(() =>
@@ -717,6 +742,24 @@ describe("replayLog log-shape validation", () => {
     expect(() =>
       replayLog(definition, withEntry(log, 1, { ...log.entries[1], phase: 42 }), init),
     ).toThrow('"phase" must be a string');
+  });
+
+  it("throws a named error when an action entry's payload is not a plain object", () => {
+    const log = liveLog();
+    expect(() =>
+      replayLog(definition, withEntry(log, 1, { ...log.entries[1], payload: "abc" }), init),
+    ).toThrow('"payload" must be a plain object');
+  });
+
+  it("throws a named error when the log has more than MAX_ACTION_LOG_ENTRIES entries", () => {
+    const log = liveLog();
+    const entry = required(log.entries[0], "first log entry");
+    const padded = [...log.entries];
+    const extra = MAX_ACTION_LOG_ENTRIES - padded.length + 1;
+    for (let i = 0; i < extra; ++i) padded.push(entry);
+    expect(() => replayLog(definition, { ...log, entries: padded }, init)).toThrow(
+      `replayLog: log.entries has more than ${MAX_ACTION_LOG_ENTRIES} entries`,
+    );
   });
 
   it("throws a named error when the log is not an object", () => {
@@ -1013,5 +1056,106 @@ describe("redacted entries", () => {
     const { states } = replayLog(definition, log, { state: newState(), options: {} });
     const last = required(states[states.length - 1], "final replayed state");
     expect(last.log).toEqual(["maybe:fine"]);
+  });
+});
+
+describe("replayLog input bounds", () => {
+  interface CapState extends PhaseState {
+    taps: number;
+  }
+  const capAction = actionFactory<CapState, Record<string, never>, Record<string, never>>();
+
+  /** A ticking phase at 1 ms: one timer fire per logged millisecond. */
+  const capDefinition = defineGame<CapState, Record<string, never>, Record<string, never>>({
+    name: "CapTap",
+    version: "1",
+    minPlayers: 1,
+    maxPlayers: 4,
+    startPhase: "Tap",
+    createPrivateState: () => ({}),
+    phases: {
+      Tap: {
+        tickMs: 1,
+        onTick: () => {},
+        actions: {
+          TAP: capAction({
+            from: "player",
+            payload: z.object({}),
+            handler: (ctx) => {
+              ctx.state.taps += 1;
+            },
+          }),
+        },
+      },
+    },
+  });
+
+  const newCapState = (): CapState => ({ phase: "", phaseEndsAt: 0, canStart: false, taps: 0 });
+
+  /** A hand-built log: start at T+100, then `taps` TAPs each `gapMs` later. */
+  const capLog = (gapMs: number, taps: number): ActionLog => {
+    const entries: ActionLogEntry[] = [
+      { seq: 1, t: 1_000_000, phase: "Lobby", kind: "enter" },
+      {
+        seq: 2,
+        t: 1_000_100,
+        phase: "Lobby",
+        kind: "action",
+        actionType: "START_GAME",
+        senderId: "p1",
+        payload: {},
+      },
+      { seq: 3, t: 1_000_100, phase: "Lobby", kind: "transition", from: "Lobby", to: "Tap" },
+      { seq: 4, t: 1_000_100, phase: "Tap", kind: "enter" },
+    ];
+    let t = 1_000_100;
+    for (let i = 0; i < taps; ++i) {
+      t += gapMs;
+      entries.push({
+        seq: i + 5,
+        t,
+        phase: "Tap",
+        kind: "action",
+        actionType: "TAP",
+        senderId: "p1",
+        payload: {},
+      });
+    }
+    return {
+      header: {
+        game: "CapTap",
+        version: "1",
+        protocolVersion: PROTOCOL_VERSION,
+        seed: [1, 2, 3, 4],
+        startedAt: 1_000_000,
+      },
+      entries,
+    };
+  };
+
+  it("refuses a time gap that would fire more than the per-advance budget", () => {
+    const log = capLog(MAX_TIMER_FIRES_PER_ADVANCE + 1, 1);
+    expect(() =>
+      replayLog(capDefinition, log, { state: newCapState(), options: {}, players: 1 }),
+    ).toThrow(/replayLog: .*timers/);
+  });
+
+  it("refuses a run whose total timer fires exceed the replay budget", () => {
+    const gapMs = 9_000; // under the per-advance budget, so only the total can trip
+    const taps = Math.floor(MAX_TIMER_FIRES_PER_REPLAY / gapMs) + 2;
+    const log = capLog(gapMs, taps);
+    expect(() =>
+      replayLog(capDefinition, log, { state: newCapState(), options: {}, players: 1 }),
+    ).toThrow(/replayLog: .*timers/);
+  });
+
+  it("replays a long-but-within-budget ticking session", () => {
+    const log = capLog(9_000, Math.floor(MAX_TIMER_FIRES_PER_REPLAY / 9_000));
+    const { states } = replayLog(capDefinition, log, {
+      state: newCapState(),
+      options: {},
+      players: 1,
+    });
+    expect(states.length).toBe(Math.floor(MAX_TIMER_FIRES_PER_REPLAY / 9_000) + 2);
   });
 });
