@@ -130,6 +130,31 @@ describe("hashBundle", () => {
     const reordered = { ...withoutLog, log };
     expect(await hashBundle(reordered)).toBe(await hashBundle(bundle));
   });
+
+  it("keeps an own __proto__ key in the canonical form", async () => {
+    const bundle = liveBundle();
+    const plain = JSON.parse('{"taps": 3}') as Record<string, unknown>;
+    const objectProto = JSON.parse('{"taps": 3, "__proto__": {"evil": true}}') as Record<
+      string,
+      unknown
+    >;
+    const primitiveProto = JSON.parse('{"taps": 3, "__proto__": "x"}') as Record<string, unknown>;
+    // Sanity: JSON.parse carries __proto__ as an own data key, not a prototype assignment.
+    expect(Object.hasOwn(objectProto, "__proto__")).toBe(true);
+    expect(Object.hasOwn(primitiveProto, "__proto__")).toBe(true);
+
+    const withPlain = [...bundle.snapshots];
+    required(withPlain[1], "snapshot").state = plain;
+    const base = await hashBundle({ ...bundle, snapshots: withPlain });
+
+    const withObject = [...bundle.snapshots];
+    required(withObject[1], "snapshot").state = objectProto;
+    expect(await hashBundle({ ...bundle, snapshots: withObject })).not.toBe(base);
+
+    const withPrimitive = [...bundle.snapshots];
+    required(withPrimitive[1], "snapshot").state = primitiveProto;
+    expect(await hashBundle({ ...bundle, snapshots: withPrimitive })).not.toBe(base);
+  });
 });
 
 describe("parseBundle", () => {

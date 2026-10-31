@@ -88,7 +88,9 @@ function canonicalize(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonicalize);
   if (value !== null && typeof value === "object") {
     const source = value as Record<string, unknown>;
-    const out: Record<string, unknown> = {};
+    // A null-prototype object so an own `__proto__` key becomes a data property instead of
+    // assigning the prototype and vanishing from JSON.stringify.
+    const out: Record<string, unknown> = Object.create(null);
     for (const key of Object.keys(source).sort()) out[key] = canonicalize(source[key]);
     return out;
   }

@@ -23,7 +23,9 @@ function* fieldsOf(ctor: object): Generator<FieldSlot> {
  * `.view()` are per-client visibility and are dropped; arrays and maps are serialized item by item.
  */
 export function syncedJsonOf(state: Schema): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
+  // A null-prototype object so an own `__proto__` key becomes a data property instead of
+  // assigning the prototype and vanishing from JSON.stringify.
+  const out: Record<string, unknown> = Object.create(null);
   for (const field of fieldsOf(state.constructor)) {
     if (field.tag !== undefined) continue; // `.view()` — never in a snapshot
     out[field.name] = serialize(Reflect.get(state, field.name));
@@ -38,7 +40,9 @@ function serialize(value: unknown): unknown {
     return items;
   }
   if (value instanceof MapSchema) {
-    const out: Record<string, unknown> = {};
+    // A null-prototype object so a game-defined `__proto__` key becomes a data property instead
+    // of assigning the prototype and vanishing from JSON.stringify.
+    const out: Record<string, unknown> = Object.create(null);
     for (const [key, item] of value) out[key] = serialize(item);
     return out;
   }
