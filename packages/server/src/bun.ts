@@ -41,6 +41,12 @@ export async function startServer(options: StartServerOptions) {
       return handler(req, remoteAddress === undefined ? {} : { remoteAddress });
     },
   });
-  await server.listen(port);
+  try {
+    await server.listen(port);
+  } catch (error) {
+    // A failed game-server bind must not leave the code API listening.
+    api.stop();
+    throw error;
+  }
   return { server, api };
 }

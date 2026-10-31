@@ -24,7 +24,12 @@ export interface ServeApiOptions {
   handler?: (req: Request, info?: ApiRequestInfo) => Response;
 }
 
-/** Serves `/api/resolve-code` for `codes` on Node's `http` (the Bun entry has its own). Close the returned server to stop it. */
+/**
+ * Serves `/api/resolve-code` for `codes` on Node's `http` (the Bun entry has its own). Close the
+ * returned server to stop it. Requests Node's parser accepts but the `Request` constructor forbids
+ * (methods such as `TRACE`) get a 405, and a handler failure gets a fixed 500 JSON body: the
+ * exception is logged, never sent to the client, and the server keeps serving.
+ */
 export async function serveApi(
   codes: RoomCodeService,
   options: ServeApiOptions,
@@ -38,24 +43,43 @@ export async function serveApi(
       resolveCode: bucket,
     });
   const api = createHttpServer(async (req, res) => {
-    // Node's parser never leaves a present header value undefined; the assertion drops it from the type.
-    const rawHeaders = req.headers as Record<string, string | string[]>;
-    const headers = new Headers();
-    for (const [name, value] of Object.entries(rawHeaders)) {
-      if (Array.isArray(value)) {
-        for (const one of value) headers.append(name, one);
-      } else {
-        headers.set(name, value);
+    const fail = (status: number, message: string): void => {
+      res.writeHead(status, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: message }));
+    };
+    try {
+      // Node's parser never leaves a present header value undefined; the assertion drops it from the type.
+      const rawHeaders = req.headers as Record<string, string | string[]>;
+      const headers = new Headers();
+      for (const [name, value] of Object.entries(rawHeaders)) {
+        if (Array.isArray(value)) {
+          for (const one of value) headers.append(name, one);
+        } else {
+          headers.set(name, value);
+        }
       }
+      // A connection that reached this handler has a peer address and a request method; the assertions keep those branches out of coverage.
+      const remoteAddress = req.socket.remoteAddress as string;
+      let request: Request;
+      try {
+        request = new Request(`http://127.0.0.1${req.url}`, {
+          method: req.method as string,
+          headers,
+        });
+      } catch {
+        // Node's parser accepts methods the Request constructor forbids (TRACE, TRACK); refuse them.
+        fail(405, "Method not allowed");
+        return;
+      }
+      const response = handler(request, { remoteAddress });
+      res.writeHead(response.status, Object.fromEntries(response.headers));
+      res.end(await response.text());
+    } catch (error) {
+      // A throwing handler must not take the process down with an unhandled rejection: a fixed
+      // body goes to the client and the exception to the log, never its text to the wire.
+      console.error("[api] request failed", error);
+      fail(500, "Internal server error");
     }
-    // A connection that reached this handler has a peer address and a request method; the assertions keep those branches out of coverage.
-    const remoteAddress = req.socket.remoteAddress as string;
-    const response = handler(
-      new Request(`http://127.0.0.1${req.url}`, { method: req.method as string, headers }),
-      { remoteAddress },
-    );
-    res.writeHead(response.status, Object.fromEntries(response.headers));
-    res.end(await response.text());
   });
   await new Promise<void>((resolve, reject) => {
     api.once("error", reject);
