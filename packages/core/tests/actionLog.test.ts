@@ -601,3 +601,93 @@ describe("a failed run", () => {
     expect(replay).toThrow(/replayLog: entry \d+ .*failed run.*timeout boom/);
   });
 });
+
+describe("action log tick counts", () => {
+  interface TS extends PhaseState {
+    taps: number;
+  }
+  const tAction = actionFactory<TS, Record<string, never>, Record<string, never>>();
+
+  class TickTable extends TestTable<TS, Record<string, never>, Record<string, never>> {
+    constructor() {
+      super({
+        definition: defineGame<TS, Record<string, never>, Record<string, never>>({
+          name: "TickLogged",
+          version: "1",
+          minPlayers: 1,
+          maxPlayers: 4,
+          startPhase: "Zone",
+          createPrivateState: () => ({}),
+          phases: {
+            Zone: {
+              tickMs: 100,
+              onTick: (ctx) => {
+                ctx.state.taps += 1;
+              },
+              actions: {
+                PING: tAction({
+                  from: "player",
+                  payload: z.object({}),
+                  handler: () => {},
+                }),
+                LEAVE: tAction({
+                  from: "player",
+                  payload: z.object({}),
+                  handler: (ctx) => ctx.transition("Out"),
+                }),
+              },
+            },
+            Out: {},
+          },
+          middleware: [actionLogMiddleware()],
+        }),
+        state: { phase: "", phaseEndsAt: 0, canStart: false, taps: 0 },
+        options: {},
+        players: 2,
+      });
+    }
+
+    log(): ActionLog | undefined {
+      return getActionLog(this.priv);
+    }
+  }
+
+  it("records the cumulative tick count on every entry while a ticking phase is active", () => {
+    const table = new TickTable();
+    expect(table.start()).toBeUndefined();
+    table.tick(150); // the tick at +100
+    expect(table.act("p2", "PING")).toBeUndefined();
+    table.tick(100); // the tick at +200
+    expect(table.act("p2", "LEAVE")).toBeUndefined();
+    const log = required(table.log(), "log");
+    const [
+      lobbyEnter,
+      startGame,
+      lobbyTransition,
+      zoneEnter,
+      ping,
+      leave,
+      leaveTransition,
+      outEnter,
+    ] = [
+      required(log.entries[0], "Lobby enter"),
+      required(log.entries[1], "START_GAME"),
+      required(log.entries[2], "start transition"),
+      required(log.entries[3], "Zone enter"),
+      required(log.entries[4], "PING"),
+      required(log.entries[5], "LEAVE"),
+      required(log.entries[6], "leave transition"),
+      required(log.entries[7], "Out enter"),
+    ];
+    // No ticking phase is active in the Lobby or Out: the field is absent.
+    expect(lobbyEnter).not.toHaveProperty("ticks");
+    expect(startGame).not.toHaveProperty("ticks");
+    expect(lobbyTransition).not.toHaveProperty("ticks");
+    expect(outEnter).not.toHaveProperty("ticks");
+    // While Zone ticks, every entry kind carries the cumulative count since entry.
+    expect(zoneEnter.ticks).toBe(0);
+    expect(ping.ticks).toBe(1);
+    expect(leave.ticks).toBe(2);
+    expect(leaveTransition.ticks).toBe(2);
+  });
+});

@@ -213,6 +213,12 @@ export interface MiddlewareContext<TState extends PhaseState, TPrivate, TOptions
    * by itself: omit `next()` to skip what is inside.
    */
   reject(code: ErrorCode, message: string, options?: RejectOptions): void;
+  /**
+   * Ticks fired since entry into the current phase — present only while a ticking phase
+   * (`onTick`) is active. The action log records it on every entry of that window so replay can
+   * cap tick delivery at the live count (#246).
+   */
+  readonly ticks?: number;
 }
 
 /**

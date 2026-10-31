@@ -14,6 +14,7 @@ import {
   GameRuntime,
   InvalidPrivateStateError,
   type PhaseState,
+  required,
   seedFromNumber,
   sfc32,
 } from "../../src/index.js";
@@ -1579,5 +1580,63 @@ describe("SET_OPTIONS", () => {
     runtime.dispatch("p1", { type: "SET_OPTIONS", data: "x".repeat(MAX_OPTIONS_JSON_LENGTH) });
     expect(host.errorsTo("p1")[0]).toMatchObject({ code: "INVALID_ACTION", action: "SET_OPTIONS" });
     expect(host.published).toEqual([]);
+  });
+});
+
+describe("runStep", () => {
+  interface RS extends PhaseState {
+    log: string[];
+  }
+  const rAction = actionFactory<RS, Record<string, never>, Record<string, never>>();
+
+  /** A runtime plus a captured context the tests can drive from inside `runStep`. */
+  function stepTable() {
+    let captured: GameContext<RS, Record<string, never>, Record<string, never>> | undefined;
+    const host = new FakeHost();
+    host.seat("p1");
+    const state: RS = { phase: "", phaseEndsAt: 0, canStart: false, log: [] };
+    const spec = defineGame<RS, Record<string, never>, Record<string, never>>({
+      name: "StepDrain",
+      version: "1",
+      minPlayers: 1,
+      maxPlayers: 2,
+      startPhase: "Play",
+      createPrivateState: () => ({}),
+      phases: {
+        Play: {
+          actions: {
+            CAPTURE: rAction({
+              from: "player",
+              payload: z.object({}),
+              handler: (ctx) => {
+                captured = ctx;
+              },
+            }),
+          },
+        },
+        Score: {},
+      },
+    });
+    const runtime = new GameRuntime({ definition: spec, state, options: {}, host });
+    return { runtime, context: () => required(captured, "captured context") };
+  }
+
+  it("drains transitions queued by fn before it returns", () => {
+    const { runtime, context } = stepTable();
+    expect(runtime.dispatch("p1", { type: "START_GAME" })).toBeUndefined();
+    expect(runtime.dispatch("p1", { type: "CAPTURE" })).toBeUndefined();
+    expect(runtime.phase).toBe("Play");
+    runtime.runStep(() => context().transition("Score"));
+    expect(runtime.phase).toBe("Score"); // the transition applied inside runStep, not deferred
+  });
+
+  it("is ignored once the runtime has stopped", () => {
+    const { runtime } = stepTable();
+    runtime.stop();
+    let ran = false;
+    runtime.runStep(() => {
+      ran = true;
+    });
+    expect(ran).toBe(false);
   });
 });

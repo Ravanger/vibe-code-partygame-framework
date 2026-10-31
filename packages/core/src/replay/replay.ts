@@ -6,6 +6,7 @@ import {
   MAX_ACTION_LOG_ENTRIES,
 } from "../actionLog.js";
 import {
+  type GameContext,
   type GameDefinition,
   GameRuntime,
   type PhaseDefinition,
@@ -76,6 +77,7 @@ const FIELD_RANGES: Record<string, readonly [number, number]> = {
   t: [0, Number.MAX_SAFE_INTEGER],
   seq: [1, Number.MAX_SAFE_INTEGER],
   startedAt: [0, Number.MAX_SAFE_INTEGER],
+  ticks: [0, Number.MAX_SAFE_INTEGER],
 };
 
 /** The "must be" text for a field, naming its integer range when the issue is an out-of-range value. */
@@ -94,6 +96,7 @@ function entryFieldType(field: string): string {
       return `one of ${ENTRY_KINDS.join(", ")}`;
     case "t":
     case "seq":
+    case "ticks":
       return "a number";
     case "payload":
       return "a plain object";
@@ -248,6 +251,77 @@ function authoritativeDurations<TState extends PhaseState, TPrivate, TOptions>(
   return { ...definition, phases };
 }
 
+/** The replay-side bookkeeping for one ticking phase's capped tick delivery (#246). */
+interface CappedTicks<TState extends PhaseState, TPrivate, TOptions> {
+  /** The most ticks the current entry allows; `undefined` until an entry with `ticks` sets it. */
+  limit: number | undefined;
+  /** Ticks applied since the last enter. */
+  applied: number;
+  /** Ticks that fired nominally but must wait for a later entry's cap, in fire order. */
+  pending: { ctx: GameContext<TState, TPrivate, TOptions>; dtMs: number }[];
+  /** The phase's original `onTick`. */
+  onTick: (ctx: GameContext<TState, TPrivate, TOptions>, dtMs: number) => void;
+}
+
+/**
+ * Caps each ticking phase's tick delivery at the count its log entries record (#246). A live host
+ * delivers ticks up to one clock grid step late, so an action can be logged after a tick's nominal
+ * deadline but before its delivery; firing every nominally due tick would then apply one the live
+ * room had not. Every phase's `onEnter` resets all caps — mirroring `enter()`'s cancel of the
+ * pending tick when a phase is left, which also discards ticks deferred for a phase that never
+ * got to deliver them. A ticking phase's `onTick` applies inline while under its entry's cap and
+ * defers beyond it, in fire order; the walk sets each cap's limit from the entry's recorded
+ * `ticks` and pumps the deferred ticks before advancing the clock. Entries without `ticks` (legacy
+ * logs) leave the caps unbounded and replay every nominally due tick, as before.
+ */
+function capTicks<TState extends PhaseState, TPrivate, TOptions>(
+  definition: GameDefinition<TState, TPrivate, TOptions>,
+): {
+  definition: GameDefinition<TState, TPrivate, TOptions>;
+  caps: Map<string, CappedTicks<TState, TPrivate, TOptions>>;
+} {
+  const caps = new Map<string, CappedTicks<TState, TPrivate, TOptions>>();
+  const resetAll = (): void => {
+    for (const cap of caps.values()) {
+      cap.limit = undefined;
+      cap.applied = 0;
+      cap.pending.length = 0;
+    }
+  };
+  const phases: Record<string, PhaseDefinition<TState, TPrivate, TOptions>> = {};
+  for (const [name, phase] of Object.entries(definition.phases)) {
+    const onEnter = phase.onEnter;
+    const wrapped: PhaseDefinition<TState, TPrivate, TOptions> = {
+      ...phase,
+      // Reset before the original hook runs, like enter() clears the tick timer before onEnter.
+      onEnter: (ctx) => {
+        resetAll();
+        onEnter?.(ctx);
+      },
+    };
+    if (phase.onTick !== undefined) {
+      const cap: CappedTicks<TState, TPrivate, TOptions> = {
+        limit: undefined,
+        applied: 0,
+        pending: [],
+        onTick: phase.onTick,
+      };
+      caps.set(name, cap);
+      wrapped.onTick = (ctx, dtMs) => {
+        // Deferred ticks must apply before any later one, so a non-empty queue defers too.
+        if (cap.pending.length > 0 || (cap.limit !== undefined && cap.applied + 1 > cap.limit)) {
+          cap.pending.push({ ctx, dtMs });
+          return;
+        }
+        cap.applied += 1;
+        cap.onTick(ctx, dtMs);
+      };
+    }
+    phases[name] = wrapped;
+  }
+  return { definition: { ...definition, phases }, caps };
+}
+
 /**
  * Re-drives a fresh runtime from an {@link ActionLog} and returns deep-cloned state snapshots.
  * The definition's `name` and `version` must match the log's header: a different game or version
@@ -262,7 +336,13 @@ function authoritativeDurations<TState extends PhaseState, TPrivate, TOptions>(
  * to its `t`, re-dispatches the action (if any) and produces one snapshot. Logged timeouts are
  * authoritative: when the replayed runtime enters a timed phase, its timer is made to expire at
  * the time recorded in the log — a live room's tick-quantized clock can fire a few ms early or
- * late relative to enter + duration — so `phaseEndsAt` in the snapshots reflects that time. The
+ * late relative to enter + duration — so `phaseEndsAt` in the snapshots reflects that time. Recorded
+ * tick counts are authoritative too: while a ticking phase is active, each entry records the ticks
+ * the live room had applied, and the replay caps that phase's tick delivery at it — a live host
+ * delivers ticks up to one clock grid step late, so an action can land after a tick's nominal
+ * deadline but before its delivery. Ticks past an entry's cap are deferred in fire order and apply
+ * at the next entry boundary (or are discarded when the phase is left first), exactly as the live
+ * room did; entries without `ticks` (legacy logs) replay every nominally due tick, as before. The
  * recorded roster (the seats at START_GAME, host first) is pre-seated with its recorded flags — so
  * the replayed bench-on-start and `activePlayers()` reads match live — and its ids are mapped
  * positionally to p1..pN so actions re-dispatch against the matching seats; a log without a roster
@@ -358,8 +438,9 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
   const host = new ReplayHost(init.seed ?? log.header.seed);
   for (let i = 0; i < seatCount; ++i) host.seat(`p${i + 1}`, seats?.[i] ?? {});
   host.time = log.header.startedAt;
+  const { definition: cappedDefinition, caps } = capTicks(definition);
   const runtime = new GameRuntime({
-    definition: authoritativeDurations(definition, pairTimeouts(log.entries)),
+    definition: authoritativeDurations(cappedDefinition, pairTimeouts(log.entries)),
     state: init.state,
     options: init.options,
     host,
@@ -395,6 +476,21 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
     }
     const prePhase = init.state.phase;
     const error = failedRunGuard(entry, () => {
+      // The entry's recorded tick count is authoritative for its phase: cap the delivery at it and
+      // apply what earlier entries deferred, before the clock advances past this entry's time.
+      // Legacy entries carry no `ticks`, leaving the cap unbounded (the old behavior).
+      const tickCap = caps.get(entry.phase);
+      if (tickCap !== undefined && entry.ticks !== undefined) {
+        const limit = entry.ticks;
+        tickCap.limit = limit;
+        runtime.runStep(() => {
+          while (tickCap.pending.length > 0 && tickCap.applied < limit) {
+            const item = required(tickCap.pending.shift(), "pending tick");
+            tickCap.applied += 1;
+            tickCap.onTick(item.ctx, item.dtMs);
+          }
+        });
+      }
       host.advance(entry.t - host.time);
       if (settleSeqs.has(entry.seq)) runtime.rosterChanged();
       // A redacted entry was refused before the handler ran and its payload is not in the log:

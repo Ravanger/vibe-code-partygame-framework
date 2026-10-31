@@ -66,6 +66,15 @@ export interface ActionLogEntry {
   from?: string;
   /** `kind === "transition"`: target phase. */
   to?: string;
+  /**
+   * Ticks fired since entry into the current phase, recorded on every entry kind while a ticking
+   * phase (`onTick`) is active — absent otherwise. A live host delivers ticks up to one clock
+   * grid step late, so an action can be logged after a tick's nominal deadline but before its
+   * delivery; `replayLog` caps the replayed tick count at this value so such an action replays
+   * with exactly the ticks the live room had applied (#246). Logs recorded before this field
+   * carry no `ticks`; they replay every nominally due tick, as before.
+   */
+  ticks?: number;
 }
 
 /** Written on the first recorded event. */
@@ -146,6 +155,7 @@ const ActionLogEntrySchema = z.strictObject({
   redacted: z.boolean().optional(),
   from: z.string().optional(),
   to: z.string().optional(),
+  ticks: nonNegativeSafeInt.optional(),
 });
 
 /** The log header, in the order replay's shape check has always reported its fields. */
@@ -208,7 +218,9 @@ function logOf(ctx: MiddlewareContext<PhaseState, unknown, unknown>, instance: s
  * Records every middleware-visible event — actions (type, sender, zod-parsed payload), transitions
  * (from/to), enters, timeouts and roster changes — into an append-only, JSON-serializable log kept
  * outside `ctx.priv` (a module-level store keyed by it). The header (seed, game name, start time)
- * is written on the first entry.
+ * is written on the first entry. While a ticking phase (`onTick`) is active, every entry also
+ * carries `ticks` — the ticks fired since the phase was entered — so replay can cap its tick
+ * delivery at the live count (#246).
  * Never touches `ctx.state`; the log stays server-side. Actions rejected before the handler chain
  * (malformed envelope, unknown action, unauthorized sender, inactive player, invalid payload) are not
  * logged; an action whose handler calls `ctx.reject()` or throws a `FrameworkError` has reached the
@@ -254,6 +266,9 @@ export function actionLogMiddleware(): PhaseMiddleware<PhaseState, unknown, unkn
       entry.to = event.to;
       if (event.from === LOBBY_PHASE) recordRoster();
     }
+    // While a ticking phase is active, the live tick count so far: replay caps its tick delivery
+    // at it (#246). Absent otherwise — legacy logs keep their old shape.
+    if (ctx.ticks !== undefined) entry.ticks = ctx.ticks;
     log.entries.push(entry);
     next();
     if (event.kind === "action" && ctx.rejectionCount > 0) {

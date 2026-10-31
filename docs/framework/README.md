@@ -189,10 +189,10 @@ canJoin: (input) =>
 The server owns the clock: clients render a countdown from `phaseEndsAt`.
 
 A real-time phase declares `onTick(ctx, dtMs)`, called every `tickMs` while the phase is active — default 100 ms (10 Hz); it must be an integer >= 1 and is rejected at definition time without `onTick`.
-`dtMs` is that nominal interval, not wall-clock elapsed time, so integrating state by it (`pos += speed * dtMs / 1000`) is deterministic: tick k is due at enter + k·tickMs, and `replayLog` reproduces exactly those ticks because the replay clock advances fire precisely the ones due between logged entries.
+`dtMs` is that nominal interval, not wall-clock elapsed time, so integrating state by it (`pos += speed * dtMs / 1000`) is deterministic: tick k is due at enter + k·tickMs.
 Ticks stop as soon as the phase is left — including a transition queued from within `onTick` — and on shutdown; leaving and re-entering restarts the cadence.
 Like `onPlayerSync`, ticks are not wrapped by phase middleware.
-On a live room the Colyseus clock quantizes delivery to its ~16 ms grid. Ticks are anchored to the phase entry — tick k is scheduled for enter + k·tickMs regardless of when tick k−1 actually fired — so a tick can land up to one grid step late but never more: lateness is not carried into the next tick, and an action in that window sees at most one fewer tick than a replay would. Timeouts have the same skew and the log corrects them; ticks are too chatty to log; closing the gap is tracked in #246.
+On a live room the Colyseus clock quantizes delivery to its ~16 ms grid. Ticks are anchored to the phase entry — tick k is scheduled for enter + k·tickMs regardless of when tick k−1 actually fired — so a tick can land up to one grid step late but never more: lateness is not carried into the next tick. An action in that window would otherwise replay with one extra tick, so the log corrects it without logging each tick (which would be too chatty): while a ticking phase is active, every entry records `ticks` — the ticks fired since the phase was entered — and `replayLog` caps that phase's delivery at the recorded count, applying deferred ticks in fire order at the next entry boundary (or discarding them when the phase is left first), exactly as the live room did. Legacy logs without `ticks` replay every nominally due tick, as before. Timeouts have the same skew; the log corrects those too (see the Determinism contract).
 
 ### Lobby
 Built in. `START_GAME` is host only and needs `minPlayers` active players (else `NOT_ENOUGH_PLAYERS`).
@@ -299,6 +299,7 @@ every room and replay table append to one log and one timing store.
 | `rejected` | `kind === "action"` only; `true` when the handler called `ctx.reject()` or threw a `FrameworkError` (the action ran but changed nothing). Absent on accepted actions |
 | `redacted` | `kind === "action"` only; `true` when the rejection asked for payload redaction (`ctx.reject` with `redactPayload: true`) — the entry then carries no `payload`. The action was refused before the handler ran, so it changed no state and `replayLog` skips re-dispatching it. Implies `rejected: true` |
 | `from`, `to` | `kind === "transition"` only |
+| `ticks` | While a ticking phase (`onTick`) is active, on every entry kind: the ticks fired since the phase was entered (0 on its own `enter`). Absent otherwise; logs without it replay every nominally due tick |
 
 Actions rejected **before the handler chain** — malformed envelope, unknown action, unauthorized sender,
 inactive player, invalid payload — are **not** logged: they never reach the middleware and change no state.
@@ -330,7 +331,12 @@ positionally to `p1..pN`, so every recorded sender re-dispatches against the mat
   logged timeouts are authoritative — when replay enters a timed phase, its timer is made to expire at the
   time recorded in the log. A live room's phase timers run on Colyseus's tick-quantized clock (a ~17 ms
   grid), so a timeout can fire a few ms early or late relative to enter + duration; `phaseEndsAt` in
-  replayed snapshots is the logged timeout time, not enter + duration.
+  replayed snapshots is the logged timeout time, not enter + duration. Recorded tick counts are
+  authoritative the same way: while a ticking phase is active, each entry's `ticks` caps how many of that
+  phase's ticks the replay fires before it — a live host delivers them up to one grid step late — so an
+  action that landed in the late-tick window replays with exactly the live tick count. The cap applies
+  deferred ticks through `GameRuntime.runStep`, which runs them as one full step so any transition they
+  queue drains before the next entry.
 - **IDs.** Identifiers that land in synced state or an action payload must come from `ctx.newId()` (drawn
   from the room RNG). `crypto.randomUUID()` breaks replay: re-dispatched payloads reference ids the fresh
   runtime never generated.
