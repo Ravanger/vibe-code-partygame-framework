@@ -217,7 +217,7 @@ The date is taken from the server clock when the first round starts and stored i
 midnight keeps the date it started with. The room seed still drives everything else (answer shuffles), so action-log replay
 of a daily game reproduces the same final state.
 
-`filterLevel` drives the room's text filter (`createTextFilter()` from `@partygame/content/filter`): answers are checked through `textFilterMiddleware` (declared as `textFields: ["answer"]` on `SUBMIT_ANSWER`, which covers tie-breakers too) and player names are checked by the server at join and on `SET_NAME`. At `moderate` slurs and profanity are refused; `strict` also refuses mild terms; `off` checks nothing. A refused answer is rejected with `CONTENT_REJECTED` and the filter's fixed reason, leaving the typed text in the player's box to fix or resend.
+`filterLevel` drives the room's text filter (`createTextFilter()` from `@partygame/content/filter`): answers are checked through `textFilterMiddleware` (declared as `textFields: ["answer"]` on `SUBMIT_ANSWER`, which covers tie-breakers too) and player names are checked by the server at join and on `SET_NAME`. At `moderate` slurs and profanity are refused; `strict` also refuses mild terms; `off` checks nothing. A refused answer is rejected with `CONTENT_REJECTED` and the fixed core message (`CLIENT_MESSAGES.CONTENT_REJECTED`; override it through the definition's `strings.contentRejected`), leaving the typed text in the player's box to fix or resend.
 
 ## Content and running
 

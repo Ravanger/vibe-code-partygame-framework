@@ -78,7 +78,7 @@ Every rejection is sent only to the sender as `ERROR { code, message, action }`:
 | `WRONG_PHASE` | action exists, but not in the current phase |
 | `UNAUTHORIZED` | role check failed (for example a guest sent a host action) |
 | `NOT_ACTIVE` | the sender is waiting for the next round |
-| `CONTENT_REJECTED` | free text failed the room's text filter: an action's declared `textFields` (via `textFilterMiddleware`) or a player name via `SET_NAME`; the message is the filter's fixed per-level reason. A join with a filtered name is refused with close code 4405 instead |
+| `CONTENT_REJECTED` | free text failed the room's text filter: an action's declared `textFields` (via `textFilterMiddleware`; the message is the fixed core string `CoreStrings.contentRejected`) or a player name via `SET_NAME` (the message is the filter's fixed per-level reason). A join with a filtered name is refused with close code 4405 instead |
 | `NOT_ENOUGH_PLAYERS` | `START_GAME` below `minPlayers` |
 | `NOT_ALLOWED` | game rule; use `ctx.reject("NOT_ALLOWED", "why")` in a handler |
 | `NAME_TAKEN` | `SET_NAME` with a name another seat already has (compared trimmed and case-insensitively); the seat keeps its name |
@@ -127,7 +127,8 @@ every scope when the phase changes (`RuntimeHost.audienceOnce`, cleared in `noti
 
 Refusals mirror the player path: a seated player who sends an audience action gets `NOT_ALLOWED`; an audience key that sends
 anything but an audience action gets `UNAUTHORIZED`. Payload validation, middleware and the failure policy are identical to
-`dispatch`. In replay, an entry whose sender is not in the recorded roster is re-dispatched through `dispatchAudience` (legacy
+`dispatch` — an audience action can declare `textFields`, which `textFilterMiddleware` checks exactly as for a player action.
+In replay, an entry whose sender is not in the recorded roster is re-dispatched through `dispatchAudience` (legacy
 logs without a roster keep player dispatch).
 
 On the server, spectators are the audience. A seatless connection may send `ACTION` only for an action declared
@@ -249,7 +250,7 @@ outside the chain), no cancelling queued transitions.
 - `loggingMiddleware({ log })` — one line per event, no hardcoded console. Exact formats: `enter <phase>`, `timeout <phase>`, `action <ACTION_TYPE> by <senderId> in <phase>`, `transition <from> -> <to>`. No line for `roster-change`.
 - `timingMiddleware()` — records per-phase durations into a store kept outside `ctx.priv` (keyed by it; read back with `getPhaseTimings(priv)`); each phase gets `{ enteredAt: number, durationsMs: number[] }`. Started on enter (before the hook), closed when a transition out of that phase is observed. The currently open phase has no final duration yet. Never touches `ctx.state` (it is synced to clients) or `ctx.priv`; timing metadata stays server-side.
 - `actionLogMiddleware()` — append-only, JSON-serializable record of every middleware-visible event, kept outside `ctx.priv` (read back with `getActionLog(priv)`); see Action log and replay below.
-- `textFilterMiddleware(filter)` — rejects an action whose declared text fields fail the room's filter level. Declare which payload fields are free text per action (`textFields: ["..."]` on the action definition; the framework never guesses) and how strict this room is via `filterLevel?: (options) => "off" | "moderate" | "strict"` on the game definition (default `"off"`). For each declared string field it runs `filter.check(value, level)` in declaration order and, on the first failure, rejects with `CONTENT_REJECTED` and the filter's reason — always with `redactPayload`, so an action log records the rejection without the offending text — without running the handler. Pass `{ onRejected?(ctx, reason) }` as the second argument to be told about each refusal (after the rejection is recorded); the game can react (e.g. count rejections) but cannot change the outcome. A `TextFilter` comes from `@partygame/content` (`createTextFilter()` is the default English one); at `"off"` the filter is never called, and actions without `textFields` pass untouched.
+- `textFilterMiddleware(filter)` — rejects an action whose declared text fields fail the room's filter level; player and audience actions alike (an audience action declares its `textFields` the same way). Declare which payload fields are free text per action (`textFields: ["..."]` on the action definition; the framework never guesses) and how strict this room is via `filterLevel?: (options) => "off" | "moderate" | "strict"` on the game definition (default `"off"`). For each declared string field it runs `filter.check(value, level)` in declaration order and, on the first failure, rejects with `CONTENT_REJECTED` and a fixed core string (`CoreStrings.contentRejected`, default `CLIENT_MESSAGES.CONTENT_REJECTED`) — always with `redactPayload`, so an action log records the rejection without the offending text — without running the handler. The filter's own reason never reaches a client; it is passed only to `{ onRejected?(ctx, reason) }` (the second argument), which fires after the rejection is recorded; the game can react (e.g. count rejections) but cannot change the outcome. A `TextFilter` comes from `@partygame/content` (`createTextFilter()` is the default English one); at `"off"` the filter is never called, and actions without `textFields` pass untouched.
 
 ### Action log and replay
 `actionLogMiddleware()` records everything the middleware sees into an append-only, JSON-serializable log
@@ -613,7 +614,7 @@ The protocol does not change: errors keep their `ErrorCode` and English `message
 
 The generic `@partygame/game-ui` components read their labels from one more table, `defaultUiStrings`, set with `setStrings(partial)` at the app root (GameControls menu and dialog, LobbySettings summary, NameInput, Podium, QrCode, and the `PhaseClock` announcement through its `secondsRemaining(n)` function entry). The table carries a `clientStrings` field: pass the same object to both the manager's `strings` option and `setStrings`, and one table localises both layers. Server error text resolves as `clientStrings.errors[code] ?? message`, so codes you do not translate keep the server's own message.
 
-On the server side, every message the core runtime owns (the lobby built-ins' refusals, the failure notice in `state.notice`, the stopped-runtime error, and the dispatch pipeline's refusal log messages) comes from `defaultCoreStrings` (`@partygame/core`). Pass a partial table as the definition's `strings` field — it lives on the game definition, so replays and tests see it; `defineGame` fills in the defaults:
+On the server side, every message the core runtime owns (the lobby built-ins' refusals, the failure notice in `state.notice`, the stopped-runtime error, the text-filter rejection, and the dispatch pipeline's refusal log messages) comes from `defaultCoreStrings` (`@partygame/core`). Pass a partial table as the definition's `strings` field — it lives on the game definition, so replays and tests see it; `defineGame` fills in the defaults:
 
 ```ts
 const game = defineGame<ButtonState, Priv>({

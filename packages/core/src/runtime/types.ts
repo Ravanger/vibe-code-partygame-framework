@@ -133,6 +133,11 @@ export interface GameContext<TState extends PhaseState, TPrivate, TOptions> {
   readonly gameVersion: string;
   /** The room RNG seed; see `sfc32`. Recorded in the action log header. */
   readonly seed: Seed;
+  /**
+   * The definition's merged strings table (its `strings` over {@link defaultCoreStrings}); the
+   * client-visible core messages — the text-filter refusal among them — come from here.
+   */
+  readonly strings: CoreStrings;
 }
 
 /** Context of an action handler. */
@@ -239,6 +244,8 @@ export interface AudienceActionDefinition<TState extends PhaseState, TPrivate, T
   readonly from: "audience";
   /** Validates the whole action object (`type` plus flat fields). */
   payload: z.ZodType<TPayload>;
+  /** Payload fields that hold free text; `textFilterMiddleware` checks exactly these, as for player actions. The framework never guesses. */
+  textFields?: readonly string[];
   handler(ctx: AudienceActionContext<TState, TPrivate, TOptions, TPayload>): void;
 }
 

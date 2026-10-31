@@ -1,10 +1,14 @@
 import type { FilterLevel, TextFilter } from "@partygame/content/filter";
-import { ErrorCode } from "@partygame/shared";
+import { CLIENT_MESSAGES, ErrorCode } from "@partygame/shared";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
   actionFactory,
+  actionLogMiddleware,
+  type CoreStrings,
+  defaultCoreStrings,
   defineGame,
+  getActionLog,
   getPhaseTimings,
   InvalidPrivateStateError,
   loggingMiddleware,
@@ -13,6 +17,7 @@ import {
   type PhaseMiddleware,
   type PhaseState,
   type PhaseTimingRecord,
+  required,
   textFilterMiddleware,
   timingMiddleware,
 } from "../src/index.js";
@@ -153,6 +158,7 @@ const rawContext = (priv: unknown): MiddlewareContext<PhaseState, unknown, unkno
   gameName: "G",
   gameVersion: "1",
   seed: [0, 0, 0, 0],
+  strings: defaultCoreStrings,
   event: { kind: "enter" },
   rejectionCount: 0,
   redactedRejectionCount: 0,
@@ -260,6 +266,7 @@ class FTable extends TestTable<S, P, O> {
     middleware: PhaseMiddleware<S, P, O>[],
     filterLevel?: (options: O) => FilterLevel,
     onError?: (error: unknown) => void,
+    strings?: Partial<CoreStrings>,
   ) {
     super({
       definition: defineGame<S, P, O>({
@@ -270,10 +277,22 @@ class FTable extends TestTable<S, P, O> {
         startPhase: "Play",
         createPrivateState: () => ({ secret: "s" }),
         ...(filterLevel ? { filterLevel } : {}),
+        ...(strings ? { strings } : {}),
         onError: (_ctx, error) => onError?.(error),
         phases: {
           Play: {
             actions: {
+              CHATTER: action({
+                from: "audience",
+                payload: z.object({ text: z.string() }),
+                textFields: ["text"],
+                handler: (ctx) => ctx.state.log.push(`chattered:${ctx.payload.text}`),
+              }),
+              CHEER: action({
+                from: "audience",
+                payload: z.object({ word: z.string() }),
+                handler: (ctx) => ctx.state.log.push(`cheered:${ctx.payload.word}`),
+              }),
               SAY: action({
                 from: "player",
                 payload: z.object({ text: z.string() }),
@@ -355,6 +374,14 @@ const testFilter: TextFilter = {
   },
 };
 
+/** A custom filter whose reason echoes the matched word — must never reach a client. */
+const echoFilter: TextFilter = {
+  check(text) {
+    const at = text.indexOf("bad");
+    return at === -1 ? { ok: true } : { ok: false, reason: `matched "bad" at ${at}` };
+  },
+};
+
 describe("textFilterMiddleware", () => {
   it("rejects a declared text field that fails the filter, without running the handler", () => {
     filterCalls.length = 0;
@@ -363,7 +390,7 @@ describe("textFilterMiddleware", () => {
     const error = table.act("p2", "SAY", { text: "a bad one" });
     expect(error).toEqual({
       code: ErrorCode.CONTENT_REJECTED,
-      message: "no bad words",
+      message: CLIENT_MESSAGES.CONTENT_REJECTED,
       action: "SAY",
     });
     expect(table.errors("p2")).toContainEqual(error);
@@ -384,7 +411,7 @@ describe("textFilterMiddleware", () => {
     table.start();
     expect(table.act("p2", "SHOUT", { first: "clean", second: "bad" })).toEqual({
       code: ErrorCode.CONTENT_REJECTED,
-      message: "no bad words",
+      message: CLIENT_MESSAGES.CONTENT_REJECTED,
       action: "SHOUT",
     });
     expect(table.state.log).toEqual([]);
@@ -445,5 +472,78 @@ describe("textFilterMiddleware", () => {
     table.start();
     table.act("p2", "SAY", { text: "a bad one" });
     expect(counts).toEqual([1]);
+  });
+
+  it("sends the client a fixed message while onRejected gets the filter's reason", () => {
+    const reasons: string[] = [];
+    const table = new FTable(
+      [textFilterMiddleware(echoFilter, { onRejected: (_ctx, reason) => reasons.push(reason) })],
+      () => "moderate",
+    );
+    table.start();
+    const error = table.act("p2", "SAY", { text: "a bad one" });
+    expect(error).toEqual({
+      code: ErrorCode.CONTENT_REJECTED,
+      message: CLIENT_MESSAGES.CONTENT_REJECTED,
+      action: "SAY",
+    });
+    expect(table.errors("p2")).toContainEqual(error);
+    expect(table.state.log).toEqual([]);
+    expect(reasons).toEqual(['matched "bad" at 2']);
+  });
+
+  it("uses the definition's contentRejected string when overridden", () => {
+    const table = new FTable([textFilterMiddleware(testFilter)], () => "moderate", undefined, {
+      contentRejected: "Text not allowed",
+    });
+    table.start();
+    const error = table.act("p2", "SAY", { text: "a bad one" });
+    expect(error).toMatchObject({ code: ErrorCode.CONTENT_REJECTED, message: "Text not allowed" });
+  });
+
+  it("lets clean audience text reach the handler", () => {
+    const table = new FTable([textFilterMiddleware(testFilter)], () => "moderate");
+    table.start();
+    expect(
+      table.runtime.dispatchAudience("aud-1", { type: "CHATTER", text: "fine" }),
+    ).toBeUndefined();
+    expect(table.state.log).toEqual(["chattered:fine"]);
+  });
+
+  it("checks an audience action's declared text fields and rejects with redaction", () => {
+    filterCalls.length = 0;
+    const table = new FTable(
+      [actionLogMiddleware(), textFilterMiddleware(testFilter)],
+      () => "moderate",
+    );
+    table.start();
+    const error = table.runtime.dispatchAudience("aud-1", { type: "CHATTER", text: "a bad one" });
+    expect(error).toEqual({
+      code: ErrorCode.CONTENT_REJECTED,
+      message: CLIENT_MESSAGES.CONTENT_REJECTED,
+      action: "CHATTER",
+    });
+    expect(table.state.log).toEqual([]);
+    expect(filterCalls).toEqual([["moderate", "a bad one"]]);
+    const log = getActionLog(table.priv);
+    const entry = required(
+      log?.entries.find((e) => e.kind === "action" && e.actionType === "CHATTER"),
+      "CHATTER log entry",
+    );
+    expect(entry.senderId).toBe("aud-1");
+    expect(entry.rejected).toBe(true);
+    expect(entry.redacted).toBe(true);
+    expect(JSON.stringify(log)).not.toContain("a bad one");
+  });
+
+  it("leaves an audience action without textFields untouched", () => {
+    filterCalls.length = 0;
+    const table = new FTable([textFilterMiddleware(testFilter)], () => "strict");
+    table.start();
+    expect(
+      table.runtime.dispatchAudience("aud-1", { type: "CHEER", word: "a bad one" }),
+    ).toBeUndefined();
+    expect(table.state.log).toEqual(["cheered:a bad one"]);
+    expect(filterCalls).toEqual([]);
   });
 });

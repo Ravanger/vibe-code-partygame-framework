@@ -1,4 +1,4 @@
-import { ErrorCode, FrameworkError, START_GAME } from "@partygame/shared";
+import { CLIENT_MESSAGES, ErrorCode, FrameworkError, START_GAME } from "@partygame/shared";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
@@ -46,6 +46,7 @@ describe("CoreStrings and defineGame", () => {
     );
     expect(defaultCoreStrings.cannotKickSelf).toBe("You cannot kick yourself");
     expect(defaultCoreStrings.noSuchPlayer).toBe("No such player");
+    expect(defaultCoreStrings.contentRejected).toBe(CLIENT_MESSAGES.CONTENT_REJECTED);
     expect(defaultCoreStrings.endGameInLobby).toBe("END_GAME is not allowed in Lobby");
     expect(defaultCoreStrings.needAtLeast(3)).toBe("Need at least 3 players to start");
     expect(defaultCoreStrings.notAllowedToSend("PRESS")).toBe("Not allowed to send PRESS");
@@ -204,6 +205,7 @@ describe("log-only core strings", () => {
     gameName: "Test",
     gameVersion: "1",
     seed: [0, 0, 0, 0],
+    strings: defaultCoreStrings,
   });
 
   const frameworkError = (fn: () => void): FrameworkError => {

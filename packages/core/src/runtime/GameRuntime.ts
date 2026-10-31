@@ -265,6 +265,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       gameName: this.spec.name,
       gameVersion: this.spec.version,
       seed: this.host.seed,
+      strings: this.strings,
     };
   }
 
