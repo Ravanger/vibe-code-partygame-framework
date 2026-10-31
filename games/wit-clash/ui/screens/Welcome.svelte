@@ -15,7 +15,7 @@ $effect(() => {
 
 <div class="welcome stack">
   <div class="hero">
-    <h1 class="wordmark">WitClash</h1>
+    <h1 class="wordmark" tabindex="-1">WitClash</h1>
     <p class="tagline">Write funny answers. Vote for the best. Win bragging rights.</p>
   </div>
 
@@ -69,7 +69,7 @@ $effect(() => {
     padding: 0.1em 0.5em;
     border: var(--outline);
     border-radius: var(--radius-card);
-    background: var(--color-1);
+    background: var(--wordmark);
     color: var(--white);
     -webkit-text-stroke: 2px var(--ink);
     paint-order: stroke fill;

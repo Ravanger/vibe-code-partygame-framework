@@ -36,7 +36,7 @@ $effect(() => () => spotlight.destroy());
 
   <div class="head">
     {#if vm.isFinalRound}
-      <h1>Game Over!</h1>
+      <h1 tabindex="-1">Game Over!</h1>
       {#if vm.champions.length > 0}
         <div class="winner-banner card taped">
           <span class="winner-stickers">
@@ -49,7 +49,7 @@ $effect(() => () => spotlight.destroy());
         </div>
       {/if}
     {:else}
-      <h1>{`${vm.roundLabel} Results`}</h1>
+      <h1 tabindex="-1">{`${vm.roundLabel} Results`}</h1>
     {/if}
   </div>
 

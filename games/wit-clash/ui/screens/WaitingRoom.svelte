@@ -56,7 +56,7 @@ $effect(() => () => vm.destroy());
 
   <div class="col">
     <div class="players-section card">
-      <h2>{`Players (${vm.readyCount} ready, ${vm.minPlayers} to ${vm.maxPlayers} needed)`}</h2>
+      <h2 tabindex="-1">{`Players (${vm.readyCount} ready, ${vm.minPlayers} to ${vm.maxPlayers} needed)`}</h2>
       {#if vm.spectatorCount > 0}
         <p class="watching hand">{`${vm.spectatorCount} watching on a TV`}</p>
       {/if}

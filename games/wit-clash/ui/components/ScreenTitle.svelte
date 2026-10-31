@@ -3,7 +3,7 @@ const { title, hint = "" }: { title: string; hint?: string } = $props();
 </script>
 
 <div class="screen-title">
-  <h1>{title}</h1>
+  <h1 tabindex="-1">{title}</h1>
   <svg class="underline" viewBox="0 0 120 10" aria-hidden="true" preserveAspectRatio="none">
     <path d="M2 6q7-8 14 0t14 0t14 0t14 0t14 0t14 0t14 0t14 0" />
   </svg>

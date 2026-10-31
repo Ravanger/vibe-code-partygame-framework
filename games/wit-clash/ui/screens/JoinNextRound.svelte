@@ -13,7 +13,7 @@ $effect(() => () => vm.destroy());
 </script>
 
 <div class="join-next-round">
-  <h1>{vm.heading}</h1>
+  <h1 tabindex="-1">{vm.heading}</h1>
   {#if vm.hint}
     <p class="hint hand">{vm.hint}</p>
   {/if}

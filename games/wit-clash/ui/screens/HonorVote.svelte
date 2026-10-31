@@ -21,7 +21,7 @@
     </div>
 
     <div class="question card taped">
-      <h2>Who wrote the funniest answer?</h2>
+      <h2 tabindex="-1">Who wrote the funniest answer?</h2>
     </div>
 
     {#if vm.isSpectator}

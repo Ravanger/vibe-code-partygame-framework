@@ -288,6 +288,13 @@ viewmodels/         one viewmodel per game screen (the name field, welcome, wait
 - Replay viewer: open the client with `?replay` in the URL to get `ReplayApp` instead of the game — no manager is built, so no server connection is ever opened. Pick an exported bundle file (the JSON the host downloads from Results) and step through it with previous/next, play/pause auto-advance or the scrubber; each snapshot renders that phase's own screen read-only (`isSpectator`, no seat). The snapshot is the final state of the phase being left, so its timer counts down from at most 1s and reads 0 almost immediately. A malformed file shows the viewer's error instead of a screen, and a phase without a `PHASE_SCREENS` entry gets a fallback line.
 - On Results, the host sees an **Export replay** button (mid-round and final): it sends the host-only `EXPORT_REPLAY` request through `manager.exportReplay()` and downloads the bundle as `<game>-replay.json`. A non-host's refusal is remembered in `lastServerError` like any rejected action.
 
+## Accessibility
+
+- Contrast: every `color`/`background` pair set in `ui/` meets WCAG AA (4.5:1 for text, 3:1 for large text), computed from the tokens of `ui/app.css` over the game-ui theme contract — enforced by `tests/contrast.test.ts`. Scope: only pairs declared within the same rule are checked (no cascade), and values that do not resolve statically are skipped — nested variables, gradients, undefined custom properties. That is why the pre-existing `var(--pink)` in `ui/ReplayApp.svelte` (an undefined token) is not flagged. `--wordmark` passes as large text: white on `#f04f9a` is about 3.3:1, which requires the wordmark to stay at or above 24px (`--fs-4`); shrink it below that and the test fails.
+- Reduced motion: no `transition` or `animation` exists outside a `prefers-reduced-motion: no-preference` block anywhere in `ui/`, and the phase banner is hidden entirely under `reduce` — enforced by `tests/reducedMotion.test.ts`. Scope: CSS declarations in `<style>` blocks; Svelte transition directives and `scroll-behavior` are not checked (neither exists in `ui/` today).
+- Screen readers: phase changes are announced through a persistent `aria-live="polite"` region carrying the phase banner text; the visual banner stays `aria-hidden` (`tests/App.test.ts`).
+- Focus: when the screen changes, focus moves to the new screen's main heading (each carries `tabindex="-1"`), except on the initial mount and while a form field (`input`, `textarea` or `select`) holds its own focus — e.g. the answer box (`tests/screens/Round.test.ts`).
+
 ## Tests
 
 `tests/game` runs on Node. Rule tests drive the real runtime with `FakeHost` and a real `WitClashState`; the `integration.*` files

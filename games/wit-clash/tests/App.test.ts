@@ -150,6 +150,27 @@ describe("App", () => {
     expect(away.container.querySelector("header")).not.toBeInTheDocument();
   });
 
+  it("announces phase changes in a live region", () => {
+    const c = connectedClient({ role: "host" });
+    const { container } = render(App, { manager: c.manager });
+    // by accessible name: Timer carries its own [aria-live=polite] region, so DOM order is not a stable selector
+    const live = () =>
+      container.querySelector<HTMLElement>("[aria-live='polite'][aria-label='Phase updates']");
+    expect(live()?.textContent).toBe("");
+
+    c.state.phase = "CategorySelection";
+    c.state.categoryOptions.push(option("a"), option("b"));
+    addMine(c.state, c.manager.playerId);
+    c.patch();
+    flushSync();
+    expect(live()?.textContent).toBe("NEW ROUND!");
+
+    c.state.phase = "Prompting";
+    c.patch();
+    flushSync();
+    expect(live()?.textContent).toBe("GET WRITING!");
+  });
+
   it("shows a quiet indicator while reconnecting, keeping the game on screen", () => {
     const c = connectedClient({}, "CategorySelection");
     const { container } = render(App, { manager: c.manager });

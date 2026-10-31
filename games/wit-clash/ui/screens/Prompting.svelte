@@ -65,7 +65,7 @@ $effect(() => () => vm.destroy());
 
     {#key vm.currentIndex}
       <div class="question card taped">
-        <h2>{vm.current?.promptText}</h2>
+        <h2 tabindex="-1">{vm.current?.promptText}</h2>
       </div>
     {/key}
     <p class="how hand">Write the funniest answer you can</p>

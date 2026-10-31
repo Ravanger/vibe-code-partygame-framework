@@ -22,7 +22,7 @@ $effect(() => () => vm.destroy());
     </div>
 
     <div class="question card taped">
-      <h2>{vm.promptText}</h2>
+      <h2 tabindex="-1">{vm.promptText}</h2>
     </div>
 
     {#if vm.isSpectator}
