@@ -148,6 +148,6 @@ c.room.requests; // what the UI sent
 
 `fakeFetch({ roomId })` stands in for the code API; `StubRoom` also has `push`, `dropConnection`, `reconnected` and `closed`.
 
-Depends on: `@partygame/shared`, `@colyseus/sdk`, `svelte`
+Depends on: `@partygame/client-utils`, `@partygame/shared`, `@colyseus/sdk`, `svelte`
 
 Guide: [docs/framework/README.md#client-sdk](../../docs/framework/README.md#client-sdk)

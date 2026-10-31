@@ -81,6 +81,6 @@ All optional: `ports` (`game` 2567, `api` 3001, `clientDev` 5173, `production` 3
 { name: "FirstToPress", gameDir, ports: { clientDev: 5200 }, commands: { build: ["bun", "run", "build"] } }
 ```
 
-Depends on: `@partygame/bots`, `@partygame/server`, `@partygame/shared`
+Depends on: `@partygame/bots`, `@partygame/client-utils`, `@partygame/server`, `@partygame/shared`
 
 Guide: [docs/framework/README.md#launcher](../../docs/framework/README.md#launcher)

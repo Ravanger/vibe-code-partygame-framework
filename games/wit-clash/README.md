@@ -1,6 +1,6 @@
 # WitClash
 
-A Quiplash-style party game for 3 to 8 players, built on `@partygame/core` and `@partygame/server`.
+A head-to-head answer-and-vote party game for 3 to 8 players, built on `@partygame/core` and `@partygame/server`.
 Everything here is game rules; the lobby, room codes, reconnection and timers come from the framework.
 
 ```
@@ -22,8 +22,8 @@ src/
   loadContent.ts     loads and validates the content directory (the declaration's `load`), plus `loadCanonContent` for daily mode
 ui/                  Svelte client, built on @partygame/game-client (see below)
 gamePackage.ts       WitClash declared once (`defineGamePackage`): meta, definition, state class, is-finished, bot kit, terminal strategy and demo; the entry files stub over it
-launch.ts            one-line stub: `launch(gamePackage)` from `@partygame/game-kit`; `bun run launch` reaches it through `scripts/game.ts`
-bots/                WitClash bot strategy (`witClashBot.ts`, on `@partygame/bots`) and the `bun run bots` entry (see "Playtesting alone")
+launch.ts            one-line stub: `launch(gamePackage)` from `@partygame/game-kit`; `bun run launch wit-clash` reaches it through `scripts/game.ts`
+bots/                WitClash bot strategy (`witClashBot.ts`, on `@partygame/bots`) and the `bun run bots wit-clash` entry (see "Playtesting alone")
 terminal/            `play.ts` and `demo.ts` — one-line stubs over `gamePackage.ts`; `Narrator.ts` narrates the demo and checks its final scores; `witClashTerminal.ts` is the `TerminalStrategy`; see "Play in the terminal"
 server.ts            one-line stub: `serve(gamePackage)` loads the content, then starts the server
 content/categories/  host-editable .jsonc categories, at least 3 needed
@@ -227,23 +227,23 @@ categories as the canon that daily mode plays from (it never reads `WITCLASH_CON
 categories in either. Ports come from `PORT` (2567) and `API_PORT` (3001). Hosting and LAN play: `docs/HOSTING.md`.
 
 ```
-bun run launch         # repo root: game server, API and Vite, waits until all answer (config: launch.ts)
-bun run dev            # repo root: Vite client and game server through turbo
-bun run dev:server     # this package: game server only (bun --hot server.ts)
+bun run launch wit-clash   # repo root: game server, API and Vite, waits until all answer (config: launch.ts)
+bun run dev                # repo root: Vite client and game server through turbo
+bun run dev:server         # this package: game server only (bun --hot server.ts)
 ```
 
 ## Playtesting alone
 
 ```bash
-bun run launch:bots          # dev stack + your room; 3 bots join once you enter your name
-bun run bots ABCD 3          # add 3 bots (1 to 7) to a room you already created
+bun run launch wit-clash --bots   # dev stack + your room; 3 bots join once you enter your name
+bun run bots wit-clash ABCD 3     # add 3 bots (1 to 7) to a room you already created
 ```
 
 You are the host: press Start Game (3 or more players, bots included) and Next Round; the game does not start by itself. The bots answer and vote on their own.
-For another number of bots use `bun run launch --bots=N` (1 to 7); `bun run bots` takes `--endpoint` and `--api-port`. Ctrl+C removes the bots.
+For another number of bots use `bun run launch wit-clash --bots=N` (1 to 7); `bun run bots wit-clash` takes `--endpoint` and `--api-port`. Ctrl+C removes the bots.
 
 ```bash
-bun run launch:demo          # watch-only room: bots play one game, the browser opens its TV view
+bun run launch wit-clash --demo   # watch-only room: bots play one game, the browser opens its TV view
 ```
 
 `--demo=N` sets the bots (2 to 7, default 3), plus a host bot. Nobody can take a seat; the TV stays on the final results. Ctrl+C stops it. Not combinable with `--bots`.
@@ -251,10 +251,10 @@ bun run launch:demo          # watch-only room: bots play one game, the browser 
 ## Play in the terminal
 
 ```bash
-bun run play                      # host a room; 3 bots join; uses the server on 2567/3001 or starts its own
-bun run play --join=ABCD          # join a room as a normal player
-bun run demo                      # `demo` script of this package; from the root: bun run --cwd games/wit-clash demo
-                                   # all-bot game, narrated; prints PASS/FAIL (--bots=N bots, 2 to 7, default 3)
+bun run play wit-clash           # host a room; 3 bots join; uses the server on 2567/3001 or starts its own
+bun run play wit-clash --join=ABCD # join a room as a normal player
+bun run demo                     # `demo` script of this package; from the root: bun run --cwd games/wit-clash demo
+                                 # all-bot game, narrated; prints PASS/FAIL (--bots=N bots, 2 to 7, default 3)
 ```
 
 You answer and vote by typing; `q` quits (`/q` while writing an answer). `play` takes `--bots=N` (0 to 7), `--name=You`, `--endpoint=ws://host:2567 --api-port=3001`.
@@ -270,7 +270,7 @@ manager.ts          the WitClashManager type
 App.svelte          screen router, error toast, "reconnecting" indicator, Leave game / End game controls outside the lobby
 ReplayApp.svelte    offline replay viewer: opens an exported bundle file and steps through it with the phase screens
 screens/            one component per screen: Welcome, WaitingRoom, JoinNextRound, CategoryVote, Prompting,
-                    MatchupVote, MatchupReveal, TieBreakerPrompting, TieBreakerVote, TieBreakerReveal, Results
+                    MatchupVote, MatchupReveal, HonorVote, TieBreakerPrompting, TieBreakerVote, TieBreakerReveal, Results
 components/         WitClash-only pieces: MatchupCard, Scoreboard, ProgressBadges, VoteBoard, AnswerBox, NextUpBar, ScreenTitle
 viewmodels/         one viewmodel per game screen (the name field, welcome, waiting room, lobby settings come from `@partygame/game-ui`), plus Scoreboard (ranks via `rankRows`), MatchupRecap, AnswerProgress and TypingReporter helpers
 ```

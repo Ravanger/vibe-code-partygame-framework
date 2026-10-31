@@ -43,7 +43,7 @@ room.onMessage(ServerMessage.ERROR, (payload: unknown) => {
 });
 ```
 
-Other codes: `INVALID_ACTION`, `UNKNOWN_ACTION`, `WRONG_PHASE`, `UNAUTHORIZED`, `NOT_ENOUGH_PLAYERS`, `NOT_ACTIVE`, `NAME_TAKEN`, `KICKED`, `INTERNAL`, and the client-only `NOT_CONNECTED`, `CONNECTION_LOST`, `BAD_REPLY`, `ROOM_NOT_FOUND`.
+Other codes: `INVALID_ACTION`, `UNKNOWN_ACTION`, `WRONG_PHASE`, `UNAUTHORIZED`, `NOT_ENOUGH_PLAYERS`, `NOT_ALLOWED`, `NOT_ACTIVE`, `CONTENT_REJECTED`, `NAME_TAKEN`, `KICKED`, `INTERNAL`, `RATE_LIMITED`, and the client-only `NOT_CONNECTED`, `CONNECTION_LOST`, `BAD_REPLY`, `ROOM_NOT_FOUND`.
 
 `LOBBY_PHASE`, `START_GAME`, `KICK_PLAYER`, `END_GAME` and `SET_OPTIONS` name the built-ins. `NAME_MAX_LENGTH` caps player names; `MAX_SEATS` caps the `seats` room option; `MAX_OPTIONS_JSON_LENGTH` caps serialized options at room creation and in `SET_OPTIONS`. `ROOM_CODE_LENGTH` and `ROOM_CODE_ALPHABET` define the room-code format that `RoomCodeSchema` enforces; `sanitizeRoomCode` cleans user input to it.
 

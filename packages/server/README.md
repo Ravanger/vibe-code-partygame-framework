@@ -80,6 +80,6 @@ await t.shutdown();                                // t.cleanup() between tests
 
 `t.join(room, { playerId })` joins one raw client; `t.endpoint` and `await t.serveApi()` expose the URLs for real client managers.
 
-Depends on: `@partygame/core`, `@partygame/shared`, `@colyseus/core`, `@colyseus/bun-websockets`, `@colyseus/schema`, `@colyseus/sdk`, `zod`
+Depends on: `@partygame/client-utils`, `@partygame/content` (types only), `@partygame/core`, `@partygame/shared`, `@colyseus/core`, `@colyseus/bun-websockets`, `@colyseus/schema`, `@colyseus/sdk`, `zod`
 
 Guide: [docs/framework/README.md#server](../../docs/framework/README.md#server)
