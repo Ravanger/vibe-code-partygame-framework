@@ -118,6 +118,18 @@ describe("honor vote", () => {
     expect(t.state.votesExpected).toBe(before);
   });
 
+  it("counts a vote whose voter disconnected before the end", () => {
+    const t = honorTable();
+    t.toResults();
+    const up = candidatesOf(t);
+    const voter = t.ids().find((id) => id !== (up[0] as string)) as string;
+    t.act(voter, "VOTE_HONOR", { authorId: up[0] as string });
+    t.drop(voter);
+    t.tick(20_000);
+    expect(t.phase).toBe("Results");
+    expect([...t.state.honorWinnerNames]).toEqual([up[0]]);
+  });
+
   it("ignores a mid-game joiner who has no seat in the honor vote", () => {
     const t = honorTable();
     t.toResults();

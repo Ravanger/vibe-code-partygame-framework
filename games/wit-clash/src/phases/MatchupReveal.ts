@@ -10,8 +10,8 @@ const reveal = (ctx: WitClashContext): void => {
   const { state, priv } = ctx;
   const round = new Round(ctx);
   const matchup = round.activeMatchup();
-  const eligible = round.eligibleVoterIds();
-  const tally = tallyVotes(eligible, priv.matchupVotes);
+  const tallying = round.tallyVoterIds();
+  const tally = tallyVotes(tallying, priv.matchupVotes);
   for (const answer of matchup.answers) {
     answer.votes = tally.get(answer.id) ?? 0;
     answer.authorId = round.authorOf(answer.id);
@@ -27,7 +27,7 @@ const reveal = (ctx: WitClashContext): void => {
       isPlaceholder: priv.placeholders.has(a.id),
     })),
     matchup.isForfeit,
-    eligible.length,
+    tallying.length,
   );
   for (const award of awards) {
     if (award.total > 0) awardPoints(priv.scores, award.playerId, award.total);

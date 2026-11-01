@@ -1,7 +1,7 @@
 import { departedIds, isBelowMinimum, required } from "@partygame/core";
 import { countVoted } from "@partygame/core/kits";
 import { pickBestAnswers } from "./bestAnswers.js";
-import { eligibleVoterIds } from "./eligibility.js";
+import { eligibleVoterIds, seatedActiveIds } from "./eligibility.js";
 import { pickHighlights } from "./highlights.js";
 import { META } from "./meta.js";
 import { PHASE } from "./phaseNames.js";
@@ -125,6 +125,16 @@ export class Round {
     const matchup = this.activeMatchup();
     const activeIds = this.ctx.activePlayers().map((p) => p.id);
     return eligibleVoterIds(activeIds, this.authorIds(matchup), matchup.isForfeit);
+  }
+
+  /** The seated players who may have voted, connected or not; a dropped connection is not a departure. */
+  tallyVoterIds(): string[] {
+    const matchup = this.activeMatchup();
+    return eligibleVoterIds(
+      seatedActiveIds(this.ctx.players()),
+      this.authorIds(matchup),
+      matchup.isForfeit,
+    );
   }
 
   syncVoting(): void {
