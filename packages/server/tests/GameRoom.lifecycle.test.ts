@@ -1,12 +1,13 @@
 import { matchMaker } from "@colyseus/core";
+import { createTextFilter } from "@partygame/content/filter";
 import { defineGame } from "@partygame/core";
-import { CLOSE_CODES } from "@partygame/shared";
+import { CLOSE_CODES, PROTOCOL_VERSION } from "@partygame/shared";
 import { BaseGameState } from "@partygame/shared/schema";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RoomCodeService } from "../src/services/RoomCodeService.js";
 import type { TestServer } from "../src/testing/index.js";
-import { waitUntil } from "../src/testing/index.js";
-import { bootBuzzer, pid, sleep, stateOf } from "./support.js";
+import { bootTestServer, waitUntil } from "../src/testing/index.js";
+import { bootBuzzer, lockedStateOf, pid, sleep, stateOf } from "./support.js";
 
 let t: TestServer | undefined;
 afterEach(async () => {
@@ -15,6 +16,18 @@ afterEach(async () => {
 });
 
 const alive = (roomId: string) => matchMaker.getLocalRoomById(roomId) !== undefined;
+
+/** A single-phase game that filters names at moderate, for the refused-join disposal tests. */
+const FilteredGame = defineGame<BaseGameState, Record<string, never>, Record<string, never>>({
+  name: "Filtered",
+  version: "1",
+  minPlayers: 1,
+  maxPlayers: 2,
+  startPhase: "Play",
+  filterLevel: () => "moderate",
+  createPrivateState: () => ({}),
+  phases: { Play: {} },
+});
 
 describe("GameRoom disposal", () => {
   it("disposes a room nobody ever joined and frees its code", async () => {
@@ -87,6 +100,40 @@ describe("GameRoom disposal", () => {
     await client.leave(false);
     await waitUntil(() => !alive(room.roomId), "disposed");
     expect(t.roomCodeService.resolve(stateOf(room).roomCode)).toBeUndefined();
+  });
+
+  it("still disposes when a rejoin presents the wrong seat secret", async () => {
+    t = await bootBuzzer({ emptyRoomGraceMs: 150 });
+    const room = await t.createRoom("buzzer");
+    const code = stateOf(room).roomCode;
+    const first = await t.join(room, { playerId: pid(1) });
+    await first.leave(false); // drop; the seat is kept for reconnection and the disposal is armed
+    await waitUntil(() => stateOf(room).players.get(pid(1))?.isConnected === false, "dropped");
+    // Schema-valid (16+ characters) but not pid(1)'s.
+    await expect(
+      t.sdk.joinById(room.roomId, {
+        playerId: pid(1),
+        seatSecret: "hijacker-secret-0000",
+        protocolVersion: PROTOCOL_VERSION,
+      }),
+    ).rejects.toMatchObject({ code: CLOSE_CODES.SEAT_TAKEN.code });
+    await waitUntil(() => !alive(room.roomId), "disposed");
+    expect(t.roomCodeService.resolve(code)).toBeUndefined();
+  });
+
+  it("still disposes when the first joiner's name is refused by the text filter", async () => {
+    t = await bootTestServer({
+      games: [{ roomName: "filtered", definition: FilteredGame, stateClass: BaseGameState }],
+      textFilter: createTextFilter(),
+      emptyRoomGraceMs: 150,
+    });
+    const room = await t.createRoom("filtered");
+    const code = lockedStateOf(room).roomCode;
+    await expect(t.join(room, { playerId: pid(1), name: "fuck" })).rejects.toMatchObject({
+      code: CLOSE_CODES.CONTENT_REJECTED.code,
+    });
+    await waitUntil(() => !alive(room.roomId), "disposed");
+    expect(t.roomCodeService.resolve(code)).toBeUndefined();
   });
 });
 

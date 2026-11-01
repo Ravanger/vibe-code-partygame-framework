@@ -279,13 +279,15 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
       ++this.state.spectatorCount;
       return;
     }
-    this.cancelDispose();
     const existing = this.state.players.get(playerId);
     if (existing) {
       const stored = this.seatSecrets.get(playerId);
       if (!seatSecret || stored === undefined || !timingSafeEqual(stored, sha256(seatSecret))) {
         throw this.closeWith(CLOSE_CODES.SEAT_TAKEN);
       }
+      // Every refusal check passed: cancel only now, so a refused join keeps the empty-room
+      // disposal armed (#324).
+      this.cancelDispose();
       const oldClient = this.bind(playerId, client.sessionId);
       this.reconnected(existing, client);
       oldClient?.leave(CLOSE_CODES.SEAT_TAKEN_OVER.code);
@@ -298,6 +300,9 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     if (name && this.nameRejected(name) !== undefined) {
       throw this.closeWith(CLOSE_CODES.CONTENT_REJECTED);
     }
+    // Every refusal check passed: cancel only now, so a refused join keeps the empty-room
+    // disposal armed (#324).
+    this.cancelDispose();
     const seat = new PlayerSchema();
     seat.id = playerId;
     seat.name = name && !this.nameTaken(playerId, name) ? name : "";
