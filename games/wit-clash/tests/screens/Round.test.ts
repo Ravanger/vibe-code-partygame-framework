@@ -518,6 +518,30 @@ describe("Focus on screen change", () => {
     expect(screen.getByRole("heading", { name: /pick a category/i })).toHaveFocus();
   });
 
+  it("moves focus to the matchup heading when the reveal phase has an active matchup", () => {
+    const c = connectedClient({ role: "host" }, "MatchupVoting");
+    c.state.matchups.push(
+      matchup("m1", "Name a fruit", [answer("a1", "Mango"), answer("a2", "Kiwi")], {
+        isRevealed: true,
+      }),
+    );
+    c.state.activeMatchupIndex = 0;
+    render(App, { manager: c.manager });
+    c.state.phase = "MatchupReveal";
+    c.patch();
+    flushSync();
+    expect(screen.getByRole("heading", { name: "Matchup 1 of 1" })).toHaveFocus();
+  });
+
+  it("moves focus to the waiting heading while the matchup is revealing", () => {
+    const c = connectedClient({ role: "host" }, "MatchupVoting");
+    render(App, { manager: c.manager });
+    c.state.phase = "MatchupReveal";
+    c.patch();
+    flushSync();
+    expect(screen.getByRole("heading", { name: "Revealing..." })).toHaveFocus();
+  });
+
   it("keeps focus on the name input when a screen mounts one", () => {
     const c = connectedClient({}, "Prompting");
     addMine(c.state, c.manager.playerId);

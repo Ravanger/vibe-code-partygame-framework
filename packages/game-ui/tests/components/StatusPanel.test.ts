@@ -33,4 +33,16 @@ describe("StatusPanel", () => {
     const { container } = render(StatusPanel, { title: "T", tone: "done" });
     expect(container.querySelector(".sticker")?.textContent).toContain("Fertig");
   });
+
+  it("renders a focusable semantic heading when heading is enabled", async () => {
+    const { container } = render(StatusPanel, {
+      title: "Revealing...",
+      tone: "wait",
+      heading: true,
+    });
+    const heading = screen.getByRole("heading", { level: 2, name: "Revealing..." });
+    expect(heading).toHaveAttribute("tabindex", "-1");
+    expect(container.querySelector(".dots")).toBeInTheDocument();
+    await expectNoViolations(container, "StatusPanel heading");
+  });
 });
