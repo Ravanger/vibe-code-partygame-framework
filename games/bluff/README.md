@@ -7,8 +7,8 @@ Part of the M6 archetypes milestone: the headless rules spike (#156) plus the br
 ## Rules
 
 - **Lobby** — the built-in lobby; the host starts with at least 3 players (max 8).
-- **Writing** (45 s) — a prompt is drawn from `content/prompts.jsonc` without replacement (the pool wraps when exhausted). Each player submits one fake answer; the round moves on once everyone has submitted or the timer runs out.
-- **Voting** (30 s) — the truth and every submitted fake become anonymous, shuffled options. Each option's authorship stays server-side; each player privately learns which option is theirs (`mine` view entry, `myOptionId`) so they cannot vote for their own fake. The round moves on once everyone has voted or the timer runs out.
+- **Writing** (45 s) — a prompt is drawn from `content/prompts.jsonc` without replacement (the pool wraps when exhausted). Each player submits one fake answer; a fake equal to the truth or to another player's answer (case- and whitespace-insensitively) is rejected. The round moves on once everyone has submitted or the timer runs out.
+- **Voting** (30 s) — the truth and every submitted fake become anonymous, shuffled options. If nobody wrote a fake, the round skips Voting and Reveal and goes straight to the next round (or Results after the final one). Each option's authorship stays server-side; each player privately learns which option is theirs (`mine` view entry, `myOptionId`) so they cannot vote for their own fake, and their cast vote is kept in the same entry (`myVote`) so a reload shows the waiting state instead of the vote buttons. The round moves on once everyone has voted or the timer runs out.
 - **Reveal** (15 s) — the truth and every author are revealed, votes are counted. Points: **+2 for guessing the truth**, **+1 per vote that lands on your fake**.
 - **Results** — final scoreboard; the host can play again.
 

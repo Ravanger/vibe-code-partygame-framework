@@ -103,7 +103,7 @@ describe("Reveal", () => {
     expect(t.priv.usedPromptIds).toEqual(new Set(["p1"]));
   });
 
-  it("shows an empty name for a player who never chose one", () => {
+  it("shows an empty name for a leaver who never chose one", () => {
     const t = Table.started({ seats: [{}, {}, {}, { name: "" }] });
     t.submitFake("p1", "Sydney");
     t.submitFake("p2", "Perth");
@@ -112,7 +112,9 @@ describe("Reveal", () => {
     t.voteFor("p1", indexOf(t, "Canberra"));
     t.voteFor("p2", indexOf(t, "Adelaide"));
     t.voteFor("p3", indexOf(t, "Sydney"));
-    t.voteFor("p4", indexOf(t, "Perth"));
+    t.leave("p4");
+    expect(t.phase).toBe("Reveal");
+    expect(t.state.choices.find((o) => o.text === "Adelaide")?.authorName).toBe("");
     const p4 = t.state.results.find((r) => r.playerId === "p4");
     expect(p4?.name).toBe("");
     expect(p4?.roundPoints).toBe(1);
@@ -132,5 +134,21 @@ describe("Reveal", () => {
     playRound(t);
     t.tick(15_000);
     expect(t.phase).toBe("Results");
+  });
+
+  it("ends the game when a departure drops the room below the minimum", () => {
+    const t = Table.started({ players: 3 });
+    t.submitFake("p1", "Sydney");
+    t.submitFake("p2", "Perth");
+    t.submitFake("p3", "Brisbane");
+    t.voteFor("p1", indexOf(t, "Perth"));
+    t.voteFor("p2", indexOf(t, "Sydney"));
+    t.voteFor("p3", indexOf(t, "Canberra"));
+    expect(t.phase).toBe("Reveal");
+    t.leave("p3");
+    expect(t.phase).toBe("Lobby");
+    expect(t.state.notice).toBe("Fewer than 3 players were left, so the game ended.");
+    t.tick(15_000);
+    expect(t.phase).toBe("Lobby");
   });
 });
