@@ -13,6 +13,18 @@ describe("share links", () => {
     expect(joinUrl("http://host:5173/", "AB&x=")).toBe("http://host:5173/?code=AB%26x%3D");
     expect(tvUrl("http://host:5173/", "AB&x=")).toBe("http://host:5173/?tv=AB%26x%3D");
   });
+
+  it("keeps an existing query string", () => {
+    expect(joinUrl("http://host:5173/?lang=de", "ABCD")).toBe(
+      "http://host:5173/?lang=de&code=ABCD",
+    );
+    expect(tvUrl("http://host:5173/?lang=de", "ABCD")).toBe("http://host:5173/?lang=de&tv=ABCD");
+  });
+
+  it("sets the code once when the base already carries it", () => {
+    expect(joinUrl("http://host:5173/?code=STALE", "ABCD")).toBe("http://host:5173/?code=ABCD");
+    expect(tvUrl("http://host:5173/?tv=STALE", "ABCD")).toBe("http://host:5173/?tv=ABCD");
+  });
 });
 
 describe("resolveRoomCode", () => {

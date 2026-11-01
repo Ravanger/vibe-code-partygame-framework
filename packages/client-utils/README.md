@@ -14,9 +14,9 @@ import { resolveRoomCode } from "@partygame/client-utils";
 const roomId = await resolveRoomCode("http://192.168.1.5:3001", "ABCD"); // GET /api/resolve-code; rejects with a RoomCodeError (reason "not-found" | "bad-reply")
 ```
 
-`joinUrl(base, code)` and `tvUrl(base, code)` build the links a host shares; `waitFor(predicate, what, timeoutMs, stepMs?)` polls until the predicate holds; `between(value, min, max)` validates an integer argument.
+`joinUrl(base, code)` and `tvUrl(base, code)` build the links a host shares (an existing query string in `base` is kept, and the code parameter is set once); `waitFor(predicate, what, timeoutMs, stepMs?)` polls until the predicate holds; `between(value, min, max)` validates an integer argument.
 
-`claimName(room, playerId, name, timeoutMs?)` sends `SET_NAME` on any room shaped like `SeatRoom` and waits until the seat carries the name (the server's refusal is rethrown); `apiBaseOf(endpoint, apiPort)` maps a game-server endpoint (`ws:`/`wss:`) to its `http(s)://host:apiPort` code API base.
+`claimName(room, playerId, name, timeoutMs?)` sends `SET_NAME` on any room shaped like `SeatRoom` and waits until the seat carries the name (the server's refusal is rethrown); `apiBaseOf(endpoint, apiPort)` maps a game-server endpoint to its `http(s)://host:apiPort` code API base (`ws:`/`http:` → `http`, `wss:`/`https:` → `https`).
 
 ## Room connector
 

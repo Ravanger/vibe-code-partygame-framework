@@ -1,5 +1,5 @@
 import { Client } from "@colyseus/sdk";
-import { RoomCodeError, resolveRoomCode } from "@partygame/client-utils";
+import { apiBaseOf, RoomCodeError, resolveRoomCode } from "@partygame/client-utils";
 import {
   type ActionResult,
   CLOSE_CODES,
@@ -118,9 +118,8 @@ export class GameConnectionManager<
     if (options.apiBase !== undefined) {
       this.apiBase = options.apiBase;
     } else {
-      const url = new URL(options.endpoint);
       const port = options.apiPort ?? DEFAULT_API_PORT;
-      this.apiBase = `${url.protocol.replace("ws", "http")}//${url.hostname}:${port}`;
+      this.apiBase = apiBaseOf(options.endpoint, port);
     }
     this.strings = { ...defaultClientStrings, ...options.strings };
     this.messages = resolveClientMessages(this.strings);
