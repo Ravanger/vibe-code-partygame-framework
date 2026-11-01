@@ -899,6 +899,7 @@ The manager shows `status === "reconnecting"` meanwhile and `"connected"` again 
 when the server ends the session for good (kick, room closed, retries exhausted). After a page reload call `resume()`: it uses the
 reconnection token in `sessionStorage`, then falls back to the room code in `localStorage` (the server reattaches the seat by `playerId`).
 A client that joined with `joinAsSpectator` is remembered as a spectator and `resume()` rejoins it as one by code, never as a seated player.
+A failed `resume()` keeps the stored session so a later retry can reclaim the seat, unless an attempt was definitively refused (seat taken, room not found, kicked or seat removed, version mismatch, join refused, watch-only, full or invalid options), which clears it.
 `leave()` forgets the room code, token and spectator flag (a reload does not rejoin) and sets `status` to `"disconnected"`.
 Joins are de-duplicated per code and mode, so watching and playing the same room are different joins and the newest wins.
 

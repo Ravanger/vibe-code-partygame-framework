@@ -4,6 +4,7 @@ import {
   type ActionResult,
   CLOSE_CODES,
   ClientMessage,
+  type CloseCode,
   closeCodeEntry,
   ErrorCode,
   type ExportReplayResponse,
@@ -66,6 +67,17 @@ export interface JoinOptions {
 
 const DEFAULT_API_PORT = 3001;
 const DEFAULT_SYNC_TIMEOUT_MS = 10_000;
+/** Close codes that mean the seat or room is definitively gone, so a failed resume clears the stored session. Every other failure keeps it (fail safe). */
+const SESSION_CLEARING: ReadonlySet<CloseCode> = new Set([
+  CLOSE_CODES.INVALID_OPTIONS,
+  CLOSE_CODES.ROOM_FULL,
+  CLOSE_CODES.SEAT_REMOVED,
+  // 4403 covers both KICKED_REJOIN and JOIN_REFUSED.
+  CLOSE_CODES.KICKED_REJOIN,
+  CLOSE_CODES.WATCH_ONLY,
+  CLOSE_CODES.VERSION_MISMATCH,
+  CLOSE_CODES.SEAT_TAKEN,
+]);
 // Same cadence as the Countdown's own ticker.
 const URGENCY_TICK_MS = 250;
 const URGENCY_WINDOW_MS = 10_000;
@@ -214,40 +226,36 @@ export class GameConnectionManager<
     return this.join(code, { spectator: true });
   }
 
-  /** Reconnect after a page reload: the stored token first, then the stored room code. A spectator rejoins as a spectator by code. */
+  /** Reconnect after a page reload: the stored token first, then the stored room code. A spectator rejoins as a spectator by code. The stored session is cleared only when an attempt was definitively refused; a transient failure keeps it so the seat can be reclaimed later. */
   async resume(): Promise<boolean> {
     const token = this.session.token;
     const spectator = this.session.spectator;
-    if (
-      token &&
-      !spectator &&
-      (await this.succeeds(() =>
-        this.coordinator.run("resume", (cancelled) =>
+    const failures: unknown[] = [];
+    if (token && !spectator) {
+      try {
+        await this.coordinator.run("resume", (cancelled) =>
           this.open(
             () => this.client.reconnect<TState>(token, this.options.rootSchema),
             false,
             cancelled,
           ),
-        ),
-      ))
-    ) {
-      return true;
+        );
+        return true;
+      } catch (error) {
+        failures.push(error);
+      }
     }
     const code = this.session.roomCode;
-    if (code && (await this.succeeds(() => this.join(code, spectator ? { spectator } : {})))) {
-      return true;
+    if (code) {
+      try {
+        await this.join(code, spectator ? { spectator } : {});
+        return true;
+      } catch (error) {
+        failures.push(error);
+      }
     }
-    this.session.clear();
+    if (failures.some((error) => this.clearsSession(error))) this.session.clear();
     return false;
-  }
-
-  private async succeeds(attempt: () => Promise<void>): Promise<boolean> {
-    try {
-      await attempt();
-      return true;
-    } catch {
-      return false;
-    }
   }
 
   /** Leaves the room and cancels any connect still in flight. */
@@ -365,7 +373,8 @@ export class GameConnectionManager<
     );
     room.onLeave((code) =>
       this.whileAttached(room, () => {
-        this.session.clear();
+        // SEAT_TAKEN_OVER: another device holds the same seat and secret; keep the shared session for it.
+        if (code !== CLOSE_CODES.SEAT_TAKEN_OVER.code) this.session.clear();
         this.spectating = false;
         this.recordClose(code);
         this.detach("disconnected");
@@ -402,6 +411,8 @@ export class GameConnectionManager<
         throw new Error(CANCELLED);
       }
       this.spectating = spectator;
+      // A working connect is a clean slate: drop any error an earlier failed attempt recorded.
+      this.setLastError(undefined);
       this.attach(room);
     } catch (error) {
       if (!cancelled()) this.status = "disconnected";
@@ -450,7 +461,11 @@ export class GameConnectionManager<
     this.session.clear();
     this.spectating = false;
     this.detach("disconnected");
-    await room?.leave(true);
+    if (room) {
+      try {
+        await room.leave(true);
+      } catch {}
+    }
   }
 
   private detach(status?: ConnectionStatus): void {
@@ -594,24 +609,36 @@ export class GameConnectionManager<
     this.fail(ErrorCode.CONNECTION_LOST);
   }
 
+  /** The CLOSE_CODES entry behind a rejected connect, when the rejection carries one of its numeric codes. */
+  private closeEntryOf(error: unknown): CloseCode | undefined {
+    if (typeof error !== "object" || error === null || !("code" in error)) return undefined;
+    const code = error.code;
+    if (typeof code !== "number") return undefined;
+    return closeCodeEntry(code);
+  }
+
+  /** True when a failed resume attempt was definitively refused (or the room code is unknown) rather than a transient loss; only then is the stored session cleared. */
+  private clearsSession(error: unknown): boolean {
+    if (error instanceof RoomCodeError) return error.reason === "not-found";
+    const entry = this.closeEntryOf(error);
+    return entry !== undefined && SESSION_CLEARING.has(entry);
+  }
+
   /**
    * The client-visible error for a refused connection: the table's fixed message, except
    * VERSION_MISMATCH (whose template the server fills with both versions) and a 4403 canJoin refusal
    * (which carries the game's own message); both pass the received text through.
    */
   private closeErrorOf(error: unknown): ServerError | undefined {
-    if (typeof error !== "object" || error === null || !("code" in error)) return undefined;
-    const code = error.code;
-    if (typeof code !== "number") return undefined;
-    const entry = closeCodeEntry(code);
+    const entry = this.closeEntryOf(error);
     if (!entry) return undefined;
     // VERSION_MISMATCH's template and a 4403 canJoin refusal carry server-filled text; show what arrived.
+    const received = error as { message?: unknown };
     if (
-      (entry === CLOSE_CODES.VERSION_MISMATCH || code === CLOSE_CODES.JOIN_REFUSED.code) &&
-      "message" in error &&
-      typeof error.message === "string"
+      (entry === CLOSE_CODES.VERSION_MISMATCH || entry.code === CLOSE_CODES.JOIN_REFUSED.code) &&
+      typeof received.message === "string"
     ) {
-      return { code: entry.errorCode, message: error.message };
+      return { code: entry.errorCode, message: received.message };
     }
     return { code: entry.errorCode, message: entry.message };
   }
