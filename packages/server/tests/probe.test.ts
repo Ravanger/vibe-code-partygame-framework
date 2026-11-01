@@ -99,4 +99,14 @@ describe("ServerProbe", () => {
       await probe.answers(`http://127.0.0.1:${handle.apiPort}/api/resolve-code?code=ZZZZ`),
     ).toBe(true);
   });
+
+  it("probes an explicit host for both the socket and the code API", async () => {
+    const handle = await start({ games: GAMES });
+    expect(await probe.isGameServer(handle.port, handle.apiPort, "127.0.0.1")).toBe(true);
+  });
+
+  it("does not report a game server on an explicit host where nothing listens", async () => {
+    const handle = await start({ games: GAMES });
+    expect(await probe.isGameServer(1, handle.apiPort, "127.0.0.1")).toBe(false);
+  });
 });

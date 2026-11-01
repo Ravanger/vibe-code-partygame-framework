@@ -28,6 +28,27 @@ class ViteUp extends ServerProbe {
   }
 }
 
+/** Records the `isGameServer` calls and never finds a server, so `run` throws before any network join. */
+class RecordingProbe extends ServerProbe {
+  calls: Array<[number, number, string]> = [];
+  override async isGameServer(port: number, apiPort: number, host?: string): Promise<boolean> {
+    this.calls.push([port, apiPort, host ?? ""]);
+    return false;
+  }
+}
+
+/** Like ViteUp, but holds the client-URL probe until released, so a stop can land mid-banner. */
+class HeldVite extends ServerProbe {
+  release = (): void => {};
+  private readonly gate = new Promise<void>((resolve) => {
+    this.release = resolve;
+  });
+  override async answers(): Promise<boolean> {
+    await this.gate;
+    return true;
+  }
+}
+
 class StubPlayer implements SessionPlayer {
   stopped = false;
   private finish: () => void = () => {};
@@ -233,11 +254,64 @@ describe("PlaySession", () => {
     }
   });
 
-  it("stops the player when asked before it is up", async () => {
-    const session = new PlaySession(await options(), new ScriptedIo(), new ViteUp());
+  it("finishes without joining and stops its server when stopped before the room exists", async () => {
+    const opts = await options();
+    const port = Number(new URL(opts.endpoint).port);
+    const session = new PlaySession(opts, new ScriptedIo(), new ViteUp());
+    sessions.push(session);
     session.stop();
     await session.run();
+    expect(players).toEqual([]);
+    expect(await new ServerProbe().canConnect(port)).toBe(false);
+  });
+
+  it("stops the player and seats no bots when stopped while the banner is up", async () => {
+    const held = new HeldVite();
+    const io = new ScriptedIo();
+    const session = new PlaySession(await options({ bots: 1 }), io, held);
+    sessions.push(session);
+    const running = session.run();
+    await waitFor(() => io.printed.some((line) => line.startsWith("Room ")), "the banner", 5000);
+    session.stop();
+    held.release();
+    await running;
     expect(players[0]?.stopped).toBe(true);
+    expect(io.printed.some((line) => line === "Bot 1 joined.")).toBe(false);
+  });
+
+  it("probes the endpoint's host and port", async () => {
+    const probe = new RecordingProbe();
+    const session = new PlaySession(
+      await options({ endpoint: "ws://remote.example:2567", apiPort: 3001, startServer: false }),
+      new ScriptedIo(),
+      probe,
+    );
+    await expect(session.run()).rejects.toThrow(
+      /No game server answers on ws:\/\/remote\.example:2567/,
+    );
+    expect(probe.calls).toEqual([[2567, 3001, "remote.example"]]);
+  });
+
+  it("probes port 80 for a ws endpoint without a port", async () => {
+    const probe = new RecordingProbe();
+    const session = new PlaySession(
+      await options({ endpoint: "ws://remote.example", apiPort: 3001, startServer: false }),
+      new ScriptedIo(),
+      probe,
+    );
+    await expect(session.run()).rejects.toThrow(/No game server answers/);
+    expect(probe.calls).toEqual([[80, 3001, "remote.example"]]);
+  });
+
+  it("probes port 443 for a wss endpoint without a port", async () => {
+    const probe = new RecordingProbe();
+    const session = new PlaySession(
+      await options({ endpoint: "wss://remote.example", apiPort: 3001, startServer: false }),
+      new ScriptedIo(),
+      probe,
+    );
+    await expect(session.run()).rejects.toThrow(/No game server answers/);
+    expect(probe.calls).toEqual([[443, 3001, "remote.example"]]);
   });
 
   it("reports a missing server instead of starting one when told not to", async () => {

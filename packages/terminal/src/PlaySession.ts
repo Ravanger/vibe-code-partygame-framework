@@ -38,7 +38,8 @@ export interface PlaySessionOptions<TState extends BaseGameState> {
 /** One terminal player's evening: find or start a server, create or join a room, seat bots, play. */
 export class PlaySession<TState extends BaseGameState> {
   private player: SessionPlayer | undefined;
-  private stopped = false;
+  /** Triggered by {@link stop} so an early Ctrl+C unwinds before the session joins anything. */
+  private readonly abort = new AbortController();
 
   constructor(
     private readonly options: PlaySessionOptions<TState>,
@@ -48,7 +49,7 @@ export class PlaySession<TState extends BaseGameState> {
 
   /** Ends the game for this player; `run` then cleans up and returns. */
   stop(): void {
-    this.stopped = true;
+    this.abort.abort();
     this.player?.stop();
   }
 
@@ -63,8 +64,11 @@ export class PlaySession<TState extends BaseGameState> {
 
   private async server(): Promise<NodeServerHandle | undefined> {
     const { endpoint, apiPort, startServer, games } = this.options;
-    const port = Number(new URL(endpoint).port);
-    if (await this.probe.isGameServer(port, apiPort)) {
+    const url = new URL(endpoint);
+    // The port the WebSocket client itself would use for this URL: the named port, or the
+    // scheme default (80 for ws:, 443 for wss:) when the URL names none.
+    const port = url.port !== "" ? Number(url.port) : url.protocol === "wss:" ? 443 : 80;
+    if (await this.probe.isGameServer(port, apiPort, url.hostname)) {
       this.io.print(`Using the game server on ${endpoint} (API port ${apiPort}).`);
       return undefined;
     }
@@ -76,6 +80,7 @@ export class PlaySession<TState extends BaseGameState> {
   }
 
   private async play(): Promise<void> {
+    if (this.abort.signal.aborted) return; // stopped before the room exists: clean up, don't join
     const { name, join, endpoint, apiPort, bots, kit } = this.options;
     const client = new GameClient(endpoint, apiPort, kit);
     const playerId = crypto.randomUUID();
@@ -89,8 +94,8 @@ export class PlaySession<TState extends BaseGameState> {
       const player = this.options.player(room, playerId, this.io);
       this.player = player;
       const playing = player.run();
-      if (this.stopped) player.stop();
-      if (bots > 0) {
+      if (this.abort.signal.aborted) player.stop();
+      if (bots > 0 && !this.abort.signal.aborted) {
         seated = this.seatBots(code);
         seated.catch(() => undefined);
       }

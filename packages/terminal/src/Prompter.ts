@@ -17,7 +17,9 @@ export class ReadlinePrompter implements Prompter {
 
   async ask(question: string, signal: AbortSignal): Promise<string> {
     const prompt = question.slice(question.lastIndexOf("\n") + 1);
-    if (question.includes("\n")) this.out.write(question.slice(0, -prompt.length));
+    // `slice(0, -prompt.length)` would be `slice(0, 0)` when the prompt is empty (a question
+    // ending in "\n"), swallowing the header; count from the length instead.
+    if (question.includes("\n")) this.out.write(question.slice(0, question.length - prompt.length));
     this.pending = prompt;
     try {
       return await this.lines.question(prompt, { signal });

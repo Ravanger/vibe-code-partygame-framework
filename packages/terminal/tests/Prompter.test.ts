@@ -35,6 +35,15 @@ describe("ReadlinePrompter", () => {
     lines.close();
   });
 
+  it("prints the header and prompts empty when the question ends in a newline", async () => {
+    const { input, lines, prompter, written } = setup();
+    const answer = prompter.ask("Header\n", new AbortController().signal);
+    input.write("x\n");
+    expect(await answer).toBe("x");
+    expect(written()).toContain("Header\n");
+    lines.close();
+  });
+
   it("redraws the pending prompt and the typed text under a printed line", async () => {
     const { input, lines, prompter, written } = setup(true);
     const answer = prompter.ask("Say: ", new AbortController().signal);
