@@ -80,12 +80,13 @@ What the framework does and does not protect, for game authors and maintainers. 
 
 **Threat.** Per-player data (hands, secrets, private scores) leaking to other clients or spectators.
 
-**Abuse case.** A client inspects its synced state for another player's `.view()` entries — or a game author forgets to mark a field private and it syncs to everyone.
+**Abuse case.** A client inspects its synced state for another player's `.view()` entries — or a game author forgets to mark a field private and it syncs to everyone — or a spectator joins under an already-seated `playerId` and, while that seat has no live connection (the drop/reconnect window), receives the seat's private `ctx.send` messages.
 
 **Today.**
 - Each connection gets its own `StateView` at join (`packages/server/src/rooms/GameRoom.ts:243-245`); the game shows/hides entries per player with `ctx.showTo`/`hideFrom`. Spectators start with an empty view.
+- A spectator can never hold a seated id: such a join closes with `SEAT_TAKEN` (both while the seat is connected and in its drop window), and seating a player evicts any spectator already holding that id with the same code — so the host's private send (`clientFor ?? spectatorClientFor`) resolves only to the seat's own connection.
 - The boundary is enforced **mechanically at boot**: every field of a state class must be `.view()`, allow-listed in the game's `publicFields`, or a `BaseGameState` field — otherwise `assertSyncedFields` throws and the server refuses to start (`packages/shared/src/schema/syncedFields.ts:13`, called from `packages/server/src/createGameServer.ts:122`; tests in `packages/shared/tests/syncedFields.test.ts`).
-- Tests proving isolation end to end: `packages/server/tests/security.isolation.test.ts` (a spectator and another player hold no `.view()` entries, before and after a drop + fresh-session rejoin; the rejoiner gets exactly its own entry back).
+- Tests proving isolation end to end: `packages/server/tests/security.isolation.test.ts` (a spectator and another player hold no `.view()` entries, before and after a drop + fresh-session rejoin; the rejoiner gets exactly its own entry back). The seated-id refusal and eviction are pinned there too, with the audience-side behaviour in `GameRoom.audience.test.ts`.
 
 **Expectation for game authors.** Declare every field other clients may see in `publicFields`; anything else must be `.view()`. The server will not boot otherwise — that is the point.
 

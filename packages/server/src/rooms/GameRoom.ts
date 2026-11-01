@@ -274,6 +274,9 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     client.view = view;
     this.views.set(client.sessionId, view);
     if (spectator) {
+      // A spectator holding a seated id would receive that seat's private sends while the seat
+      // has no live client (the drop window): refuse it (#325).
+      if (this.state.players.has(playerId)) throw this.closeWith(CLOSE_CODES.SEAT_TAKEN);
       this.spectators.add(client.sessionId);
       this.spectatorIds.set(client.sessionId, playerId);
       ++this.state.spectatorCount;
@@ -303,6 +306,14 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     // Every refusal check passed: cancel only now, so a refused join keeps the empty-room
     // disposal armed (#324).
     this.cancelDispose();
+    // A spectator may hold this id (it joined while the seat was free): seating takes the id
+    // away for good, so evict it with the same close code (#325). Iterate a snapshot: leave()
+    // closes the socket and the client leaves this.clients only when that close is processed.
+    for (const client of [...this.clients]) {
+      if (this.spectatorIds.get(client.sessionId) === playerId) {
+        client.leave(CLOSE_CODES.SEAT_TAKEN.code);
+      }
+    }
     const seat = new PlayerSchema();
     seat.id = playerId;
     seat.name = name && !this.nameTaken(playerId, name) ? name : "";

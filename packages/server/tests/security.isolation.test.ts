@@ -145,6 +145,26 @@ describe("security isolation", () => {
     expect(clientState(spec).secrets?.size ?? 0).toBe(0);
   });
 
+  it("refuses a spectator join under a seated id while the seat is connected", async () => {
+    const room = await t.createRoom("buzzer");
+    await t.join(room, { playerId: pid(1) });
+    await expect(t.join(room, { playerId: pid(1), spectator: true })).rejects.toMatchObject({
+      code: CLOSE_CODES.SEAT_TAKEN.code,
+      message: CLOSE_CODES.SEAT_TAKEN.message,
+    });
+  });
+
+  it("refuses a spectator join under a seated id in the seat's drop window", async () => {
+    const room = await t.createRoom("buzzer");
+    const p1 = await t.join(room, { playerId: pid(1) });
+    await p1.leave(false); // drop; the seat is kept for reconnection
+    await waitUntil(() => stateOf(room).players.get(pid(1))?.isConnected === false, "p1 dropped");
+    await expect(t.join(room, { playerId: pid(1), spectator: true })).rejects.toMatchObject({
+      code: CLOSE_CODES.SEAT_TAKEN.code,
+      message: CLOSE_CODES.SEAT_TAKEN.message,
+    });
+  });
+
   it("after hideFrom and seat removal, the removed client gets no further updates for that entry", async () => {
     const room = await t.createRoom("buzzer", { buzzMs: 60_000 });
     const p1 = await seat(t, room, 1);
