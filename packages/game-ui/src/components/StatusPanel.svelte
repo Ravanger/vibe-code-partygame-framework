@@ -3,14 +3,19 @@ const {
   title,
   detail = "",
   tone,
-}: { title: string; detail?: string; tone: "wait" | "done" | "info" } = $props();
+  heading = false,
+}: { title: string; detail?: string; tone: "wait" | "done" | "info"; heading?: boolean } = $props();
 </script>
 
 <div class={`status-panel card taped tone-${tone}`}>
   {#if tone === "done"}
     <span class="sticker done-sticker" aria-hidden="true">&#10003; Done</span>
   {/if}
-  <p class="title">{title}</p>
+  {#if heading}
+    <h2 class="title" tabindex="-1">{title}</h2>
+  {:else}
+    <p class="title">{title}</p>
+  {/if}
   {#if detail}
     <p class="detail hand">{detail}</p>
   {/if}
