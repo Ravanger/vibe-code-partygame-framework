@@ -9,6 +9,7 @@ describe("departures", () => {
     t.leave("p3");
     expect(t.state.mine.size).toBe(3);
     expect(t.state.roles.get("p3")).toBeUndefined();
+    expect(t.state.reveals.length).toBe(1);
     const entry = t.state.reveals.find((r) => r.playerId === "p3");
     expect(entry?.signal).toBe(signal);
     expect(entry?.name).toBe("p3");
@@ -17,8 +18,17 @@ describe("departures", () => {
   it("reveals a leaver's signal with an empty remembered name", () => {
     const t = Table.started({ seats: [{}, {}, {}, { name: "" }] });
     t.leave("p4");
+    expect(t.state.reveals.length).toBe(1);
     const entry = t.state.reveals.find((r) => r.playerId === "p4");
     expect(entry?.name).toBe("");
+  });
+
+  it("keeps a single reveal when a sharer leaves", () => {
+    const t = Table.started({ players: 4 });
+    t.share("p1");
+    t.leave("p1");
+    expect(t.state.reveals.length).toBe(1);
+    expect(t.state.reveals[0]?.playerId).toBe("p1");
   });
 
   it("keeps the target locked to the starting crew when someone leaves", () => {
@@ -54,6 +64,7 @@ describe("departures", () => {
     t.leave("p1");
     expect(t.priv.responses.size).toBe(1);
     expect(t.state.choices.map((c) => c.playerId)).toEqual(["p2"]);
+    expect(t.state.reveals.length).toBe(1);
     expect(revealOf(t, "p1")).toBe(signal);
   });
 

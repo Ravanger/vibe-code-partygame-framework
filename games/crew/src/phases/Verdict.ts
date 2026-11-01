@@ -10,7 +10,7 @@ export const Verdict: CrewPhase = {
   onRosterChange: (ctx) => {
     const crew = new Crew(ctx);
     crew.pruneDeparted();
-    if (crew.endIfTooFewPlayers()) return;
+    crew.endIfTooFewPlayers();
   },
   actions: {
     [ACTION.GUESS]: defineAction({
