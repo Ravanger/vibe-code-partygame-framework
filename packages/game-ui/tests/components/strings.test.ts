@@ -43,6 +43,8 @@ describe("defaultUiStrings and the table", () => {
     expect(strings.thisIsYou).toBe("This is you");
     expect(strings.scoreUnit).toBe("pts");
     expect(strings.qrCode).toBe("QR code that opens the join link");
+    expect(strings.sound).toBe("Sound");
+    expect(strings.done).toBe("Done");
     expect(strings.secondsRemaining(5)).toBe("5 seconds remaining");
   });
 

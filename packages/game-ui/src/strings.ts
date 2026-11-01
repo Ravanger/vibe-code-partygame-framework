@@ -37,6 +37,10 @@ export interface UiStrings {
   scoreUnit: string;
   /** `aria-label` of the QrCode image. */
   qrCode: string;
+  /** The SoundToggle button label; its state is conveyed by `aria-pressed`, so the label stays constant. */
+  sound: string;
+  /** The StatusPanel done sticker. */
+  done: string;
   /** Builds the Timer announcement for a given number of seconds left. */
   secondsRemaining: (seconds: number) => string;
   /**
@@ -62,6 +66,8 @@ export const defaultUiStrings: UiStrings = {
   thisIsYou: "This is you",
   scoreUnit: "pts",
   qrCode: "QR code that opens the join link",
+  sound: "Sound",
+  done: "Done",
   secondsRemaining: (seconds) => `${seconds} seconds remaining`,
   clientStrings: {},
 };

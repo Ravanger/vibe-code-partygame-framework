@@ -323,6 +323,7 @@
           "RoomLike": {},
           "UrgentFeedbackEvent": {},
           "defaultClientStrings": {},
+          "isUrgent": {},
           "readCodeParam": {},
           "resolveEndpoints": {}
         },

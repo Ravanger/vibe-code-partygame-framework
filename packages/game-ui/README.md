@@ -102,7 +102,7 @@ import { SoundPolicy } from "@partygame/game-ui";
 const sound = new SoundPolicy({ storage: localStorage, storagePrefix: "my-game", target: window });
 ```
 
-`SoundToggle` (from `@partygame/game-ui/components`) is the button for it — a native `type="button"` with `aria-pressed`, so it is keyboard operable; optional `on`/`off` props override the labels ("Sound on"/"Sound off"). Gate every sound your game makes on `canPlay`; combined with a feedback bus of sound events, that is one line per event:
+`SoundToggle` (from `@partygame/game-ui/components`) is the button for it — a native `type="button"` with a constant label and `aria-pressed`, so a screen reader announces one state ("Sound, pressed") instead of a contradicting pair; the label comes from the `UiStrings` table (`sound`, default "Sound"), and the button has a 44px minimum height. Gate every sound your game makes on `canPlay`; combined with a feedback bus of sound events, that is one line per event:
 
 ```svelte
 <script lang="ts">
@@ -151,7 +151,7 @@ const sound = new SoundPolicy({ storage: localStorage, storagePrefix: "my-game",
 
 ## Components
 
-Props (all render in plain markup, e.g. `<Timer seconds={12} total={30} />`): `LobbySettings` and `GameControls` take `vm`; `NameInput` takes `field` (`vm.nameField`) and `focus?`; `PlayerSticker` takes `name`, `playerId`, `size?`, `ghost?`; `QrCode` takes `text`; `SoundToggle` takes `policy` (a `SoundPolicy`) and optional `on`/`off` labels; `StatusPanel` takes `title`, `detail?`, `tone` (`"wait"`, `"done"`, `"info"`); `Timer` takes `seconds`, `total`, `announcement?`.
+Props (all render in plain markup, e.g. `<Timer seconds={12} total={30} />`): `LobbySettings` and `GameControls` take `vm`; `NameInput` takes `field` (`vm.nameField`) and `focus?`; `PlayerSticker` takes `name`, `playerId`, `size?`, `ghost?`; `QrCode` takes `text`; `SoundToggle` takes `policy` (a `SoundPolicy`); `StatusPanel` takes `title`, `detail?`, `tone` (`"wait"`, `"done"`, `"info"`); `Timer` takes `seconds`, `total`, `announcement?`.
 
 ## Podium and ranking
 
@@ -173,7 +173,7 @@ Props (all render in plain markup, e.g. `<Timer seconds={12} total={30} />`): `L
 
 ## Localisation
 
-Every label the generic components render (the GameControls menu and dialog, the LobbySettings summary, NameInput, Podium, QrCode and the `PhaseClock` announcement through its `secondsRemaining(n)` function entry) comes from `defaultUiStrings`. Call `setStrings(partial)` once at the app root to replace any of them; unspecified keys keep the English default.
+Every label the generic components render (the GameControls menu and dialog, the LobbySettings summary, NameInput, Podium, QrCode, the SoundToggle label, the StatusPanel done sticker and the `PhaseClock` announcement through its `secondsRemaining(n)` function entry) comes from `defaultUiStrings`. Call `setStrings(partial)` once at the app root to replace any of them; unspecified keys keep the English default.
 
 ```svelte
 <script lang="ts">

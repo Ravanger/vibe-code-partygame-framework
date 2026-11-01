@@ -1,7 +1,10 @@
 import { render, screen } from "@testing-library/svelte";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { StatusPanel } from "../../src/components/index.js";
+import { setStrings } from "../../src/strings.js";
 import { expectNoViolations } from "../support/a11y.js";
+
+afterEach(() => setStrings({}));
 
 describe("StatusPanel", () => {
   it("shows a waiting message with breathing dots", async () => {
@@ -23,5 +26,11 @@ describe("StatusPanel", () => {
     expect(info.container.querySelector(".sticker")).not.toBeInTheDocument();
     await expectNoViolations(container, "StatusPanel");
     await expectNoViolations(info.container, "StatusPanel");
+  });
+
+  it("takes the done sticker text from the UiStrings table", () => {
+    setStrings({ done: "Fertig" });
+    const { container } = render(StatusPanel, { title: "T", tone: "done" });
+    expect(container.querySelector(".sticker")?.textContent).toContain("Fertig");
   });
 });

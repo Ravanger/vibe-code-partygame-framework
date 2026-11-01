@@ -18,7 +18,7 @@ The Svelte 5 SDK a game client uses to connect, join, send actions and read stat
 
 ## Public entry points
 
-- `.`: `GameConnectionManager`, `Countdown`, `resolveEndpoints`, `readCodeParam`.
+- `.`: `GameConnectionManager`, `Countdown`, `isUrgent`, `resolveEndpoints`, `readCodeParam`.
 - `./test-setup`: vitest setup for jsdom.
 - `./testing`: `StubRoom`, `connectedClient`, `addSeat`, `fakeFetch`.
 

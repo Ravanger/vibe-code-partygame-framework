@@ -2,6 +2,11 @@ import { createSubscriber } from "svelte/reactivity";
 
 const DEFAULT_TICK_MS = 250;
 
+/** Whether a countdown is in its last stretch: more than 0 seconds left and at most 10, so an expired timer (0) is not urgent. */
+export function isUrgent(secondsLeft: number): boolean {
+  return secondsLeft > 0 && secondsLeft <= 10;
+}
+
 // The client clock lives in a closure instead of a class field: Stryker wraps constructor
 // statements in if/else, so `$state` cannot be assigned in the constructor (Svelte accepts it
 // only as a top-level constructor assignment), and a `$state` class field initializer leaves
@@ -24,7 +29,7 @@ export class Countdown {
   private lastServerNow = 0;
   private lastServerNowClientTime = 0;
   readonly isExpired: boolean = $derived(this.secondsLeft <= 0);
-  readonly isUrgent: boolean = $derived(this.secondsLeft > 0 && this.secondsLeft <= 10);
+  readonly isUrgent: boolean = $derived(isUrgent(this.secondsLeft));
   private readonly track: () => void;
 
   constructor(

@@ -1,4 +1,6 @@
 <script lang="ts">
+import { isUrgent } from "@partygame/game-client";
+
 const {
   seconds,
   total,
@@ -7,13 +9,12 @@ const {
 
 const STICK_START = 6;
 const STICK_LENGTH = 92;
-const URGENT_AT = 10;
 
 const fraction = $derived(total > 0 ? Math.min(1, Math.max(0, seconds / total)) : 0);
 const tip = $derived(STICK_START + STICK_LENGTH * fraction);
 </script>
 
-<div class="sparkler" class:urgent={seconds <= URGENT_AT}>
+<div class="sparkler" class:urgent={isUrgent(seconds)}>
   <span class="sr-only" aria-live="polite" aria-atomic="true">{announcement}</span>
   <svg viewBox="0 0 120 40" aria-hidden="true">
     <line class="wire" x1={STICK_START} y1="20" x2={STICK_START + STICK_LENGTH} y2="20" />
@@ -24,7 +25,7 @@ const tip = $derived(STICK_START + STICK_LENGTH * fraction);
       <path class="spark spark-3" d="M8 8L9 11L12 12L9 13L8 16L7 13L4 12L7 11z" />
     </g>
   </svg>
-  <span class="number">{seconds}</span>
+  <span class="number" aria-hidden="true">{seconds}</span>
 </div>
 
 <style>
@@ -124,10 +125,6 @@ const tip = $derived(STICK_START + STICK_LENGTH * fraction);
 
     .urgent {
       animation: jiggle 0.4s ease-in-out infinite;
-    }
-
-    .stick {
-      transition: x2 1s linear;
     }
   }
 </style>
