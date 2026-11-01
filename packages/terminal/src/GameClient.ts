@@ -26,7 +26,13 @@ export class GameClient<TState extends BaseGameState> {
       ...options,
       seatSecret: crypto.randomUUID() + crypto.randomUUID(),
     });
-    await claimName(room, playerId, name);
+    try {
+      await claimName(room, playerId, name);
+    } catch (error) {
+      // A failed name claim would otherwise leave the just-created room occupied.
+      await Promise.allSettled([room.leave(true)]);
+      throw error;
+    }
     return room;
   }
 

@@ -47,12 +47,18 @@ export class ColyseusConnector<TState extends BaseGameState> implements RoomConn
       this.game.stateClass,
     );
     // The SDK leaves room.state undefined until the first sync lands; poll it as if absent.
-    await waitFor(
-      () => (room.state?.roomCode ?? "") !== "",
-      "the room state",
-      timeoutMs ?? DEFAULT_TIMEOUT_MS,
-    );
-    if (name !== undefined) await claimName(room, playerId, name);
+    try {
+      await waitFor(
+        () => (room.state?.roomCode ?? "") !== "",
+        "the room state",
+        timeoutMs ?? DEFAULT_TIMEOUT_MS,
+      );
+      if (name !== undefined) await claimName(room, playerId, name);
+    } catch (error) {
+      // A failed post-join step would otherwise leave the seat occupied until the server reaps it.
+      await Promise.allSettled([room.leave(true)]);
+      throw error;
+    }
     return room;
   }
 }
