@@ -1,7 +1,7 @@
 import { t as schemaField } from "@colyseus/schema";
 import { ColyseusSDK } from "@colyseus/sdk";
 import { WebSocketTransport } from "@colyseus/ws-transport";
-import { noopLogger } from "@partygame/core";
+import { type LogFields, type Logger, noopLogger } from "@partygame/core";
 import { RoomCodeSchema } from "@partygame/shared";
 import { BaseGameState } from "@partygame/shared/schema";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -162,7 +162,7 @@ describe("rate limits", () => {
     });
   });
 
-  it("reports an observed limit hit through console.warn", () => {
+  it("reports an observed limit hit through console.warn when no logger is given", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       warnRateLimit("room-1:player-1:ACTION");
@@ -172,6 +172,19 @@ describe("rate limits", () => {
     }
   });
 
+  it("reports an observed limit hit through the given logger instead", () => {
+    const lines: Array<{ event: string; fields?: LogFields | undefined }> = [];
+    const logger: Logger = {
+      info: () => {},
+      warn: (event, fields) => {
+        lines.push({ event, fields });
+      },
+      error: () => {},
+    };
+    warnRateLimit("room-1:player-1:ACTION", logger);
+    expect(lines).toEqual([{ event: "rate.limit", fields: { key: "room-1:player-1:ACTION" } }]);
+  });
+
   it("boots a server in observe mode", async () => {
     t = await bootBuzzer({ rateLimits: { mode: "observe" } });
     const room = await t.createRoom("buzzer");
@@ -179,25 +192,28 @@ describe("rate limits", () => {
   });
 
   it("builds the code API throttle from rateLimits", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    try {
-      const defaults = createResolveCodeThrottle();
-      expect(defaults.bucket).toEqual({ rate: 1, burst: 10 });
-      for (let i = 0; i < 10; ++i) {
-        expect(defaults.limiter.take("1.2.3.4", defaults.bucket)).toBe(true);
-      }
-      expect(defaults.limiter.take("1.2.3.4", defaults.bucket)).toBe(false); // enforce by default
-
-      const observed = createResolveCodeThrottle({
-        resolveCode: { rate: 3, burst: 1 },
-        mode: "observe",
-      });
-      expect(observed.bucket).toEqual({ rate: 3, burst: 1 });
-      expect(observed.limiter.take("5.6.7.8", observed.bucket)).toBe(true);
-      expect(observed.limiter.take("5.6.7.8", observed.bucket)).toBe(true); // observed, not refused
-      expect(warn).toHaveBeenCalledWith("[rate-limit] 5.6.7.8 is over its limit");
-    } finally {
-      warn.mockRestore();
+    const defaults = createResolveCodeThrottle();
+    expect(defaults.bucket).toEqual({ rate: 1, burst: 10 });
+    for (let i = 0; i < 10; ++i) {
+      expect(defaults.limiter.take("1.2.3.4", defaults.bucket)).toBe(true);
     }
+    expect(defaults.limiter.take("1.2.3.4", defaults.bucket)).toBe(false); // enforce by default
+
+    const lines: Array<{ event: string; fields?: LogFields | undefined }> = [];
+    const logger: Logger = {
+      info: () => {},
+      warn: (event, fields) => {
+        lines.push({ event, fields });
+      },
+      error: () => {},
+    };
+    const observed = createResolveCodeThrottle(
+      { resolveCode: { rate: 3, burst: 1 }, mode: "observe" },
+      logger,
+    );
+    expect(observed.bucket).toEqual({ rate: 3, burst: 1 });
+    expect(observed.limiter.take("5.6.7.8", observed.bucket)).toBe(true);
+    expect(observed.limiter.take("5.6.7.8", observed.bucket)).toBe(true); // observed, not refused
+    expect(lines).toEqual([{ event: "rate.limit", fields: { key: "5.6.7.8" } }]);
   });
 });

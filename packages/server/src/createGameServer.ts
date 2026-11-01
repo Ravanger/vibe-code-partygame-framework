@@ -88,13 +88,23 @@ export function resolveRateLimits(options?: RateLimits): ResolvedRateLimits {
   };
 }
 
-/** Reports one observed (not enforced) limit hit; the observe-mode `onObserve` of {@link createGameServer}. */
-export function warnRateLimit(key: string): void {
+/**
+ * Reports one observed (not enforced) limit hit. With a `logger` it writes the structured line
+ * `rate.limit { key }` through it; without one it falls back to `console.warn`.
+ */
+export function warnRateLimit(key: string, logger?: Logger): void {
+  if (logger !== undefined) {
+    logger.warn("rate.limit", { key });
+    return;
+  }
   console.warn(`[rate-limit] ${key} is over its limit`);
 }
 
 /** The limiter and resolved bucket the HTTP entries use to throttle `/api/resolve-code`. */
-export function createResolveCodeThrottle(rateLimits?: RateLimits): {
+export function createResolveCodeThrottle(
+  rateLimits?: RateLimits,
+  logger?: Logger,
+): {
   limiter: RateLimiter;
   bucket: TokenBucket;
 } {
@@ -102,7 +112,7 @@ export function createResolveCodeThrottle(rateLimits?: RateLimits): {
   return {
     limiter: new RateLimiter({
       mode: resolved.mode,
-      ...(resolved.mode === "observe" ? { onObserve: warnRateLimit } : {}),
+      ...(resolved.mode === "observe" ? { onObserve: (key) => warnRateLimit(key, logger) } : {}),
     }),
     bucket: resolved.resolveCode,
   };
@@ -117,10 +127,12 @@ export function createGameServer(options: GameServerOptions): GameColyseusServer
   const server = new GameColyseusServer(
     options.transport ? { transport: options.transport } : defaultTransportOptions,
   );
+  // One logger for the rooms and for observe-mode limit hits; a configured logger wins over stdout.
+  const logger = options.logger ?? jsonLineLogger();
   const rateLimits = resolveRateLimits(options.rateLimits);
   const rateLimiter = new RateLimiter({
     mode: rateLimits.mode,
-    ...(rateLimits.mode === "observe" ? { onObserve: warnRateLimit } : {}),
+    ...(rateLimits.mode === "observe" ? { onObserve: (key) => warnRateLimit(key, logger) } : {}),
   });
   for (const game of options.games) {
     assertSyncedFields(game.stateClass, game.publicFields ?? []);
@@ -135,7 +147,7 @@ export function createGameServer(options: GameServerOptions): GameColyseusServer
       ...(options.textFilter ? { textFilter: options.textFilter } : {}),
       rateLimiter,
       rateLimits,
-      logger: options.logger ?? jsonLineLogger(),
+      logger,
     };
     server.define(
       game.roomName,

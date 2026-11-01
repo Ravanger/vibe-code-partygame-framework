@@ -1,5 +1,6 @@
 import { createServer as createHttpServer, type Server as HttpServer } from "node:http";
 import type { Server } from "@colyseus/core";
+import type { Logger } from "@partygame/core";
 import { type ApiRequestInfo, createApiHandler } from "./api/createApiHandler.js";
 import {
   createGameServer,
@@ -9,7 +10,7 @@ import {
 import { listenGameServer } from "./gameTransport.js";
 import { closeHttpServer, freePort } from "./probe.js";
 import type { RateLimits } from "./RateLimiter.js";
-import { hostFrom, parseAllowedOrigins } from "./resolveStartOptions.js";
+import { hostFrom, parseAllowedOrigins, trustProxyFrom } from "./resolveStartOptions.js";
 import { RoomCodeService } from "./services/RoomCodeService.js";
 
 export interface ServeApiOptions {
@@ -20,6 +21,10 @@ export interface ServeApiOptions {
   allowedOrigins?: string[] | "*";
   /** Throttle `/api/resolve-code` per remote address with these limits (429 + `Retry-After`). */
   rateLimits?: RateLimits;
+  /** Key the throttle on the last hop of `X-Forwarded-For`; only behind a trusted reverse proxy. */
+  trustProxy?: boolean;
+  /** Where observe-mode limit hits are logged; `console.warn` when omitted. */
+  logger?: Logger;
   /** Test seam: replaces the default handler. */
   handler?: (req: Request, info?: ApiRequestInfo) => Response;
 }
@@ -34,11 +39,12 @@ export async function serveApi(
   codes: RoomCodeService,
   options: ServeApiOptions,
 ): Promise<HttpServer> {
-  const { limiter, bucket } = createResolveCodeThrottle(options.rateLimits);
+  const { limiter, bucket } = createResolveCodeThrottle(options.rateLimits, options.logger);
   const handler =
     options.handler ??
     createApiHandler(codes, {
       ...(options.allowedOrigins !== undefined ? { allowedOrigins: options.allowedOrigins } : {}),
+      ...(options.trustProxy !== undefined ? { trustProxy: options.trustProxy } : {}),
       limiter,
       resolveCode: bucket,
     });
@@ -97,6 +103,8 @@ export interface NodeServerOptions extends Omit<GameServerOptions, "transport"> 
   host?: string;
   /** Origins allowed to read the code API; loopback only (or `ALLOWED_ORIGINS`) when omitted. */
   allowedOrigins?: string[] | "*";
+  /** Key the code API's throttle on `X-Forwarded-For`; only behind a trusted reverse proxy (or `TRUST_PROXY`). */
+  trustProxy?: boolean;
 }
 
 /** A game server and its code API running in this process. */
@@ -143,15 +151,17 @@ export async function startNodeServer(
     apiPort: wantedApiPort,
     host: optionHost,
     allowedOrigins: optionAllowedOrigins,
+    trustProxy: optionTrustProxy,
     ...serverOptions
   } = options;
   if (wantedPort !== undefined && wantedPort === wantedApiPort) {
     throw new Error("The game server and the code API need different ports");
   }
   const roomCodeService = options.roomCodeService ?? new RoomCodeService();
-  // Unset options fall back to the environment, so a launcher can steer the bind with HOST/ALLOWED_ORIGINS.
+  // Unset options fall back to the environment, so a launcher can steer the bind with HOST/ALLOWED_ORIGINS/TRUST_PROXY.
   const host = optionHost ?? hostFrom(process.env.HOST);
   const allowedOrigins = optionAllowedOrigins ?? parseAllowedOrigins(process.env.ALLOWED_ORIGINS);
+  const trustProxy = optionTrustProxy ?? trustProxyFrom(process.env.TRUST_PROXY);
   const discoverFreePort = hooks?.freePort ?? freePort;
   for (let attempt = 1; ; ++attempt) {
     const port = wantedPort ?? (await discoverFreePort());
@@ -162,7 +172,9 @@ export async function startNodeServer(
         port: apiPort,
         ...(host !== undefined ? { host } : {}),
         ...(allowedOrigins !== undefined ? { allowedOrigins } : {}),
+        ...(trustProxy !== undefined ? { trustProxy } : {}),
         ...(options.rateLimits !== undefined ? { rateLimits: options.rateLimits } : {}),
+        ...(options.logger !== undefined ? { logger: options.logger } : {}),
       });
       const server = createGameServer({ ...serverOptions, roomCodeService });
       // A failed bind shuts the server down itself; only the API needs closing here.

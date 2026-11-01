@@ -1,5 +1,6 @@
+import type { LogFields, Logger } from "@partygame/core";
 import { type ActionResult, ClientMessage } from "@partygame/shared";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { type TestServer, waitUntil } from "../src/testing/index.js";
 import { bootBuzzer, pid, sleep, startedRoom, stateOf } from "./support.js";
 
@@ -78,21 +79,28 @@ describe("GameRoom rate limits", () => {
     ).toBe(true);
   });
 
-  it("refuses nothing in observe mode and reports each hit through console.warn", async () => {
-    t = await bootBuzzer({ rateLimits: { action: { rate: 0, burst: 1 }, mode: "observe" } });
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    try {
-      const { p1 } = await startedRoom(t);
-      expect(
-        await p1.client.request<unknown, ActionResult>(ClientMessage.ACTION, { type: "JUNK" }),
-      ).toEqual({ ok: true });
-      expect(
-        await p1.client.request<unknown, ActionResult>(ClientMessage.ACTION, { type: "JUNK" }),
-      ).toEqual({ ok: true }); // over the limit, but only observed
-      expect(warn.mock.calls.some(([message]) => String(message).includes(pid(1)))).toBe(true);
-    } finally {
-      warn.mockRestore();
-    }
+  it("refuses nothing in observe mode and reports each hit through the configured logger", async () => {
+    const lines: Array<{ event: string; fields?: LogFields | undefined }> = [];
+    const logger: Logger = {
+      info: () => {},
+      warn: (event, fields) => {
+        lines.push({ event, fields });
+      },
+      error: () => {},
+    };
+    t = await bootBuzzer({
+      rateLimits: { action: { rate: 0, burst: 1 }, mode: "observe" },
+      logger,
+    });
+    const { p1 } = await startedRoom(t);
+    expect(
+      await p1.client.request<unknown, ActionResult>(ClientMessage.ACTION, { type: "JUNK" }),
+    ).toEqual({ ok: true });
+    expect(
+      await p1.client.request<unknown, ActionResult>(ClientMessage.ACTION, { type: "JUNK" }),
+    ).toEqual({ ok: true }); // over the limit, but only observed
+    const hit = lines.find((line) => line.event === "rate.limit");
+    expect(hit?.fields).toMatchObject({ key: expect.stringContaining(pid(1)) });
   });
 
   it("throttles SET_NAME on its own bucket and leaves actions alone", async () => {

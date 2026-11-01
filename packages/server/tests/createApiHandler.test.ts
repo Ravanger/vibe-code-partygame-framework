@@ -54,20 +54,29 @@ describe("createApiHandler", () => {
       },
     );
 
-    it("sends no CORS headers for a disallowed origin, but answers normally", async () => {
+    it("sends no allow headers for a disallowed origin, but still Vary: Origin", async () => {
       const res = call("/api/resolve-code?code=ABCD", "GET", "http://evil.example.com:5173");
       expect(res.status).toBe(200);
       expect(await res.json()).toEqual({ roomId: "room-1" });
       expect(res.headers.get("Access-Control-Allow-Origin")).toBeNull();
-      expect(res.headers.get("Vary")).toBeNull();
+      // allow-list mode varies the response by Origin, so shared caches must not cross origins
+      expect(res.headers.get("Vary")).toBe("Origin");
       expect(res.headers.get("Access-Control-Allow-Methods")).toBeNull();
     });
 
-    it("sends no CORS headers when there is no Origin header", () => {
+    it("sends Vary: Origin even when there is no Origin header", () => {
       const res = call("/api/resolve-code?code=ABCD");
       expect(res.status).toBe(200);
       expect(res.headers.get("Access-Control-Allow-Origin")).toBeNull();
-      expect(res.headers.get("Vary")).toBeNull();
+      expect(res.headers.get("Vary")).toBe("Origin");
+    });
+
+    it("matches a :* pattern only against a port: digits, nothing else", () => {
+      const res = call("/api/resolve-code?code=ABCD", "GET", "http://localhost:5173");
+      expect(res.headers.get("Access-Control-Allow-Origin")).toBe("http://localhost:5173");
+      // a host that merely continues with letters is not a port
+      const evil = call("/api/resolve-code?code=ABCD", "GET", "http://localhost:evil.example");
+      expect(evil.headers.get("Access-Control-Allow-Origin")).toBeNull();
     });
 
     it("answers a preflight from an allowed origin with 204 and the echoed origin", () => {
@@ -79,10 +88,11 @@ describe("createApiHandler", () => {
       expect(res.headers.get("Access-Control-Allow-Headers")).toBe("Content-Type");
     });
 
-    it("answers a preflight from a disallowed origin with 204 and no CORS headers", () => {
+    it("answers a preflight from a disallowed origin with 204 and only Vary: Origin", () => {
       const res = call("/api/resolve-code", "OPTIONS", "http://evil.example.com");
       expect(res.status).toBe(204);
       expect(res.headers.get("Access-Control-Allow-Origin")).toBeNull();
+      expect(res.headers.get("Vary")).toBe("Origin");
       expect(res.headers.get("Access-Control-Allow-Methods")).toBeNull();
     });
 
@@ -114,10 +124,26 @@ describe("createApiHandler", () => {
   });
 
   describe("resolve-code throttle", () => {
-    const ask = (handler: ReturnType<typeof createApiHandler>, remoteAddress?: string): Response =>
-      handler(new Request("http://x/api/resolve-code?code=ABCD"), {
+    const ask = (
+      handler: ReturnType<typeof createApiHandler>,
+      remoteAddress?: string,
+      method = "GET",
+    ): Response =>
+      handler(new Request("http://x/api/resolve-code?code=ABCD", { method }), {
         ...(remoteAddress !== undefined ? { remoteAddress } : {}),
       });
+
+    /** One request carrying an `X-Forwarded-For` header, as it arrives at the HTTP entries. */
+    const viaProxy = (
+      handler: ReturnType<typeof createApiHandler>,
+      xff: string | undefined,
+      remoteAddress?: string,
+    ): Response => {
+      const headers: Record<string, string> = {};
+      if (xff !== undefined) headers["X-Forwarded-For"] = xff;
+      const info = remoteAddress === undefined ? undefined : { remoteAddress };
+      return handler(new Request("http://x/api/resolve-code?code=ABCD", { headers }), info);
+    };
 
     it("allows the burst and then answers 429 with Retry-After", async () => {
       const limiter = new RateLimiter({ clock: () => 0 });
@@ -192,6 +218,66 @@ describe("createApiHandler", () => {
       expect(refused.status).toBe(429);
       expect(refused.headers.get("Access-Control-Allow-Origin")).toBe("http://localhost:5173");
       expect(refused.headers.get("Vary")).toBe("Origin");
+    });
+
+    it("does not spend the caller's budget on a preflight", () => {
+      const limiter = new RateLimiter({ clock: () => 0 });
+      const throttled = createApiHandler(codes, { limiter, resolveCode: { rate: 0, burst: 1 } });
+      for (let i = 0; i < 3; ++i) expect(ask(throttled, "10.0.0.1", "OPTIONS").status).toBe(204);
+      expect(ask(throttled, "10.0.0.1").status).toBe(200); // the whole burst is still intact
+    });
+
+    describe("trustProxy", () => {
+      it("keys buckets by the last X-Forwarded-For hop behind one proxy address", () => {
+        const limiter = new RateLimiter({ clock: () => 0 });
+        const throttled = createApiHandler(codes, {
+          limiter,
+          resolveCode: { rate: 0, burst: 1 },
+          trustProxy: true,
+        });
+        expect(viaProxy(throttled, "203.0.113.7", "10.0.0.1").status).toBe(200); // client A
+        expect(viaProxy(throttled, "203.0.113.8", "10.0.0.1").status).toBe(200); // client B: same socket, own bucket
+        expect(viaProxy(throttled, "203.0.113.7", "10.0.0.1").status).toBe(429); // A's bucket is spent
+      });
+
+      it("uses the last hop of a multi-hop chain, not the client-claimed first one", () => {
+        const limiter = new RateLimiter({ clock: () => 0 });
+        const throttled = createApiHandler(codes, {
+          limiter,
+          resolveCode: { rate: 0, burst: 1 },
+          trustProxy: true,
+        });
+        expect(viaProxy(throttled, "spoofed.example, 203.0.113.9", "10.0.0.1").status).toBe(200);
+      });
+
+      it("ignores X-Forwarded-For when trustProxy is off", () => {
+        const limiter = new RateLimiter({ clock: () => 0 });
+        const plain = createApiHandler(codes, { limiter, resolveCode: { rate: 0, burst: 1 } });
+        expect(viaProxy(plain, "203.0.113.7", "10.0.0.1").status).toBe(200);
+        expect(viaProxy(plain, "203.0.113.8", "10.0.0.1").status).toBe(429); // the header changes nothing
+      });
+
+      it("falls back to the socket address when no X-Forwarded-For arrives", () => {
+        const limiter = new RateLimiter({ clock: () => 0 });
+        const throttled = createApiHandler(codes, {
+          limiter,
+          resolveCode: { rate: 0, burst: 1 },
+          trustProxy: true,
+        });
+        expect(viaProxy(throttled, undefined, "10.0.0.5").status).toBe(200);
+        expect(viaProxy(throttled, undefined, "10.0.0.5").status).toBe(429); // same socket -> same bucket
+      });
+
+      it("falls back to the socket address when X-Forwarded-For is blank", () => {
+        const limiter = new RateLimiter({ clock: () => 0 });
+        const throttled = createApiHandler(codes, {
+          limiter,
+          resolveCode: { rate: 0, burst: 1 },
+          trustProxy: true,
+        });
+        expect(viaProxy(throttled, " , ", "10.0.0.6").status).toBe(200);
+        expect(viaProxy(throttled, undefined, "10.0.0.6").status).toBe(429); // the blank header keyed on the socket too
+      });
     });
   });
 });

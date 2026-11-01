@@ -132,6 +132,8 @@ VITE_SERVER_ENDPOINT=wss://your-origin/game VITE_API_BASE=https://your-origin bu
 - `VITE_API_BASE` is a bare origin (protocol + host, **no** `/api` suffix): the client appends exactly `/api/resolve-code` to it, with no port — so `https://your-origin` reaches an API answering at `/api/resolve-code`. It wins over `VITE_API_PORT`.
 - Without either variable, an HTTPS page still derives its endpoint from its own protocol (`https://<page host>:2567`), which is what you want when TLS terminates directly on those ports.
 
+Behind such a proxy every request reaches the code API from the proxy's own address, so its per-address throttle treats all your clients as one caller. If your proxy records the client's real address in `X-Forwarded-For` (nginx with `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`), set `TRUST_PROXY=true` and the API keys its throttle on the last hop of that header instead — each client gets its own bucket again. Enable it only when every request really passes your trusted proxy: a direct caller could otherwise spoof the header to split or share buckets.
+
 The reverse proxy itself is not exercised by this repo's tests. The forwarding rules above follow from how the client builds its request URLs — the matchmake call carries the endpoint's path, the room-code lookup appends `/api/resolve-code` to `VITE_API_BASE` — and where each backend answers; they are not a live-proxy test.
 
 ## Environment Variables
@@ -144,6 +146,7 @@ The reverse proxy itself is not exercised by this repo's tests. The forwarding r
 | `API_PORT` | `3001` | Room-code lookup API port |
 | `HOST` | `127.0.0.1` | Interface the room-code API binds; `0.0.0.0` for every interface (the game server listens on all of them anyway) |
 | `ALLOWED_ORIGINS` | loopback origins, any port | Comma-separated browser origins allowed to read the API; `*` for all. Needed when guests' pages are not on localhost |
+| `TRUST_PROXY` | off | Set `true` to key the code API's per-address throttle on the last hop of `X-Forwarded-For`; only behind a trusted reverse proxy that records the client's real address. See [Behind HTTPS and a reverse proxy](#behind-https-and-a-reverse-proxy) |
 | `WITCLASH_CONTENT_DIR` (WitClash) | `games/wit-clash/content/categories` | Directory holding WitClash's category files |
 
 Other server limits are set as options of `createGameServer` (see the [framework README](framework/README.md)), not environment variables: for example `maxRooms` caps the number of concurrent rooms (default 100); a create beyond the cap is refused with "Server is full". Rate limits (`rateLimits`) throttle player actions, name changes and `/api/resolve-code` per remote address; an exhausted address gets HTTP 429 with `Retry-After`.

@@ -1,5 +1,6 @@
 import { request as httpRequest, type Server } from "node:http";
 import { networkInterfaces } from "node:os";
+import type { LogFields, Logger } from "@partygame/core";
 import { afterEach, describe, expect, it } from "vitest";
 import { type NodeServerHandle, serveApi, startNodeServer } from "../src/node.js";
 import { freePort, ServerProbe } from "../src/probe.js";
@@ -212,6 +213,43 @@ describe("serveApi", () => {
     // the server survived the handler failure
     expect((await fetch(url)).status).toBe(204);
   });
+
+  it("keys the resolve-code throttle on X-Forwarded-For when trustProxy is on", async () => {
+    const port = await freePort();
+    servers.push(
+      await serveApi(new RoomCodeService(), {
+        port,
+        host: "127.0.0.1",
+        trustProxy: true,
+        rateLimits: { resolveCode: { rate: 0, burst: 1 } },
+      }),
+    );
+    const ask = (xff: string) =>
+      fetch(`http://127.0.0.1:${port}/api/resolve-code?code=ZZZZ`, {
+        headers: { "X-Forwarded-For": xff },
+      });
+    expect((await ask("203.0.113.7")).status).toBe(404); // A's one token is spent (unknown code)
+    expect((await ask("203.0.113.8")).status).toBe(404); // B behind the same proxy: its own bucket
+    expect((await ask("203.0.113.7")).status).toBe(429); // A's bucket is spent
+  });
+
+  it("ignores X-Forwarded-For when trustProxy is off", async () => {
+    const port = await freePort();
+    servers.push(
+      await serveApi(new RoomCodeService(), {
+        port,
+        host: "127.0.0.1",
+        rateLimits: { resolveCode: { rate: 0, burst: 1 } },
+      }),
+    );
+    const ask = (xff: string) =>
+      fetch(`http://127.0.0.1:${port}/api/resolve-code?code=ZZZZ`, {
+        headers: { "X-Forwarded-For": xff },
+      });
+    expect((await ask("203.0.113.7")).status).toBe(404);
+    // the spoofed header changes nothing: one socket, one bucket
+    expect((await ask("203.0.113.8")).status).toBe(429);
+  });
 });
 
 describe("startNodeServer", () => {
@@ -283,6 +321,34 @@ describe("startNodeServer", () => {
     const refused = await fetch(url);
     expect(refused.status).toBe(429);
     expect(refused.headers.get("Retry-After")).toBe("1");
+  });
+
+  it("keys the code API throttle on X-Forwarded-For and routes limit hits to the configured logger", async () => {
+    const lines: Array<{ event: string; fields?: LogFields | undefined }> = [];
+    const logger: Logger = {
+      info: () => {},
+      warn: (event, fields) => {
+        lines.push({ event, fields });
+      },
+      error: () => {},
+    };
+    const handle = await start({
+      games: GAMES,
+      host: "127.0.0.1",
+      trustProxy: true,
+      rateLimits: { resolveCode: { rate: 0, burst: 1 }, mode: "observe" },
+      logger,
+    });
+    const ask = (xff: string) =>
+      fetch(`http://127.0.0.1:${handle.apiPort}/api/resolve-code?code=ZZZZ`, {
+        headers: { "X-Forwarded-For": xff },
+      });
+    expect((await ask("203.0.113.7")).status).toBe(404); // A spends its one token (unknown code)
+    expect((await ask("203.0.113.8")).status).toBe(404); // B behind the same proxy: its own bucket
+    const observed = await ask("203.0.113.7"); // A is over its limit, but observe mode only reports
+    expect(observed.status).toBe(404);
+    const hits = lines.filter((line) => line.event === "rate.limit");
+    expect(hits.map((line) => line.fields?.key)).toEqual(["203.0.113.7"]); // keyed by the proxy hop, not the socket
   });
 
   it("refuses one port for both servers", async () => {

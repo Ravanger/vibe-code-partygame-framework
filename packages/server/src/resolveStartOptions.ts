@@ -11,6 +11,8 @@ export interface StartPorts {
   host?: string;
   /** Origins allowed to read the code API; loopback only when omitted. */
   allowedOrigins?: string[] | "*";
+  /** Key the code API's throttle on `X-Forwarded-For`; only behind a trusted reverse proxy. */
+  trustProxy?: boolean;
 }
 
 const portFrom = (name: string, raw: string | undefined, fallback: number): number => {
@@ -41,6 +43,11 @@ export function parseAllowedOrigins(raw: string | undefined): string[] | "*" | u
   return origins.length === 1 && origins[0] === "*" ? "*" : origins;
 }
 
+/** `TRUST_PROXY` from the environment: true only for the exact string `"true"` — anything else leaves it off. */
+export function trustProxyFrom(raw: string | undefined): boolean | undefined {
+  return raw === "true" ? true : undefined;
+}
+
 /** Fills in the ports, the bind interface and the shared room-code service for `startServer`. */
 export function resolveStartOptions(
   options: StartPorts,
@@ -51,14 +58,17 @@ export function resolveStartOptions(
   roomCodeService: RoomCodeService;
   host?: string;
   allowedOrigins?: string[] | "*";
+  trustProxy?: boolean;
 } {
   const host = options.host ?? hostFrom(env.HOST);
   const allowedOrigins = options.allowedOrigins ?? parseAllowedOrigins(env.ALLOWED_ORIGINS);
+  const trustProxy = options.trustProxy ?? trustProxyFrom(env.TRUST_PROXY);
   return {
     port: options.port ?? portFrom("PORT", env.PORT, 2567),
     apiPort: options.apiPort ?? portFrom("API_PORT", env.API_PORT, 3001),
     roomCodeService: options.roomCodeService ?? new RoomCodeService(),
     ...(host !== undefined ? { host } : {}),
     ...(allowedOrigins !== undefined ? { allowedOrigins } : {}),
+    ...(trustProxy !== undefined ? { trustProxy } : {}),
   };
 }
