@@ -33,7 +33,7 @@ await runLauncher(
 | `--bots[=N]` | open a room for you and seat N bots once you have entered your name |
 | `--demo[=N]` | a watch-only room that N bots plus a host bot play alone; the browser opens its TV view. Excludes `--bots` |
 
-The launcher refuses to start when a port is taken, stops everything on Ctrl+C and exits 1 if a service dies.
+The launcher refuses to start when a port is taken, stops everything on Ctrl+C or a closed terminal (SIGHUP), kills every spawned process if it crashes or the process exits, and exits 1 if a service dies.
 
 ## Enable `--bots`
 

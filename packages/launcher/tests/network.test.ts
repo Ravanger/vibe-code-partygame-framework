@@ -51,10 +51,10 @@ class FakeChild extends EventEmitter {
 }
 
 const fakeSpawn = () => {
-  const calls: Array<{ file: string; args: string[] }> = [];
+  const calls: Array<{ file: string; args: string[]; options: Record<string, unknown> }> = [];
   const child = new FakeChild();
-  const spawnFn: BrowserSpawner = (file, args) => {
-    calls.push({ file, args });
+  const spawnFn: BrowserSpawner = (file, args, options) => {
+    calls.push({ file, args, options });
     return child;
   };
   return { calls, child, spawnFn };
@@ -65,10 +65,12 @@ describe("openBrowser", () => {
     ["win32", "cmd", ["/c", "start", "", "http://x"]],
     ["darwin", "open", ["http://x"]],
     ["linux", "xdg-open", ["http://x"]],
-  ] as const)("opens the URL on %s", (platform, file, args) => {
+  ] as const)("opens the URL on %s without a console window", (platform, file, args) => {
     const fake = fakeSpawn();
     openBrowser("http://x", { spawnFn: fake.spawnFn, platform });
-    expect(fake.calls).toEqual([{ file, args }]);
+    expect(fake.calls).toEqual([
+      { file, args, options: { stdio: "ignore", detached: true, windowsHide: true } },
+    ]);
     expect(fake.child.unreffed).toBe(true);
   });
 

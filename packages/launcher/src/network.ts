@@ -5,7 +5,7 @@ import { type NetworkInterfaceInfo, networkInterfaces } from "node:os";
 export type BrowserSpawner = (
   file: string,
   args: string[],
-  options: { stdio: "ignore"; detached: true },
+  options: { stdio: "ignore"; detached: true; windowsHide: true },
 ) => { on(event: "error", listener: () => void): unknown; unref(): void };
 
 /** `http://<address>:<port>` for every external IPv4 address of this machine. */
@@ -32,7 +32,11 @@ export function openBrowser(url: string, options: OpenBrowserOptions = {}): void
     platform === "win32"
       ? { file: "cmd", args: ["/c", "start", "", url] }
       : { file: platform === "darwin" ? "open" : "xdg-open", args: [url] };
-  const child = spawnFn(opener.file, opener.args, { stdio: "ignore", detached: true });
+  const child = spawnFn(opener.file, opener.args, {
+    stdio: "ignore",
+    detached: true,
+    windowsHide: true,
+  });
   child.on("error", () => onError?.());
   child.unref();
 }

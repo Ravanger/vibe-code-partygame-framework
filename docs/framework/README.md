@@ -1228,7 +1228,7 @@ bot pacing) merged in.
 | `--bots[=N]` | open a room for you and seat N bots (1 to `bots.max`, default `bots.default` or 3) once you have entered your name |
 | `--demo[=N]` | a watch-only room that N bots plus a host bot play alone; the browser opens its TV view (`demo.min` to `demo.max`). Excludes `--bots` |
 
-The launcher refuses to start when a port is taken, stops everything on Ctrl+C and exits 1 if a service dies. Its full config
+The launcher refuses to start when a port is taken, stops everything on Ctrl+C or a closed terminal (SIGHUP), kills every spawned process if it crashes or the process exits, and exits 1 if a service dies. Its full config
 (`ports`, `commands`, `readyTimeoutMs`, `openBrowser`, `log`) and pieces (`Launcher`, `parseLaunchArgs`, `ProcessGroup`, `StaticSite`,
 `lanUrls`, `openBrowser`) are documented in `packages/launcher/README.md` for tests and custom launchers.
 

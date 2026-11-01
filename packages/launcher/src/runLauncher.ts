@@ -4,16 +4,23 @@ import { Launcher } from "./Launcher.js";
 import type { LaunchConfig } from "./types.js";
 
 /**
- * Entry point of a game's `launch.ts`: parses `argv` (without the executable and script), starts the launch,
- * stops it on Ctrl+C and exits 1 when anything fails. Resolves once the game is being served.
+ * Entry point of a game's `launch.ts`: parses `argv` (without the executable and script), starts the launch and
+ * resolves once the game is being served. Stops everything on Ctrl+C or a closed terminal, kills every spawned
+ * process when the launcher crashes or the process exits, and exits 1 when anything fails.
  */
 export async function runLauncher<TState extends BaseGameState>(
   config: LaunchConfig<TState>,
   argv: string[],
-  /** Injectable process exit for tests; defaults to `process.exit`. */
-  deps: { exit?: (code: number) => void } = {},
+  /** Injectable process exit and signal registration for tests; default to `process.exit` and `process.on`. */
+  deps: {
+    exit?: (code: number) => void;
+    on?: (name: string, listener: (...args: unknown[]) => void) => void;
+  } = {},
 ): Promise<void> {
   const exitProcess = deps.exit ?? process.exit;
+  const onSignal =
+    deps.on ??
+    ((name: string, listener: (...args: unknown[]) => void) => process.on(name, listener));
   const parsed = parseLaunchArgs(argv, config);
   if (!parsed.ok) {
     console.error(parsed.error);
@@ -30,9 +37,21 @@ export async function runLauncher<TState extends BaseGameState>(
     console.error(`[Launch] ${message}`);
     exit(1);
   };
+  // The process is already terminating when these run, so only a synchronous kill reaches the children.
+  const crash = (error: unknown): void => {
+    console.error(error);
+    launcher.killNow();
+    if (exiting) return;
+    exiting = true;
+    exitProcess(1);
+  };
   const launcher = new Launcher(config, fail);
-  process.on("SIGINT", () => exit(0));
-  process.on("SIGTERM", () => exit(0));
+  onSignal("SIGINT", () => exit(0));
+  onSignal("SIGTERM", () => exit(0));
+  onSignal("SIGHUP", () => exit(0));
+  onSignal("exit", () => launcher.killNow());
+  onSignal("uncaughtException", (error: unknown) => crash(error));
+  onSignal("unhandledRejection", (reason: unknown) => crash(reason));
   await launcher
     .start(parsed.value)
     .catch((error: unknown) => fail(error instanceof Error ? error.message : String(error)));

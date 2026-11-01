@@ -101,6 +101,11 @@ export class Launcher<TState extends BaseGameState> {
     }
   }
 
+  /** Synchronously kills every spawned process, without waiting for it to leave; for handlers that may not await. */
+  killNow(): void {
+    this.processes.stop();
+  }
+
   /** Leaves the bot or demo table (waiting at most a second), then stops every process and the static site. */
   async stop(): Promise<void> {
     let timer: ReturnType<typeof setTimeout> | undefined;

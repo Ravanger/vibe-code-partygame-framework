@@ -52,6 +52,34 @@ describe("StaticSite", () => {
     });
   });
 
+  it("serves every known extension with its content type", async () => {
+    const dist = join(root, "dist");
+    const files: Array<[string, string]> = [
+      ["page.css", "text/css; charset=utf-8"],
+      ["data.json", "application/json"],
+      ["app.js.map", "application/json"],
+      ["icon.svg", "image/svg+xml"],
+      ["logo.png", "image/png"],
+      ["favicon.ico", "image/x-icon"],
+      ["photo.jpg", "image/jpeg"],
+      ["photo.jpeg", "image/jpeg"],
+      ["photo.webp", "image/webp"],
+      ["anim.gif", "image/gif"],
+      ["track.mp3", "audio/mpeg"],
+      ["track.ogg", "audio/ogg"],
+      ["tone.wav", "audio/wav"],
+      ["font.woff", "font/woff"],
+      ["font.woff2", "font/woff2"],
+      ["module.wasm", "application/wasm"],
+      ["site.webmanifest", "application/manifest+json"],
+      ["module.mjs", "text/javascript; charset=utf-8"],
+    ];
+    for (const [name, type] of files) {
+      await writeFile(join(dist, name), "x");
+      expect((await get(`/${name}`)).type).toBe(type);
+    }
+  });
+
   it("serves index.html for the root", async () => {
     const response = await get("/");
     expect(response.status).toBe(200);
