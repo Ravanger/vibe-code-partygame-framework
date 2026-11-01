@@ -1,6 +1,6 @@
 import { connectedClient, type SeatConfig } from "@partygame/game-client/testing";
 import { BaseGameState } from "@partygame/shared/schema";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { LobbySettingsViewModel } from "../src/LobbySettingsViewModel.svelte.js";
 import { TEST_DEFAULTS, TestOptionsSchema } from "./fixtures/optionsSchema.js";
@@ -74,7 +74,73 @@ describe("LobbySettingsViewModel", () => {
     expect(host.room.requests).toEqual([
       { type: "ACTION", payload: { turnSeconds: 40, type: "SET_OPTIONS" } },
     ]);
+    // The accepted draft is gone; the field shows what is published (nothing yet: the default).
+    expect(vm.valueOf("turnSeconds")).toBe("20");
+    host.state.options = JSON.stringify({ turnSeconds: 40 });
+    host.room.patch();
     expect(vm.valueOf("turnSeconds")).toBe("40");
+  });
+
+  it("shows the published value after an accepted commit, including later changes", async () => {
+    const host = client({ role: "host" });
+    host.state.options = JSON.stringify({ turnSeconds: 30 });
+    const vm = model(host);
+    vm.setDraft("turnSeconds", "40");
+    await vm.commit("turnSeconds");
+    host.state.options = JSON.stringify({ turnSeconds: 45 });
+    host.room.patch();
+    expect(vm.valueOf("turnSeconds")).toBe("45");
+  });
+
+  it("shows the clamped value the server publishes for an accepted change", async () => {
+    const host = client({ role: "host" });
+    host.state.options = JSON.stringify({ turnSeconds: 30 });
+    const vm = model(host);
+    vm.setDraft("turnSeconds", "999");
+    await vm.commit("turnSeconds");
+    host.state.options = JSON.stringify({ turnSeconds: 60 });
+    host.room.patch();
+    expect(vm.valueOf("turnSeconds")).toBe("60");
+  });
+
+  it("drops a typed draft when the server publishes a different value", async () => {
+    const host = client({ role: "host" });
+    host.state.options = JSON.stringify({ turnSeconds: 30 });
+    const vm = model(host);
+    vm.setDraft("turnSeconds", "4");
+    vm.setDraft("turnSeconds", "45"); // typing continues on the current draft
+    expect(vm.valueOf("turnSeconds")).toBe("45");
+    host.state.options = JSON.stringify({ turnSeconds: 40 });
+    host.room.patch();
+    expect(vm.valueOf("turnSeconds")).toBe("40"); // the stale draft no longer shows
+    await vm.commit("turnSeconds"); // and it is not sent
+    expect(host.room.requests).toEqual([]);
+    vm.setDraft("turnSeconds", "41");
+    host.state.options = JSON.stringify({ turnSeconds: 50 });
+    host.room.patch();
+    vm.setDraft("turnSeconds", "51"); // the stale draft is dropped and re-baselined while typing
+    expect(vm.valueOf("turnSeconds")).toBe("51");
+  });
+
+  it("keeps what the host is typing while a commit is in flight", async () => {
+    const host = client({ role: "host" });
+    host.state.options = JSON.stringify({ turnSeconds: 30 });
+    const vm = model(host);
+    let release!: (result: { ok: true }) => void;
+    vi.spyOn(host.manager, "sendAction").mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          host.state.options = JSON.stringify({ turnSeconds: 45 });
+          host.room.patch();
+          release = resolve;
+        }),
+    );
+    vm.setDraft("turnSeconds", "999");
+    const committing = vm.commit("turnSeconds");
+    expect(vm.valueOf("turnSeconds")).toBe("999"); // in flight: the typed value still shows
+    release({ ok: true });
+    await committing;
+    expect(vm.valueOf("turnSeconds")).toBe("45"); // settled: the published value wins
   });
 
   it("sends nothing when nothing was typed", async () => {
@@ -173,6 +239,17 @@ describe("LobbySettingsViewModel", () => {
     expect(host.room.requests).toEqual([
       { type: "ACTION", payload: { level: "strict", type: "SET_OPTIONS" } },
     ]);
+  });
+
+  it("shows the published choice after an accepted choose, including later changes", async () => {
+    const host = client({ role: "host" });
+    host.state.options = JSON.stringify({ level: "moderate" });
+    const vm = levelVm(host);
+    await vm.choose("level", "strict");
+    expect(vm.valueOf("level")).toBe("moderate"); // the accepted draft is gone; nothing new published
+    host.state.options = JSON.stringify({ level: "off" });
+    host.room.patch();
+    expect(vm.valueOf("level")).toBe("off");
   });
 
   it("drops an option draft that is not one of the choices", async () => {
