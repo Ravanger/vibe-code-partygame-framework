@@ -345,13 +345,13 @@ export interface GameDefinition<
   onError?(ctx: GameContext<TState, TPrivate, TOptions>, error: unknown): void;
 }
 
-declare const timerBrand: unique symbol;
+declare const timerTag: unique symbol;
 /**
- * Opaque handle for a timer created by {@link RuntimeHost.setTimeout}. A branded
- * number: hosts brand their numeric id with a single `as`, and a plain number is
+ * Opaque handle for a timer created by {@link RuntimeHost.setTimeout}. A tagged
+ * number: hosts tag their numeric id with a single `as`, and a plain number is
  * still a type error, so no double assertion is needed at any boundary.
  */
-export type TimerHandle = number & { readonly [timerBrand]: true };
+export type TimerHandle = number & { readonly [timerTag]: true };
 
 /** Everything the runtime needs from its environment. Implemented by the server; faked in tests. */
 export interface RuntimeHost {

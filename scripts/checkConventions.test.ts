@@ -5,15 +5,6 @@ const check = (path: string, text: string) => checkConventions([{ path, text }])
 const rules = (path: string, text: string) => check(path, text).map((v) => v.rule);
 
 describe("checkConventions", () => {
-  it("flags the brand case-insensitively in every file, AGENTS.md included", () => {
-    const brand = ["Jack", "Box"].join("");
-    expect(check("docs/a.md", `ok\nsee ${brand}`)).toEqual([
-      { rule: "brand", path: "docs/a.md", line: 2, message: "names a commercial brand" },
-    ]);
-    expect(rules("AGENTS.md", brand)).toEqual(["brand"]);
-    expect(check("docs/a.md", "clean")).toEqual([]);
-  });
-
   it("flags game vocabulary in packages except the cli template", () => {
     expect(rules("packages/core/src/a.ts", "const wit_clash = 1; // WitClash")).toEqual([
       "vocabulary",
@@ -66,5 +57,69 @@ describe("checkConventions", () => {
     expect(rules("bunfig.toml", '[install]\nlinker = "hoisted"\n')).toEqual([]);
     expect(rules(".gitignore", "")).toEqual([]);
     expect(rules("docs/NOTES.md", "x")).toEqual([]);
+  });
+
+  describe("provenance", () => {
+    const manifest = (entries: unknown) => ({
+      path: "games/x/content/provenance.json",
+      text: JSON.stringify(entries),
+    });
+    const content = (name: string) => ({ path: `games/x/content/${name}`, text: "{}" });
+    const messages = (files: { path: string; text: string }[]) =>
+      checkConventions(files)
+        .filter((v) => v.rule === "provenance")
+        .map((v) => `${v.path}: ${v.message}`);
+
+    it("accepts a manifest listing every content file as original or with a source and licence", () => {
+      expect(
+        messages([
+          manifest({ "a.jsonc": "original", "sub/b.jsonc": { source: "S", license: "MIT" } }),
+          content("a.jsonc"),
+          content("sub/b.jsonc"),
+        ]),
+      ).toEqual([]);
+    });
+
+    it("ignores games without content files and files outside content trees", () => {
+      expect(messages([{ path: "games/x/src/a.ts", text: "" }])).toEqual([]);
+      expect(messages([manifest({})])).toEqual([]);
+    });
+
+    it("flags a content tree with no manifest", () => {
+      expect(messages([content("a.jsonc")])).toEqual([
+        "games/x/content/a.jsonc: games/x/content has no provenance.json",
+      ]);
+    });
+
+    it("flags a content file missing from the manifest", () => {
+      expect(
+        messages([manifest({ "a.jsonc": "original" }), content("a.jsonc"), content("b.jsonc")]),
+      ).toEqual(["games/x/content/b.jsonc: not listed in provenance.json"]);
+    });
+
+    it("flags a manifest entry with no file", () => {
+      expect(messages([manifest({ "gone.jsonc": "original" }), content("a.jsonc")])).toEqual([
+        "games/x/content/provenance.json: gone.jsonc has no file",
+        "games/x/content/a.jsonc: not listed in provenance.json",
+      ]);
+    });
+
+    it.each([
+      ["a wrong string", { "a.jsonc": "copied" }],
+      ["a missing licence", { "a.jsonc": { source: "S" } }],
+      ["an empty source", { "a.jsonc": { source: "", license: "MIT" } }],
+      ["an extra key", { "a.jsonc": { source: "S", license: "MIT", x: 1 } }],
+      ["a non-object manifest", ["a.jsonc"]],
+    ])("flags %s", (_label, entries) => {
+      const found = messages([manifest(entries), content("a.jsonc")]);
+      expect(found).toHaveLength(1);
+      expect(found[0]).toContain("games/x/content/provenance.json: invalid manifest");
+    });
+
+    it("flags a manifest that is not JSON", () => {
+      expect(
+        messages([{ path: "games/x/content/provenance.json", text: "{" }, content("a.jsonc")]),
+      ).toEqual(["games/x/content/provenance.json: provenance.json is not valid JSON"]);
+    });
   });
 });

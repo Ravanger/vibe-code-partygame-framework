@@ -683,7 +683,7 @@ runtime.stop();                          // on room dispose: clears timers
 
 `options` are the room options, already parsed with `definition.options` (the host does this once, before building the runtime).
 `host` is a `RuntimeHost`: seat list, `send`, `broadcast`, `showTo`/`hideFrom`, `kick`, `publishOptions`, `now`, `rng`,
-`activateWaitingPlayers`, and `setTimeout`/`clearTimeout`, which pass a branded `TimerHandle` (a number) between them (the runtime's XState actor uses these as its clock).
+`activateWaitingPlayers`, and `setTimeout`/`clearTimeout`, which pass a tagged `TimerHandle` (a number) between them (the runtime's XState actor uses these as its clock).
 The Colyseus server implements it; tests use `FakeHost` from `@partygame/core/testing`.
 
 ### Unit-testing phases without a server
@@ -1252,6 +1252,10 @@ By package: `@colyseus/schema` 22.5%, `zod` 21.2%, `svelte` 18.2%, wit-clash sou
 `@partygame/shared`, `@partygame/game-client` and `@partygame/game-ui` declare `"sideEffects": false` — verified by scanning their sources: no top-level calls, no global writes, no CSS imports; the only initializer expressions are pure object constructions (`new RegExp`, schema objects). For wit-clash this changed nothing (byte-identical output): it uses every exported component, so there was no unused module to drop. The field still lets a future game that imports a subset tree-shake the rest.
 
 Follow-ups for later work (not done here): `@colyseus/schema` is a single 174,915 B module — about 45% of the final JS — and `zod` totals 21.2%; both are candidates for slimming (e.g. dropping zod's JSON-schema processors from the client path).
+
+## Content provenance
+
+Game content (prompts, categories) lives under `games/<slug>/content/`. Every file in that tree, except the manifest itself, is listed in `content/provenance.json`, a map from the path relative to `content/` to either `"original"` or `{ "source": "<where it came from>", "license": "<licence>" }`. `bun run check:conventions` (rule `provenance`) fails on a content file missing from the manifest, an entry with no file, or an entry of another shape. Copied text is a reviewer's call; the manifest makes the author state it.
 
 ## Config presets
 

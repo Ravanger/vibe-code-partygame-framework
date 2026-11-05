@@ -1,6 +1,6 @@
 // Bluff prompts: one file, every prompt in `prompts`.
 // Format per prompt: { "id": lowercase-kebab-case-unique, "question", "truth" }.
-// Quality bar (Fibbage style): the truth must be surprising enough to sound fake.
+// Quality bar: the truth must be surprising enough to sound fake.
 // If most players already know the answer, there is nothing left to bluff — replace it.
 {
   "prompts": [
