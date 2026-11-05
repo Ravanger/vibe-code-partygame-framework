@@ -3,6 +3,7 @@ import { type BaseGameState, PlayerSchema } from "@partygame/shared/schema";
 import { GameConnectionManager } from "./GameConnectionManager.svelte.js";
 import { StubRoom } from "./testing.js";
 
+/** Overrides for a seat added by `addSeat`; unset fields take the defaults. */
 export interface SeatConfig {
   name?: string;
   role?: PlayerSchema["role"];
@@ -24,6 +25,7 @@ export function addSeat(state: BaseGameState, id: string, config: SeatConfig = {
   return seat;
 }
 
+/** Options for `connectedClient`. */
 export interface ConnectedClientOptions<TState extends BaseGameState> {
   stateClass: new () => TState;
   /** Default "test-room". */
@@ -36,6 +38,7 @@ export interface ConnectedClientOptions<TState extends BaseGameState> {
   setup?: (state: TState) => void;
 }
 
+/** The manager, state, stub room and own seat returned by `connectedClient`. */
 export interface ConnectedClient<TState extends BaseGameState> {
   manager: GameConnectionManager<TState>;
   state: TState;
@@ -65,6 +68,7 @@ export function connectedClient<TState extends BaseGameState>(
   return { manager, state, room, me, patch: () => room.patch() };
 }
 
+/** A recording fetch replacement returned by `fakeFetch`. */
 export interface FetchStub {
   urls: string[];
   /** Install with `vi.stubGlobal("fetch", stub.fetch)`. */

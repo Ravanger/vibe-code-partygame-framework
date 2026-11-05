@@ -4,7 +4,7 @@ Build and test presets so a game's config files are one-liners. Add it as a devD
 
 | Import | What |
 |---|---|
-| `@partygame/config/vite` | `defineGameViteConfig({ port?, overrides? })`: Svelte, LAN dev server, `development` condition only for `vite serve` |
+| `@partygame/config/vite` | `defineGameViteConfig({ port?, overrides? })` (`GameViteOptions`: dev server port and Vite overrides merged into the game's client config): Svelte, LAN dev server, `development` condition only for `vite serve` |
 | `@partygame/config/vitest` | `uiTestConfig`, `nodeTestConfig`: jsdom + Svelte or node test projects |
 | `@partygame/config/svelte` | `svelteConfig`: `vitePreprocess()`, runes mode |
 | `@partygame/config/node-test-setup` | vitest setup file (the default `setupFiles` of `nodeTestConfig`): defines a global `WebSocket` on Node < 21, where Colyseus's reconnect path reads it |
@@ -33,7 +33,7 @@ import { uiTestConfig } from "@partygame/config/vitest";
 export default uiTestConfig({ name: "my-game", coverage: ["src/**/*.ts", "ui/**/*.ts"] });
 ```
 
-Options: `{ name, coverage, include?, exclude?, setupFiles?, overrides? }`. `include` defaults to `tests/**/*.test.ts`; `exclude` always adds `dist/**`, `node_modules/**` and `coverage/**`; a given `setupFiles` replaces the UI default. In a multi-project setup, give each project its own `name` and call `nodeTestConfig({ name, coverage, include: [...] })` for the non-UI ones.
+Options (`TestPresetOptions`: project name, coverage globs and test globs): `{ name, coverage, include?, exclude?, setupFiles?, overrides? }`. `include` defaults to `tests/**/*.test.ts`; `exclude` always adds `dist/**`, `node_modules/**` and `coverage/**`; a given `setupFiles` replaces the UI default. In a multi-project setup, give each project its own `name` and call `nodeTestConfig({ name, coverage, include: [...] })` for the non-UI ones.
 
 Both presets install a `resolve.alias` that maps every `@partygame/*` export subpath to its package **source** (`src/...`, enumerated from each package's `exports`), so a test never reads another workspace's stale `dist/` build — no `bun run build` is needed before running tests after editing a dependency package.
 

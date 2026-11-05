@@ -6,6 +6,7 @@ import type { BotConnection, BotKit } from "./types.js";
 
 const DEFAULT_TIMEOUT_MS = 5000;
 
+/** Connection, kit, room code and bot count for {@link joinBots}. */
 export interface JoinBotsOptions<TState extends BaseGameState>
   extends BotConnection,
     Omit<BotKit<TState>, "roomName"> {

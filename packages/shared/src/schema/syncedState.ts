@@ -25,7 +25,7 @@ function* fieldsOf(ctor: object): Generator<FieldSlot> {
 export function syncedJsonOf(state: Schema): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const field of fieldsOf(state.constructor)) {
-    if (field.tag !== undefined) continue; // `.view()` — never in a snapshot
+    if (field.tag !== undefined) continue;
     out[field.name] = serialize(Reflect.get(state, field.name));
   }
   return out;
@@ -63,9 +63,9 @@ export function syncedStateFromJson<T extends Schema>(
 
 function fill(state: Schema, json: Record<string, unknown>): void {
   for (const field of fieldsOf(state.constructor)) {
-    if (field.tag !== undefined) continue; // `.view()` — never in a snapshot
+    if (field.tag !== undefined) continue;
     const value = json[field.name];
-    if (value === undefined) continue; // absent — keep the default
+    if (value === undefined) continue;
     assign(state, field.name, value);
   }
 }
@@ -95,7 +95,7 @@ function assign(state: Schema, name: string, value: unknown): void {
     return;
   }
   if (value && typeof value === "object") {
-    fill(current as Schema, value as Record<string, unknown>); // nested ref: fill in place
+    fill(current as Schema, value as Record<string, unknown>);
     return;
   }
   Reflect.set(state, name, value);

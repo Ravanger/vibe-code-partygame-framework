@@ -10,6 +10,7 @@ export interface GestureTarget {
   removeEventListener(type: "pointerdown" | "keydown", listener: () => void): void;
 }
 
+/** Where a `SoundPolicy` persists its toggle and listens for the first gesture. */
 export interface SoundPolicyOptions {
   /** Where the toggle is persisted. */
   storage: SoundStorage;

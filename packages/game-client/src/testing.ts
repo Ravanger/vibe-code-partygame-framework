@@ -55,6 +55,7 @@ export class StubRoom<TState extends BaseGameState> implements RoomLike<TState> 
   readonly onReconnect = this.reconnect.subscribe;
   readonly onLeave = this.leaveSignal.subscribe;
 
+  /** Registers a handler for a broadcast name and returns a function that removes it. */
   onMessage(type: string, callback: (payload: unknown) => void): () => void {
     const handlers = this.handlersOf(type);
     handlers.add(callback);
@@ -63,32 +64,39 @@ export class StubRoom<TState extends BaseGameState> implements RoomLike<TState> 
     };
   }
 
+  /** Records the message in `sent`. */
   send(type: string, payload?: unknown): void {
     this.sent.push({ type, payload });
   }
 
+  /** Records the request in `requests` and resolves with `reply`. */
   async request(type: string, payload?: unknown): Promise<unknown> {
     this.requests.push({ type, payload });
     return this.reply;
   }
 
+  /** Fires `onLeave` with the consented close code 1000 and resolves with it. */
   async leave(): Promise<number> {
     this.leaveSignal.fire(1000, "");
     return 1000;
   }
 
+  /** Fires `onStateChange`, as Colyseus does after applying a state patch. */
   patch(): void {
     this.stateChange.fire(this.state);
   }
 
+  /** Delivers a server broadcast to the handlers registered for `type`. */
   push(type: string, payload: unknown): void {
     for (const handler of this.handlersOf(type)) handler(payload);
   }
 
+  /** Fires `onDrop`, simulating a lost connection. */
   dropConnection(): void {
     this.drop.fire();
   }
 
+  /** Fires `onReconnect`, simulating a restored connection. */
   reconnected(): void {
     this.reconnect.fire();
   }
@@ -98,6 +106,7 @@ export class StubRoom<TState extends BaseGameState> implements RoomLike<TState> 
     this.leaveSignal.fire(code, message);
   }
 
+  /** How many handlers are registered for a broadcast name. */
   messageListeners(type: string): number {
     return this.handlersOf(type).size;
   }

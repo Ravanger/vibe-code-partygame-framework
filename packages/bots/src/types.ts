@@ -17,6 +17,7 @@ export interface BotOutcome {
   detail: string;
 }
 
+/** A `[minMs, maxMs]` range in milliseconds from which a random delay is drawn. */
 export type DelayRange = readonly [minMs: number, maxMs: number];
 
 /** `think` paces slow moves (writing, choosing), `react` quick ones (voting, confirming). */
@@ -43,11 +44,13 @@ export interface BotStrategy<TState extends BaseGameState> {
   host?(turn: BotTurn<TState>): void;
 }
 
+/** Options that make a bot the host of the room. */
 export interface BotHostOptions {
   /** Named seats to wait for before starting; the room's own `canStart` rule always applies too. */
   expectedPlayers?: number;
 }
 
+/** Per-bot timing, logging and hosting options; every field is optional. */
 export interface BotOptions {
   rng?: () => number;
   /** Runs `run` after `ms` and returns a canceller. */

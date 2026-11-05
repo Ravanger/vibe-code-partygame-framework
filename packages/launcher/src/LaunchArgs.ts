@@ -3,8 +3,10 @@ import type { BaseGameState } from "@partygame/shared/schema";
 import type { LaunchConfig } from "./types.js";
 
 const MODES = ["dev", "host", "prod"] as const;
+/** How the launcher runs the game: `dev` serves the Vite dev client, `host` is dev reachable from other devices, `prod` serves the built client. */
 export type LaunchMode = (typeof MODES)[number];
 
+/** The parsed `launch` command line. */
 export interface LaunchArgs {
   mode: LaunchMode;
   openBrowser: boolean;

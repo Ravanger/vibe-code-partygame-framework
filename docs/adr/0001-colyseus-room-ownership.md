@@ -1,6 +1,6 @@
 # ADR 0001: Colyseus owns rooms; game rules are Colyseus-free
 
-**Status:** Proposed
+**Status:** Accepted
 
 ## Context
 
@@ -16,12 +16,12 @@ Colyseus (via `GameRoom`) owns the Colyseus-level concerns: creating rooms, join
 
 ## Consequences
 
-The `packages/core` runtime has no Colyseus imports. A game definition is testable in Node with a `FakeHost` and replayable from an action log without network code. The Colyseus-specific adapter lives in `GameRoom.ts` (~300 lines) and talks to the runtime through the `RuntimeHost` interface. A game author sees only `defineGame`, phases, actions and the `GameContext`.
+The `packages/core` runtime has no Colyseus imports. A game definition is testable in Node with a `FakeHost` and replayable from an action log without network code. The Colyseus-specific adapter lives in `GameRoom.ts` (about 660 lines, the room lifecycle, seats and views) and talks to the runtime through the `RuntimeHost` interface. A game author sees only `defineGame`, phases, actions and the `GameContext`.
 
 ## Where it lives
 
-- `packages/core/src/runtime/types.ts` — `RuntimeHost` interface (15 methods: players, send, broadcast, now, rng)
+- `packages/core/src/runtime/types.ts` — `RuntimeHost` interface (players, send, broadcast, now, rng and the other host services)
 - `packages/server/src/rooms/GameRoom.ts` — the Colyseus adapter implementing `RuntimeHost`
-- `packages/core/tests/` — `FakeHost` for testing without Colyseus
+- `packages/core/src/testing/FakeHost.ts` — `FakeHost` for testing without Colyseus
 
 **Sources:** Code inspection.

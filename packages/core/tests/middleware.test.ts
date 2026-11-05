@@ -170,7 +170,7 @@ describe("getPhaseTimings", () => {
   it("returns the live store, stable across calls", () => {
     const table = new TTable();
     const first = timings(table);
-    expect(first).toBeDefined();
+    expect(first.Lobby?.durationsMs).toEqual([]);
     expect(timings(table)).toBe(first);
   });
 });
@@ -232,29 +232,6 @@ describe("timingMiddleware", () => {
   });
 });
 
-describe("compile-time sync rule", () => {
-  it("rejects an async layer at compile time and accepts a synchronous one", () => {
-    // If the chain's return type were ever widened back to `void`, the async layer below would
-    // become assignable, `rejected` would resolve to `true`, and this file would stop compiling.
-    const asyncLayer = async (
-      _ctx: MiddlewareContext<PhaseState, unknown, unknown>,
-      next: () => void,
-    ) => {
-      next();
-    };
-    type IsAssignable<F, T> = F extends T ? true : false;
-    const rejected: IsAssignable<
-      typeof asyncLayer,
-      PhaseMiddleware<PhaseState, unknown, unknown>
-    > = false;
-    expect(rejected).toBe(false);
-    const sync: PhaseMiddleware<PhaseState, unknown, unknown> = (_ctx, next) => {
-      next();
-    };
-    expect(sync).toBeTypeOf("function");
-  });
-});
-
 class FTable extends TestTable<S, P, O> {
   constructor(
     middleware: PhaseMiddleware<S, P, O>[],
@@ -308,44 +285,6 @@ class FTable extends TestTable<S, P, O> {
     });
   }
 }
-
-describe("MiddlewareContext.reject", () => {
-  it("stops the chain, reaches the sender and counts as a rejection", () => {
-    const seen: number[] = [];
-    const observe: PhaseMiddleware<S, P, O> = (ctx, next) => {
-      next();
-      if (ctx.event.kind === "action" && ctx.event.actionType === "SAY")
-        seen.push(ctx.rejectionCount);
-    };
-    const veto: PhaseMiddleware<S, P, O> = (ctx, next) => {
-      if (ctx.event.kind === "action" && ctx.event.actionType === "SAY") {
-        ctx.reject(ErrorCode.NOT_ALLOWED, "no saying");
-        return;
-      }
-      next();
-    };
-    const table = new FTable([observe, veto]);
-    table.start();
-    const error = table.act("p2", "SAY", { text: "hello" });
-    expect(error).toEqual({ code: ErrorCode.NOT_ALLOWED, message: "no saying", action: "SAY" });
-    expect(table.errors("p2")).toContainEqual(error);
-    expect(seen).toEqual([1]);
-    expect(table.state.log).toEqual([]);
-  });
-
-  it("throws for non-action events, like a hook throw", () => {
-    const errors: unknown[] = [];
-    const vetoEnter: PhaseMiddleware<S, P, O> = (ctx, next) => {
-      if (ctx.event.kind === "enter" && ctx.phase === "Play")
-        ctx.reject(ErrorCode.NOT_ALLOWED, "no");
-      next();
-    };
-    const table = new FTable([vetoEnter], undefined, (error) => errors.push(error));
-    expect(() => table.start()).toThrow("only available for action events");
-    expect(errors).toHaveLength(1);
-    expect(table.state.notice).toBe("The game stopped because of an unexpected error.");
-  });
-});
 
 const filterCalls: [FilterLevel, string][] = [];
 const testFilter: TextFilter = {

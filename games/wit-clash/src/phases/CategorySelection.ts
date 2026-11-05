@@ -52,7 +52,6 @@ export const CategorySelection: WitClashPhase = {
     ++state.roundNumber;
     state.totalRounds = ctx.options.totalRounds;
     if (ctx.options.mode === "daily") {
-      // The date is fixed on the first round of the game: a room that crosses midnight keeps it.
       if (ctx.priv.dailyDay === "") ctx.priv.dailyDay = utcDay(ctx.now());
       const order = shuffle(ctx.priv.canon.all(), dailyRng(ctx.priv.dailyDay, "categories"));
       const category = required(order[(state.roundNumber - 1) % order.length], "daily category");

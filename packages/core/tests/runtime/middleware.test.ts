@@ -22,7 +22,7 @@ interface O {
 
 const action = actionFactory<S, P, O>();
 
-const game = (middleware: PhaseMiddleware<S, P, O>[]) =>
+const game = (middleware: PhaseMiddleware<S, P, O>[], onError?: (error: unknown) => void) =>
   defineGame<S, P, O>({
     name: "Mw",
     version: "1",
@@ -77,13 +77,14 @@ const game = (middleware: PhaseMiddleware<S, P, O>[]) =>
         },
       },
     },
+    ...(onError ? { onError: (_ctx, error) => onError(error) } : {}),
     middleware,
   });
 
 class MTable extends TestTable<S, P, O> {
-  constructor(middleware: PhaseMiddleware<S, P, O>[] = []) {
+  constructor(middleware: PhaseMiddleware<S, P, O>[] = [], onError?: (error: unknown) => void) {
     super({
-      definition: game(middleware),
+      definition: game(middleware, onError),
       state: { phase: "", phaseEndsAt: 0, canStart: false, log: [] },
       options: { rounds: 2 },
       players: 2,
@@ -493,5 +494,66 @@ describe("middleware must be synchronous", () => {
     table.start();
     expect(table.act("p2", "PING")).toBeUndefined();
     expect(table.state.log).toContain("ping");
+  });
+});
+
+describe("compile-time sync rule", () => {
+  it("rejects an async layer at compile time and accepts a synchronous one", () => {
+    // If the chain's return type were ever widened back to `void`, the async layer below would
+    // become assignable, `rejected` would resolve to `true`, and this file would stop compiling.
+    const asyncLayer = async (
+      _ctx: MiddlewareContext<PhaseState, unknown, unknown>,
+      next: () => void,
+    ) => {
+      next();
+    };
+    type IsAssignable<F, T> = F extends T ? true : false;
+    const rejected: IsAssignable<
+      typeof asyncLayer,
+      PhaseMiddleware<PhaseState, unknown, unknown>
+    > = false;
+    expect(rejected).toBe(false);
+    const sync: PhaseMiddleware<PhaseState, unknown, unknown> = (_ctx, next) => {
+      next();
+    };
+    expect(sync).toBeTypeOf("function");
+  });
+});
+
+describe("MiddlewareContext.reject", () => {
+  it("stops the chain, reaches the sender and counts as a rejection", () => {
+    const seen: number[] = [];
+    const observe: PhaseMiddleware<S, P, O> = (ctx, next) => {
+      next();
+      if (ctx.event.kind === "action" && ctx.event.actionType === "PING")
+        seen.push(ctx.rejectionCount);
+    };
+    const veto: PhaseMiddleware<S, P, O> = (ctx, next) => {
+      if (ctx.event.kind === "action" && ctx.event.actionType === "PING") {
+        ctx.reject(ErrorCode.NOT_ALLOWED, "no pinging");
+        return;
+      }
+      next();
+    };
+    const table = new MTable([observe, veto]);
+    table.start();
+    const error = table.act("p2", "PING");
+    expect(error).toEqual({ code: ErrorCode.NOT_ALLOWED, message: "no pinging", action: "PING" });
+    expect(table.errors("p2")).toContainEqual(error);
+    expect(seen).toEqual([1]);
+    expect(table.state.log).toEqual(["enter:Play"]);
+  });
+
+  it("throws for non-action events, like a hook throw", () => {
+    const vetoEnter: PhaseMiddleware<S, P, O> = (ctx, next) => {
+      if (ctx.event.kind === "enter" && ctx.phase === "Play")
+        ctx.reject(ErrorCode.NOT_ALLOWED, "no");
+      next();
+    };
+    const errors: unknown[] = [];
+    const table = new MTable([vetoEnter], (error) => errors.push(error));
+    expect(() => table.start()).toThrow("only available for action events");
+    expect(errors).toHaveLength(1);
+    expect(table.state.notice).toBe("The game stopped because of an unexpected error.");
   });
 });

@@ -70,7 +70,6 @@ describe("CoreStrings and defineGame", () => {
     };
     const spec = defineGame<S, Record<string, never>, Record<string, unknown>>(base);
     expect(spec).toBe(base);
-    expect(spec.strings).toBeDefined();
     expect(spec.strings?.cannotKickSelf).toBe("Du kannst dich nicht selbst rausschmeißen");
     expect(spec.strings?.noSuchPlayer).toBe(defaultCoreStrings.noSuchPlayer);
   });

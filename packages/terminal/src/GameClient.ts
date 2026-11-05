@@ -3,6 +3,7 @@ import { type BotKit, ColyseusConnector } from "@partygame/bots";
 import { apiBaseOf, claimName, resolveRoomCode } from "@partygame/client-utils";
 import type { BaseGameState } from "@partygame/shared/schema";
 
+/** The client-side room for a game whose state is `TState`. */
 export type GameRoomOf<TState extends BaseGameState> = Room<unknown, TState>;
 
 /** Creates, joins and watches rooms of one game on one game server. */
@@ -36,6 +37,7 @@ export class GameClient<TState extends BaseGameState> {
     return this.connector.join(roomId, { playerId, name });
   }
 
+  /** Joins the room with `code` as a spectator that holds no seat. */
   async watch(code: string, playerId: string): Promise<GameRoomOf<TState>> {
     const roomId = await resolveRoomCode(this.apiBase, code);
     return this.connector.join(roomId, { playerId, spectator: true });

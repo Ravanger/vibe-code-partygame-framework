@@ -1,5 +1,5 @@
 import type { TextFilter } from "@partygame/content/filter";
-import { ErrorCode, PROTOCOL_VERSION } from "@partygame/shared";
+import { CLIENT_MESSAGES, ErrorCode, PROTOCOL_VERSION } from "@partygame/shared";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
@@ -12,6 +12,7 @@ import {
   InvalidPrivateStateError,
   type MiddlewareContext,
   noopLogger,
+  type PhaseMiddleware,
   type PhaseState,
   required,
   seedFromNumber,
@@ -20,6 +21,14 @@ import {
 } from "../src/index.js";
 import { replayLog } from "../src/replay/index.js";
 import { TestTable } from "../src/testing/TestTable.js";
+import {
+  type LoggedOptions,
+  type LoggedPriv,
+  type LoggedState,
+  LoggedTable,
+  loggedDefinition,
+  newLoggedState,
+} from "./support/loggedPlay.js";
 
 interface S extends PhaseState {
   log: string[];
@@ -125,7 +134,7 @@ describe("getActionLog", () => {
 
   it("returns the live log, stable across calls", () => {
     const table = new ATable();
-    expect(table.log()).toBeDefined();
+    expect(table.log()?.header.game).toBe("Logged");
     expect(table.log()).toBe(table.log());
   });
 });
@@ -140,7 +149,6 @@ describe("actionLogMiddleware", () => {
   it("writes the header on the first entry and starts with the Lobby enter", () => {
     const table = new ATable();
     const log = table.log();
-    expect(log).toBeDefined();
     expect(log?.header).toEqual({
       seed: seedFromNumber(0),
       game: "Logged",
@@ -267,7 +275,7 @@ describe("action log content, ordering and isolation", () => {
   it("round-trips through JSON.stringify and JSON.parse", () => {
     const table = scriptedSession();
     const log = table.log();
-    expect(log).toBeDefined();
+    expect(log?.entries).toHaveLength(9);
     const roundTripped = JSON.parse(JSON.stringify(log));
     expect(roundTripped).toEqual(log);
     expect(getActionLog(table.priv)).toBe(log);
@@ -306,7 +314,7 @@ describe("framework data stays out of the game's priv", () => {
     expect(table.priv).toEqual({ actionLog: "mine", phaseTimings: 1 });
     expect(Object.keys(table.priv)).toEqual(["actionLog", "phaseTimings"]);
     expect(getActionLog(table.priv)?.entries.length).toBeGreaterThan(0);
-    expect(getPhaseTimings(table.priv)?.Play).toBeDefined();
+    expect(getPhaseTimings(table.priv)?.Play?.durationsMs).toEqual([]);
   });
 });
 
@@ -561,5 +569,98 @@ describe("a failed run", () => {
     const log = JSON.parse(JSON.stringify(getActionLog(table.priv))) as ActionLog;
     const replay = () => replayLog(definition, log, { state: newState(), options: { rounds: 2 } });
     expect(replay).toThrow(/replayLog: entry \d+ .*failed run.*timeout boom/);
+  });
+});
+
+describe("actions the runtime refuses", () => {
+  it("logs none of malformed, invalid-payload, unknown, unauthorized or wrong-phase actions", () => {
+    const table = new LoggedTable();
+    table.start();
+    const count = (): number => table.log()?.entries.length ?? -1;
+    const before = count();
+
+    expect(table.runtime.dispatch("p2", 42)).toEqual({
+      code: ErrorCode.INVALID_ACTION,
+      message: CLIENT_MESSAGES.INVALID_ACTION,
+    }); // malformed envelope
+    expect(table.act("p2", "PING", { n: "not a number" })).toMatchObject({
+      code: ErrorCode.INVALID_ACTION,
+    }); // invalid payload
+    expect(table.act("p2", "NOPE")).toMatchObject({ code: ErrorCode.UNKNOWN_ACTION }); // unknown action
+    expect(table.act("p2", "END_GAME")).toMatchObject({ code: ErrorCode.UNAUTHORIZED }); // host-only, from a player
+
+    table.tick(1000); // Play -> Score (timeout + transition + enter: three legitimate entries)
+    const afterTick = count();
+    expect(afterTick).toBe(before + 3);
+    expect(table.act("p2", "PING", { n: 8 })).toMatchObject({ code: ErrorCode.WRONG_PHASE }); // declared elsewhere
+
+    expect(count()).toBe(afterTick); // nothing rejected reached the log
+    expect(table.errors("p2")).toHaveLength(5); // sanity: all five were really rejected
+  });
+});
+
+describe("action log header", () => {
+  it("header.seed is the room seed, header.game the definition name, startedAt the first entry's clock base", () => {
+    const table = new TestTable({
+      definition: { ...loggedDefinition, middleware: [actionLogMiddleware()] },
+      state: newLoggedState(),
+      options: { rounds: 2 },
+      players: 2,
+      seed: 987,
+    });
+    const log = getActionLog(table.priv);
+    expect(log?.header.seed).toEqual(seedFromNumber(987));
+    expect(log?.header.game).toBe("LoggedPlay");
+    expect(log?.header.startedAt).toBe(log?.entries[0]?.t);
+  });
+});
+
+describe("actionLogMiddleware beside a throwing observer", () => {
+  const throwingObserver =
+    (): PhaseMiddleware<LoggedState, LoggedPriv, LoggedOptions> => (ctx, next) => {
+      if (ctx.event.kind === "transition" && ctx.event.to === "Play") {
+        next();
+        throw new Error("observer boom");
+      }
+      next();
+    };
+
+  it.each([
+    ["log outer, throwing inner", [actionLogMiddleware(), throwingObserver()]],
+    ["throwing outer, log inner", [throwingObserver(), actionLogMiddleware()]],
+  ])(
+    "%s: the transition still applies, is logged, and the default policy returns the room",
+    (_label, middleware) => {
+      const table = new LoggedTable(middleware);
+      expect(() => table.start()).toThrow("observer boom");
+      const log = getActionLog(table.priv);
+      expect(
+        log?.entries.some((e) => e.kind === "transition" && e.from === "Lobby" && e.to === "Play"),
+      ).toBe(true);
+      expect(log?.entries.some((e) => e.kind === "enter" && e.phase === "Play")).toBe(true);
+      expect(table.phase).toBe("Lobby");
+      expect(table.state.notice).toBeTruthy();
+    },
+  );
+});
+
+describe("a frozen private state", () => {
+  it("a frozen private state is a valid store key: the log works normally and adds no keys", () => {
+    const frozenDefinition = defineGame<LoggedState, LoggedPriv, LoggedOptions>({
+      ...loggedDefinition,
+      middleware: [actionLogMiddleware()],
+      createPrivateState: () => Object.freeze({ secret: "s" }),
+    });
+    const table = new TestTable({
+      definition: frozenDefinition,
+      state: newLoggedState(),
+      options: { rounds: 2 },
+      players: 2,
+    });
+    expect(() => table.start()).not.toThrow();
+    // The log lives outside priv (a module-level store keyed by it), so freezing priv is harmless.
+    const log = getActionLog(table.priv);
+    expect(log?.entries.length).toBeGreaterThan(1);
+    expect(Object.keys(table.priv)).toEqual(["secret"]);
   });
 });

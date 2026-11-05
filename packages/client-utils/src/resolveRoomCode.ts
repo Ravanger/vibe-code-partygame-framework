@@ -29,7 +29,6 @@ export async function resolveRoomCode(apiBase: string, code: string): Promise<st
     throw new Error("Could not reach the game server");
   }
   if (!response.ok) {
-    // A 404 JSON body carries the API's reason ("Game code not found"); keep it (existing behaviour).
     const parsed = ResolveCodeResponseSchema.safeParse(
       await response.json().catch(() => undefined),
     );

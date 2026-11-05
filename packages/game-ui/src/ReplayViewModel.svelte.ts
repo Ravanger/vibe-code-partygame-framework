@@ -41,10 +41,7 @@ const defaultTimer: ReplayTimer = {
   clearInterval: (id) => clearInterval(id as number),
 };
 
-// The mutable position lives in a closure instead of class fields: Stryker wraps constructor
-// statements in if/else, so `$state` cannot be assigned in the constructor, and a `$state` class
-// field initializer leaves phantom uncovered items when v8 merges per-project maps (see
-// docs/framework/troubleshooting.md).
+// `$state` stays in a closure: assigning it in a constructor body does not compile.
 function createPosition() {
   let index = $state(0);
   let playing = $state(false);

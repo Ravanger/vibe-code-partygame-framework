@@ -1,5 +1,6 @@
 import { encode } from "uqr";
 
+/** A QR code as a square module grid: `size` modules per side and one SVG path of the dark modules. */
 export interface QrCode {
   size: number;
   path: string;

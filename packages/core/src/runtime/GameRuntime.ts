@@ -304,13 +304,11 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
 
   private middlewareContext(event: MiddlewareEvent): MiddlewareContext<TState, TPrivate, TOptions> {
     const rejections = this.rejections;
-    // A getter shorthand binds `this` to the returned context object, so the live counter is
-    // read through a captured reference to the runtime.
+    // A getter shorthand binds `this` to the context object, not the runtime.
     const runtime = this;
     return {
       ...this.context(),
       event,
-      // Live view of the dispatch's rejection list (dispatch resets it before every handle).
       get rejectionCount() {
         return rejections.length;
       },
@@ -338,7 +336,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     this.chain({ kind: "roster-change" }, () => this.current.onRosterChange?.(this.context()));
   }
 
-  /** Promotes a new host when the current one is not connected, per `hostMigration` (#36). */
+  /** Promotes a new host when the current one is not connected, per `hostMigration`. */
   private migrateHost(): void {
     const setHost = this.host.setHost;
     if (setHost === undefined) return; // replay hosts never migrate: no picker call, no rng draw
@@ -568,7 +566,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   }
 }
 
-/** Named `hostMigration` policies: pick from the connected seats in seat order (#36). */
+/** Named `hostMigration` policies: pick from the connected seats in seat order. */
 function pickHost(
   policy: "oldest" | "next-seated" | "random" | "none",
   candidates: PlayerInfo[],

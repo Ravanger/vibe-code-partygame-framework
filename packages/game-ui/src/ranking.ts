@@ -11,6 +11,7 @@ export function rankRows<T extends { score: number; hasLeft: boolean }>(
   });
 }
 
+/** One podium step: the players sharing a rank, with their tier (1-3) and display label. */
 export interface PodiumStep<T> {
   rank: number;
   tier: number;
@@ -18,6 +19,7 @@ export interface PodiumStep<T> {
   players: T[];
 }
 
+/** A scoreboard row as the podium and ranking helpers read it. */
 export interface PodiumRow {
   playerId: string;
   name: string;

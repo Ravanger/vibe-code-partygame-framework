@@ -2,6 +2,7 @@ import { type BotKit, type BotOptions, type BotPlayer, joinBots } from "@partyga
 import type { BaseGameState } from "@partygame/shared/schema";
 import { parseBotsArgs } from "./args.js";
 
+/** Options for `runBotsCommand`. */
 export interface BotsCommandOptions<TState extends BaseGameState> {
   kit: BotKit<TState>;
   /** The most bots the game seats besides a human host. */
@@ -17,6 +18,7 @@ export interface BotsCommandOptions<TState extends BaseGameState> {
   onInterrupt?: (stop: () => Promise<void>) => void;
 }
 
+/** Control over the bots a `bots` command seated. */
 export interface BotsCommandHandle {
   /** Removes the bots from the room. */
   leave(): Promise<void>;
