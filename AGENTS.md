@@ -103,7 +103,7 @@ Every job is a separate check in `.github/workflows/ci.yml` (`gates` in `gates.y
 | `typecheck` | `bun run typecheck:scripts && bun run typecheck` |
 | `test` | `bun run test:coverage` |
 | `template-smoke` | `bun run smoke:template` |
-| `mutation` (PRs only) | `bun run build && bun run mutate:changed` (Stryker on the `packages/*/src` and `games/*/src` files changed against `origin/main`, break below 80%) |
+| `mutation` (PRs only) | `bun run build && bun run mutate:changed` (Stryker on the `packages/*/src`, `games/*/src`, `games/*/{ui,bots,terminal}/**/*.ts` and `games/*/gamePackage.ts` files changed against `origin/main`, break below 80%) |
 | `gates` (PRs only) | `bun run check:gates --base origin/main` and `bun run scripts/checkPathsCli.ts --base origin/main` |
 
 `bun run verify` runs all of them except `template-smoke`, `mutation` and `gates`.

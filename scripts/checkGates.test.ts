@@ -233,6 +233,33 @@ describe("untested-change", () => {
     expect(untested([src, other])).toEqual(["packages/core"]);
   });
 
+  it.each([
+    "games/x/ui/viewmodels/Foo.ts",
+    "games/x/bots/xBot.ts",
+    "games/x/terminal/xTerminal.ts",
+    "games/x/gamePackage.ts",
+  ])("fails a game change to %s without a test", (path) => {
+    expect(untested([diffOf(path, [], ["x"])])).toEqual(["games/x"]);
+    expect(
+      untested([diffOf(path, [], ["x"]), diffOf("games/x/tests/a.test.ts", [], ["x"])]),
+    ).toEqual([]);
+  });
+
+  it.each([
+    "games/x/ui/main.ts",
+    "games/x/ui/Screen.svelte",
+    "games/x/bots/cli.ts",
+    "games/x/terminal/play.ts",
+    "games/x/terminal/demo.ts",
+    "games/x/server.ts",
+    "games/x/launch.ts",
+    "games/x/ui/a.d.ts",
+    "packages/core/ui/a.ts",
+    "packages/core/gamePackage.ts",
+  ])("does not require a test for %s", (path) => {
+    expect(untested([diffOf(path, [], ["x"])])).toEqual([]);
+  });
+
   it("passes a test-only change", () => {
     expect(untested([diffOf("packages/core/tests/a.test.ts", [], ["x"])])).toEqual([]);
   });

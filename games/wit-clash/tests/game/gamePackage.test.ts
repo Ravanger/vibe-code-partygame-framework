@@ -28,4 +28,13 @@ describe("gamePackage", () => {
     // The canon never reads the host's directory.
     expect(canon.all().length).toBeGreaterThanOrEqual(3);
   });
+
+  it("narrates and audits the demo through one narrator", () => {
+    const demo = gamePackage.demo;
+    if (demo?.narrate === undefined || demo.problems === undefined)
+      throw new Error("expected demo narrate and problems");
+    const state = new WitClashState();
+    expect(demo.narrate(state)).toEqual(expect.any(Array));
+    expect(demo.problems(state)).toEqual(["The scoreboard is empty"]);
+  });
 });

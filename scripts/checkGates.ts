@@ -128,6 +128,8 @@ const violationsOf = (change: FileChange): GateViolation[] => {
 };
 
 const SOURCE_FILE = /^((?:packages|games)\/[^/]+)\/src\/.+/;
+const GAME_SOURCE_FILE = /^(games\/[^/]+)\/(?:(?:ui|bots|terminal)\/.+\.ts|gamePackage\.ts)$/;
+const ENTRY_STUB = /^games\/[^/]+\/(?:ui\/main|bots\/cli|terminal\/(?:play|demo))\.ts$/;
 const TEST_FILE = /^((?:packages|games)\/[^/]+)\/.+\.test\.ts$/;
 
 const untestedChanges = (changes: FileChange[]): GateViolation[] => {
@@ -137,7 +139,8 @@ const untestedChanges = (changes: FileChange[]): GateViolation[] => {
     touched
       .filter(({ path, added }) => added.length > 0 && !path.endsWith(".d.ts"))
       .filter(({ path }) => !TEST_FILE.test(path))
-      .flatMap(({ path }) => SOURCE_FILE.exec(path)?.[1] ?? []),
+      .filter(({ path }) => !ENTRY_STUB.test(path))
+      .flatMap(({ path }) => (SOURCE_FILE.exec(path) ?? GAME_SOURCE_FILE.exec(path))?.[1] ?? []),
   );
   return [...roots]
     .filter((root) => !tested.has(root))
