@@ -69,7 +69,7 @@ Known traps in this repo, with the cause and the rule that keeps each one fixed.
 
 ## A label does not reach a re-run job
 - **Cause:** "Re-run jobs" replays the original event payload, so a label added since is invisible to it. The `pull_request` trigger's default types also leave out `labeled`/`unlabeled`.
-- **Rule:** `gates` lives in `.github/workflows/gates.yml`, which triggers on label changes; adding the label starts a fresh run. For any other job, push or close and reopen the PR instead of re-running. Never make a required job skip with `if:`: a skipped required check counts as passing.
+- **Rule:** `gates` lives in `.github/workflows/gates.yml` (`pull_request_target`, workflow and scripts from the base branch), which triggers on label changes; adding the label starts a fresh run. Only a label the repository owner added counts (checked through the issue events API); a label added by anyone else is ignored. For any other job, push or close and reopen the PR instead of re-running. Never make a required job skip with `if:`: a skipped required check counts as passing.
 - **Reference:** `.github/workflows/gates.yml`, `docs/HOSTING.md`
 
 ## `bun.lock` conflict or a knip memory error

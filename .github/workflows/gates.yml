@@ -1,8 +1,14 @@
 name: Gates
 
+# pull_request_target: this workflow file and scripts/ come from the BASE branch, so a PR cannot edit them
+# to pass. The PR tree is checked out into pr/ as data only: no install, no PR code runs.
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+  issues: read
 
 concurrency:
   group: gates-${{ github.event.pull_request.number }}
@@ -13,10 +19,37 @@ jobs:
     name: gates
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      BASE_REF: ${{ github.base_ref }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      OWNER: ${{ github.repository_owner }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: ./.github/actions/setup
-      - run: bun run check:gates --base origin/${{ github.base_ref }}
-      - run: bun run scripts/checkPathsCli.ts --base origin/${{ github.base_ref }}
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: pr
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Fetch the base branch into the PR checkout
+        run: git -C pr fetch --no-tags "$GITHUB_WORKSPACE" "+refs/heads/$BASE_REF:refs/remotes/origin/$BASE_REF"
+      - name: Fetch label events
+        run: gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/events" > "$RUNNER_TEMP/label-events.json"
+      - name: Gates (base scripts, PR diff)
+        env:
+          GIT_DIR: ${{ github.workspace }}/pr/.git
+          GIT_WORK_TREE: ${{ github.workspace }}/pr
+        run: bun scripts/checkGatesCli.ts --base "origin/$BASE_REF" --label-events "$RUNNER_TEMP/label-events.json" --label-owner "$OWNER"
+      - name: Paths (base scripts, PR diff)
+        env:
+          GIT_DIR: ${{ github.workspace }}/pr/.git
+          GIT_WORK_TREE: ${{ github.workspace }}/pr
+        run: bun scripts/checkPathsCli.ts --base "origin/$BASE_REF"

@@ -190,7 +190,9 @@ CI cannot stop a direct push to `main` on its own. In the GitHub repository sett
 
 ## Maintainer: changing a gate
 
-A PR that edits a gate (check and mutation scripts, CI workflows and actions, `biome.json` and its plugins, `vitest.config.mts`, `knip.json`, gate scripts in a `package.json`, strict `tsconfig` options, suppressions and skipped tests) needs the `gate-change` label before the `gates` job passes. Only a maintainer adds it. `gates` lives in its own workflow (`.github/workflows/gates.yml`) that also runs when a label is added or removed, so the label takes effect without a new push.
+A PR that edits a gate (check and mutation scripts, CI workflows and actions, `biome.json` and its plugins, `vitest.config.mts`, `knip.json`, gate scripts in a `package.json`, strict `tsconfig` options, suppressions and skipped tests) needs the `gate-change` label before the `gates` job passes. Only the repository owner's label counts: the job reads the PR's issue events through the API and ignores `gate-change` and `no-test-needed` unless the owner added them (an owner-less or organisation repository therefore counts none). `gates` lives in its own workflow (`.github/workflows/gates.yml`) that also runs when a label is added or removed, so the label takes effect without a new push.
+
+`gates` triggers on `pull_request_target`, so the workflow file and `scripts/check*` come from the base branch, not from the PR: editing them in a PR cannot switch the job off (the edit itself is a `protected-path` violation that fails until the owner labels it, and the new version only takes effect after merge). The PR is checked out into `pr/` as data only and diffed against the base. Never add `bun install` or any step that executes files from `pr/` to this job: `pull_request_target` has a token with repository access. The scripts it runs must stay on `node:` builtins. The other `ci.yml` jobs still run the PR's own code by design.
 
 Locally the pre-commit hook runs the same check on staged files. To commit an intended gate edit, skip only that step: `LEFTHOOK_EXCLUDE=gates git commit ...`. Biome and `check:paths` still run, and CI still requires the label.
 

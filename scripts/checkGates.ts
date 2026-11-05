@@ -153,6 +153,29 @@ export const labelsOf = (event: unknown): string[] => {
   });
 };
 
+const labelEvents = (events: unknown): unknown[] => (Array.isArray(events) ? events.flat() : []);
+
+/** Labels whose latest labeled/unlabeled issue event is an add by `owner`. */
+export const ownerLabels = (events: unknown, owner: string): string[] => {
+  const latest = new Map<string, boolean>();
+  for (const entry of labelEvents(events)) {
+    const { event, label, actor } = (entry ?? {}) as {
+      event?: unknown;
+      label?: { name?: unknown };
+      actor?: { login?: unknown };
+    };
+    if ((event === "labeled" || event === "unlabeled") && typeof label?.name === "string") {
+      latest.set(label.name, event === "labeled" && actor?.login === owner);
+    }
+  }
+  return [...latest].filter(([, byOwner]) => byOwner).map(([name]) => name);
+};
+
+export const trustedLabels = (event: unknown, events: unknown, owner: string): string[] => {
+  const byOwner = new Set(ownerLabels(events, owner));
+  return labelsOf(event).filter((name) => byOwner.has(name));
+};
+
 export const diffRange = (args: string[]): string[] => {
   if (args.includes("--staged")) return ["--cached"];
   const flag = args.indexOf("--base");

@@ -5,7 +5,9 @@ import {
   labelsOf,
   NO_TEST_LABEL,
   OVERRIDE_LABEL,
+  ownerLabels,
   parseDiff,
+  trustedLabels,
 } from "./checkGates.js";
 
 const diffOf = (path: string, removed: string[], added: string[]): string =>
@@ -254,6 +256,66 @@ describe("labelsOf", () => {
     expect(labelsOf("x")).toEqual([]);
     expect(labelsOf({})).toEqual([]);
     expect(labelsOf({ pull_request: {} })).toEqual([]);
+  });
+});
+
+const labeled = (name: string, login: string, event = "labeled") => ({
+  event,
+  label: { name },
+  actor: { login },
+});
+
+describe("ownerLabels", () => {
+  it("counts a label the owner added", () => {
+    expect(ownerLabels([labeled("gate-change", "boss")], "boss")).toEqual(["gate-change"]);
+  });
+
+  it("ignores a label added by anyone else", () => {
+    expect(ownerLabels([labeled("gate-change", "mallory")], "boss")).toEqual([]);
+  });
+
+  it("lets the latest event win, so a removal or a re-add by someone else revokes it", () => {
+    const removed = [labeled("a", "boss"), labeled("a", "boss", "unlabeled")];
+    expect(ownerLabels(removed, "boss")).toEqual([]);
+    const readded = [
+      labeled("a", "boss"),
+      labeled("a", "mallory", "unlabeled"),
+      labeled("a", "mallory"),
+    ];
+    expect(ownerLabels(readded, "boss")).toEqual([]);
+  });
+
+  it("flattens paginated pages and skips malformed or unrelated events", () => {
+    const pages = [
+      [labeled("a", "boss")],
+      [labeled("b", "boss"), { event: "closed" }, null, { event: "labeled" }],
+    ];
+    expect(ownerLabels(pages, "boss")).toEqual(["a", "b"]);
+    expect(ownerLabels({ not: "an array" }, "boss")).toEqual([]);
+    expect(ownerLabels([{ event: "labeled", label: { name: "x" } }], "boss")).toEqual([]);
+  });
+});
+
+describe("trustedLabels", () => {
+  const event = {
+    pull_request: {
+      labels: [{ name: "gate-change" }, { name: "no-test-needed" }, { name: "bug" }],
+    },
+  };
+
+  it("keeps only owner-added override labels", () => {
+    const events = [labeled("gate-change", "boss"), labeled("no-test-needed", "mallory")];
+    expect(trustedLabels(event, events, "boss")).toEqual(["gate-change"]);
+  });
+
+  it("drops a label present on the PR that no event shows the owner adding", () => {
+    expect(trustedLabels(event, [], "boss")).toEqual([]);
+  });
+
+  it("does not let a forged label name in the payload count without an event", () => {
+    expect(
+      checkGates(diffOf("biome.json", [], ["{}"]), trustedLabels(event, [], "boss")),
+    ).not.toEqual([]);
   });
 });
 
