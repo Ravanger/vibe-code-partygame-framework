@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mutateTargets, strykerArgs } from "./mutateChanged.js";
+import { codeChanged, mutateTargets, strykerArgs } from "./mutateChanged.js";
 
 describe("mutateTargets", () => {
   it("keeps package and game source files", () => {
@@ -55,5 +55,48 @@ describe("strykerArgs", () => {
       "--mutate",
       "a.ts,b.ts",
     ]);
+  });
+});
+
+describe("codeChanged", () => {
+  const tpl = (code: string): string => code.replaceAll("@{", "$" + "{");
+  const base = "export const a = 1;\n";
+
+  it("ignores a JSDoc-only edit", () => {
+    expect(codeChanged(base, `/** One. */\n${base}`)).toBe(false);
+  });
+
+  it("ignores a line-comment-only edit", () => {
+    expect(codeChanged(base, `${base}// note\n`)).toBe(false);
+  });
+
+  it("ignores whitespace and formatting", () => {
+    expect(codeChanged(base, "export  const\n  a = 1 ;")).toBe(false);
+  });
+
+  it("detects a changed token", () => {
+    expect(codeChanged(base, "export const a = 2;\n")).toBe(true);
+  });
+
+  it("detects a change inside a string holding comment markers", () => {
+    expect(codeChanged('const u = "a//b";', 'const u = "a//c";')).toBe(true);
+  });
+
+  it("detects a change inside a template literal holding comment markers", () => {
+    expect(codeChanged(tpl("const u = `a//@{x}b`;"), tpl("const u = `a//@{y}b`;"))).toBe(true);
+  });
+
+  it("detects a token added after a template literal", () => {
+    expect(codeChanged(tpl("const u = `a@{x}b`;"), tpl("const u = `a@{x}b`; f();"))).toBe(true);
+  });
+
+  it("detects a change after a template with several substitutions and braces", () => {
+    const code = tpl("const u = `a@{{ k: 1 }.k}b@{y}c`; // x\nconst z = 1;");
+    expect(codeChanged(code, tpl("const u = `a@{{ k: 1 }.k}b@{y}c`;\nconst z = 1;"))).toBe(false);
+    expect(codeChanged(code, code.replace("z = 1", "z = 2"))).toBe(true);
+  });
+
+  it("treats a new file as changed", () => {
+    expect(codeChanged(undefined, base)).toBe(true);
   });
 });
