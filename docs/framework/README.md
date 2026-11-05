@@ -758,6 +758,8 @@ type ButtonState = SchemaType<typeof ButtonState>;
 const games = [{ roomName: "button", definition: ButtonGame, stateClass: ButtonState }];
 ```
 
+Reserved field names: `phase`, `roomCode`, `phaseEndsAt`, `serverNow`, `spectatorCount`, `options`, `notice`, `minPlayers`, `maxPlayers`, `canStart`, `players`. Do not reuse them in `BaseGameState.extend(...)`; Colyseus rejects the clash only at schema definition (`Duplicate 'options' definition on '<State>'`), so name a collection of voting or answer choices `choices`, not `options`. `options` stays as the room-options JSON: it is part of the synced shape every client reads, so a rename would be a breaking change with no gain.
+
 Bun entry point (the only place that imports `bun`):
 
 ```ts
