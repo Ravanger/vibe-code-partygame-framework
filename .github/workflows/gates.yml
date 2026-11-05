@@ -39,6 +39,7 @@ jobs:
           path: pr
           fetch-depth: 0
           persist-credentials: false
+          allow-unsafe-pr-checkout: true # safe only while nothing under pr/ is executed
       - name: Fetch the base branch into the PR checkout
         run: git -C pr fetch --no-tags "$GITHUB_WORKSPACE" "+refs/heads/$BASE_REF:refs/remotes/origin/$BASE_REF"
       - name: Fetch label events
