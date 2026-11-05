@@ -61,6 +61,14 @@ export interface GameServerOptions {
   rateLimits?: RateLimits;
   /** Structured lifecycle logger for every room. Defaults to {@link jsonLineLogger} (one JSON line per event on stdout). */
   logger?: Logger;
+  /** Print the Colyseus start-up banner when the server listens. Default `true`; tests turn it off. */
+  greet?: boolean;
+  /**
+   * Register Colyseus' process signal handlers (`SIGINT`, `SIGTERM`, ...) that shut the server down
+   * gracefully. Default `true`; a process that starts many servers (a test worker) turns it off and
+   * calls `gracefullyShutdown` itself.
+   */
+  gracefullyShutdown?: boolean;
 }
 
 export const DEFAULT_RECONNECT_MS = 60_000;
@@ -111,11 +119,20 @@ export function createResolveCodeThrottle(rateLimits?: RateLimits): {
 /** Colyseus server with one {@link GameRoom} per game. */
 export function createGameServer(options: GameServerOptions): GameColyseusServer {
   const roomCodeService = options.roomCodeService ?? new RoomCodeService();
+  const processOptions: ServerOptions = {
+    ...(options.greet !== undefined ? { greet: options.greet } : {}),
+    ...(options.gracefullyShutdown !== undefined
+      ? { gracefullyShutdown: options.gracefullyShutdown }
+      : {}),
+  };
   const defaultTransportOptions: ServerOptions & { maxPayload?: number } = {
+    ...processOptions,
     maxPayload: options.maxPayloadBytes ?? DEFAULT_MAX_PAYLOAD_BYTES,
   };
   const server = new GameColyseusServer(
-    options.transport ? { transport: options.transport } : defaultTransportOptions,
+    options.transport
+      ? { ...processOptions, transport: options.transport }
+      : defaultTransportOptions,
   );
   const rateLimits = resolveRateLimits(options.rateLimits);
   const rateLimiter = new RateLimiter({

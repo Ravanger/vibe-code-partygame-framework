@@ -145,6 +145,8 @@ export async function bootTestServer(
   const server = createGameServer({
     reconnectMs: 1000,
     emptyRoomGraceMs: 30_000,
+    greet: false,
+    gracefullyShutdown: false,
     ...options,
     roomCodeService,
     // Silent under test unless the suite opts in with its own logger.
