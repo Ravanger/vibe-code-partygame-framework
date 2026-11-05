@@ -6,9 +6,9 @@ The reference game: rules, UI screens, content and entry points, built only on t
 
 ## Never put here
 
-- Reusable framework code (hoist to `packages/`, moving: #62, #112, #137).
+- Reusable framework code (hoist to `packages/`).
 - Imports from other games.
-- Hand-rolled server, bot, terminal or launch plumbing that game-kit will own (moving: #134, #135).
+- Hand-rolled server, bot, terminal or launch plumbing; game-kit owns it.
 
 ## May import
 

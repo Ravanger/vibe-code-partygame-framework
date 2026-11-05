@@ -1375,7 +1375,7 @@ The framework validates everything that crosses the wire, but the rules are your
    ```
    (`games/wit-clash/src/phases/answering.ts`)
 
-8. **Know the limits.** `playerId` is the only seat credential: a client can send any action, but the server acts on `ctx.playerId`, which it assigned itself. There is no built-in rate limiting; the threat model that spells this out is planned work (#89).
+8. **Know the limits.** `playerId` is the only seat credential: a client can send any action, but the server acts on `ctx.playerId`, which it assigned itself. `RateLimiter` throttles `ACTION` and `SET_NAME` per player and spectator actions per connection, but nothing caps how many connections or rooms one address opens; the limits and what is out of scope are in [the threat model](../security/threat-model.md).
    ```ts
    const drafts = ctx.priv.drafts.get(ctx.playerId) ?? new Map<string, string>();
    ctx.priv.drafts.set(ctx.playerId, drafts.set(matchupId, answer));

@@ -16,7 +16,7 @@ Browser- and Node-safe client helpers: `waitFor`, `resolveRoomCode`, `joinUrl`, 
 
 ## Public entry points
 
-- `.`: `waitFor`, `resolveRoomCode`, `joinUrl`, `tvUrl`, `between`, `claimName`, `apiBaseOf`, type `Parsed`, type `SeatRoom`, types `RoomConnector`, `ConnectedRoom`, `RoomCreateOptions`, `RoomJoinOptions`.
+- `.`: `waitFor`, `resolveRoomCode`, `joinUrl`, `tvUrl`, `between`, `claimName`, `apiBaseOf`, `RoomCodeError`, type `RoomCodeFailure`, type `Parsed`, type `SeatRoom`, types `RoomConnector`, `ConnectedRoom`, `RoomCreateOptions`, `RoomJoinOptions`.
 
 ## Tests
 
