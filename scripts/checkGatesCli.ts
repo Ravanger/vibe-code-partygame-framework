@@ -1,6 +1,5 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import {
   checkGates,
   diffRange,
@@ -27,8 +26,12 @@ const diff = execFileSync("git", ["diff", "-U10000", "--no-color", ...diffRange(
   maxBuffer: 256 * 1024 * 1024,
 });
 
-// The file list comes from the PR work tree, so reads must resolve against it too.
-const workTree = process.env.GIT_WORK_TREE ?? ".";
+// Read contents from git, never from disk: a fork's tree can contain symlinks.
+const readFromGit = (path: string): string =>
+  execFileSync("git", ["show", `:${path}`], {
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+  });
 
 const staged = args.includes("--staged");
 const treeFiles = staged
@@ -36,7 +39,7 @@ const treeFiles = staged
   : execFileSync("git", ["ls-files", "-z"], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 })
       .split("\0")
       .filter((path) => path !== "" && isScannedPath(path))
-      .map((path) => ({ path, content: readFileSync(join(workTree, path), "utf8") }));
+      .map((path) => ({ path, content: readFromGit(path) }));
 
 const violations = [...checkGates(diff, labels, !staged), ...scanTree(treeFiles)];
 for (const violation of violations) {
