@@ -998,6 +998,8 @@ export class LobbySettingsViewModel extends LobbySettingsBase<ButtonState> {
 
 To change a rule, subclass it and override a member, for example `banner`: `class AppViewModel extends AppRouter<ButtonState, typeof SCREENS> { override get banner() { ... } }` (`manager` and `screens` are `protected`).
 
+Write text that mixes literals and values as one template literal, `{`${choice.name} - ${choice.votes} votes`}`, never `{choice.name} - {choice.votes} votes`. Svelte guards each bare interpolation in mixed text with `?? ''`, and the unreachable fallback is a phantom uncovered branch that fails the 100% coverage gate. A single `{expr}` is safe. Details: `docs/framework/troubleshooting.md`; `packages/config/tests/svelte.test.ts` pins the compiler behaviour.
+
 ### Components
 
 `@partygame/game-ui/components` ships Svelte 5 source (no build step; import through the `svelte` export condition). `PlayerSticker` and `QrCode` have helpers on the main entry: `playerSticker`, `stickerLetter`, `qrCode`. `Podium` takes steps from `podiumSteps(rankRows(rows))`: `rankRows` adds competition ranks (1, 1, 3) to rows already in leaderboard order (a new rank group starts where `hasLeft` changes); `podiumSteps` keeps the top three rank groups among seated rows, labelled "1st"/"2nd"/"3rd", in display order second, first, third. Rows are `PodiumRow` (`playerId`, `name`, `score`, `rank`, `hasLeft`, `isMe`).

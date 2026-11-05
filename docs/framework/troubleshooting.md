@@ -34,6 +34,7 @@ Known traps in this repo, with the cause and the rule that keeps each one fixed.
 ## Svelte coverage and template text
 - **Rule:** In `.svelte` templates, text mixing literal and interpolated values is written as one template literal: `{`Matchup ${vm.n} of ${vm.total}`}`, never `Matchup {vm.n} of {vm.total}`.
 - **Cause:** The Svelte compiler emits `${vm.n ?? ''}` for each bare interpolation in mixed text. The unreachable `''` side shows up as an uncovered v8 branch. A template literal is known to be defined, so no fallback is emitted.
+- **Guard:** `packages/config/tests/svelte.test.ts` compiles mixed, template-literal and single-expression text with the shipped preset, so a Svelte or preset change that alters the guards is noticed.
 - **Biome:** `html.experimentalFullSupportEnabled` is on, so Svelte templates are linted and the old `.svelte` unused-import override is gone. Every `<button>` needs `type="button"` (`a11y/useButtonType`).
 
 ## A `$derived` that returns a schema instance never re-runs
