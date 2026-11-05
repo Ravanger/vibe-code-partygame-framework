@@ -32,6 +32,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.2
+      # allow-unsafe-pr-checkout is safe here: the PR tree is data only and never executed; the gate scripts only diff it.
       - uses: actions/checkout@v7
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
@@ -39,6 +40,7 @@ jobs:
           path: pr
           fetch-depth: 0
           persist-credentials: false
+          allow-unsafe-pr-checkout: true
       - name: Fetch the base branch into the PR checkout
         run: git -C pr fetch --no-tags "$GITHUB_WORKSPACE" "+refs/heads/$BASE_REF:refs/remotes/origin/$BASE_REF"
       - name: Fetch label events
