@@ -1222,7 +1222,7 @@ and a terminal it asks (`Pick a game [1-N]:`; empty input or end of input exits 
 
 ## Bundle size
 
-Each game builds its own client with `vite build`; there is no multi-game bundle. The reference game `wit-clash` is measured on every CI run: `bun run check:bundle` rebuilds it and fails when the gzip total of `dist/**/*.{js,css}` exceeds the budget in `scripts/bundle-budget.json`. The budget is the measured gzip total rounded up to the next 1 kB (1024 B), plus 10% — currently **130,905 → 131,072 → 144,180 bytes**. When a change legitimately grows the bundle, update `scripts/bundle-budget.json` and the numbers below in the same PR.
+Each game builds its own client with `vite build`; there is no multi-game bundle. Every game with a client (an `index.html` and a `ui/` directory; headless games are skipped) is measured on every CI run: `bun run check:bundle` rebuilds them and fails when the gzip total of `dist/**/*.{js,css}` exceeds the game's budget in `scripts/bundle-budget.json`, or when the game has no entry. A new game with a client must add its build to `check:bundle` in the root `package.json` and an entry to `scripts/bundle-budget.json` (measure with `bun run scripts/bundleSizeCli.ts <slug>`). `bun run scripts/bundleSizeCli.ts --check` with no game checks all of them. The budget is the measured gzip total rounded up to the next 1 kB (1024 B), plus 10% — currently **130,905 → 131,072 → 144,180 bytes**. When a change legitimately grows the bundle, update `scripts/bundle-budget.json` and the numbers below in the same PR.
 
 Measured with `bun run --cwd games/wit-clash build && bun run scripts/bundleSizeCli.ts wit-clash`:
 
