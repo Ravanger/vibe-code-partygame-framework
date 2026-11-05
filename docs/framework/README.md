@@ -3,7 +3,7 @@
 You describe a game as data: phases, the actions players may send in each phase, and optional timers.
 The framework supplies the lobby, room, roster, reconnection, timers and wire protocol.
 
-Dependency direction: `games/* -> @partygame/server -> @partygame/core -> @partygame/shared`.
+Dependency direction: `games/* -> @partygame/server -> @partygame/core -> @partygame/shared`. Inside a game, `check:boundaries` also keeps `src/` free of `@partygame/game-ui`, `@partygame/game-client`, `@colyseus/sdk` and `svelte`, and `ui/` free of `@colyseus/*` server pieces and `node:*`; it scans the game and package root `.ts` files (entry files, configs, setups) as well as `src`, `tests`, `ui`, `bots`, `terminal` and `scripts`.
 
 Known traps (build, coverage, reconnects, Schema 5): [troubleshooting.md](troubleshooting.md).
 
