@@ -72,7 +72,11 @@ describe("play", () => {
   }, 30_000);
 
   it("stops the session when the prompter closes", async () => {
-    const handle = await startNodeServer({ games: [hostedGame(pkg, undefined)] });
+    const handle = await startNodeServer({
+      greet: false,
+      gracefullyShutdown: false,
+      games: [hostedGame(pkg, undefined)],
+    });
     try {
       const prompter = new ScriptedIo();
       let close: (() => void) | undefined;
@@ -117,7 +121,11 @@ describe("play", () => {
   });
 
   it("plays a session against a started server and exits 0", async () => {
-    const handle = await startNodeServer({ games: [hostedGame(pkg, undefined)] });
+    const handle = await startNodeServer({
+      greet: false,
+      gracefullyShutdown: false,
+      games: [hostedGame(pkg, undefined)],
+    });
     try {
       const prompter = new ScriptedIo();
       let signal: (() => void) | undefined;

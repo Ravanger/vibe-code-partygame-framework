@@ -19,7 +19,8 @@ Known traps in this repo, with the cause and the rule that keeps each one fixed.
 - **Fix:** the root `bunfig.toml` sets `[install] linker = "hoisted"` — one flat copy per version, so a static `WebSocketTransport` import shares the server's core and its `matchMaker`. Do not delete `bunfig.toml`; it is allowlisted in `scripts/checkConventions.ts` for exactly this reason.
 - **Do not** "fix" this with `[install] peer = false`: it dedupes too, but drops auto-installed optional peers and silently breaks typecheck in five packages — their `@types/node` arrives through a d.ts chain (`@colyseus/core`'s `Server.d.ts` imports express's types, which reference node).
 - **Phantom dependencies:** under hoisting, tsc, vitest and the runtime resolve undeclared packages from the flat tree. Whether a package declares its dependencies is enforced only by `check:boundaries` (which reads `package.json`) and knip, not by module resolution; configs and scripts outside knip's scan silently work with missing declarations.
-- **Reference:** `bunfig.toml`, `packages/server/tests/createGameServer.test.ts`, `.AGENTS/docs/libraries/colyseus.md` (Transports)
+- **Guard:** `packages/server/tests/colyseusCoreSingleton.test.ts` fails when a second `@colyseus/core` copy exists under any `node_modules` (nested ones included) or when packages that depend on Colyseus resolve it to different paths. If it fails, align the diverging version ranges and reinstall; do not delete the test.
+- **Reference:** `bunfig.toml`, `packages/server/tests/createGameServer.test.ts`, `packages/server/tests/colyseusCoreSingleton.test.ts`, `.AGENTS/docs/libraries/colyseus.md` (Transports)
 
 ## Browser shows "Connection Error / Disconnected from server" on every load
 - **Cause (was):** the component that starts a connection was mounted only after a connection existed, so nothing could ever connect.
@@ -33,6 +34,7 @@ Known traps in this repo, with the cause and the rule that keeps each one fixed.
 ## Svelte coverage and template text
 - **Rule:** In `.svelte` templates, text mixing literal and interpolated values is written as one template literal: `{`Matchup ${vm.n} of ${vm.total}`}`, never `Matchup {vm.n} of {vm.total}`.
 - **Cause:** The Svelte compiler emits `${vm.n ?? ''}` for each bare interpolation in mixed text. The unreachable `''` side shows up as an uncovered v8 branch. A template literal is known to be defined, so no fallback is emitted.
+- **Guard:** `packages/config/tests/svelte.test.ts` compiles mixed, template-literal and single-expression text with the shipped preset, so a Svelte or preset change that alters the guards is noticed.
 - **Biome:** `html.experimentalFullSupportEnabled` is on, so Svelte templates are linted and the old `.svelte` unused-import override is gone. Every `<button>` needs `type="button"` (`a11y/useButtonType`).
 
 ## A `$derived` that returns a schema instance never re-runs
@@ -62,6 +64,16 @@ Known traps in this repo, with the cause and the rule that keeps each one fixed.
 - **Rule:** call `ctx.hideFrom(playerId, entry)` before deleting a `.view()` entry from the state.
 - **Reference:** `packages/server/src/rooms/GameRoom.ts`
 
+## Replay timeouts differ from enter plus duration
+- **Cause:** live phase timers run on a tick-quantized clock, so a logged timeout can differ from the nominal enter time plus `duration`.
+- **Rule:** replay treats the logged timeout as authoritative but still calls a function `duration`, so its `ctx.rng()` draws stay in step with the live run. A `duration` that draws RNG must draw the same number of values on every call.
+- **Reference:** `packages/core/src/replay/replay.ts`
+
+## `room.state.players` can be undefined briefly
+- **Cause:** a wire-level decode hiccup on large states can leave `players` missing for a moment (seen in CI).
+- **Rule:** read it with `?.` inside `waitFor` and poll to the timeout instead of crashing the predicate.
+- **Reference:** `packages/client-utils/src/claimName.ts`
+
 ## Svelte generics imports need a Biome suppression
 - **Cause:** Biome does not see an import used only in a component's `generics="..."` attribute, so `noUnusedImports` fails unless the import carries a suppression comment.
 - **Rule:** an added suppression line fails the `gates` job (hard rule 12), so a new generic component needs the `gate-change` label, or a design without a generics-only import.
@@ -69,7 +81,7 @@ Known traps in this repo, with the cause and the rule that keeps each one fixed.
 
 ## A label does not reach a re-run job
 - **Cause:** "Re-run jobs" replays the original event payload, so a label added since is invisible to it. The `pull_request` trigger's default types also leave out `labeled`/`unlabeled`.
-- **Rule:** `gates` lives in `.github/workflows/gates.yml`, which triggers on label changes; adding the label starts a fresh run. For any other job, push or close and reopen the PR instead of re-running. Never make a required job skip with `if:`: a skipped required check counts as passing.
+- **Rule:** `gates` lives in `.github/workflows/gates.yml` (`pull_request_target`, workflow and scripts from the base branch), which triggers on label changes; adding the label starts a fresh run. Only a label the repository owner added counts (checked through the issue events API); a label added by anyone else is ignored. For any other job, push or close and reopen the PR instead of re-running. Never make a required job skip with `if:` (a skipped required check counts as passing), unless the job exists only for pull requests and is required only there (`gates`, `mutation`).
 - **Reference:** `.github/workflows/gates.yml`, `docs/HOSTING.md`
 
 ## `bun.lock` conflict or a knip memory error

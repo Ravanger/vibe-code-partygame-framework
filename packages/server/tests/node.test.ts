@@ -1,4 +1,4 @@
-import { request as httpRequest, type Server } from "node:http";
+import { createServer, request as httpRequest, type Server } from "node:http";
 import { networkInterfaces } from "node:os";
 import { afterEach, describe, expect, it } from "vitest";
 import { type NodeServerHandle, serveApi, startNodeServer } from "../src/node.js";
@@ -23,9 +23,23 @@ const start = async (
   options: Parameters<typeof startNodeServer>[0],
   hooks?: Parameters<typeof startNodeServer>[1],
 ): Promise<NodeServerHandle> => {
-  const handle = await startNodeServer(options, hooks);
+  const handle = await startNodeServer(
+    { greet: false, gracefullyShutdown: false, ...options },
+    hooks,
+  );
   handles.push(handle);
   return handle;
+};
+
+const occupyLoopback = async (): Promise<number> => {
+  const port = await freePort();
+  const blocker = createServer();
+  await new Promise<void>((resolve, reject) => {
+    blocker.once("error", reject);
+    blocker.listen(port, "127.0.0.1", resolve);
+  });
+  servers.push(blocker);
+  return port;
 };
 
 describe("serveApi", () => {
@@ -177,12 +191,24 @@ describe("startNodeServer", () => {
   it("uses the given ports and refuses taken ones", async () => {
     const first = await start({ games: GAMES });
     await expect(
-      startNodeServer({ games: GAMES, port: first.port, apiPort: first.apiPort }),
+      startNodeServer({
+        greet: false,
+        gracefullyShutdown: false,
+        games: GAMES,
+        port: first.port,
+        apiPort: first.apiPort,
+      }),
     ).rejects.toThrow();
 
     const freeGamePort = await freePort();
     await expect(
-      startNodeServer({ games: GAMES, port: freeGamePort, apiPort: first.apiPort }),
+      startNodeServer({
+        greet: false,
+        gracefullyShutdown: false,
+        games: GAMES,
+        port: freeGamePort,
+        apiPort: first.apiPort,
+      }),
     ).rejects.toThrow();
     expect(await probe.canConnect(freeGamePort)).toBe(false);
   });
@@ -233,9 +259,15 @@ describe("startNodeServer", () => {
 
   it("refuses one port for both servers", async () => {
     const port = await freePort();
-    await expect(startNodeServer({ games: GAMES, port, apiPort: port })).rejects.toThrow(
-      /different ports/,
-    );
+    await expect(
+      startNodeServer({
+        greet: false,
+        gracefullyShutdown: false,
+        games: GAMES,
+        port,
+        apiPort: port,
+      }),
+    ).rejects.toThrow(/different ports/);
   });
 
   it("closes the code API again when the game server cannot be built", async () => {
@@ -248,7 +280,7 @@ describe("startNodeServer", () => {
     let calls = 0;
     await expect(
       startNodeServer(
-        { games: new BrokenList(), apiPort },
+        { greet: false, gracefullyShutdown: false, games: new BrokenList(), apiPort },
         {
           freePort: async () => {
             ++calls;
@@ -265,7 +297,13 @@ describe("startNodeServer", () => {
     const first = await start({ games: GAMES });
     const freeApiPort = await freePort();
     await expect(
-      startNodeServer({ games: GAMES, port: first.port, apiPort: freeApiPort }),
+      startNodeServer({
+        greet: false,
+        gracefullyShutdown: false,
+        games: GAMES,
+        port: first.port,
+        apiPort: freeApiPort,
+      }),
     ).rejects.toThrow();
     expect(await probe.canConnect(freeApiPort)).toBe(false);
   });
@@ -282,9 +320,9 @@ describe("startNodeServer", () => {
   });
 
   it("re-rolls when the code API port got taken after the game port was claimed", async () => {
-    const first = await start({ games: GAMES });
+    const taken = await occupyLoopback();
     const gameFree = await freePort();
-    const sequence = [gameFree, first.port, await freePort(), await freePort()];
+    const sequence = [gameFree, taken, await freePort(), await freePort()];
     let n = 0;
     const next = async (): Promise<number> => {
       const port = sequence[n];
@@ -292,7 +330,10 @@ describe("startNodeServer", () => {
       if (port === undefined) throw new Error("sequence exhausted");
       return port;
     };
-    const handle = await start({ games: GAMES }, { freePort: next });
+    const handle = await start(
+      { games: GAMES, greet: false, gracefullyShutdown: false },
+      { freePort: next },
+    );
     expect(n).toBe(4);
     expect(await probe.canConnect(gameFree)).toBe(false); // the claimed game port was released
     expect(await probe.isGameServer(handle.port, handle.apiPort)).toBe(true);
@@ -303,7 +344,7 @@ describe("startNodeServer", () => {
     let calls = 0;
     await expect(
       startNodeServer(
-        { games: GAMES },
+        { greet: false, gracefullyShutdown: false, games: GAMES },
         {
           freePort: async () => {
             ++calls;
@@ -321,7 +362,13 @@ describe("startNodeServer", () => {
     let calls = 0;
     await expect(
       startNodeServer(
-        { games: GAMES, port: first.port, apiPort: freeApiPort },
+        {
+          greet: false,
+          gracefullyShutdown: false,
+          games: GAMES,
+          port: first.port,
+          apiPort: freeApiPort,
+        },
         {
           freePort: async () => {
             ++calls;
@@ -334,12 +381,12 @@ describe("startNodeServer", () => {
   });
 
   it("does not re-roll when an explicitly given API port is taken", async () => {
-    const first = await start({ games: GAMES });
+    const taken = await occupyLoopback();
     let calls = 0;
     let gamePort = 0;
     await expect(
       startNodeServer(
-        { games: GAMES, apiPort: first.port },
+        { greet: false, gracefullyShutdown: false, games: GAMES, apiPort: taken },
         {
           freePort: async () => {
             ++calls;

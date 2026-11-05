@@ -15,12 +15,18 @@ class NoHttpServerTransport extends Transport {
 
 describe("listenGameServer", () => {
   it("rejects when the transport has no HTTP server to race the bind against", async () => {
-    const server = new GameColyseusServer({ transport: new NoHttpServerTransport() });
+    const server = new GameColyseusServer({
+      transport: new NoHttpServerTransport(),
+      greet: false,
+      gracefullyShutdown: false,
+    });
     await expect(listenGameServer(server, await freePort())).rejects.toThrow(/HTTP server/);
   });
 
   it("rejects when Colyseus' own listen rejects before the bind", async () => {
     const server = new GameColyseusServer({
+      greet: false,
+      gracefullyShutdown: false,
       beforeListen: () => {
         throw new Error("no boot for you");
       },
@@ -34,9 +40,9 @@ describe("listenGameServer", () => {
     const blocker = createHttpServer();
     await new Promise<void>((resolve, reject) => {
       blocker.once("error", reject);
-      blocker.listen(port, "127.0.0.1", resolve);
+      blocker.listen(port, resolve);
     });
-    const server = new GameColyseusServer();
+    const server = new GameColyseusServer({ greet: false, gracefullyShutdown: false });
     try {
       await expect(listenGameServer(server, port)).rejects.toMatchObject({ code: "EADDRINUSE" });
     } finally {

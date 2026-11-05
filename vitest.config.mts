@@ -15,6 +15,7 @@ export default defineConfig({
         "packages/*/src/**/*.ts",
         "packages/game-ui/src/**/*.svelte",
         "games/*/src/**/*.ts",
+        "games/*/gamePackage.ts",
         "games/*/ui/**/*.{ts,svelte}",
         "games/*/bots/**/*.ts",
         "games/*/terminal/**/*.ts",

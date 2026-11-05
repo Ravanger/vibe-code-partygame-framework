@@ -61,6 +61,7 @@ const RATE_LIMITED_ERROR: ProtocolError = {
   message: CLIENT_MESSAGES.RATE_LIMITED,
 };
 
+/** The per-game configuration `createGameServer` hands to each `GameRoom`; not built by game code. */
 export interface GameRoomConfig {
   definition: GameDefinition<BaseGameState, unknown, unknown>;
   stateClass: new () => BaseGameState;
@@ -512,7 +513,7 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
   /**
    * An ACTION from a seatless connection: only an action declared `from: "audience"` in the current
    * phase is dispatched, under the per-connection rate limit and keyed by the spectator's join
-   * `playerId`; everything else gets the spectator error, as before audience actions existed.
+   * `playerId`; everything else gets the spectator error.
    */
   private actAudience(client: Client, raw: unknown): ActionResult {
     if (!this.limited(client.sessionId, ClientMessage.ACTION, this.config.rateLimits.action)) {
@@ -636,7 +637,6 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
   }
 
   private rosterChanged(): void {
-    // Host migration (who becomes host when the current one disconnects) is the runtime's call (#36).
     this.safely(() => this.runtime.rosterChanged());
   }
 

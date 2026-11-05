@@ -8,8 +8,8 @@ Generic Svelte 5 viewmodels and components for the screens every game has (welco
 
 - Game vocabulary or phase-specific screens (they live in the game).
 - Connection logic (`game-client`).
-- Direct `window`/`document` reads (moving: #109).
-- Per-game viewmodels that could be generic (moving: #62).
+- Direct `window`/`document` reads (inject them).
+- Per-game viewmodels that could be generic.
 
 ## May import
 

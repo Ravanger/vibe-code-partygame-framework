@@ -43,7 +43,6 @@ const deal = (ctx: WitClashContext): void => {
   const round = new Round(ctx);
   round.remember();
   const players = ctx.activePlayers();
-  // Daily mode plays the canon, so a selected category may not exist in the host's content.
   const repository = ctx.options.mode === "daily" ? priv.canon : priv.content;
   const category = required(repository.byId(priv.categoryId), "selected category");
   const { items: prompts } = drawPool(
@@ -51,8 +50,6 @@ const deal = (ctx: WitClashContext): void => {
     priv.usedPromptIds,
     Math.max(players.length, 1),
   );
-  // Daily mode deals from the date seed so every server deals identically; the room rng still
-  // drives everything else (answer shuffles and friends).
   const dealRng =
     ctx.options.mode === "daily" ? dailyRng(ctx.priv.dailyDay, state.roundNumber) : ctx.rng;
   const planned = buildMatchups(

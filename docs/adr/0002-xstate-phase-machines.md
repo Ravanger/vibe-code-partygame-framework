@@ -1,6 +1,6 @@
 # ADR 0002: One XState actor per room drives phases
 
-**Status:** Proposed
+**Status:** Accepted
 
 ## Context
 
@@ -21,7 +21,7 @@ Each room has one stateful actor that serializes phase logic. Hooks run inside t
 
 ## Where it lives
 
-- `packages/core/src/runtime/GameRuntime.ts` — actor creation and dispatch (line 10 import, line 66 private field `actor`)
+- `packages/core/src/runtime/GameRuntime.ts` — actor creation and dispatch (`GameRuntime.actor`, built with xstate's `createActor`)
 - `packages/core/src/runtime/types.ts` — `GameContext.transition` and `MiddlewareEvent`
 - `packages/core/tests/runtime/GameRuntime.test.ts` — tests showing phase transitions, timers and queueing
 

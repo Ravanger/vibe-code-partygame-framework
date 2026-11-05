@@ -34,7 +34,7 @@ export class CategoryRepository {
 
   /**
    * `count` distinct categories from the candidates (weight > 0, and passing `filter` when given).
-   * Equal weights deal a uniform shuffle — exactly as before weighting existed; differing weights
+   * Equal weights deal a uniform shuffle; differing weights
    * use Efraimidis–Spirakis sampling, where each candidate draws a key of `rng() ** (1 / weight)`
    * and the highest keys win, so a category's share of picks tracks its weight. A weight of 0
    * means never offered.

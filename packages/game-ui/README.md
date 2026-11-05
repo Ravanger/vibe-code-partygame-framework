@@ -6,7 +6,7 @@ Ships Svelte source; consumers need the Svelte plugin — Vite with `@sveltejs/v
 
 | Import | What |
 |---|---|
-| `@partygame/game-ui` | `createAppRouter`, `AppRouter`, `WelcomeViewModel`, `WaitingRoomViewModel`, `LobbySettingsViewModel`, `OptionsReader`, `PhaseClock`, `TypingReporter`, `GameControlsViewModel`, `NameField`, `ReplayViewModel`, `snapshotManager`, `SoundPolicy`; `OptionFields`, `qrCode`, `playerSticker`, `rankRows`, `podiumSteps`; `setStrings`, `defaultUiStrings`, `UiStrings` |
+| `@partygame/game-ui` | `createAppRouter`, `AppRouter`, `WelcomeViewModel`, `WaitingRoomViewModel`, `LobbySettingsViewModel`, `OptionsReader`, `PhaseClock`, `TypingReporter`, `GameControlsViewModel`, `NameField`, `ReplayViewModel`, `snapshotManager`, `SoundPolicy`; `OptionFields`, `qrCode`, `playerSticker`, `rankRows`, `podiumSteps`; `setStrings`, `defaultUiStrings`, `UiStrings`; types `RouterScreen`, `LobbySettingsConfig`, `SoundPolicyOptions`, `StickerShape` |
 | `@partygame/game-ui/components` | Svelte 5 source: `StatusPanel`, `Timer`, `PlayerSticker`, `QrCode`, `ActionBar`, `NameInput`, `SoundToggle`, `LobbySettings`, `GameControls`, `Podium` |
 
 Viewmodels are typed on `GameConnectionManager<TState>` and read its state reactively. Import through the `svelte` export condition (Vite with the Svelte plugin). Build one in a component with `untrack(() => new Vm(manager))`.
@@ -42,11 +42,11 @@ Viewmodels are typed on `GameConnectionManager<TState>` and read its state react
 {/if}
 ```
 
-The router also exposes `banner`, `phase`, `isSpectator`, `isReconnecting`, `roomCode`, `error`, `dismissError()`.
+A `RouterScreen` is one entry of that table: `component` and an optional `banner`. The router also exposes `banner`, `phase`, `isSpectator`, `isReconnecting`, `roomCode`, `error`, `dismissError()`.
 
 ## Welcome and waiting room
 
-`WelcomeViewModel(manager, urlCode?, urlTvCode?)` hosts, joins by code, watches as a TV and auto-joins from a share link. `WaitingRoomViewModel(manager, browser?)` is the lobby: `players`, `readyCount`, `canStart`, `start()`, kick, `nameField`, `shareUrl`, `notice`. `browser` injects `location()` (for `shareUrl`) and `clipboard.writeText` (for the copy button); both default to the page's globals, read lazily.
+`WelcomeViewModel(manager, urlCode?, urlTvCode?)` hosts, joins by code, watches as a TV and auto-joins from a share link. `WaitingRoomViewModel(manager, browser?)` is the lobby: `players`, `readyCount`, `canStart`, `start()`, kick, `nameField`, `shareUrl`, `notice`. `browser` injects `location()` (for `shareUrl`) and `clipboard.writeText` (for the copy button); both default to the page's globals, read lazily. Also on `WaitingRoomViewModel`: `needsName` (this seat is not yet named), `draftName` (the name as typed), `showJoinInfo` (room code and share link: host and spectators), `showWaitingPanel` (a named non-host waits for the host), `copyCode()` (a denied clipboard is ignored), `canKick(player)` (host, any other seat), `askKick(id)`, `confirmKick()` (sends `KICK_PLAYER`, host only) and `cancelKick()`.
 
 ```svelte
 <script lang="ts">
@@ -69,7 +69,7 @@ Build the waiting room the same way and call `vm.destroy()` on teardown: `$effec
 
 ## Settings from your options schema
 
-`LobbySettingsViewModel` takes the zod schema you pass to `defineGame`. Every bounded numeric option (`.min()` and `.max()`) becomes a labelled number input for the host — step 1 for integers, the schema's `multipleOf` when present, else `any` — and a read-only line for everyone else; every boolean option becomes a checkbox; every string-enum option becomes a row of choice buttons, one per value (a commit that is not one of them is dropped without sending); every plain string option becomes a text input, bounded by `maxlength` when the schema bounds it. Options the form cannot render (unbounded numbers, arrays, objects, enums with non-string choices) are skipped and reported to the optional `onUnsupported(key, reason)` config — by default a console warning, once per key per instance; `labels` overrides the generated names.
+`LobbySettingsViewModel` takes the zod schema you pass to `defineGame`. Every bounded numeric option (`.min()` and `.max()`) becomes a labelled number input for the host — step 1 for integers, the schema's `multipleOf` when present, else `any` — and a read-only line for everyone else; every boolean option becomes a checkbox; every string-enum option becomes a row of choice buttons, one per value (a commit that is not one of them is dropped without sending); every plain string option becomes a text input, bounded by `maxlength` when the schema bounds it. Options the form cannot render (unbounded numbers, arrays, objects, enums with non-string choices) are skipped and reported to the optional `onUnsupported(key, reason)` config — by default a console warning, once per key per instance; `labels` overrides the generated names. The config type is `LobbySettingsConfig` (what the view model needs to build the form from the options schema). Members: `canEdit` (host only), `startsOpen` (panel starts expanded for host and spectators) and `setDraft(key, raw)` (stores what the host is typing without sending; `commit` sends it).
 
 ```ts
 import type { GameConnectionManager } from "@partygame/game-client";
@@ -84,7 +84,7 @@ export class LobbySettingsViewModel extends Base<ButtonState> {
 
 Any viewmodel that needs the published options reads them through `OptionsReader`: `new OptionsReader(manager, schema, defaults?)` parses `state.options` once per change and exposes `current` (reactive), falling back to `defaults` or the schema's own `.default()`s when nothing valid is published.
 
-`GameControlsViewModel(manager, isGameOver?)` is leave plus a host-only end-game menu outside the lobby; subclass it with `super(manager, (state) => state.phase === "Done")`.
+`GameControlsViewModel(manager, isGameOver?)` is leave plus a host-only end-game menu outside the lobby; subclass it with `super(manager, (state) => state.phase === "Done")`. Members: `isVisible` (connected and outside the lobby), `canEndGame` (host, controls visible, game not over), `toggleMenu()`/`closeMenu()` (both drop a pending end confirmation), `askEnd()`, `confirmEnd()` (closes the menu and sends `END_GAME`; no-op unless `canEndGame`) and `cancelEnd()`.
 
 ## Phase clock and typing
 
@@ -94,7 +94,7 @@ Any viewmodel that needs the published options reads them through `OptionsReader
 
 ## Sound
 
-`SoundPolicy({ storage, storagePrefix, target })` is the room's sound gate: off by default, one persisted toggle, and nothing plays before the first tap (browsers block audio until a user gesture, and players on a shared TV may not want it). `enabled` (persisted under `${storagePrefix}.sound`; a throwing or empty storage — private windows — degrades to off), `unlocked` (a pointerdown or keydown on `target` has happened) and `canPlay` (both) are reactive getters; `toggle()` flips `enabled`; `dispose()` removes the gesture listeners when the owning screen unmounts. Construct it once with the page's globals, using the same prefix you pass to `GameConnectionManager`:
+`SoundPolicy({ storage, storagePrefix, target })` (`SoundPolicyOptions`: where the toggle persists and where the first gesture is heard) is the room's sound gate: off by default, one persisted toggle, and nothing plays before the first tap (browsers block audio until a user gesture, and players on a shared TV may not want it). `enabled` (persisted under `${storagePrefix}.sound`; a throwing or empty storage — private windows — degrades to off), `unlocked` (a pointerdown or keydown on `target` has happened) and `canPlay` (both) are reactive getters; `toggle()` flips `enabled`; `dispose()` removes the gesture listeners when the owning screen unmounts. Construct it once with the page's globals, using the same prefix you pass to `GameConnectionManager`:
 
 ```ts
 import { SoundPolicy } from "@partygame/game-ui";
@@ -155,7 +155,7 @@ Props (all render in plain markup, e.g. `<Timer seconds={12} total={30} />`): `L
 
 ## Podium and ranking
 
-`rankRows` adds competition ranks (1, 1, 3) to rows in leaderboard order; `podiumSteps` keeps the top three rank groups among seated rows; `Podium` takes `steps` and an optional `extra` snippet per occupant. Block heights come from `--podium-block-height-1` to `--podium-block-height-3` (the contract's fallbacks are scaled by `--scale`); set them in your own context for a different scale, e.g. inside a `main.tv` rule.
+`STICKER_SHAPES` lists the shapes a player sticker can take (`StickerShape` is one of them). `rankRows` adds competition ranks (1, 1, 3) to rows in leaderboard order; `podiumSteps` keeps the top three rank groups among seated rows; `Podium` takes `steps` and an optional `extra` snippet per occupant. Block heights come from `--podium-block-height-1` to `--podium-block-height-3` (the contract's fallbacks are scaled by `--scale`); set them in your own context for a different scale, e.g. inside a `main.tv` rule.
 
 ```svelte
 <script lang="ts">

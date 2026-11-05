@@ -15,11 +15,11 @@ Each rule names the gate that enforces it; `not enforced yet: #N` means a review
 7. MUST validate client input with Zod. (action payloads: `defineAction`'s type requires a `payload` schema, so `bun run typecheck` fails without one; join options: `GameRoom` parses them with `RoomOptionsSchema`)
 8. MUST NOT mock the module under test; `vi.mock` only `node:` builtins. Rules run through `FakeHost`, rooms through `bootTestServer`, UI through `StubRoom`. (biome plugin `vi-mock-node-only`)
 9. MUST NOT reintroduce decorators (`experimentalDecorators`, `emitDecoratorMetadata`); Colyseus Schema 5 is decorator-free. (biome plugin `no-decorators`; `bun run check:conventions` for tsconfig options)
-10. MUST NOT name a commercial party-game brand or product in docs, code or communication. (`bun run check:conventions`)
+10. MUST keep game content original: every file under a game's `content/` is listed in its `provenance.json` as `"original"` or with its source and licence. (`bun run check:conventions` rule `provenance`; copied text: reviewer)
 11. MUST NOT edit generated files (`dist/`, `coverage/`, `node_modules/`, `.turbo/`) or change `bun.lock` without a `package.json` change. (`bun run check:paths`)
-12. MUST NOT weaken a gate: edit gate config (`biome.json`, `vitest.config.mts`, `knip.json`, CI, check scripts), relax a gate `package.json` script or a strict `tsconfig` option, or add a suppression (`biome-ignore`, `@ts-nocheck`, `v8 ignore`, `.skip`/`.only`/`.todo`). (`bun run check:gates` in the `gates` CI job; only a maintainer adds the `gate-change` override label)
+12. MUST NOT weaken a gate: edit gate config (`biome.json`, `vitest.config.mts`, `knip.json`, CI, check scripts), relax a gate `package.json` script or a strict `tsconfig` option, or add a suppression (`biome-ignore`, `@ts-nocheck`, `v8 ignore`, `.skip`/`.only`/`.todo`). (`bun run check:gates` in the `gates` CI job, which also scans the whole tree for suppressions and skipped or focused tests; only a maintainer adds the `gate-change` override label). The suppressions already on main are the only exceptions, listed in `TREE_ALLOWLIST` in `scripts/checkGates.ts`: the Svelte `generics=` `biome-ignore` in `packages/game-ui/src/components/{GameControls,LobbySettings,Podium}.svelte`, `@ts-expect-error` in `packages/core/tests/runtime/types.test.ts` and `packages/server/src/bun.ts`, and the symlink `ctx.skip` in `packages/content/tests/content.test.ts`
 13. MUST use `++i` in loops, never `i++`. (`biome` plugin `prefer-prefix-increment`)
-14. MUST document every public API (JSDoc plus `docs/framework/README.md`) in the same PR. (`bun run check:exports` snapshots the surface; docs not enforced yet: #113)
+14. MUST document every public API (JSDoc plus `docs/framework/README.md`) in the same PR. (`bun run check:exports` snapshots the surface and fails on an export or public class member without JSDoc; the guide text is reviewer-checked)
 15. MUST put agent files (plans, logs, checklists, notes) in `.AGENTS/`; `docs/` is for developers and users only; no new files in the repo root. (`bun run check:conventions`)
 16. MUST NOT commit or push unless the human asks. (branch protection on `main`: nothing merges without a PR and green CI)
 17. MUST NOT send raw Zod or exception text to a client; client-visible error strings come from `CLIENT_MESSAGES`, `CLOSE_CODES` or a game-authored `ctx.reject` message (`docs/framework/README.md`, Error model). (reviewer)
@@ -36,6 +36,7 @@ A `lefthook` pre-commit hook (`lefthook.yml`, installed by `bun install`) runs `
 
 - Work only on open issues labelled `agent-ready`. Never start one labelled `needs-decision` or `epic`.
 - One commit per issue, with `Closes #N` in the body. A lone issue gets its own branch `<type>/<issue>-<slug>`, e.g. `docs/116-agents-hard-rules`; a milestone's issues share one branch `milestone/<n>-<slug>` and one PR.
+- Start an issue only when every issue in its Depends on section is closed.
 - Touch only the files the issue lists. If a test forces another file, say why in the PR.
 - TDD order: failing test, see it fail, minimal code, see it pass, refactor.
 - Use conventional commit subjects (`feat(core): ...`). No plan numbers in subjects.
@@ -60,10 +61,10 @@ Each package's README has its API. Each package also has an `AGENTS.md` (respons
 | [`packages/shared`](packages/shared/README.md) | wire protocol (`protocol.ts`: messages, `ErrorCode`, `ActionResult`, zod schemas), limits, browser-safe state classes (`/schema`) |
 | [`packages/content`](packages/content/README.md) | content tooling: `stripJsonComments`, `loadJsoncDir` (a folder of commented JSON files, validated against a caller-supplied schema); `/filter`: `TextFilter`, `createTextFilter` (profanity filtering with `off`/`moderate`/`strict` levels) |
 | [`packages/client-utils`](packages/client-utils/README.md) | client helpers hoisted out of `shared`: `waitFor` poll loop, `resolveRoomCode` (the code API), `joinUrl`/`tvUrl` share links, `between`/`Parsed` arg parsing, `claimName`/`SeatRoom`, `apiBaseOf` |
-| [`packages/core`](packages/core/README.md) | pure runtime, no Colyseus: `defineGame`, `actionFactory`, `GameRuntime`, built-in lobby actions, action log, scoring helpers, roster guards (`seatedCount`, `isBelowMinimum`, `departedIds`), `textFilterMiddleware`; `/kits` (collectResponses kit); `/replay` (`replayLog`, `ReplayHost`, replay bundles); `/testing` (`FakeHost`, `TestTable`, `replayLog`) |
-| [`packages/server`](packages/server/README.md) | Colyseus host: `createGameServer`, `GameRoom`, `RoomCodeService`, `createApiHandler`; `/bun`, `/node`, `/testing` |
+| [`packages/core`](packages/core/README.md) | pure runtime, no Colyseus: `defineGame`, `actionFactory`, `GameRuntime`, built-in lobby actions, action log, scoring helpers, roster guards (`seatedCount`, `isBelowMinimum`, `departedIds`), `textFilterMiddleware`; `/awards` (`computeAwards`); `/kits` (collectResponses, voteAndTally and drawPool kits); `/replay` (`replayLog`, `ReplayHost`, replay bundles); `/testing` (`FakeHost`, `TestTable`, `replayLog`) |
+| [`packages/server`](packages/server/README.md) | Colyseus host: `createGameServer`, `GameRoom`, `RoomCodeService`, `createApiHandler`; `/bun`, `/node`, `/probe`, `/testing` |
 | [`packages/game-client`](packages/game-client/README.md) | Svelte 5 SDK: `GameConnectionManager`, `Countdown`, `resolveEndpoints`; `/testing`, `/test-setup` |
-| [`packages/game-ui`](packages/game-ui/README.md) | viewmodels (welcome, waiting room, settings, controls, phase clock, typing), `AppRouter`, rank helpers; `/components` |
+| [`packages/game-ui`](packages/game-ui/README.md) | viewmodels (welcome, waiting room, settings, controls, phase clock, typing), `AppRouter`, rank helpers; `/components`, `/theme-contract.css` |
 | [`packages/bots`](packages/bots/README.md) | `BotPlayer`, `joinBots`, `BotTable`, `DemoTable`; a game supplies a `BotStrategy` |
 | [`packages/terminal`](packages/terminal/README.md) | `TerminalPlayer`, `PlaySession`, arg parsers, `runBotsCommand`; a game supplies a `TerminalStrategy` |
 | [`packages/launcher`](packages/launcher/README.md) | `runLauncher(config, argv)`: server, API, client and bot tables |
@@ -71,6 +72,9 @@ Each package's README has its API. Each package also has an `AGENTS.md` (respons
 | [`packages/config`](packages/config/README.md) | presets: `/vite`, `/vitest` (source aliases, `JSDOM_DIST_ONLY`), `/svelte`, tsconfigs |
 | [`packages/cli`](packages/cli/README.md) | `bun run new <slug>` scaffolds a tested game from `packages/cli/template/` |
 | [`games/wit-clash`](games/wit-clash/README.md) | reference game: `src/` rules, `ui/` client, `server.ts`, `launch.ts`, `content/` |
+| [`games/bluff`](games/bluff/README.md) | bluffing game: write fake answers, vote for the true one |
+| [`games/crew`](games/crew/README.md) | asymmetric cooperative game: public roles, private signals, one shared guess |
+| [`games/rush`](games/rush/README.md) | real-time tap race driven by a server tick |
 | `scripts/game.ts` | root dispatcher for `list`, `launch`, `play`, `bots` (pure part in `scripts/gameEntry.ts`) |
 
 Docs: [`docs/framework/README.md`](docs/framework/README.md) (game author guide), [`docs/HOSTING.md`](docs/HOSTING.md), [`docs/framework/troubleshooting.md`](docs/framework/troubleshooting.md) (known traps; read it before debugging the build, coverage or reconnects), [`docs/adr/`](docs/adr/README.md) (why the architecture is shaped this way; read before reopening a settled design).
@@ -103,10 +107,11 @@ Every job is a separate check in `.github/workflows/ci.yml` (`gates` in `gates.y
 | `typecheck` | `bun run typecheck:scripts && bun run typecheck` |
 | `test` | `bun run test:coverage` |
 | `template-smoke` | `bun run smoke:template` |
-| `mutation` (PRs only) | `bun run build && bun run mutate:changed` (Stryker on the `packages/*/src` and `games/*/src` files changed against `origin/main`, break below 80%) |
+| `bundle` | `bun run build && bun run check:bundle` |
+| `mutation` (PRs only) | `bun run build && bun run mutate:changed` (Stryker on the `packages/*/src`, `games/*/src`, `games/*/{ui,bots,terminal}/**/*.ts` and `games/*/gamePackage.ts` files changed against `origin/main`, break below 80%) |
 | `gates` (PRs only) | `bun run check:gates --base origin/main` and `bun run scripts/checkPathsCli.ts --base origin/main` |
 
-`bun run verify` runs all of them except `template-smoke`, `mutation` and `gates`.
+`bun run verify` runs all of them except `template-smoke`, `bundle`, `mutation` and `gates`.
 
 ## Library docs
 
@@ -141,9 +146,9 @@ Paths are relative to `games/wit-clash/` unless they start with `packages/`. Tes
 
 | To add... | Do this |
 |---|---|
-| A category or prompt | Drop a `.jsonc` file into `content/categories/` and restart the server. No code. Category ids and prompt ids must be unique across all files (used-prompt tracking is by id). |
+| A category or prompt | Drop a `.jsonc` file into `content/categories/`, add its line to `content/provenance.json` (`"original"`, or `{ "source", "license" }`), and restart the server. No code. Category ids and prompt ids must be unique across all files (used-prompt tracking is by id). |
 | A game phase | 1. Add the name to `PHASE` in `src/phaseNames.ts`. 2. Create `src/phases/<Name>.ts` exporting a `WitClashPhase` (`onEnter`, `duration` + `onTimeout`, `onRosterChange`, `actions`). 3. Add one line to `phases` in `src/game.ts`. 4. Add any synced field to `src/state.ts` (the client contract) and server-only data to `src/private.ts`. |
-| A screen for a phase | 1. `ui/viewmodels/<Name>ViewModel.ts` (reads `manager.state`, never recomputes rules). 2. `ui/screens/<Name>.svelte`. 3. One entry in `PHASE_SCREENS` in `ui/screens/index.ts`: `[PHASE.X]: { component, waitingLabel }` (a missing phase is a compile error). `AppViewModel` (an `AppRouter` from `@partygame/game-ui`) routes from `PHASE_SCREENS`, `App.svelte` renders and `JoinNextRound` labels from that table. A screen should also render with no seat (`manager.isSpectator`, the TV display): no inputs, progress shown large. Reusable pieces (StatusPanel, Timer, PlayerSticker, ActionBar, Podium, ...) come from `@partygame/game-ui/components`, themed by `ui/app.css`. |
+| A screen for a phase | 1. `ui/viewmodels/<Name>ViewModel.ts` (reads `manager.state`, never recomputes rules). 2. `ui/screens/<Name>.svelte`. 3. One entry in `PHASE_SCREENS` in `ui/screens/index.ts`: `[PHASE.X]: { component, waitingLabel, banner }` (`banner` is shown briefly when the room enters the phase, `""` for none) (a missing phase is a compile error). `AppViewModel` (an `AppRouter` from `@partygame/game-ui`) routes from `PHASE_SCREENS`, `App.svelte` renders and `JoinNextRound` labels from that table. A screen should also render with no seat (`manager.isSpectator`, the TV display): no inputs, progress shown large. Reusable pieces (StatusPanel, Timer, PlayerSticker, ActionBar, Podium, ...) come from `@partygame/game-ui/components`, themed by `ui/app.css`. |
 | A client action | 1. Name in `ACTION` (`src/actionNames.ts`, `SCREAMING_SNAKE_CASE`; `START_GAME`, `KICK_PLAYER`, `SET_OPTIONS`, `END_GAME` are reserved). 2. zod payload schema and payload type in `src/actions.ts`. 3. `[ACTION.X]: defineAction({ from, payload, handler })` in the accepting phase's `actions`. 4. `manager.sendAction(ACTION.X, payload)` from a viewmodel; it resolves with an `ActionResult` and rejections also land in `manager.lastServerError`. Reject with `ctx.reject(ErrorCode.NOT_ALLOWED, "why")`. |
 | An option | Add the field, default and range to `WitClashOptionsSchema` in `src/options.ts` (the single source). Read it as `ctx.options.<name>` in phases. The client reads the published `state.options` JSON through the same schema (see `LobbySettingsViewModel`). The lobby settings form is generated from the same schema (`LobbySettingsViewModel` from `@partygame/game-ui` reads the bounds through `z.toJSONSchema`; the game's subclass passes the schema and defaults): every bounded numeric field gets a labelled number input for the host and a read-only line for everyone else, so a new numeric option needs no UI edit. The host changes options with the built-in `SET_OPTIONS`. |
 | A timed phase | Set `duration` (ms, or a function of `ctx`) and `onTimeout` on the phase; the runtime writes `state.phaseEndsAt` and the server owns the clock. Client side: `manager.countdown()`, as in `ui/viewmodels/CategoryVoteViewModel.ts`. For continuous motion add `onTick(ctx, dtMs)` (optional `tickMs`, default 100 = 10 Hz); rate and determinism rules in `docs/framework/README.md` (Timers). |

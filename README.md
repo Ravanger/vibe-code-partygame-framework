@@ -70,3 +70,4 @@ Run each with `bun run`. Add `--no-browser` to skip the browser tab.
 - [Framework guide](docs/framework/README.md): writing a game
 - [Troubleshooting](docs/framework/troubleshooting.md): known traps (build, coverage, reconnects)
 - [ADRs](docs/adr/README.md): why the architecture is shaped this way
+- Security: [policy](.github/SECURITY.md) and [threat model](docs/security/threat-model.md)

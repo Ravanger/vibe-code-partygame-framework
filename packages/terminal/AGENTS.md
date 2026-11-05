@@ -7,8 +7,8 @@ Terminal clients for any game: `TerminalPlayer`, `PlaySession`, arg parsers and 
 ## Never put here
 
 - Game-specific prompts or narration (they live in the game).
-- Bot logic; the dependency on bots internals is going away (moving: #102).
-- Port probing owned elsewhere (moving: #99).
+- Bot logic.
+- Port probing (it lives in `@partygame/server/probe`).
 
 ## May import
 
@@ -17,7 +17,7 @@ Terminal clients for any game: `TerminalPlayer`, `PlaySession`, arg parsers and 
 
 ## Public entry points
 
-- `.`: `TerminalPlayer`, `PlaySession`, `ReadlinePrompter`, `parsePlayArgs`, `parseBotsArgs`, `runBotsCommand`.
+- `.`: `TerminalPlayer`, `PlaySession`, `ReadlinePrompter`, `parsePlayArgs`, `parseBotsArgs`, `runBotsCommand`, `DemoRun`, `GameClient`, `parseDemoArgs`.
 - `./testing`: terminal test helpers.
 
 ## Tests

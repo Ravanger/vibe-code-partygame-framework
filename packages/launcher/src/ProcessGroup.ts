@@ -26,6 +26,7 @@ export class ProcessGroup {
     this.killGroup = options.killGroup ?? killProcessGroup;
   }
 
+  /** Spawns a long-running child that is killed on `stop`; an unexpected exit is reported through the failure callback. */
   start(label: string, command: string[], cwd: string, env: Record<string, string> = {}): void {
     const child = this.spawnChild(label, command, cwd, env);
     child.on("error", (error) => this.onFailure(`${label} failed to start: ${error.message}`));
@@ -50,6 +51,7 @@ export class ProcessGroup {
     });
   }
 
+  /** Kills every child process tree and stops reporting exits as failures. */
   stop(): void {
     this.stopping = true;
     for (const child of this.children) this.killTree(child);

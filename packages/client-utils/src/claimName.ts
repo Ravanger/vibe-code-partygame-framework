@@ -29,8 +29,7 @@ export async function claimName(
   try {
     room.send(ClientMessage.SET_NAME, name);
     await waitFor(
-      // `players` can be missing when a wire-level decode hiccup dropped it (observed in CI on
-      // large states); poll to the timeout instead of crashing the predicate.
+      // `players` can be missing on a large state; poll instead of crashing the predicate.
       () => refusal !== "" || room.state.players?.get(playerId)?.name === name,
       "your name to be accepted",
       timeoutMs,

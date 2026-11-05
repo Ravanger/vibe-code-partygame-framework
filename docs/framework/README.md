@@ -3,7 +3,7 @@
 You describe a game as data: phases, the actions players may send in each phase, and optional timers.
 The framework supplies the lobby, room, roster, reconnection, timers and wire protocol.
 
-Dependency direction: `games/* -> @partygame/server -> @partygame/core -> @partygame/shared`.
+Dependency direction: `games/* -> @partygame/server -> @partygame/core -> @partygame/shared`. Inside a game, `check:boundaries` also keeps `src/` free of `@partygame/game-ui`, `@partygame/game-client`, `@colyseus/sdk` and `svelte`, and `ui/` free of `@colyseus/*` server pieces and `node:*`; it scans the game and package root `.ts` files (entry files, configs, setups) as well as `src`, `tests`, `ui`, `bots`, `terminal` and `scripts`.
 
 Known traps (build, coverage, reconnects, Schema 5): [troubleshooting.md](troubleshooting.md).
 
@@ -460,12 +460,12 @@ versioning) is refused outright. The recommended practice is to keep the
 game at the recorded name and version to replay its log — bump `version` whenever you change anything the
 table above marks "yes".
 
-**Runtime additions.** Action middleware events now carry the zod-parsed `payload`; every context exposes
+**Runtime additions.** Action middleware events carry the zod-parsed `payload`; every context exposes
 `ctx.gameName` (definition name), `ctx.gameVersion` (definition version, recorded in the log header),
 `ctx.seed` (room RNG seed, recorded in the log header) and `ctx.newId()` (deterministic ids — see the
-Determinism contract above). Middleware contexts additionally expose `ctx.rejectionCount` — the live count
-of rejections (`ctx.reject()` calls and a handler-thrown `FrameworkError`) for the current dispatch, so a middleware can tell after `next()` whether an action's
-handler rejected.
+Determinism contract above). Middleware contexts also expose `ctx.rejectionCount`, the live count of rejections
+(`ctx.reject()` calls and a handler-thrown `FrameworkError`) for the current dispatch, so a middleware can tell
+after `next()` whether an action's handler rejected.
 
 ### Awards
 `@partygame/core/awards` lets a game declare awards as data — pure reducers over the session's action log —
@@ -683,7 +683,7 @@ runtime.stop();                          // on room dispose: clears timers
 
 `options` are the room options, already parsed with `definition.options` (the host does this once, before building the runtime).
 `host` is a `RuntimeHost`: seat list, `send`, `broadcast`, `showTo`/`hideFrom`, `kick`, `publishOptions`, `now`, `rng`,
-`activateWaitingPlayers`, and `setTimeout`/`clearTimeout`, which pass a branded `TimerHandle` (a number) between them (the runtime's XState actor uses these as its clock).
+`activateWaitingPlayers`, and `setTimeout`/`clearTimeout`, which pass a tagged `TimerHandle` (a number) between them (the runtime's XState actor uses these as its clock).
 The Colyseus server implements it; tests use `FakeHost` from `@partygame/core/testing`.
 
 ### Unit-testing phases without a server
@@ -758,6 +758,8 @@ type ButtonState = SchemaType<typeof ButtonState>;
 const games = [{ roomName: "button", definition: ButtonGame, stateClass: ButtonState }];
 ```
 
+Reserved field names: `phase`, `roomCode`, `phaseEndsAt`, `serverNow`, `spectatorCount`, `options`, `notice`, `minPlayers`, `maxPlayers`, `canStart`, `players`. Do not reuse them in `BaseGameState.extend(...)`; Colyseus rejects the clash only at schema definition (`Duplicate 'options' definition on '<State>'`), so name a collection of voting or answer choices `choices`, not `options`. `options` stays as the room-options JSON: it is part of the synced shape every client reads, so a rename would be a breaking change with no gain.
+
 Bun entry point (the only place that imports `bun`):
 
 ```ts
@@ -765,8 +767,9 @@ import { startServer } from "@partygame/server/bun";
 await startServer({ games });   // WebSocket on PORT (2567) + /api/resolve-code on API_PORT (3001)
 ```
 
-Elsewhere: `createGameServer({ games, roomCodeService?, transport?, maxPayloadBytes?, maxRooms?, reconnectMs?, emptyRoomGraceMs?, audienceSlots?, textFilter? })` returns the Colyseus `Server`,
+Elsewhere: `createGameServer({ games, roomCodeService?, transport?, maxPayloadBytes?, maxRooms?, reconnectMs?, emptyRoomGraceMs?, audienceSlots?, textFilter?, greet?, gracefullyShutdown? })` returns the Colyseus `Server`,
 and `createApiHandler(roomCodeService, { allowedOrigins? })` is the pure `(request, info?) => Response` behind `/api/resolve-code`: it answers with CORS headers only for origins in `allowedOrigins` (exact origins or `scheme://host:*` patterns; `"*"` for all) — by default loopback on any port, the dev client — echoing the origin with `Vary: Origin`; a disallowed origin gets no CORS headers, so the browser blocks it while non-browser callers still get the answer. The HTTP entries (`serveApi`, the Bun `startServer`) forward the request's method and headers and pass `{ remoteAddress }` as the second argument, and they bind the code API to loopback by default: `host` (or env `HOST`) picks another interface, and `allowedOrigins` (or env `ALLOWED_ORIGINS`, comma-separated, `*` for all) widens who may read it.
+`greet` (default `true`) prints the Colyseus start-up banner; `gracefullyShutdown` (default `true`) registers the Colyseus `SIGINT`/`SIGTERM` handlers that shut the server down. `bootTestServer` sets both to `false`, so a test run prints no banner and no `MaxListenersExceededWarning`; a test that starts a server itself passes the same two.
 The largest accepted WebSocket frame is `maxPayloadBytes` (default `DEFAULT_MAX_PAYLOAD_BYTES`, 4096), enforced on both transports; a bigger frame closes only that connection (code 1009) and leaves the room and its other players untouched.
 The number of concurrent rooms across all games is capped by `maxRooms` (default `DEFAULT_MAX_ROOMS`, 100; `Infinity` removes the cap): a create beyond the cap is refused with close code 4429 (`SERVER_FULL`, "Server is full") and existing rooms keep working; a slot frees again when one of the rooms is disposed.
 Rate limits are configured with `rateLimits`: actions per player (default 10/s, burst 20), `SET_NAME` per player (default 2/s, burst 2) and `/api/resolve-code` per remote address (default 1/s, burst 10), plus `mode: "observe" | "enforce"` (default `"enforce"`). Actions and `SET_NAME` are enforced in every room through one shared limiter: buckets are keyed by room, player and message type, so a reconnect cannot reset them, and they are freed when a seat leaves or the room is disposed. An over-limit message is refused with `RATE_LIMITED` — pushed as `ERROR` and returned in the `ActionResult` of a request — without touching other players; the refusal happens before the runtime, so it is not logged and replay is unaffected. The code API enforces its bucket in the HTTP entries: an exhausted address gets 429 with `Retry-After` (seconds until the next token) and the CORS headers of its origin, and callers whose remote address is unknown share one bucket instead of getting unlimited access. In observe mode an over-limit message or request is logged through `console.warn` instead of being refused.
@@ -997,6 +1000,8 @@ export class LobbySettingsViewModel extends LobbySettingsBase<ButtonState> {
 
 To change a rule, subclass it and override a member, for example `banner`: `class AppViewModel extends AppRouter<ButtonState, typeof SCREENS> { override get banner() { ... } }` (`manager` and `screens` are `protected`).
 
+Write text that mixes literals and values as one template literal, `{`${choice.name} - ${choice.votes} votes`}`, never `{choice.name} - {choice.votes} votes`. Svelte guards each bare interpolation in mixed text with `?? ''`, and the unreachable fallback is a phantom uncovered branch that fails the 100% coverage gate. A single `{expr}` is safe. Details: `docs/framework/troubleshooting.md`; `packages/config/tests/svelte.test.ts` pins the compiler behaviour.
+
 ### Components
 
 `@partygame/game-ui/components` ships Svelte 5 source (no build step; import through the `svelte` export condition). `PlayerSticker` and `QrCode` have helpers on the main entry: `playerSticker`, `stickerLetter`, `qrCode`. `Podium` takes steps from `podiumSteps(rankRows(rows))`: `rankRows` adds competition ranks (1, 1, 3) to rows already in leaderboard order (a new rank group starts where `hasLeft` changes); `podiumSteps` keeps the top three rank groups among seated rows, labelled "1st"/"2nd"/"3rd", in display order second, first, third. Rows are `PodiumRow` (`playerId`, `name`, `score`, `rank`, `hasLeft`, `isMe`).
@@ -1221,7 +1226,7 @@ and a terminal it asks (`Pick a game [1-N]:`; empty input or end of input exits 
 
 ## Bundle size
 
-Each game builds its own client with `vite build`; there is no multi-game bundle. The reference game `wit-clash` is measured on every CI run: `bun run check:bundle` rebuilds it and fails when the gzip total of `dist/**/*.{js,css}` exceeds the budget in `scripts/bundle-budget.json`. The budget is the measured gzip total rounded up to the next 1 kB (1024 B), plus 10% — currently **130,905 → 131,072 → 144,180 bytes**. When a change legitimately grows the bundle, update `scripts/bundle-budget.json` and the numbers below in the same PR.
+Each game builds its own client with `vite build`; there is no multi-game bundle. Every game with a client (an `index.html` and a `ui/` directory; headless games are skipped) is measured on every CI run: `bun run check:bundle` rebuilds them and fails when the gzip total of `dist/**/*.{js,css}` exceeds the game's budget in `scripts/bundle-budget.json`, or when the game has no entry. A new game with a client must add its build to `check:bundle` in the root `package.json` and an entry to `scripts/bundle-budget.json` (measure with `bun run scripts/bundleSizeCli.ts <slug>`). `bun run scripts/bundleSizeCli.ts --check` with no game checks all of them. The budget is the measured gzip total rounded up to the next 1 kB (1024 B), plus 10% — currently **130,905 → 131,072 → 144,180 bytes**. When a change legitimately grows the bundle, update `scripts/bundle-budget.json` and the numbers below in the same PR.
 
 Measured with `bun run --cwd games/wit-clash build && bun run scripts/bundleSizeCli.ts wit-clash`:
 
@@ -1251,6 +1256,10 @@ By package: `@colyseus/schema` 22.5%, `zod` 21.2%, `svelte` 18.2%, wit-clash sou
 `@partygame/shared`, `@partygame/game-client` and `@partygame/game-ui` declare `"sideEffects": false` — verified by scanning their sources: no top-level calls, no global writes, no CSS imports; the only initializer expressions are pure object constructions (`new RegExp`, schema objects). For wit-clash this changed nothing (byte-identical output): it uses every exported component, so there was no unused module to drop. The field still lets a future game that imports a subset tree-shake the rest.
 
 Follow-ups for later work (not done here): `@colyseus/schema` is a single 174,915 B module — about 45% of the final JS — and `zod` totals 21.2%; both are candidates for slimming (e.g. dropping zod's JSON-schema processors from the client path).
+
+## Content provenance
+
+Game content (prompts, categories) lives under `games/<slug>/content/`. Every file in that tree, except the manifest itself, is listed in `content/provenance.json`, a map from the path relative to `content/` to either `"original"` or `{ "source": "<where it came from>", "license": "<licence>" }`. `bun run check:conventions` (rule `provenance`) fails on a content file missing from the manifest, an entry with no file, or an entry of another shape. Copied text is a reviewer's call; the manifest makes the author state it.
 
 ## Config presets
 
@@ -1366,7 +1375,7 @@ The framework validates everything that crosses the wire, but the rules are your
    ```
    (`games/wit-clash/src/phases/answering.ts`)
 
-8. **Know the limits.** `playerId` is the only seat credential: a client can send any action, but the server acts on `ctx.playerId`, which it assigned itself. There is no built-in rate limiting; the threat model that spells this out is planned work (#89).
+8. **Know the limits.** `playerId` is the only seat credential: a client can send any action, but the server acts on `ctx.playerId`, which it assigned itself. `RateLimiter` throttles `ACTION` and `SET_NAME` per player and spectator actions per connection, but nothing caps how many connections or rooms one address opens; the limits and what is out of scope are in [the threat model](../security/threat-model.md).
    ```ts
    const drafts = ctx.priv.drafts.get(ctx.playerId) ?? new Map<string, string>();
    ctx.priv.drafts.set(ctx.playerId, drafts.set(matchupId, answer));

@@ -65,12 +65,13 @@ export function stripJsonComments(input: string): string {
   return out;
 }
 
+/** How {@link loadJsoncDir} identifies, labels and validates the items it loads. */
 export interface LoadJsoncDirOptions<T> {
   /** Unique key across all files; a repeat throws. */
   idOf: (item: T) => string;
   /** Used in warnings and errors, e.g. `"Item"`. */
   label: string;
-  /** A file that fails to parse or the validation: throw by default, or skip it with a `console.warn` as before. */
+  /** A file that fails to parse or the validation: throw by default, or skip it with a `console.warn`. */
   onInvalid?: "throw" | "skip";
   /** Most content files in the directory (default 256). */
   maxFiles?: number;

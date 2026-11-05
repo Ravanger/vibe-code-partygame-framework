@@ -51,6 +51,7 @@ export class TestPlayer<TState extends BaseGameState> {
   }
 }
 
+/** Options for `seatPlayers`: how many players to join and whether to start the game. */
 export interface SeatPlayersOptions<TState extends BaseGameState> {
   stateClass: new () => TState;
   count: number;

@@ -46,7 +46,6 @@ export class ColyseusConnector<TState extends BaseGameState> implements RoomConn
       },
       this.game.stateClass,
     );
-    // The SDK leaves room.state undefined until the first sync lands; poll it as if absent.
     await waitFor(
       () => (room.state?.roomCode ?? "") !== "",
       "the room state",

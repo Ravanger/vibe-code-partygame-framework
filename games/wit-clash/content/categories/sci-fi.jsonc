@@ -3,7 +3,7 @@
   "name": "Sci-Fi",
   "emoji": "🚀",
   "prompts": [
-    { "id": "sf-1", "text": "The name of a brand-new planet, chosen by an online poll." },
+    { "id": "sf-1", "text": "The name of an all-new planet, chosen by an online poll." },
     { "id": "sf-2", "text": "A useless invention from the year 3000 that everybody owns anyway." },
     { "id": "sf-3", "text": "The one time-travel rule printed on every time machine's dashboard." },
     { "id": "sf-4", "text": "An alien superpower that's mostly just inconvenient at parties." },

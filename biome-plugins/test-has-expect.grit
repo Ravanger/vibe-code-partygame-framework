@@ -5,19 +5,31 @@ or {
   `test($name, $cb)`,
   `it($name, $cb, $t)`,
   `test($name, $cb, $t)`,
+  `it.concurrent($name, $cb)`,
+  `test.concurrent($name, $cb)`,
+  `it.concurrent($name, $cb, $t)`,
+  `test.concurrent($name, $cb, $t)`,
   `it.each($tbl)($name, $cb)`,
-  `test.each($tbl)($name, $cb)`
+  `test.each($tbl)($name, $cb)`,
+  `it.concurrent.each($tbl)($name, $cb)`,
+  `test.concurrent.each($tbl)($name, $cb)`,
+  `it.for($tbl)($name, $cb)`,
+  `test.for($tbl)($name, $cb)`,
+  `it.concurrent.for($tbl)($name, $cb)`,
+  `test.concurrent.for($tbl)($name, $cb)`
 } as $call where {
   $cb <: or {
     JsArrowFunctionExpression(),
     JsFunctionExpression()
   },
   $cb <: not contains or {
-    `expect($_)`,
-    `expect.$_($_)`,
-    `expectTypeOf($_)`,
+    `expect($_).$_($...)`,
+    `expect($_).$_.$_($...)`,
+    `expect($_).$_.$_.$_($...)`,
+    `expectTypeOf($_).$_($...)`,
+    `expectTypeOf($_).$_.$_($...)`,
     `assert($_)`,
-    `$f($...)` where { $f <: r"^(?:expect|assert|waitUntil|waitFor)[A-Za-z0-9_]*$" }
+    `$f($...)` where { $f <: r"^(?:(?:expect|assert)[A-Z][A-Za-z0-9_]*|waitUntil|waitFor)$" }
   },
-  register_diagnostic(span=$call, message="Test callback has no expect call; add an assertion.")
+  register_diagnostic(span=$call, message="Test callback has no assertion; call expect(...).<matcher>(...), a named expect*/assert* helper, assert(...), waitFor or waitUntil.")
 }

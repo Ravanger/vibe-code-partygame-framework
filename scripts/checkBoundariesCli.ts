@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { checkBoundaries, importsOf, type SourceFile, type Workspace } from "./checkBoundaries.js";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-const SOURCE_DIRS = ["src", "tests", "ui", "bots", "terminal"];
+const SOURCE_DIRS = ["src", "tests", "ui", "bots", "terminal", "scripts"];
 const SOURCE = /\.(ts|svelte)$/;
 const SKIPPED = new Set(["node_modules", "dist", "coverage"]);
 
@@ -39,9 +39,13 @@ const readWorkspace = (dir: string): Workspace | undefined => {
   } catch {
     return undefined;
   }
+  const rootFiles = readdirSync(join(root, dir), { withFileTypes: true })
+    .filter((entry) => entry.isFile() && SOURCE.test(entry.name))
+    .map((entry) => join(root, dir, entry.name));
   const files: SourceFile[] = SOURCE_DIRS.map((sub) => join(root, dir, sub))
     .filter(isDirectory)
     .flatMap(walk)
+    .concat(rootFiles)
     .map((path) => ({
       path: relative(root, path).replaceAll("\\", "/"),
       imports: importsOf(readFileSync(path, "utf8")),

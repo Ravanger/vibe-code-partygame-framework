@@ -9,6 +9,7 @@ export class ScriptedIo implements Prompter {
   readonly signals: AbortSignal[] = [];
   private waiting: ((text: string) => void) | undefined;
 
+  /** Records the question and signal, then waits for `type` to answer it. */
   ask(question: string, signal: AbortSignal): Promise<string> {
     this.asked.push(question);
     this.signals.push(signal);
@@ -18,6 +19,7 @@ export class ScriptedIo implements Prompter {
     });
   }
 
+  /** Records `line` in `printed`. */
   print(line: string): void {
     this.printed.push(line);
   }
@@ -31,10 +33,12 @@ export class ScriptedIo implements Prompter {
     await tick();
   }
 
+  /** Whether a question is waiting for `type`. */
   get isWaiting(): boolean {
     return this.waiting !== undefined;
   }
 
+  /** The most recent question asked, or an empty string when none was. */
   get lastQuestion(): string {
     return this.asked[this.asked.length - 1] ?? "";
   }

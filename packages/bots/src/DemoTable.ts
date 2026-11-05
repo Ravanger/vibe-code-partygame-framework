@@ -9,6 +9,7 @@ import type { BotConnection, BotKit, BotRoom } from "./types.js";
 
 const OPEN_TIMEOUT_MS = 5000;
 
+/** Connection, bot kit, bot count and finish rule for a {@link DemoTable}. */
 export interface DemoTableOptions<TState extends BaseGameState>
   extends BotConnection,
     BotKit<TState>,
@@ -55,10 +56,7 @@ export class DemoTable<TState extends BaseGameState> {
       seats: [this.hostId, ...this.botIds],
     });
     const watch = new RoomWatch(room);
-    // The initial state sync lands after create() resolves (room.state is undefined until then),
-    // and a wire hiccup can blank the synced code at any point after that. Capture it atomically
-    // at its first well-formed observation — before claimName's round trip opens a window in
-    // which a late read would capture "".
+    // Capture the code at its first well-formed value, before claimName's round trip can blank it.
     let code = "";
     try {
       await waitFor(
@@ -86,6 +84,7 @@ export class DemoTable<TState extends BaseGameState> {
     return this.seat.code;
   }
 
+  /** Creates the room with a host bot and seats the other bots; resolves with all of them. */
   async seatBots(): Promise<BotPlayer<TState>[]> {
     const { code } = this.openSeat();
     const { endpoint, apiPort, stateClass, strategy, bot, bots, nameFor, resolveCode, timeoutMs } =
@@ -113,6 +112,7 @@ export class DemoTable<TState extends BaseGameState> {
     await watch.until(() => this.options.isFinished(room.state), timeoutMs, "the end of the game");
   }
 
+  /** Leaves the room and disconnects the host bot and every other bot. */
   async leave(): Promise<void> {
     const host = this.host;
     this.host = undefined;

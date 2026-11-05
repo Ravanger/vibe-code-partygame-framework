@@ -40,6 +40,7 @@ export class TerminalPlayer<TState extends BaseGameState> {
     return finished;
   }
 
+  /** Ends the session and aborts any pending question; `run` then resolves. */
   stop(): void {
     this.ended.abort();
     this.step?.abort();

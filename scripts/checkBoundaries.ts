@@ -23,7 +23,9 @@ export interface Violation {
 const SCOPE = "@partygame/";
 const CONFIG = `${SCOPE}config`;
 const CLI = `${SCOPE}cli`;
-const IMPORT = /(?:\bfrom\s*|\bimport\s*\(?\s*)["']([^"']+)["']/g;
+const IMPORT =
+  /(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*|\bimport\.meta\.glob(?:Eager)?\s*\(\s*)["']([^"']+)["']/g;
+const GAME_ENTRY_FILES = ["gamePackage.ts", "server.ts", "launch.ts"];
 
 const LAYERS: Record<string, { runtime: string[]; dev: string[] }> = {
   shared: { runtime: [], dev: [] },
@@ -51,6 +53,9 @@ const PURITY: Record<string, string[]> = {
   "game-client": [...COLYSEUS_SERVER, "node:*"],
   "game-ui": [...COLYSEUS_SERVER, "node:*"],
 };
+
+const GAME_SRC_PURITY = [`${SCOPE}game-ui`, `${SCOPE}game-client`, "@colyseus/sdk", "svelte"];
+const GAME_UI_PURITY = [...COLYSEUS_SERVER, "node:*"];
 
 const GAME_UI_PACKAGES = ["game-ui", "game-client", "shared"].map((name) => SCOPE + name);
 const GAME_UI_SRC = [
@@ -81,6 +86,12 @@ const forbidden = (specifier: string, patterns: string[]): boolean =>
 const isGame = (workspace: Workspace): boolean => workspace.dir.startsWith("games/");
 
 const shortName = (workspace: Workspace): string => workspace.name.replace(SCOPE, "");
+
+const purityOf = (workspace: Workspace, area: string | undefined): string[] => {
+  if (!isGame(workspace)) return area === "src" ? (PURITY[shortName(workspace)] ?? []) : [];
+  if (area === "src") return GAME_SRC_PURITY;
+  return area === "ui" ? GAME_UI_PURITY : [];
+};
 
 const manifestViolations = (workspace: Workspace): Violation[] => {
   const path = `${workspace.dir}/package.json`;
@@ -129,7 +140,11 @@ const fileViolations = (
 
     const target = packageOf(specifier);
     if (target !== undefined) {
-      const tests = area === "tests";
+      const rest = file.path.slice(workspace.dir.length + 1);
+      const tests =
+        area === "tests" ||
+        area === "scripts" ||
+        (!rest.includes("/") && !GAME_ENTRY_FILES.includes(rest));
       const declared = [
         ...workspace.dependencies,
         ...(tests ? [...workspace.devDependencies, CONFIG] : []),
@@ -147,7 +162,7 @@ const fileViolations = (
       }
     }
 
-    if (area === "src" && forbidden(specifier, PURITY[shortName(workspace)] ?? [])) {
+    if (forbidden(specifier, purityOf(workspace, area))) {
       add("layer-purity", `${specifier} is not allowed in ${workspace.name}`);
     }
 

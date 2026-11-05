@@ -233,7 +233,7 @@ describe("PhaseDefinition.onTick", () => {
     expect(live.act("p2", "TAP")).toBeUndefined();
     live.tick(300); // ticks at 800, 900, 1000; the timeout at 1050
     const log = getActionLog(live.priv);
-    expect(log).toBeDefined();
+    expect(log?.entries.some((e) => e.kind === "timeout")).toBe(true);
     const { states } = replayLog(definition, log as ActionLog, {
       state: newState(),
       options: {},

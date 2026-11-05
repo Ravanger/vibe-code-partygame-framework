@@ -27,7 +27,9 @@ afterEach(async () => {
 
 describe("createGameServer", () => {
   it("defines one room type per game with default timings and a fresh code service", async () => {
-    expect(createGameServer({ games: GAMES })).toBeDefined();
+    expect(
+      createGameServer({ greet: false, gracefullyShutdown: false, games: GAMES }),
+    ).toBeDefined();
     t = await bootTestServer({ games: GAMES.map((game) => ({ ...game, roomName: "other" })) });
     const room = await t.createRoom("other");
     expect(RoomCodeSchema.safeParse(stateOf(room).roomCode).success).toBe(true);
@@ -35,6 +37,8 @@ describe("createGameServer", () => {
 
   it("accepts a transport, a shared code service and explicit timings", () => {
     const server = createGameServer({
+      greet: false,
+      gracefullyShutdown: false,
       games: GAMES,
       roomCodeService: new RoomCodeService(),
       transport: new WebSocketTransport(),
@@ -47,6 +51,8 @@ describe("createGameServer", () => {
   it("boots with an explicit transport and lets a client join", async () => {
     const roomCodeService = new RoomCodeService();
     const server = createGameServer({
+      greet: false,
+      gracefullyShutdown: false,
       games: GAMES,
       roomCodeService,
       transport: new WebSocketTransport(),
@@ -76,6 +82,8 @@ describe("createGameServer", () => {
     );
     expect(() =>
       createGameServer({
+        greet: false,
+        gracefullyShutdown: false,
         games: [{ roomName: "leak", definition: PlainGame, stateClass: LeakingState }],
       }),
     ).toThrow(/LeakingState[\s\S]*leaky/);
@@ -88,6 +96,8 @@ describe("createGameServer", () => {
     );
     expect(
       createGameServer({
+        greet: false,
+        gracefullyShutdown: false,
         games: [
           {
             roomName: "clean",
