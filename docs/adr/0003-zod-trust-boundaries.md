@@ -1,6 +1,6 @@
 # ADR 0003: Zod validates every trust boundary
 
-**Status:** Proposed
+**Status:** Accepted
 
 ## Context
 
@@ -29,7 +29,7 @@ Game hooks receive only valid, narrowly-typed payloads. Invalid input is rejecte
 
 - `packages/shared/src/protocol.ts` — `ActionEnvelopeSchema`, `JoinOptionsSchema`, `SetNameSchema`, `ErrorCode`, `isServerError`, `isActionResult`
 - `packages/core/src/runtime/types.ts` — `ActionDefinition.payload` type
-- `packages/server/src/rooms/GameRoom.ts` — `RoomOptionsSchema` parse at line 66
+- `packages/server/src/rooms/GameRoom.ts` — `RoomOptionsSchema` (from `packages/shared/src/protocol.ts`) parse in `GameRoom.onCreate`
 - `packages/core/tests/` — tests showing validation and rejection
 - `docs/framework/README.md` — Actions section and Zod payload requirement
 

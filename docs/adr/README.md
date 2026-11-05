@@ -14,8 +14,3 @@ Short, plain decisions that live in the codebase. Each record states the decisio
 ## Rule
 
 Never edit an ADR after acceptance, except to replace it with a new superseding record (mark the old one "Superseded"). Add new decisions as new records with the next number.
-
-## Open questions for the maintainer
-
-- **0001 (Colyseus):** Why Colyseus over other WebSocket hosts? Tradeoffs with custom protocols or other frameworks?
-- **0002 (XState):** Why XState specifically? How was timer ownership (`duration` in the definition vs Colyseus clock) decided?
