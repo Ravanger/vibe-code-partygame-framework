@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   checkGates,
   diffRange,
@@ -26,13 +27,16 @@ const diff = execFileSync("git", ["diff", "-U10000", "--no-color", ...diffRange(
   maxBuffer: 256 * 1024 * 1024,
 });
 
+// The file list comes from the PR work tree, so reads must resolve against it too.
+const workTree = process.env.GIT_WORK_TREE ?? ".";
+
 const staged = args.includes("--staged");
 const treeFiles = staged
   ? []
   : execFileSync("git", ["ls-files", "-z"], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 })
       .split("\0")
       .filter((path) => path !== "" && isScannedPath(path))
-      .map((path) => ({ path, content: readFileSync(path, "utf8") }));
+      .map((path) => ({ path, content: readFileSync(join(workTree, path), "utf8") }));
 
 const violations = [...checkGates(diff, labels, !staged), ...scanTree(treeFiles)];
 for (const violation of violations) {
