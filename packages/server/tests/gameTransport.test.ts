@@ -34,7 +34,7 @@ describe("listenGameServer", () => {
     const blocker = createHttpServer();
     await new Promise<void>((resolve, reject) => {
       blocker.once("error", reject);
-      blocker.listen(port, "127.0.0.1", resolve);
+      blocker.listen(port, resolve);
     });
     const server = new GameColyseusServer();
     try {
