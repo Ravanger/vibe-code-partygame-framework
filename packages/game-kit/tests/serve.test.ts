@@ -15,7 +15,7 @@ const ioWith = (
     env,
     startServer: async (options) => {
       seens.push(options);
-      const handle = await startNodeServer(options);
+      const handle = await startNodeServer({ greet: false, gracefullyShutdown: false, ...options });
       started.push(handle);
       return handle;
     },

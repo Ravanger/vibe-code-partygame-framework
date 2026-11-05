@@ -16,7 +16,10 @@ const start = async (
   options: Parameters<typeof startNodeServer>[0],
   hooks?: Parameters<typeof startNodeServer>[1],
 ): Promise<NodeServerHandle> => {
-  const handle = await startNodeServer(options, hooks);
+  const handle = await startNodeServer(
+    { greet: false, gracefullyShutdown: false, ...options },
+    hooks,
+  );
   handles.push(handle);
   return handle;
 };

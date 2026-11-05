@@ -33,7 +33,7 @@ Clients join with `{ playerId, name? }`; `spectator: true` gives a TV display wi
 
 ## Host without Bun
 
-`createGameServer` returns the Colyseus `Server` (omit `transport` to use the bundled WebSocket one). `startNodeServer` runs it plus the code API in this process.
+`createGameServer` returns the Colyseus `Server` (omit `transport` to use the bundled WebSocket one). `greet` (default `true`) prints the Colyseus banner and `gracefullyShutdown` (default `true`) registers its `SIGINT`/`SIGTERM` handlers; `bootTestServer` turns both off. `startNodeServer` runs it plus the code API in this process.
 
 ```ts
 import { startNodeServer } from "@partygame/server/node";

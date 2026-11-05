@@ -17,6 +17,8 @@ const USAGE = "Usage: bots CODE";
 let handle: NodeServerHandle;
 beforeAll(async () => {
   handle = await startNodeServer({
+    greet: false,
+    gracefullyShutdown: false,
     games: [
       {
         roomName: TAP_ROOM,

@@ -2,6 +2,7 @@ import { startNodeServer } from "@partygame/server/node";
 import { TAP_PUBLIC_FIELDS, TAP_ROOM, TapGame, TapState } from "../tapGame.js";
 
 await startNodeServer({
+  greet: false,
   port: Number(process.env.PORT),
   apiPort: Number(process.env.API_PORT),
   games: [

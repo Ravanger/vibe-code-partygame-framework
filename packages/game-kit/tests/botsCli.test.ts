@@ -16,7 +16,11 @@ const pkg = defineGamePackage({
 
 let handle: NodeServerHandle;
 beforeAll(async () => {
-  handle = await startNodeServer({ games: [hostedGame(pkg, undefined)] });
+  handle = await startNodeServer({
+    greet: false,
+    gracefullyShutdown: false,
+    games: [hostedGame(pkg, undefined)],
+  });
 });
 afterAll(() => handle.stop());
 
