@@ -26,13 +26,20 @@ const diff = execFileSync("git", ["diff", "-U10000", "--no-color", ...diffRange(
   maxBuffer: 256 * 1024 * 1024,
 });
 
+// Read contents from git, never from disk: a fork's tree can contain symlinks.
+const readFromGit = (path: string): string =>
+  execFileSync("git", ["show", `:${path}`], {
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+  });
+
 const staged = args.includes("--staged");
 const treeFiles = staged
   ? []
   : execFileSync("git", ["ls-files", "-z"], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 })
       .split("\0")
       .filter((path) => path !== "" && isScannedPath(path))
-      .map((path) => ({ path, content: readFileSync(path, "utf8") }));
+      .map((path) => ({ path, content: readFromGit(path) }));
 
 const violations = [...checkGates(diff, labels, !staged), ...scanTree(treeFiles)];
 for (const violation of violations) {
