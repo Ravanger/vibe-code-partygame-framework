@@ -1,4 +1,4 @@
-import { request as httpRequest, type Server } from "node:http";
+import { createServer, request as httpRequest, type Server } from "node:http";
 import { networkInterfaces } from "node:os";
 import { afterEach, describe, expect, it } from "vitest";
 import { type NodeServerHandle, serveApi, startNodeServer } from "../src/node.js";
@@ -26,6 +26,17 @@ const start = async (
   const handle = await startNodeServer(options, hooks);
   handles.push(handle);
   return handle;
+};
+
+const occupyLoopback = async (): Promise<number> => {
+  const port = await freePort();
+  const blocker = createServer();
+  await new Promise<void>((resolve, reject) => {
+    blocker.once("error", reject);
+    blocker.listen(port, "127.0.0.1", resolve);
+  });
+  servers.push(blocker);
+  return port;
 };
 
 describe("serveApi", () => {
@@ -282,9 +293,9 @@ describe("startNodeServer", () => {
   });
 
   it("re-rolls when the code API port got taken after the game port was claimed", async () => {
-    const first = await start({ games: GAMES });
+    const taken = await occupyLoopback();
     const gameFree = await freePort();
-    const sequence = [gameFree, first.port, await freePort(), await freePort()];
+    const sequence = [gameFree, taken, await freePort(), await freePort()];
     let n = 0;
     const next = async (): Promise<number> => {
       const port = sequence[n];
@@ -334,12 +345,12 @@ describe("startNodeServer", () => {
   });
 
   it("does not re-roll when an explicitly given API port is taken", async () => {
-    const first = await start({ games: GAMES });
+    const taken = await occupyLoopback();
     let calls = 0;
     let gamePort = 0;
     await expect(
       startNodeServer(
-        { games: GAMES, apiPort: first.port },
+        { games: GAMES, apiPort: taken },
         {
           freePort: async () => {
             ++calls;

@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, sep } from "node:path";
 import { gzipSync } from "node:zlib";
 
 /** One emitted bundle file with its measured sizes. */
@@ -39,7 +39,7 @@ export const readBundle = (dir: string): BundleFile[] => {
       } else if (entry.name.endsWith(".js") || entry.name.endsWith(".css")) {
         const content = readFileSync(path);
         files.push({
-          name: relative(dir, path),
+          name: relative(dir, path).split(sep).join("/"),
           bytes: content.length,
           gzipBytes: gzipSync(content).length,
         });
