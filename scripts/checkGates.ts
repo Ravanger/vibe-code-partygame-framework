@@ -16,6 +16,11 @@ const PROTECTED_PATHS = [
   /^biome-plugins\//,
   /^knip\.json$/,
   /^vitest\.config\.mts$/,
+  /^scripts\/bundleSize[^/]*\.ts$/,
+  /^scripts\/(bundle-budget|exports\.snapshot)\.json$/,
+  /^scripts\/(vitest\.config\.ts|tsconfig\.json)$/,
+  /^(turbo|tsconfig\.base)\.json$/,
+  /^packages\/config\/(src\/vitest\.ts|tsconfig\.(base|game)\.json|node-test-setup\.ts)$/,
 ];
 
 const FORBIDDEN_LINES: { rule: string; pattern: RegExp }[] = [

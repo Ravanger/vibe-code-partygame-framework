@@ -102,12 +102,28 @@ describe("checkGates", () => {
     "scripts/mutateChangedCli.ts",
     "knip.json",
     "vitest.config.mts",
+    "scripts/bundle-budget.json",
+    "scripts/bundleSize.ts",
+    "scripts/bundleSizeCli.ts",
+    "scripts/exports.snapshot.json",
+    "scripts/vitest.config.ts",
+    "scripts/tsconfig.json",
+    "turbo.json",
+    "tsconfig.base.json",
+    "packages/config/src/vitest.ts",
+    "packages/config/tsconfig.base.json",
+    "packages/config/tsconfig.game.json",
+    "packages/config/node-test-setup.ts",
   ])("rejects edits to %s", (path) => {
     expect(rules(diffOf(path, [], ["x"]))).toEqual(["protected-path"]);
   });
 
   it("does not protect unrelated scripts or nested paths", () => {
     expect(rules(diffOf("scripts/game.ts", [], ["x"]))).toEqual([]);
+    expect(rules(diffOf("packages/config/README.md", [], ["x"]))).toEqual([]);
+    expect(rules(diffOf("packages/core/vitest.config.ts", [], ["x"]))).toEqual([]);
+    expect(rules(diffOf("games/wit-clash/vitest.config.ts", [], ["x"]))).toEqual([]);
+    expect(rules(diffOf("packages/core/tsconfig.base.json", [], ["x"]))).toEqual([]);
     expect(rules(diffOf("packages/x/scripts/checkA.ts", [], ["x"]))).toEqual([]);
   });
 
@@ -146,7 +162,7 @@ describe("checkGates", () => {
 
   it.each([
     ["tsconfig.json", [], ['    "strict": false,']],
-    ["packages/config/tsconfig.base.json", ['    "strict": true,'], []],
+    ["packages/core/tsconfig.json", ['    "strict": true,'], []],
     ["packages/core/tsconfig.test.json", [], ['    "noUncheckedIndexedAccess": false']],
     ["games/x/tsconfig.json", ['    "noImplicitReturns": true,'], []],
     ["tsconfig.json", [], ['    "strictNullChecks": false,']],
