@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   checkGates,
   diffRange,
+  isScannedPath,
   labelsOf,
   NO_TEST_LABEL,
   OVERRIDE_LABEL,
   ownerLabels,
   parseDiff,
+  scanTree,
+  TREE_ALLOWLIST,
   trustedLabels,
 } from "./checkGates.js";
 
@@ -28,8 +31,8 @@ describe("parseDiff", () => {
   it("splits a diff per file and ignores lines outside hunks", () => {
     const diff = `${diffOf("a.ts", ["old"], ["new"])}\n${diffOf("b.ts", [], ["more"])}`;
     expect(parseDiff(diff)).toEqual([
-      { path: "a.ts", added: ["new"], removed: ["old"] },
-      { path: "b.ts", added: ["more"], removed: [] },
+      { path: "a.ts", added: ["new"], removed: ["old"], removedKeys: [undefined] },
+      { path: "b.ts", added: ["more"], removed: [], removedKeys: [] },
     ]);
   });
 
@@ -37,7 +40,9 @@ describe("parseDiff", () => {
     const diff = ["preamble", "diff --git a/a.ts b/a.ts", "@@ -1 +1 @@", " context", "+new"].join(
       "\n",
     );
-    expect(parseDiff(diff)).toEqual([{ path: "a.ts", added: ["new"], removed: [] }]);
+    expect(parseDiff(diff)).toEqual([
+      { path: "a.ts", added: ["new"], removed: [], removedKeys: [] },
+    ]);
     expect(parseDiff("@@ -1 +1 @@\n+orphan")).toEqual([]);
   });
 });
@@ -63,6 +68,14 @@ describe("checkGates", () => {
     ["it.todo('x');", "focused-or-skipped-test"],
     ["it.skip('x', () => {});", "focused-or-skipped-test"],
     ["describe.only('x', () => {});", "focused-or-skipped-test"],
+    ["xit('x', () => {});", "focused-or-skipped-test"],
+    ["xdescribe('x', () => {});", "focused-or-skipped-test"],
+    ["xtest('x', () => {});", "focused-or-skipped-test"],
+    ["it.fails('x', () => {});", "focused-or-skipped-test"],
+    ["test.fails('x', () => {});", "focused-or-skipped-test"],
+    ["it.skip.each([1])('x', () => {});", "focused-or-skipped-test"],
+    ["it.only.each([1])('x', () => {});", "focused-or-skipped-test"],
+    ["test.todo.each([1])('x');", "focused-or-skipped-test"],
     ["const a = b as any;", "type-escape"],
     ["const a = b as unknown as C;", "type-escape"],
   ])("rejects added line %s", (line, rule) => {
@@ -171,6 +184,62 @@ describe("checkGates", () => {
     ["tsconfig.json", [], ['    "exactOptionalPropertyTypes": false,']],
   ])("rejects a relaxed compiler option in %s", (path, removed, added) => {
     expect(rules(diffOf(path, removed, added))).toEqual(["compiler-option"]);
+  });
+
+  it.each([
+    [
+      "games/x/tsconfig.json",
+      ['  "include": ["src/**/*.ts", "ui/**/*.ts"]'],
+      ['  "include": ["src/**/*.ts"]'],
+    ],
+    ["games/x/tsconfig.json", ['    "ui/**/*.ts",'], []],
+    ["packages/core/tsconfig.json", [], ['  "exclude": ["src/big"]']],
+  ])("rejects a shrunk include or an added exclude in %s", (path, removed, added) => {
+    expect(rules(diffOf(path, removed, added))).toEqual(["tsconfig-scope"]);
+  });
+
+  it.each([
+    ["exclude", false],
+    ["files", false],
+    ["types", false],
+    ["include", true],
+  ])("judges a removed entry of the %s array by its enclosing key", (key, rejected) => {
+    const diff = [
+      "diff --git a/tsconfig.json b/tsconfig.json",
+      "--- a/tsconfig.json",
+      "+++ b/tsconfig.json",
+      "@@ -1,9 +1,8 @@",
+      " {",
+      `   "${key}": [`,
+      '     "a",',
+      '-    "b",',
+      '     "c"',
+      "   ],",
+      '   "other": [',
+      '     "d"',
+      "   ]",
+      " }",
+    ].join("\n");
+    expect(rules(diff)).toEqual(rejected ? ["tsconfig-scope"] : []);
+  });
+
+  it("accepts a grown or reordered include and unrelated tsconfig edits", () => {
+    const grown = diffOf(
+      "games/x/tsconfig.json",
+      ['    "terminal/**/*.ts"'],
+      ['    "terminal/**/*.ts",', '    "gamePackage.ts"'],
+    );
+    expect(rules(grown)).toEqual([]);
+    const widened = diffOf(
+      "tsconfig.json",
+      ['  "include": ["src"]'],
+      ['  "include": ["src", "tests"]'],
+    );
+    expect(rules(widened)).toEqual([]);
+    expect(
+      rules(diffOf("tsconfig.json", ['  "extends": "./a.json",'], ['  "extends": "./b.json",'])),
+    ).toEqual([]);
+    expect(rules(diffOf("packages/x/src/a.ts", [], ['  "exclude": ["a"]']))).toEqual([]);
   });
 
   it("accepts tightened or unrelated compiler options", () => {
@@ -371,5 +440,66 @@ describe("diffRange", () => {
     expect(diffRange(["--base", "dev"])).toEqual(["dev...HEAD"]);
     expect(diffRange(["--base"])).toEqual(["origin/main...HEAD"]);
     expect(diffRange([])).toEqual(["origin/main...HEAD"]);
+  });
+});
+
+describe("scanTree", () => {
+  const found = (path: string, content: string, allowlist = TREE_ALLOWLIST) =>
+    scanTree([{ path, content }], allowlist);
+
+  it("flags a suppression or a skipped test anywhere in the tree", () => {
+    expect(found("packages/core/src/a.ts", "const a = 1;\nconst b = 2; // biome-ignore x")).toEqual(
+      [
+        {
+          path: "packages/core/src/a.ts",
+          rule: "suppression",
+          detail: "const b = 2; // biome-ignore x",
+        },
+      ],
+    );
+    expect(found("games/x/tests/a.test.ts", "xit('a', () => {});").map((v) => v.rule)).toEqual([
+      "focused-or-skipped-test",
+    ]);
+    expect(found("a.ts", "// @ts-expect-error y").map((v) => v.rule)).toEqual(["suppression"]);
+  });
+
+  it("leaves the type-escape rules to the diff gate", () => {
+    expect(found("a.ts", "const a = b as unknown as C;")).toEqual([]);
+  });
+
+  it("passes clean files", () => {
+    expect(scanTree([{ path: "a.ts", content: "export const a = 1;\n" }], [])).toEqual([]);
+  });
+
+  it("passes an allowlisted line in its own file only", () => {
+    const allowlist = [{ path: "a.ts", pattern: /biome-ignore/, reason: "r" }];
+    expect(found("a.ts", "// biome-ignore x", allowlist)).toEqual([]);
+    expect(found("b.ts", "// biome-ignore x", allowlist).map((v) => v.path)).toEqual(["b.ts"]);
+    expect(found("a.ts", "// @ts-ignore", allowlist).map((v) => v.rule)).toEqual(["suppression"]);
+  });
+
+  it("allowlists the known suppressions on main, each with a reason", () => {
+    const paths = TREE_ALLOWLIST.map((entry) => entry.path).sort();
+    expect(paths).toEqual([
+      "packages/content/tests/content.test.ts",
+      "packages/core/tests/runtime/types.test.ts",
+      "packages/game-ui/src/components/GameControls.svelte",
+      "packages/game-ui/src/components/LobbySettings.svelte",
+      "packages/game-ui/src/components/Podium.svelte",
+      "packages/server/src/bun.ts",
+    ]);
+    expect(TREE_ALLOWLIST.every((entry) => entry.reason.length > 0)).toBe(true);
+  });
+});
+
+describe("isScannedPath", () => {
+  it("scans source files and skips the gate's own pattern text and other files", () => {
+    expect(isScannedPath("packages/core/src/a.ts")).toBe(true);
+    expect(isScannedPath("packages/game-ui/src/A.svelte")).toBe(true);
+    expect(isScannedPath("vitest.config.mts")).toBe(true);
+    expect(isScannedPath("scripts/checkGates.ts")).toBe(false);
+    expect(isScannedPath("scripts/checkGates.test.ts")).toBe(false);
+    expect(isScannedPath("docs/framework/README.md")).toBe(false);
+    expect(isScannedPath("biome-plugins/a.grit")).toBe(false);
   });
 });

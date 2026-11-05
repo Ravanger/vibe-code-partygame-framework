@@ -3,9 +3,11 @@ import { readFileSync } from "node:fs";
 import {
   checkGates,
   diffRange,
+  isScannedPath,
   labelsOf,
   NO_TEST_LABEL,
   OVERRIDE_LABEL,
+  scanTree,
   trustedLabels,
 } from "./checkGates.js";
 
@@ -19,12 +21,20 @@ const labels =
   eventsPath && owner
     ? trustedLabels(event, JSON.parse(readFileSync(eventsPath, "utf8")), owner)
     : labelsOf(event);
-const diff = execFileSync("git", ["diff", "-U0", "--no-color", ...diffRange(args)], {
+const diff = execFileSync("git", ["diff", "-U10000", "--no-color", ...diffRange(args)], {
   encoding: "utf8",
   maxBuffer: 256 * 1024 * 1024,
 });
 
-const violations = checkGates(diff, labels, !args.includes("--staged"));
+const staged = args.includes("--staged");
+const treeFiles = staged
+  ? []
+  : execFileSync("git", ["ls-files", "-z"], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 })
+      .split("\0")
+      .filter((path) => path !== "" && isScannedPath(path))
+      .map((path) => ({ path, content: readFileSync(path, "utf8") }));
+
+const violations = [...checkGates(diff, labels, !staged), ...scanTree(treeFiles)];
 for (const violation of violations) {
   console.error(`${violation.path}: ${violation.rule}: ${violation.detail}`);
 }

@@ -31,7 +31,8 @@ const FORBIDDEN_LINES: { rule: string; pattern: RegExp }[] = [
   { rule: "suppression", pattern: /Stryker disable/ },
   { rule: "suppression", pattern: /\b(v8|c8|istanbul) ignore\b/ },
   { rule: "suppression", pattern: /@ts-nocheck/ },
-  { rule: "focused-or-skipped-test", pattern: /\.(skip|only|skipIf|runIf|todo)\(/ },
+  { rule: "focused-or-skipped-test", pattern: /\.(skip|only|skipIf|runIf|todo|fails)\b\s*[.(]/ },
+  { rule: "focused-or-skipped-test", pattern: /\b(xit|xdescribe|xtest)\(/ },
   { rule: "type-escape", pattern: /\bas any\b/ },
   { rule: "type-escape", pattern: /\bas unknown as\b/ },
 ];
@@ -47,22 +48,42 @@ interface FileChange {
   path: string;
   added: string[];
   removed: string[];
+  removedKeys: (string | undefined)[];
 }
+
+const ARRAY_OPEN = /^\s*"([^"]+)"\s*:\s*\[\s*$/;
 
 export const parseDiff = (diff: string): FileChange[] => {
   const changes: FileChange[] = [];
   let current: FileChange | undefined;
   let inHunk = false;
+  let arrayKey: string | undefined;
   for (const line of diff.split(/\r?\n/)) {
     if (line.startsWith("diff --git ")) {
-      current = { path: line.slice(line.lastIndexOf(" b/") + 3), added: [], removed: [] };
+      current = {
+        path: line.slice(line.lastIndexOf(" b/") + 3),
+        added: [],
+        removed: [],
+        removedKeys: [],
+      };
       changes.push(current);
       inHunk = false;
     } else if (line.startsWith("@@")) {
       inHunk = true;
+      arrayKey = undefined;
     } else if (current && inHunk) {
-      if (line.startsWith("+")) current.added.push(line.slice(1));
-      else if (line.startsWith("-")) current.removed.push(line.slice(1));
+      if (line.startsWith("+")) {
+        current.added.push(line.slice(1));
+        continue;
+      }
+      const old = line.slice(1);
+      const opened = ARRAY_OPEN.exec(old);
+      if (opened) arrayKey = opened[1];
+      if (line.startsWith("-")) {
+        current.removed.push(old);
+        current.removedKeys.push(arrayKey);
+      }
+      if (/^\s*\]/.test(old)) arrayKey = undefined;
     }
   }
   return changes;
@@ -79,6 +100,28 @@ const changedGateScripts = (change: FileChange): GateViolation[] => {
       rule: "gate-script",
       detail: `gate script changed: ${line.trim()}`,
     }));
+};
+
+const quoted = (line: string): string[] =>
+  Array.from(line.matchAll(/"([^"]*)"/g), (match) => match[1] as string);
+
+const BARE_ENTRY = /^\s*"[^"]*",?\s*$/;
+
+const narrowedScope = (change: FileChange): GateViolation[] => {
+  const kept = new Set(change.added.flatMap(quoted));
+  const shrunk = change.removed
+    .filter(
+      (line, index) =>
+        /"include"\s*:/.test(line) ||
+        (BARE_ENTRY.test(line) && [undefined, "include"].includes(change.removedKeys[index])),
+    )
+    .filter((line) => quoted(line).some((entry) => !kept.has(entry)));
+  return [
+    ...shrunk.map((line) => `tsconfig include shrunk: ${line.trim()}`),
+    ...change.added
+      .filter((line) => /"exclude"\s*:/.test(line))
+      .map((line) => `tsconfig exclude added: ${line.trim()}`),
+  ].map((detail) => ({ path: change.path, rule: "tsconfig-scope", detail }));
 };
 
 const relaxedCompilerOptions = (change: FileChange): GateViolation[] =>
@@ -123,7 +166,7 @@ const violationsOf = (change: FileChange): GateViolation[] => {
   }
   if (/(^|\/)package\.json$/.test(change.path)) violations.push(...changedGateScripts(change));
   if (/(^|\/)tsconfig[^/]*\.json$/.test(change.path))
-    violations.push(...relaxedCompilerOptions(change));
+    violations.push(...relaxedCompilerOptions(change), ...narrowedScope(change));
   return violations;
 };
 
@@ -200,3 +243,60 @@ export const checkGates = (
   const untested = requireTests && !labels.includes(NO_TEST_LABEL) ? untestedChanges(changes) : [];
   return [...gated, ...untested];
 };
+
+export interface TreeFile {
+  path: string;
+  content: string;
+}
+
+/** Suppressions already on main, each tied to one file and one exact line shape. */
+export const TREE_ALLOWLIST: { path: string; pattern: RegExp; reason: string }[] = [
+  {
+    path: "packages/content/tests/content.test.ts",
+    pattern: /ctx\.skip\("symlinks not permitted on this machine"\)/,
+    reason: "#129: bails out where the OS forbids creating symlinks",
+  },
+  {
+    path: "packages/core/tests/runtime/types.test.ts",
+    pattern: /@ts-expect-error the handler cannot read a field the schema does not declare/,
+    reason: "a type test asserting that an invalid handler fails to compile",
+  },
+  {
+    path: "packages/game-ui/src/components/GameControls.svelte",
+    pattern: /biome-ignore lint\/correctness\/noUnusedImports: used by the generics attribute/,
+    reason: "Svelte generics= trap (docs/framework/troubleshooting.md)",
+  },
+  {
+    path: "packages/game-ui/src/components/LobbySettings.svelte",
+    pattern: /biome-ignore lint\/correctness\/noUnusedImports: used by the generics attribute/,
+    reason: "Svelte generics= trap (docs/framework/troubleshooting.md)",
+  },
+  {
+    path: "packages/game-ui/src/components/Podium.svelte",
+    pattern: /biome-ignore lint\/correctness\/noUnusedImports: used by the generics attribute/,
+    reason: "Svelte generics= trap (docs/framework/troubleshooting.md)",
+  },
+  {
+    path: "packages/server/src/bun.ts",
+    pattern: /@ts-expect-error - Bun ships no TypeScript declarations in this repo/,
+    reason: "Bun ships no TypeScript declarations here",
+  },
+];
+
+const TREE_RULES = new Set(["suppression", "focused-or-skipped-test"]);
+
+/** The gate's own regex text and tests would match themselves. */
+export const isScannedPath = (path: string): boolean =>
+  /\.(ts|mts|js|mjs|cjs|tsx|svelte)$/.test(path) && !/^scripts\/checkGates[^/]*$/.test(path);
+
+export const scanTree = (
+  files: TreeFile[],
+  allowlist: { path: string; pattern: RegExp }[] = TREE_ALLOWLIST,
+): GateViolation[] =>
+  files.flatMap(({ path, content }) =>
+    content.split(/\r?\n/).flatMap((line) =>
+      FORBIDDEN_LINES.filter(({ rule, pattern }) => TREE_RULES.has(rule) && pattern.test(line))
+        .filter(() => !allowlist.some((entry) => entry.path === path && entry.pattern.test(line)))
+        .map(({ rule }) => ({ path, rule, detail: line.trim() })),
+    ),
+  );
