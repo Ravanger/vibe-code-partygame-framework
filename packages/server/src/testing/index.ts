@@ -29,6 +29,7 @@ export function collectMessages(client: ClientRoom, type: string): unknown[] {
   return received;
 }
 
+/** Options for joining a test room as one player or spectator. */
 export interface TestJoinOptions {
   playerId: string;
   name?: string;
@@ -118,6 +119,7 @@ export class TestServer {
     await Promise.all(matchMaker.disconnectAll());
   }
 
+  /** Closes the test server and its APIs; call it in `afterAll`. */
   async shutdown(): Promise<void> {
     liveTestServers.delete(this);
     await Promise.all(

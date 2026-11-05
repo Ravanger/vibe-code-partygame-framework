@@ -24,6 +24,7 @@ import { PersistedSession } from "./PersistedSession.js";
 import type { RoomLike } from "./RoomLike.js";
 import { type ClientStrings, defaultClientStrings, resolveClientMessages } from "./strings.js";
 
+/** Where the manager is in its connection lifecycle. */
 export type ConnectionStatus =
   | "idle"
   | "connecting"
@@ -31,6 +32,7 @@ export type ConnectionStatus =
   | "reconnecting"
   | "disconnected";
 
+/** Configuration for a `GameConnectionManager`: server endpoints, room name and a storage namespace. */
 export interface GameConnectionOptions<TState> {
   /** Game server URL, e.g. `http://host:2567`. */
   endpoint: string;
@@ -138,10 +140,12 @@ export class GameConnectionManager<
     return this.room?.state;
   }
 
+  /** The room's join code, or `undefined` before the state has synced. */
   get roomCode(): string | undefined {
     return this.state?.roomCode || undefined;
   }
 
+  /** True when this client's seat holds the host role. */
   get isHost(): boolean {
     return this.me()?.role === "host";
   }
@@ -164,6 +168,7 @@ export class GameConnectionManager<
     );
   }
 
+  /** Creates a room with the given room options and joins it as the host. */
   async create(options: Record<string, unknown> = {}): Promise<void> {
     await this.coordinator.run("create", (cancelled) =>
       this.open(
@@ -211,6 +216,7 @@ export class GameConnectionManager<
     );
   }
 
+  /** Joins the room with this code without a seat, as a TV display does. */
   joinAsSpectator(code: string): Promise<void> {
     return this.join(code, { spectator: true });
   }
@@ -257,6 +263,7 @@ export class GameConnectionManager<
     await this.closeRoom();
   }
 
+  /** Asks the server to rename this client's seat; the server validates the name. */
   setName(name: string): void {
     this.room?.send(ClientMessage.SET_NAME, name);
   }
@@ -347,6 +354,7 @@ export class GameConnectionManager<
     };
   }
 
+  /** Clears `lastServerError`. */
   dismissError(): void {
     this.setLastError(undefined);
   }

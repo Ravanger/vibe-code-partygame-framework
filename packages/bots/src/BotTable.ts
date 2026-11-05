@@ -7,6 +7,7 @@ import { type JoinBotsOptions, joinBots } from "./joinBots.js";
 import { RoomWatch } from "./RoomWatch.js";
 import type { BotConnection, BotKit, BotRoom } from "./types.js";
 
+/** Connection, bot kit and join options for a {@link BotTable}. */
 export interface BotTableOptions<TState extends BaseGameState>
   extends BotConnection,
     BotKit<TState>,
@@ -15,6 +16,7 @@ export interface BotTableOptions<TState extends BaseGameState>
   connector?: RoomConnector<TState>;
 }
 
+/** How many bots to seat and how long, in milliseconds, to wait for a human first. */
 export interface SeatBotsOptions {
   count: number;
   timeoutMs?: number;
@@ -65,6 +67,7 @@ export class BotTable<TState extends BaseGameState> {
     return this.seat.code;
   }
 
+  /** Waits for a human to join and name themselves, then seats `count` bots and resolves with them. */
   async seatBots({
     count,
     timeoutMs = DEFAULT_SEAT_TIMEOUT_MS,
@@ -103,6 +106,7 @@ export class BotTable<TState extends BaseGameState> {
     return this.bots;
   }
 
+  /** Leaves the table room and disconnects every seated bot. */
   async leave(): Promise<void> {
     await this.leaveRoom();
     await Promise.allSettled(this.bots.splice(0).map((bot) => bot.leave()));

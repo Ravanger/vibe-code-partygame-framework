@@ -14,12 +14,14 @@ interface Timer {
   callback: () => void;
 }
 
+/** A message `FakeHost` recorded as sent to one player. */
 export interface Sent {
   playerId: string;
   type: string;
   payload: unknown;
 }
 
+/** A recording {@link RuntimeHost} with a manual clock, for driving the runtime in tests without a server. */
 export class FakeHost implements RuntimeHost {
   readonly seats: PlayerInfo[] = [];
   readonly sent: Sent[] = [];
@@ -57,6 +59,7 @@ export class FakeHost implements RuntimeHost {
     this.rngFn = sfc32(this.seed);
   }
 
+  /** Adds a seat, the first one as host, with `overrides` applied over the connected, ready, active defaults. */
   seat(id: string, overrides: Partial<PlayerInfo> = {}): PlayerInfo {
     const info: PlayerInfo = {
       id,
@@ -71,16 +74,19 @@ export class FakeHost implements RuntimeHost {
     return info;
   }
 
+  /** The number of timers scheduled and not yet fired or cleared. */
   get pendingTimers(): number {
     return this.timers.length;
   }
 
+  /** The payloads of every `ERROR` message sent to `playerId`. */
   errorsTo(playerId: string): unknown[] {
     return this.sent
       .filter((s) => s.playerId === playerId && s.type === "ERROR")
       .map((s) => s.payload);
   }
 
+  /** Advances the manual clock by `ms` milliseconds, firing every due timer in order. */
   advance(ms: number): void {
     const target = this.time + ms;
     for (;;) {
@@ -95,6 +101,7 @@ export class FakeHost implements RuntimeHost {
     this.time = target;
   }
 
+  /** {@inheritDoc RuntimeHost.players} */
   players(): PlayerInfo[] {
     return this.seats;
   }
@@ -108,10 +115,12 @@ export class FakeHost implements RuntimeHost {
     for (const seat of this.seats) if (!seat.isReady) seat.isActive = false;
   }
 
+  /** {@inheritDoc RuntimeHost.send} */
   send(playerId: string, type: string, payload: unknown): void {
     this.sent.push({ playerId, type, payload });
   }
 
+  /** {@inheritDoc RuntimeHost.broadcast} */
   broadcast(type: string, payload: unknown): void {
     this.broadcasts.push({ type, payload });
   }
@@ -132,10 +141,12 @@ export class FakeHost implements RuntimeHost {
     return true;
   }
 
+  /** {@inheritDoc RuntimeHost.showTo} */
   showTo(playerId: string, ref: object): void {
     this.views.push({ op: "show", playerId, ref });
   }
 
+  /** {@inheritDoc RuntimeHost.hideFrom} */
   hideFrom(playerId: string, ref: object): void {
     this.views.push({ op: "hide", playerId, ref });
   }
@@ -150,20 +161,24 @@ export class FakeHost implements RuntimeHost {
     this.published.push(options);
   }
 
+  /** {@inheritDoc RuntimeHost.now} */
   now(): number {
     return this.time;
   }
 
+  /** {@inheritDoc RuntimeHost.rng} */
   rng(): number {
     return this.rngFn();
   }
 
+  /** {@inheritDoc RuntimeHost.setTimeout} */
   setTimeout(callback: () => void, ms: number): TimerHandle {
     const id = this.nextId++;
     this.timers.push({ id, at: this.time + ms, callback });
     return id as TimerHandle;
   }
 
+  /** {@inheritDoc RuntimeHost.clearTimeout} */
   clearTimeout(handle: TimerHandle): void {
     this.timers = this.timers.filter((t) => t.id !== handle);
   }

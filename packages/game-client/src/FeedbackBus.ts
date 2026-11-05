@@ -20,6 +20,7 @@ export interface MessageFeedbackEvent {
   reducedMotion: boolean;
 }
 
+/** Any event the feedback bus delivers, discriminated by `type`. */
 export type FeedbackEvent = PhaseFeedbackEvent | UrgentFeedbackEvent | MessageFeedbackEvent;
 
 /**

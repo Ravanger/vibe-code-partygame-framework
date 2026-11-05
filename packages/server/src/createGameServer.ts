@@ -25,6 +25,7 @@ export interface HostedGame {
   publicFields?: readonly string[];
 }
 
+/** Options for `createGameServer`; every field except `games` has a default. */
 export interface GameServerOptions {
   games: HostedGame[];
   /** Shared with the API handler so `/api/resolve-code` sees the same rooms. Defaults to a fresh one. */
@@ -71,7 +72,9 @@ export interface GameServerOptions {
   gracefullyShutdown?: boolean;
 }
 
+/** Default time in milliseconds a dropped player's seat is held. */
 export const DEFAULT_RECONNECT_MS = 60_000;
+/** Default time in milliseconds an empty room lives before it is disposed. */
 export const DEFAULT_EMPTY_ROOM_GRACE_MS = 120_000;
 /** Default maximum number of concurrent rooms across all games. */
 export const DEFAULT_MAX_ROOMS = 100;

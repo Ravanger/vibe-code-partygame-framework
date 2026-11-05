@@ -22,6 +22,7 @@ export function leaderboard(
     .sort((a, b) => b.score - a.score || (a.playerId < b.playerId ? -1 : 1));
 }
 
+/** One ranked row of a leaderboard. */
 export interface LeaderboardEntry {
   playerId: string;
   name: string;
@@ -29,6 +30,7 @@ export interface LeaderboardEntry {
   hasLeft: boolean;
 }
 
+/** Scores and names from which a leaderboard is composed, seated players first. */
 export interface LeaderboardInput {
   scores: Readonly<Record<string, number>>;
   seatedNames: ReadonlyMap<string, string>;

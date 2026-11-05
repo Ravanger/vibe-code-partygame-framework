@@ -19,6 +19,7 @@ function createNow() {
   };
 }
 
+/** Seconds left until a server-set deadline, corrected for client clock skew, with `isExpired` and `isUrgent` flags. */
 export class Countdown {
   private readonly nowRef = createNow();
   private lastServerNow = 0;
@@ -70,6 +71,9 @@ export class Countdown {
     }
   }
 
-  /** @deprecated The interval now starts and stops with the readers, so this no longer does anything. */
+  /**
+   * No-op kept for compatibility.
+   * @deprecated The interval now starts and stops with the readers, so this no longer does anything.
+   */
   destroy(): void {}
 }

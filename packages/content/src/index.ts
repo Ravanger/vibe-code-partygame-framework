@@ -65,6 +65,7 @@ export function stripJsonComments(input: string): string {
   return out;
 }
 
+/** How {@link loadJsoncDir} identifies, labels and validates the items it loads. */
 export interface LoadJsoncDirOptions<T> {
   /** Unique key across all files; a repeat throws. */
   idOf: (item: T) => string;

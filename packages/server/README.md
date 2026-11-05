@@ -5,10 +5,10 @@ Generic Colyseus server: host any game defined with `@partygame/core`.
 | Import | What |
 |---|---|
 | `@partygame/server` | `createGameServer`, `jsonLineLogger`, `GameRoom`, `createApiHandler`, `RoomCodeService` |
-| `@partygame/server/bun` | `startServer`: Bun entry point (WebSocket on 2567, API on 3001) |
-| `@partygame/server/node` | `startNodeServer`, `serveApi`: in-process Node hosting (game server plus code API) |
+| `@partygame/server/bun` | `startServer`: Bun entry point (WebSocket on 2567, API on 3001); options `StartServerOptions` (the `GameServerOptions` minus `transport`, plus the listening ports) |
+| `@partygame/server/node` | `startNodeServer`, `serveApi`: in-process Node hosting (game server plus code API); options `NodeServerOptions` (`GameServerOptions` minus `transport`, plus ports and API access), `ServeApiOptions` |
 | `@partygame/server/probe` | `ServerProbe` (`isGameServer`, `canConnect`, `answers`), `freePort`, `closeHttpServer`: port probing, no Colyseus |
-| `@partygame/server/testing` | `bootTestServer`, `seatPlayers`, `joinPlayer`, `stateOf`, `waitUntil`, `testPlayerId`, `TestServer` for room tests |
+| `@partygame/server/testing` | `bootTestServer`, `seatPlayers`, `joinPlayer`, `stateOf`, `waitUntil`, `testPlayerId`, `TestServer` for room tests; options `SeatPlayersOptions` (how many players to join, whether to start), `TestJoinOptions` (join as one player or spectator) |
 
 ## Host a game
 
@@ -29,7 +29,7 @@ await startServer({
 });
 ```
 
-Clients join with `{ playerId, name? }`; `spectator: true` gives a TV display with no seat. A dropped player keeps the seat for `reconnectMs` (default 60 s); an empty room lives `emptyRoomGraceMs` (default 120 s). A room admits at most `maxPlayers + audienceSlots` connections (default 32, `DEFAULT_AUDIENCE_SLOTS`). With a `textFilter`, names are checked at join and on `SET_NAME` at the game's `filterLevel` option (default `"off"`); a refused join closes with code 4405. Every room writes one structured JSON line per lifecycle event (`room.created`, `player.joined`, `player.reconnected`, `player.left`, `action.rejected`, `room.disposed`) through the `logger` option — by default `jsonLineLogger`, one object per line on stdout; pass any `Logger` to route lines elsewhere. The framework guide's Logging section lists the events and field rules.
+Clients join with `{ playerId, name? }`; `spectator: true` gives a TV display with no seat. A dropped player keeps the seat for `reconnectMs` (default 60 s, `DEFAULT_RECONNECT_MS`); an empty room lives `emptyRoomGraceMs` (default 120 s, `DEFAULT_EMPTY_ROOM_GRACE_MS`). `GameRoomConfig` is the per-game configuration `createGameServer` hands to each `GameRoom`; game code does not build it. A room admits at most `maxPlayers + audienceSlots` connections (default 32, `DEFAULT_AUDIENCE_SLOTS`). With a `textFilter`, names are checked at join and on `SET_NAME` at the game's `filterLevel` option (default `"off"`); a refused join closes with code 4405. Every room writes one structured JSON line per lifecycle event (`room.created`, `player.joined`, `player.reconnected`, `player.left`, `action.rejected`, `room.disposed`) through the `logger` option — by default `jsonLineLogger`, one object per line on stdout; pass any `Logger` to route lines elsewhere. The framework guide's Logging section lists the events and field rules.
 
 ## Host without Bun
 
@@ -42,7 +42,7 @@ const server = await startNodeServer({ games, port: 2567, apiPort: 3001 }); // f
 await server.stop();
 ```
 
-Share one `RoomCodeService` between `createGameServer({ games, roomCodeService })` and `createApiHandler(roomCodeService, { allowedOrigins?, limiter?, resolveCode? })` (a pure `(request, info?) => Response`: CORS headers go out only for allowed origins, and a `limiter` throttles per remote address with 429 + `Retry-After`) when wiring your own HTTP layer.
+Share one `RoomCodeService` between `createGameServer({ games, roomCodeService })` and `createApiHandler(roomCodeService, { allowedOrigins?, limiter?, resolveCode? })` (a pure `(request, info?) => Response`: CORS headers go out only for allowed origins, and a `limiter` throttles per remote address with 429 + `Retry-After`) when wiring your own HTTP layer. `RoomCodeService` has `generateCode()` (an unused random code, not registered; throws after repeated collisions), `generateAndRegister(roomId)` (binds a code to a room; the server calls it, game code should not) and `resolveByRoomId(roomId)` (the bound code or `undefined`).
 
 Content-directory loading (`loadJsoncDir`) lives in [`@partygame/content`](../content/README.md).
 

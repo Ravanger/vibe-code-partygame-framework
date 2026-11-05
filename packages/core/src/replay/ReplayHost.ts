@@ -29,6 +29,7 @@ export class ReplayHost implements RuntimeHost {
     this.rngFn = sfc32(this.seed);
   }
 
+  /** Adds a seat, the first one as host, with `overrides` applied over the connected, ready, active defaults. */
   seat(id: string, overrides: Partial<PlayerInfo> = {}): PlayerInfo {
     const info: PlayerInfo = {
       id,
@@ -58,6 +59,7 @@ export class ReplayHost implements RuntimeHost {
     this.time = target;
   }
 
+  /** {@inheritDoc RuntimeHost.players} */
   players(): PlayerInfo[] {
     return this.seats;
   }
@@ -70,8 +72,10 @@ export class ReplayHost implements RuntimeHost {
     for (const seat of this.seats) if (!seat.isReady) seat.isActive = false;
   }
 
+  /** {@inheritDoc RuntimeHost.send} */
   send(_playerId: string, _type: string, _payload: unknown): void {}
 
+  /** {@inheritDoc RuntimeHost.broadcast} */
   broadcast(_type: string, _payload: unknown): void {}
 
   notifyTransition(_from: string, _to: string): void {
@@ -89,8 +93,10 @@ export class ReplayHost implements RuntimeHost {
     return true;
   }
 
+  /** {@inheritDoc RuntimeHost.showTo} */
   showTo(_playerId: string, _ref: object): void {}
 
+  /** {@inheritDoc RuntimeHost.hideFrom} */
   hideFrom(_playerId: string, _ref: object): void {}
 
   kick(playerId: string): void {
@@ -100,20 +106,24 @@ export class ReplayHost implements RuntimeHost {
 
   publishOptions(_options: unknown): void {}
 
+  /** {@inheritDoc RuntimeHost.now} */
   now(): number {
     return this.time;
   }
 
+  /** {@inheritDoc RuntimeHost.rng} */
   rng(): number {
     return this.rngFn();
   }
 
+  /** {@inheritDoc RuntimeHost.setTimeout} */
   setTimeout(callback: () => void, ms: number): TimerHandle {
     const id = this.nextId++;
     this.timers.push({ id, at: this.time + ms, callback });
     return id as TimerHandle;
   }
 
+  /** {@inheritDoc RuntimeHost.clearTimeout} */
   clearTimeout(handle: TimerHandle): void {
     this.timers = this.timers.filter((t) => t.id !== handle);
   }

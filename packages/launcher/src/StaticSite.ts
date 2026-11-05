@@ -16,6 +16,7 @@ const MIME: Record<string, string> = {
   ".woff2": "font/woff2",
 };
 
+/** Serves a built client directory over HTTP on one port. */
 export class StaticSite {
   private server: Server | undefined;
 
@@ -34,6 +35,7 @@ export class StaticSite {
     this.server = server;
   }
 
+  /** Stops serving and drops open connections; does nothing when not serving. */
   async close(): Promise<void> {
     const server = this.server;
     this.server = undefined;

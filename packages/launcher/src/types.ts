@@ -1,6 +1,7 @@
 import type { BotConnection, BotKit, DemoTable } from "@partygame/bots";
 import type { BaseGameState } from "@partygame/shared/schema";
 
+/** The TCP ports the launcher's services listen on. */
 export interface LaunchPorts {
   game: number;
   api: number;
@@ -8,6 +9,7 @@ export interface LaunchPorts {
   production: number;
 }
 
+/** The child-process commands the launcher runs, each as an argv array. */
 export interface LaunchCommands {
   /** Default: `[execPath, "server.ts"]`, run with env `PORT` and `API_PORT`. */
   server: string[];
@@ -17,6 +19,7 @@ export interface LaunchCommands {
   build: string[];
 }
 
+/** How a game opens a watch-only all-bot room for `--demo`. */
 export interface LaunchDemo<TState extends BaseGameState> {
   /** Fewest bots besides the host bot. */
   min: number;
@@ -26,6 +29,7 @@ export interface LaunchDemo<TState extends BaseGameState> {
   create(options: BotConnection & { bots: number }): DemoTable<TState>;
 }
 
+/** How a game seats bots beside a human for `--bots`. */
 export interface LaunchBots<TState extends BaseGameState> {
   kit: BotKit<TState>;
   /** Most bots one `--bots` run may seat. */
@@ -34,6 +38,7 @@ export interface LaunchBots<TState extends BaseGameState> {
   default?: number;
 }
 
+/** Everything `runLauncher` needs to start one game's server, API and client. */
 export interface LaunchConfig<TState extends BaseGameState> {
   /** Folder with `server.ts`, the `dev` and `build` scripts of its `package.json` and the built `dist/`. */
   gameDir: string;

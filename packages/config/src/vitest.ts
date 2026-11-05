@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { mergeConfig, type ViteUserConfig } from "vitest/config";
 
+/** Project name, coverage globs and test globs for the Vitest preset configs. */
 export interface TestPresetOptions {
   name: string;
   coverage: string[];

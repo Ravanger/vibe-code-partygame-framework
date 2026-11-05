@@ -26,6 +26,7 @@ export interface OpenBrowserOptions {
   onError?: () => void;
 }
 
+/** Opens `url` in the platform's default browser without waiting for it; failure to start the opener calls `onError`. */
 export function openBrowser(url: string, options: OpenBrowserOptions = {}): void {
   const { spawnFn = spawn, platform = process.platform, onError } = options;
   const opener =

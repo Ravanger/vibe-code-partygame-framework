@@ -35,6 +35,7 @@ export interface TerminalStrategy<TState extends BaseGameState> {
   lobby?(turn: TerminalTurn<TState>): Promise<void>;
 }
 
+/** Optional clock and quit word for a `TerminalPlayer`. */
 export interface TerminalPlayerOptions {
   /** Clock for the deadline countdown; `Date.now` by default. */
   now?: () => number;

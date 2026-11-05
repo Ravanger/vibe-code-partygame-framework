@@ -61,6 +61,7 @@ const RATE_LIMITED_ERROR: ProtocolError = {
   message: CLIENT_MESSAGES.RATE_LIMITED,
 };
 
+/** The per-game configuration `createGameServer` hands to each `GameRoom`; not built by game code. */
 export interface GameRoomConfig {
   definition: GameDefinition<BaseGameState, unknown, unknown>;
   stateClass: new () => BaseGameState;

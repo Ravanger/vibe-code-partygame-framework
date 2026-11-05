@@ -5,6 +5,7 @@ import { z } from "zod";
 import { type OptionField, OptionFields } from "./OptionFields.js";
 import { OptionsReader } from "./OptionsReader.svelte.js";
 
+/** What `LobbySettingsViewModel` needs to build the settings form from a room's options schema. */
 export interface LobbySettingsConfig {
   /** The room's options schema; the same one passed to `defineGame`. */
   schema: z.ZodType;
@@ -37,10 +38,12 @@ export class LobbySettingsViewModel<TState extends BaseGameState> {
     );
   }
 
+  /** True for the host, the only seat that may change options. */
   get canEdit(): boolean {
     return this.manager.isHost;
   }
 
+  /** True when the settings panel should be expanded initially: for the host and spectators. */
   get startsOpen(): boolean {
     return this.canEdit || this.manager.isSpectator;
   }
@@ -50,6 +53,7 @@ export class LobbySettingsViewModel<TState extends BaseGameState> {
     return this.drafts[key] ?? String(this.reader.current[key] ?? "");
   }
 
+  /** Stores what the host is typing for a field without sending it; `commit` sends it. */
   setDraft(key: string, raw: string): void {
     this.drafts[key] = raw;
   }

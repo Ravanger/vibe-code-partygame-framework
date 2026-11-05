@@ -2,7 +2,7 @@
 
 Terminal client: a human at a prompt, bots, or an all-bot demo run. You write the strategy.
 
-- `@partygame/terminal`: `TerminalPlayer`, `PlaySession`, `ReadlinePrompter`, `DemoRun`, `parsePlayArgs`, `parseDemoArgs`, `runBotsCommand`; types `TerminalStrategy`, `TerminalTurn`
+- `@partygame/terminal`: `TerminalPlayer`, `PlaySession`, `ReadlinePrompter`, `DemoRun`, `parsePlayArgs`, `parseDemoArgs`, `runBotsCommand`; `DEFAULT_ENDPOINT` (`ws://localhost:2567`), `DEFAULT_API_PORT` (3001); types `TerminalStrategy`, `TerminalTurn`, `TerminalPlayerOptions` (optional clock and quit word), `GameRoomOf<TState>` (the client-side room), `PlayArgs`, `BotsArgs`, `ArgsLimits`, `PlaySessionOptions`, `DemoRunOptions`, `BotsCommandOptions`, `BotsCommandHandle`
 - `@partygame/terminal/testing`: `ScriptedIo`, a scripted `Prompter`
 
 ## Write a strategy
@@ -37,7 +37,7 @@ Optional: `stageOf(state)`; `narrate(state)` returns lines printed on every stat
 
 ## Wire `terminal/play.ts`
 
-`parsePlayArgs` reads `--bots`, `--name`, `--join`, `--endpoint`, `--api-port`. `parseDemoArgs(argv, { minBots, maxBots, usage })` reads `--bots=N` for an all-bot demo (default 3, clamped into the range; the space form and unknown flags are rejected with `usage`). Entries exit 2 on bad arguments. `PlaySession` finds or starts a server, creates or joins a room and seats bots from your `BotKit`; rooms are opened through `GameClient`, a thin wrapper over `ColyseusConnector` from `@partygame/bots`.
+`parsePlayArgs` reads `--bots`, `--name`, `--join`, `--endpoint`, `--api-port`. `parseDemoArgs(argv, { minBots, maxBots, usage })` reads `--bots=N` for an all-bot demo (default 3, clamped into the range; the space form and unknown flags are rejected with `usage`). `PlayArgs` and `BotsArgs` are the parsed command lines; `ArgsLimits` carries the limits and usage text. Entries exit 2 on bad arguments. `PlaySession` (options `PlaySessionOptions`: where the server is, which room to enter, who plays) finds or starts a server, creates or joins a room and seats bots from your `BotKit`; rooms are opened through `GameClient`, a thin wrapper over `ColyseusConnector` from `@partygame/bots`.
 
 ```ts
 import { createInterface } from "node:readline/promises";
@@ -69,7 +69,7 @@ lines.close();
 
 ## Wire `bots/cli.ts`
 
-`bun run bots <CODE> [count]` seats bots in a room created in the browser.
+`bun run bots <CODE> [count]` seats bots in a room created in the browser. `runBotsCommand` takes `BotsCommandOptions`; the `BotsCommandHandle` it resolves with controls the seated bots.
 
 ```ts
 import { runBotsCommand } from "@partygame/terminal";
@@ -87,7 +87,7 @@ await runBotsCommand({
 
 ## Check a game with an all-bot run
 
-`DemoRun` plays one game on its own server and prints `PASS` or `FAIL`: it fails on a refused bot action, no finish within `timeoutMs` (default 180 s), or lines from the optional `problems(state)`.
+`DemoRun` (options `DemoRunOptions`: kit, bot count and verdict hooks) plays one game on its own server and prints `PASS` or `FAIL`: it fails on a refused bot action, no finish within `timeoutMs` (default 180 s), or lines from the optional `problems(state)`.
 
 ```ts
 import { DemoRun } from "@partygame/terminal";

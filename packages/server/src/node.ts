@@ -12,6 +12,7 @@ import type { RateLimits } from "./RateLimiter.js";
 import { hostFrom, parseAllowedOrigins } from "./resolveStartOptions.js";
 import { RoomCodeService } from "./services/RoomCodeService.js";
 
+/** Options for `serveApi`. */
 export interface ServeApiOptions {
   port: number;
   /** Interface to bind; loopback when omitted. */
@@ -64,6 +65,7 @@ export async function serveApi(
   return api;
 }
 
+/** Options for `startNodeServer`: the `GameServerOptions` (minus `transport`) plus ports and API access. */
 export interface NodeServerOptions extends Omit<GameServerOptions, "transport"> {
   /** Game server port; a free one when omitted. */
   port?: number;
@@ -87,6 +89,7 @@ export class NodeServerHandle {
     readonly apiPort: number,
   ) {}
 
+  /** The WebSocket URL a client connects to. */
   get endpoint(): string {
     return `ws://127.0.0.1:${this.port}`;
   }
