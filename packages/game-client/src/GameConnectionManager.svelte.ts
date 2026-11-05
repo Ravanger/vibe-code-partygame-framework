@@ -68,7 +68,6 @@ export interface JoinOptions {
 
 const DEFAULT_API_PORT = 3001;
 const DEFAULT_SYNC_TIMEOUT_MS = 10_000;
-// Same cadence as the Countdown's own ticker.
 const URGENCY_TICK_MS = 250;
 const URGENCY_WINDOW_MS = 10_000;
 
@@ -128,9 +127,7 @@ export class GameConnectionManager<
     this.messages = resolveClientMessages(this.strings);
     const matchMedia = options.matchMedia ?? ((query: string) => window.matchMedia(query));
     this.feedback = new FeedbackBus(() => matchMedia("(prefers-reduced-motion: reduce)").matches);
-    // The state watchers only run while someone listens for phase or urgent events.
     this.feedback.onChange(() => this.syncStateWatchers());
-    // Protocol errors are internal plumbing, not a game broadcast: no feedback relay.
     this.bus.on(ServerMessage.ERROR, (payload) => this.serverErrorReceived(payload));
   }
 
@@ -329,7 +326,6 @@ export class GameConnectionManager<
     type: K,
     callback: (payload: TEvents[K]) => void,
   ): () => void {
-    // The bus stores untyped callbacks; the typed contract lives at this public boundary.
     const offBus = this.bus.on(type, callback as (payload: unknown) => void);
     let relay = this.messageRelays.get(type);
     if (relay === undefined) {
@@ -339,11 +335,11 @@ export class GameConnectionManager<
       };
       this.messageRelays.set(type, relay);
     }
-    const registered = relay; // the entry cannot change while a live listener holds it
+    const registered = relay;
     registered.count += 1;
     let done = false;
     return () => {
-      if (done) return; // an unsubscribe removes only its own listener, once
+      if (done) return;
       done = true;
       offBus();
       registered.count -= 1;
@@ -433,7 +429,6 @@ export class GameConnectionManager<
         settle();
         resolve();
       };
-      // `settle` removes this listener, so it can only fire while the wait is still open.
       const onLeave = (): void => {
         settle();
         reject(new Error(this.strings.syncDisconnected));
@@ -478,19 +473,18 @@ export class GameConnectionManager<
       this.stopStateWatchers();
       return;
     }
-    if (this.phaseWatcher !== undefined) return; // already running
+    if (this.phaseWatcher !== undefined) return;
     const watchPhase = () => this.observePhase(room);
     room.onStateChange(watchPhase);
     this.phaseWatcher = { room, callback: watchPhase };
     this.startUrgencyTimer(room);
-    watchPhase(); // establish the baseline at the moment listening begins
+    watchPhase();
   }
 
   /** Stops the phase watcher and urgency timer and resets the phase baseline so a later (re)start re-establishes it silently. */
   private stopStateWatchers(): void {
     this.phaseWatcher?.room.onStateChange.remove(this.phaseWatcher.callback);
     this.phaseWatcher = undefined;
-    // Reset the phase baseline so a reconnect re-establishes it silently, like the urgency side.
     this.lastPhase = undefined;
     this.stopUrgencyTimer();
   }
@@ -614,7 +608,6 @@ export class GameConnectionManager<
     if (typeof code !== "number") return undefined;
     const entry = closeCodeEntry(code);
     if (!entry) return undefined;
-    // VERSION_MISMATCH's template and a 4403 canJoin refusal carry server-filled text; show what arrived.
     if (
       (entry === CLOSE_CODES.VERSION_MISMATCH || code === CLOSE_CODES.JOIN_REFUSED.code) &&
       "message" in error &&

@@ -56,10 +56,7 @@ export class DemoTable<TState extends BaseGameState> {
       seats: [this.hostId, ...this.botIds],
     });
     const watch = new RoomWatch(room);
-    // The initial state sync lands after create() resolves (room.state is undefined until then),
-    // and a wire hiccup can blank the synced code at any point after that. Capture it atomically
-    // at its first well-formed observation — before claimName's round trip opens a window in
-    // which a late read would capture "".
+    // Capture the code at its first well-formed value, before claimName's round trip can blank it.
     let code = "";
     try {
       await waitFor(

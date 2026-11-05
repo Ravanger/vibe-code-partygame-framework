@@ -46,10 +46,7 @@ export class BotTable<TState extends BaseGameState> {
     const room = await this.connector.create({ playerId: crypto.randomUUID(), spectator: true });
     const watch = new RoomWatch(room);
     this.seat = { room, watch, code: "" };
-    // The initial state sync lands after create() resolves (room.state is undefined until then),
-    // and a wire hiccup can leave the synced code malformed; capture it atomically at its first
-    // well-formed observation instead of any non-empty value (the API would refuse a garbage code
-    // with "Invalid code format").
+    // Capture the code at its first well-formed value; a later read can be malformed.
     let code = "";
     await watch.until(
       () => {

@@ -17,13 +17,9 @@ const TOKEN_KEYS = {
   __PascalName__: "pascalName",
   __camelName__: "camelName",
   __DisplayName__: "displayName",
-  // JSON.stringify of the display name, quotes included: safe inside TS/JS string literals.
   __DisplayNameJson__: "displayNameJson",
-  // The display name escaped for the inside of a JSON string, quotes excluded: safe in package.json.
   __DisplayNameJsonText__: "displayNameJsonText",
-  // HTML-entity-escaped display name: safe in index.html and Svelte text nodes.
   __DisplayNameHtml__: "displayNameHtml",
-  // Markdown-safe display name (entities plus doubled backslashes, line breaks as spaces).
   __DisplayNameMd__: "displayNameMd",
   __roomName__: "roomName",
 } as const satisfies Record<string, keyof TokenValues>;
@@ -43,7 +39,6 @@ type TokenValues = Names & {
 };
 
 function tokenValues(names: Names): TokenValues {
-  // Derived here so the raw display name stays the single source (create may override it).
   const json = JSON.stringify(names.displayName);
   return {
     ...names,
@@ -55,7 +50,6 @@ function tokenValues(names: Names): TokenValues {
 }
 
 function substitute(content: string, values: TokenValues): string {
-  // TOKEN_RE only ever matches a key of TOKEN_KEYS, so the lookup is total.
   return content.replace(TOKEN_RE, (token) => values[TOKEN_KEYS[token as Token]]);
 }
 

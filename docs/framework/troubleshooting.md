@@ -64,6 +64,16 @@ Known traps in this repo, with the cause and the rule that keeps each one fixed.
 - **Rule:** call `ctx.hideFrom(playerId, entry)` before deleting a `.view()` entry from the state.
 - **Reference:** `packages/server/src/rooms/GameRoom.ts`
 
+## Replay timeouts differ from enter plus duration
+- **Cause:** live phase timers run on a tick-quantized clock, so a logged timeout can differ from the nominal enter time plus `duration`.
+- **Rule:** replay treats the logged timeout as authoritative but still calls a function `duration`, so its `ctx.rng()` draws stay in step with the live run. A `duration` that draws RNG must draw the same number of values on every call.
+- **Reference:** `packages/core/src/replay/replay.ts`
+
+## `room.state.players` can be undefined briefly
+- **Cause:** a wire-level decode hiccup on large states can leave `players` missing for a moment (seen in CI).
+- **Rule:** read it with `?.` inside `waitFor` and poll to the timeout instead of crashing the predicate.
+- **Reference:** `packages/client-utils/src/claimName.ts`
+
 ## Svelte generics imports need a Biome suppression
 - **Cause:** Biome does not see an import used only in a component's `generics="..."` attribute, so `noUnusedImports` fails unless the import carries a suppression comment.
 - **Rule:** an added suppression line fails the `gates` job (hard rule 12), so a new generic component needs the `gate-change` label, or a design without a generics-only import.

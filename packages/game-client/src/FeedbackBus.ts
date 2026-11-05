@@ -89,8 +89,6 @@ export class FeedbackBus {
     this.emit("message", (reducedMotion) => ({ type: "message", name, payload, reducedMotion }));
   }
 
-  // The preference is read only when a subscriber exists, so relaying an event nobody listens
-  // for never touches the browser.
   private emit(
     type: FeedbackEvent["type"],
     build: (reducedMotion: boolean) => FeedbackEvent,

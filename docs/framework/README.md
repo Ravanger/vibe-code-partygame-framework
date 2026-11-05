@@ -460,12 +460,12 @@ versioning) is refused outright. The recommended practice is to keep the
 game at the recorded name and version to replay its log — bump `version` whenever you change anything the
 table above marks "yes".
 
-**Runtime additions.** Action middleware events now carry the zod-parsed `payload`; every context exposes
+**Runtime additions.** Action middleware events carry the zod-parsed `payload`; every context exposes
 `ctx.gameName` (definition name), `ctx.gameVersion` (definition version, recorded in the log header),
 `ctx.seed` (room RNG seed, recorded in the log header) and `ctx.newId()` (deterministic ids — see the
-Determinism contract above). Middleware contexts additionally expose `ctx.rejectionCount` — the live count
-of rejections (`ctx.reject()` calls and a handler-thrown `FrameworkError`) for the current dispatch, so a middleware can tell after `next()` whether an action's
-handler rejected.
+Determinism contract above). Middleware contexts also expose `ctx.rejectionCount`, the live count of rejections
+(`ctx.reject()` calls and a handler-thrown `FrameworkError`) for the current dispatch, so a middleware can tell
+after `next()` whether an action's handler rejected.
 
 ### Awards
 `@partygame/core/awards` lets a game declare awards as data — pure reducers over the session's action log —
