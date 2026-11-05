@@ -19,7 +19,8 @@ Known traps in this repo, with the cause and the rule that keeps each one fixed.
 - **Fix:** the root `bunfig.toml` sets `[install] linker = "hoisted"` — one flat copy per version, so a static `WebSocketTransport` import shares the server's core and its `matchMaker`. Do not delete `bunfig.toml`; it is allowlisted in `scripts/checkConventions.ts` for exactly this reason.
 - **Do not** "fix" this with `[install] peer = false`: it dedupes too, but drops auto-installed optional peers and silently breaks typecheck in five packages — their `@types/node` arrives through a d.ts chain (`@colyseus/core`'s `Server.d.ts` imports express's types, which reference node).
 - **Phantom dependencies:** under hoisting, tsc, vitest and the runtime resolve undeclared packages from the flat tree. Whether a package declares its dependencies is enforced only by `check:boundaries` (which reads `package.json`) and knip, not by module resolution; configs and scripts outside knip's scan silently work with missing declarations.
-- **Reference:** `bunfig.toml`, `packages/server/tests/createGameServer.test.ts`, `.AGENTS/docs/libraries/colyseus.md` (Transports)
+- **Guard:** `packages/server/tests/colyseusCoreSingleton.test.ts` fails when a second `@colyseus/core` copy exists under any `node_modules` (nested ones included) or when packages that depend on Colyseus resolve it to different paths. If it fails, align the diverging version ranges and reinstall; do not delete the test.
+- **Reference:** `bunfig.toml`, `packages/server/tests/createGameServer.test.ts`, `packages/server/tests/colyseusCoreSingleton.test.ts`, `.AGENTS/docs/libraries/colyseus.md` (Transports)
 
 ## Browser shows "Connection Error / Disconnected from server" on every load
 - **Cause (was):** the component that starts a connection was mounted only after a connection existed, so nothing could ever connect.
