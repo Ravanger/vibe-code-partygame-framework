@@ -145,7 +145,9 @@ export const SetNameSchema = z
   .trim()
   .min(1)
   .refine((name) =>
-    /^[^\p{Cc}\p{Cf}\p{Zl}\p{Zp}]*[^\p{Cc}\p{Cf}\p{Z}][^\p{Cc}\p{Cf}\p{Zl}\p{Zp}]*$/u.test(name),
+    /^[^\p{Cc}\p{Cf}\p{Zl}\p{Zp}]*[^\p{Cc}\p{Cf}\p{Z}\p{M}][^\p{Cc}\p{Cf}\p{Zl}\p{Zp}]*$/u.test(
+      name,
+    ),
   )
   .refine((name) => [...name].length <= NAME_MAX_LENGTH);
 

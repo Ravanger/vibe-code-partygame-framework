@@ -121,8 +121,12 @@ describe("SetNameSchema", () => {
     expect(SetNameSchema.safeParse("Ada\u2028Bob").success).toBe(false); // line separator
     expect(SetNameSchema.safeParse("Ada\u2029Bob").success).toBe(false); // paragraph separator
   });
+  it("rejects a name made only of combining marks", () => {
+    expect(SetNameSchema.safeParse("\u0301").success).toBe(false); // combining acute only: renders as nothing
+  });
   it("accepts accented, emoji and CJK names", () => {
     expect(SetNameSchema.parse("José")).toBe("José");
+    expect(SetNameSchema.parse("e\u0301")).toBe("e\u0301"); // decomposed é: the e carries the name
     expect(SetNameSchema.parse("🚀")).toBe("🚀");
     expect(SetNameSchema.parse("你好")).toBe("你好");
   });
