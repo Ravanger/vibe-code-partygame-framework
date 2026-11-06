@@ -133,6 +133,17 @@ describe("LobbySettingsViewModel", () => {
     expect(vm.valueOf("turnSeconds")).toBe("51");
   });
 
+  it("keeps a typed draft when an unrelated key is published", () => {
+    const host = client({ role: "host" });
+    host.state.options = JSON.stringify({ turnSeconds: 30, soundOn: true });
+    const vm = model(host);
+    vm.setDraft("turnSeconds", "45");
+    host.state.options = JSON.stringify({ turnSeconds: 30, soundOn: false });
+    host.room.patch();
+    expect(vm.valueOf("soundOn")).toBe("false"); // the unrelated publish did land
+    expect(vm.valueOf("turnSeconds")).toBe("45"); // ...and does not touch the typed draft
+  });
+
   it("keeps what the host is typing while a commit is in flight", async () => {
     const host = client({ role: "host" });
     host.state.options = JSON.stringify({ turnSeconds: 30 });
