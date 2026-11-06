@@ -43,6 +43,12 @@ export interface UiStrings {
   done: string;
   /** Builds the Timer announcement for a given number of seconds left. */
   secondsRemaining: (seconds: number) => string;
+  /** Builds the place label shown on a podium step for a given tier (1–3). */
+  podiumPlace: (tier: number) => string;
+  /** The waiting room's copy status after the room code was copied. */
+  codeCopied: string;
+  /** The waiting room's copy status when the clipboard is denied or unavailable. */
+  codeCopyFailed: string;
   /**
    * The client-side table from `@partygame/game-client`; pass the same object to the manager's
    * `strings` option so one table covers both layers.
@@ -69,6 +75,9 @@ export const defaultUiStrings: UiStrings = {
   sound: "Sound",
   done: "Done",
   secondsRemaining: (seconds) => `${seconds} seconds remaining`,
+  podiumPlace: (tier) => (tier === 1 ? "1st" : tier === 2 ? "2nd" : "3rd"),
+  codeCopied: "Copied!",
+  codeCopyFailed: "Copy failed, read the code out",
   clientStrings: {},
 };
 

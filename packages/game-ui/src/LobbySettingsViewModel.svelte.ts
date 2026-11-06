@@ -13,6 +13,8 @@ export interface LobbySettingsConfig {
   defaults?: Readonly<Record<string, unknown>>;
   /** Overrides the generated label of a field. */
   labels?: Readonly<Record<string, string>>;
+  /** Labels for the choices of select fields, by field key and raw value; a choice without an entry shows its raw value. */
+  choiceLabels?: Readonly<Record<string, Readonly<Record<string, string>>>>;
   /** Reports each option the form cannot render; the default is a console warning, once per key per instance. */
   onUnsupported?: (key: string, reason: string) => void;
 }
@@ -26,11 +28,13 @@ export class LobbySettingsViewModel<TState extends BaseGameState> {
   /** Keys with a SET_OPTIONS in flight; their typed value keeps showing until the server answers. */
   private readonly inFlight = new Set<string>();
   private readonly reader: OptionsReader<Record<string, unknown>>;
+  private readonly choiceLabels: Readonly<Record<string, Readonly<Record<string, string>>>>;
 
   constructor(
     private readonly manager: GameConnectionManager<TState>,
     config: LobbySettingsConfig,
   ) {
+    this.choiceLabels = config.choiceLabels ?? {};
     this.fields = new OptionFields(config.labels, config.onUnsupported).from(
       z.toJSONSchema(config.schema),
     );
@@ -57,6 +61,11 @@ export class LobbySettingsViewModel<TState extends BaseGameState> {
     const draft = this.drafts[key];
     if (draft !== undefined && !this.stale(key)) return draft;
     return this.publishedOf(key);
+  }
+
+  /** The display label of a select field's value; the raw value when `choiceLabels` has no entry for it. */
+  choiceLabel(key: string, value: string): string {
+    return this.choiceLabels[key]?.[value] ?? value;
   }
 
   /** Stores what the host is typing for a field without sending it; `commit` sends it. */

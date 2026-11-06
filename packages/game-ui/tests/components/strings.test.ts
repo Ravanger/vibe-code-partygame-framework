@@ -46,6 +46,11 @@ describe("defaultUiStrings and the table", () => {
     expect(strings.sound).toBe("Sound");
     expect(strings.done).toBe("Done");
     expect(strings.secondsRemaining(5)).toBe("5 seconds remaining");
+    expect(strings.podiumPlace(1)).toBe("1st");
+    expect(strings.podiumPlace(2)).toBe("2nd");
+    expect(strings.podiumPlace(3)).toBe("3rd");
+    expect(strings.codeCopied).toBe("Copied!");
+    expect(strings.codeCopyFailed).toBe("Copy failed, read the code out");
   });
 
   it("lets setStrings and getStrings work outside a component", () => {
@@ -161,13 +166,22 @@ describe("Podium", () => {
     );
   }
 
-  it("renders the English aria-label, you-marker and score unit without a provider", () => {
+  it("renders the English aria-label, places, you-marker and score unit without a provider", () => {
     const { container } = render(Podium, { steps: steps() });
     expect(screen.getByRole("list", { name: "Podium" })).toBeInTheDocument();
+    expect(screen.getByText("1st")).toBeInTheDocument();
+    expect(screen.getByText("2nd")).toBeInTheDocument();
     const marker = container.querySelector(".you");
     if (marker === null) throw new Error("the you marker did not render");
     expect(marker.querySelector(".sr-only")?.textContent).toBe("This is you");
     expect(screen.getByText("30 pts")).toBeInTheDocument();
+  });
+
+  it("renders the places from the table", () => {
+    setStrings({ podiumPlace: (tier) => `${tier}. Platz` });
+    render(Podium, { steps: steps() });
+    expect(screen.getByText("1. Platz")).toBeInTheDocument();
+    expect(screen.getByText("2. Platz")).toBeInTheDocument();
   });
 
   it("renders the replaced aria-label, you-marker and score unit from the table", () => {

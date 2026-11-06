@@ -36,6 +36,17 @@ describe("LobbySettingsViewModel", () => {
     expect(vm.fields[0]?.label).toBe("Seconds per turn");
   });
 
+  it("labels choice values through choiceLabels and falls back to the raw value", () => {
+    const vm = new LobbySettingsViewModel(client().manager, {
+      schema: TestOptionsSchema,
+      choiceLabels: { level: { off: "Off", strict: "Strict" } },
+    });
+    expect(vm.choiceLabel("level", "off")).toBe("Off");
+    expect(vm.choiceLabel("level", "strict")).toBe("Strict");
+    expect(vm.choiceLabel("level", "moderate")).toBe("moderate"); // no entry for this value
+    expect(vm.choiceLabel("label", "anything")).toBe("anything"); // no table for this field
+  });
+
   it("falls back to the defaults for unusable options or no room, and to nothing without defaults", () => {
     const c = client();
     const vm = model(c);

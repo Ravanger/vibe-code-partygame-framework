@@ -96,6 +96,41 @@ describe("LobbySettings", () => {
     await expectNoViolations(container, "LobbySettings");
   });
 
+  it("shows choice buttons from choiceLabels and still commits the raw value", async () => {
+    const c = connectedClient({ stateClass: BaseGameState, seat: { role: "host" } });
+    c.state.options = JSON.stringify({ level: "moderate" });
+    const vm = new LobbySettingsViewModel(c.manager, {
+      schema: z.object({ level: z.enum(["off", "moderate", "strict"]).default("moderate") }),
+      choiceLabels: { level: { off: "Off", moderate: "Moderate", strict: "Strict" } },
+    });
+    const { container } = render(LobbySettings, { vm });
+    expect(screen.getByRole("button", { name: "Moderate" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await fireEvent.click(screen.getByRole("button", { name: "Strict" }));
+    expect(c.room.requests).toEqual([
+      { type: "ACTION", payload: { level: "strict", type: "SET_OPTIONS" } },
+    ]);
+    await expectNoViolations(container, "LobbySettings");
+  });
+
+  it("shows the choice label in the read-only list and keeps raw values for other kinds", async () => {
+    const c = connectedClient({ stateClass: BaseGameState });
+    c.state.options = JSON.stringify({ turnSeconds: 30, level: "moderate" });
+    const vm = new LobbySettingsViewModel(c.manager, {
+      schema: z.object({
+        turnSeconds: z.number().int().min(5).max(60).default(20),
+        level: z.enum(["off", "moderate", "strict"]).default("moderate"),
+      }),
+      choiceLabels: { level: { off: "Off", moderate: "Moderate", strict: "Strict" } },
+    });
+    const { container } = render(LobbySettings, { vm });
+    expect(screen.getByText("30").tagName).toBe("DD"); // a number stays raw
+    expect(screen.getByText("Moderate").tagName).toBe("DD");
+    await expectNoViolations(container, "LobbySettings");
+  });
+
   it("gives every instance distinct input ids that its own labels target", () => {
     const a = setup({ role: "host" });
     const b = setup({ role: "host" });

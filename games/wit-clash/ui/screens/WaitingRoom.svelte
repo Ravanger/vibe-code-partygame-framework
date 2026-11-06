@@ -39,6 +39,8 @@ $effect(() => () => vm.destroy());
             <button type="button" class="btn btn--secondary" onclick={() => vm.copyCode()}>Copy</button>
           {/if}
         </div>
+        <!-- Always present so a screen reader announces the status change, not just new markup. -->
+        <p class="copy-status" aria-live="polite">{vm.copyStatusText}</p>
         <div class="qr-box">
           <QrCode text={vm.shareUrl} />
         </div>
@@ -158,6 +160,14 @@ $effect(() => () => vm.destroy());
     letter-spacing: 0.2em;
     line-height: 1.1;
     text-indent: 0.2em;
+  }
+
+  .copy-status {
+    margin: 0.25rem 0 0;
+    min-height: calc(var(--fs-2) * var(--scale, 1) * 1.4);
+    color: var(--ink-soft);
+    font-size: calc(var(--fs-2) * var(--scale, 1));
+    text-align: center;
   }
 
   .qr-box {

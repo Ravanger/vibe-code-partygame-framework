@@ -3,6 +3,7 @@ import type { GameConnectionManager } from "@partygame/game-client";
 import { KICK_PLAYER, START_GAME } from "@partygame/shared";
 import type { BaseGameState } from "@partygame/shared/schema";
 import { NameField } from "./NameField.svelte.js";
+import { getStrings } from "./strings.js";
 
 /** A seat as the waiting room lists it. */
 export interface LobbyPlayer {
@@ -26,11 +27,14 @@ const defaultClipboard = {
 /** The lobby screen: roster, room code and share link, name entry, kicking and starting the game. */
 export class WaitingRoomViewModel<TState extends BaseGameState> {
   kickCandidate = $state<string | undefined>(undefined);
+  /** The outcome of the last room-code copy; `"copied"` returns to `"idle"` after 2000 ms, `"failed"` stays until the next attempt. */
+  copyState = $state<"idle" | "copied" | "failed">("idle");
   readonly nameField: NameField<TState>;
   /** Decided once, so the name card does not jump away while its owner is typing. */
   readonly nameFirst: boolean;
   private readonly location: () => { origin: string; pathname: string };
   private readonly clipboard: { writeText(text: string): Promise<void> };
+  private copyResetTimer: ReturnType<typeof setTimeout> | undefined;
 
   /**
    * @param manager The connection this lobby belongs to.
@@ -170,13 +174,28 @@ export class WaitingRoomViewModel<TState extends BaseGameState> {
     if (this.canStart) await this.manager.sendAction(START_GAME);
   }
 
-  /** Copies the room code to the clipboard; a denied clipboard is ignored. */
+  /** Copies the room code to the clipboard and reports the outcome in `copyState`; a denied or missing clipboard marks it failed. */
   async copyCode(): Promise<void> {
     try {
       await this.clipboard.writeText(this.roomCode);
+      if (this.copyResetTimer !== undefined) clearTimeout(this.copyResetTimer);
+      this.copyResetTimer = setTimeout(() => {
+        this.copyResetTimer = undefined;
+        // A failed copy in the meantime must not be cleared by an older success.
+        if (this.copyState === "copied") this.copyState = "idle";
+      }, 2000);
+      this.copyState = "copied";
     } catch {
-      // Clipboard access can be denied; the code is on screen anyway.
+      // Clipboard access can be denied or unavailable on insecure origins; the code is on screen anyway.
+      this.copyState = "failed";
     }
+  }
+
+  /** What the copy status line shows: empty while idle, else the table's copied or failed text. */
+  get copyStatusText(): string {
+    if (this.copyState === "copied") return getStrings().codeCopied;
+    if (this.copyState === "failed") return getStrings().codeCopyFailed;
+    return "";
   }
 
   /** Cancels the name field's pending rename. */
