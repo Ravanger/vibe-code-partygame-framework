@@ -163,6 +163,7 @@ describe("rate limits", () => {
       action: { rate: 10, burst: 20 },
       setName: { rate: 2, burst: 2 },
       resolveCode: { rate: 1, burst: 10 },
+      exportReplay: { rate: 0.2, burst: 1 },
       mode: "enforce",
     });
     expect(resolveRateLimits({ action: { rate: 1, burst: 1 }, mode: "observe" })).toEqual({

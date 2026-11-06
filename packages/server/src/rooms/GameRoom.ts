@@ -68,6 +68,8 @@ export interface GameRoomConfig {
   roomCodeService: RoomCodeService;
   reconnectMs: number;
   emptyRoomGraceMs: number;
+  /** Most phase transitions kept as replay snapshots; once the log outgrows them the export refuses. */
+  maxReplayTransitions: number;
   /** Maximum concurrent rooms across all games; a create beyond it closes with `SERVER_FULL` (4429). */
   maxRooms: number;
   /** Spectator connections admitted on top of `maxPlayers`; the room's `maxClients`. */
@@ -235,7 +237,18 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
         }
         return this.act(seat.id, raw);
       });
-      this.onMessage(ClientMessage.EXPORT_REPLAY, (client): unknown => this.exportReplay(client));
+      this.onMessage(ClientMessage.EXPORT_REPLAY, (client): unknown => {
+        // Only a host reaches the bundle build, so only host seats spend the export bucket.
+        const seat = this.seatBySession(client);
+        if (
+          seat?.role === "host" &&
+          !this.limited(seat.id, ClientMessage.EXPORT_REPLAY, this.config.rateLimits.exportReplay)
+        ) {
+          client.send(ServerMessage.ERROR, RATE_LIMITED_ERROR);
+          return { ok: false, error: RATE_LIMITED_ERROR };
+        }
+        return this.exportReplay(client);
+      });
       this.logLine("info", "room.created");
     } catch (error) {
       roomCodeService.unregister(code);
@@ -386,7 +399,14 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     broadcast: (type, payload) => this.broadcast(type, payload),
     notifyTransition: (from, to) => {
       this.safely(() => {
-        this.snapshots.push({ from, to, state: syncedJsonOf(this.state) });
+        // A bundle needs both halves: without an action log the snapshots could never be exported,
+        // and past the bound the export's length check refuses instead of shipping a truncated bundle.
+        if (
+          getActionLog(this.runtime.priv) !== undefined &&
+          this.snapshots.length < this.config.maxReplayTransitions
+        ) {
+          this.snapshots.push({ from, to, state: syncedJsonOf(this.state) });
+        }
         this.audienceScopes.clear();
       });
     },

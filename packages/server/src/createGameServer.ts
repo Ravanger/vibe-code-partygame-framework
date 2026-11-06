@@ -47,6 +47,12 @@ export interface GameServerOptions {
   /** How long an empty room lives before it is disposed. Default 120 s. */
   emptyRoomGraceMs?: number;
   /**
+   * Most phase transitions a room keeps as replay snapshots, recorded only while the game keeps an
+   * action log (a bundle needs both halves). Once the log outgrows the bound the export answers
+   * the fixed refusal instead of shipping a truncated bundle. Default {@link DEFAULT_MAX_REPLAY_TRANSITIONS}.
+   */
+  maxReplayTransitions?: number;
+  /**
    * Spectator (audience) connections a room admits on top of `maxPlayers`. The room's `maxClients`
    * is `maxPlayers + audienceSlots`, so once it is full Colyseus refuses further joins. Default
    * {@link DEFAULT_AUDIENCE_SLOTS}.
@@ -55,9 +61,9 @@ export interface GameServerOptions {
   /** When set, player names are checked against it at join and on `SET_NAME`, at the level of each game's `filterLevel`. */
   textFilter?: TextFilter;
   /**
-   * Per-player and per-address rate limits ({@link RateLimits}). Every room enforces the action and
-   * SET_NAME buckets through one shared limiter; the HTTP entries enforce `resolveCode` on
-   * `/api/resolve-code` (429 with `Retry-After`).
+   * Per-player and per-address rate limits ({@link RateLimits}). Every room enforces the action,
+   * SET_NAME and EXPORT_REPLAY buckets through one shared limiter; the HTTP entries enforce
+   * `resolveCode` on `/api/resolve-code` (429 with `Retry-After`).
    */
   rateLimits?: RateLimits;
   /** Structured lifecycle logger for every room. Defaults to {@link jsonLineLogger} (one JSON line per event on stdout). */
@@ -88,6 +94,10 @@ export const DEFAULT_ACTION_BUCKET: TokenBucket = { rate: 10, burst: 20 };
 export const DEFAULT_SET_NAME_BUCKET: TokenBucket = { rate: 2, burst: 2 };
 /** Default `/api/resolve-code` limit per remote address: 1/s, burst 10. */
 export const DEFAULT_RESOLVE_CODE_BUCKET: TokenBucket = { rate: 1, burst: 10 };
+/** Default EXPORT_REPLAY limit per host seat: one per 5 s, burst 1. */
+export const DEFAULT_EXPORT_REPLAY_BUCKET: TokenBucket = { rate: 0.2, burst: 1 };
+/** Default most phase transitions a room keeps as replay snapshots; no normal party reaches it. */
+export const DEFAULT_MAX_REPLAY_TRANSITIONS = 5_000;
 
 /** Resolve `rateLimits` against the defaults, which leave a normal party unaffected. */
 export function resolveRateLimits(options?: RateLimits): ResolvedRateLimits {
@@ -95,6 +105,7 @@ export function resolveRateLimits(options?: RateLimits): ResolvedRateLimits {
     action: options?.action ?? DEFAULT_ACTION_BUCKET,
     setName: options?.setName ?? DEFAULT_SET_NAME_BUCKET,
     resolveCode: options?.resolveCode ?? DEFAULT_RESOLVE_CODE_BUCKET,
+    exportReplay: options?.exportReplay ?? DEFAULT_EXPORT_REPLAY_BUCKET,
     mode: options?.mode ?? "enforce",
   };
 }
@@ -162,6 +173,7 @@ export function createGameServer(options: GameServerOptions): GameColyseusServer
       roomCodeService,
       reconnectMs: options.reconnectMs ?? DEFAULT_RECONNECT_MS,
       emptyRoomGraceMs: options.emptyRoomGraceMs ?? DEFAULT_EMPTY_ROOM_GRACE_MS,
+      maxReplayTransitions: options.maxReplayTransitions ?? DEFAULT_MAX_REPLAY_TRANSITIONS,
       maxRooms: options.maxRooms ?? DEFAULT_MAX_ROOMS,
       audienceSlots: options.audienceSlots ?? DEFAULT_AUDIENCE_SLOTS,
       ...(options.textFilter ? { textFilter: options.textFilter } : {}),

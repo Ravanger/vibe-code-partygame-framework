@@ -14,6 +14,8 @@ export interface RateLimits {
   setName?: TokenBucket;
   /** `/api/resolve-code` per remote address. Default 1/s, burst 10. */
   resolveCode?: TokenBucket;
+  /** EXPORT_REPLAY per host seat (the only caller that builds a bundle). Default one per 5 s, burst 1. */
+  exportReplay?: TokenBucket;
   /** "enforce" refuses over-limit traffic; "observe" only reports it. Default "enforce". */
   mode?: "observe" | "enforce";
 }
@@ -23,6 +25,7 @@ export interface ResolvedRateLimits {
   action: TokenBucket;
   setName: TokenBucket;
   resolveCode: TokenBucket;
+  exportReplay: TokenBucket;
   mode: "observe" | "enforce";
 }
 
