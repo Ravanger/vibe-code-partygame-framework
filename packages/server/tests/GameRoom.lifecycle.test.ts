@@ -121,6 +121,31 @@ describe("GameRoom disposal", () => {
     expect(t.roomCodeService.resolve(code)).toBeUndefined();
   });
 
+  it("still disposes when a join is refused because every seat is taken", async () => {
+    t = await bootBuzzer({ emptyRoomGraceMs: 150, reconnectMs: 5000 });
+    const room = await t.createRoom("buzzer");
+    const code = stateOf(room).roomCode;
+    const first = await t.join(room, { playerId: pid(1) });
+    const second = await t.join(room, { playerId: pid(2) });
+    const third = await t.join(room, { playerId: pid(3) });
+    // Everyone drops: the seats stay for reconnection (the room is still full) and disposal arms.
+    await first.leave(false);
+    await second.leave(false);
+    await third.leave(false);
+    await waitUntil(
+      () =>
+        stateOf(room).players.get(pid(1))?.isConnected === false &&
+        stateOf(room).players.get(pid(2))?.isConnected === false &&
+        stateOf(room).players.get(pid(3))?.isConnected === false,
+      "dropped",
+    );
+    await expect(t.join(room, { playerId: pid(4) })).rejects.toMatchObject({
+      code: CLOSE_CODES.ROOM_FULL.code,
+    });
+    await waitUntil(() => !alive(room.roomId), "disposed");
+    expect(t.roomCodeService.resolve(code)).toBeUndefined();
+  });
+
   it("still disposes when the first joiner's name is refused by the text filter", async () => {
     t = await bootTestServer({
       games: [{ roomName: "filtered", definition: FilteredGame, stateClass: BaseGameState }],
