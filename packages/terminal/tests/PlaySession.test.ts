@@ -131,7 +131,11 @@ describe("PlaySession", () => {
   });
 
   it("removes seated bots when the player fails", async () => {
-    const handle = await startNodeServer({ games: [game] });
+    const handle = await startNodeServer({
+      greet: false,
+      gracefullyShutdown: false,
+      games: [game],
+    });
     try {
       const host = await new GameClient(handle.endpoint, handle.apiPort, kit).create(
         crypto.randomUUID(),
@@ -225,7 +229,11 @@ describe("PlaySession", () => {
   });
 
   it("joins a room on a running server as a plain player and can quit", async () => {
-    const handle = await startNodeServer({ games: [game] });
+    const handle = await startNodeServer({
+      greet: false,
+      gracefullyShutdown: false,
+      games: [game],
+    });
     try {
       const host = await new GameClient(handle.endpoint, handle.apiPort, kit).create(
         crypto.randomUUID(),

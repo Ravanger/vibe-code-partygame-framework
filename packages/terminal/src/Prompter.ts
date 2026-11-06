@@ -15,6 +15,7 @@ export class ReadlinePrompter implements Prompter {
     private readonly out: NodeJS.WritableStream = process.stdout,
   ) {}
 
+  /** Shows `question` and resolves with the typed line; rejects when `signal` aborts. */
   async ask(question: string, signal: AbortSignal): Promise<string> {
     const prompt = question.slice(question.lastIndexOf("\n") + 1);
     // `slice(0, -prompt.length)` would be `slice(0, 0)` when the prompt is empty (a question
@@ -28,6 +29,7 @@ export class ReadlinePrompter implements Prompter {
     }
   }
 
+  /** Writes `line` above the pending question without losing what the player has typed. */
   print(line: string): void {
     this.out.write(`\r\x1b[K${line}\n${this.pending}${this.pending ? this.lines.line : ""}`);
   }

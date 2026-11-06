@@ -13,6 +13,7 @@ export interface SessionPlayer {
   stop(): void;
 }
 
+/** Options for `PlaySession`: where the server is, which room to enter and who plays. */
 export interface PlaySessionOptions<TState extends BaseGameState> {
   name: string;
   /** Bots to seat once the room exists; 0 for none. */
@@ -53,6 +54,7 @@ export class PlaySession<TState extends BaseGameState> {
     this.player?.stop();
   }
 
+  /** Plays until the player quits or the room goes away, then stops any server it started. */
   async run(): Promise<void> {
     const server = await this.server();
     try {

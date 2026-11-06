@@ -48,8 +48,7 @@ const reveal = (ctx: WitClashContext): void => {
       votes: answer.votes,
       matchupVotes: state.votesCast,
       matchupId: matchup.id,
-      // Only contested matchups reach the history and both of their authors submitted, so both
-      // lookups are present; placeholders live in forfeited or skipped matchups and never get here.
+      // Placeholders (forfeited or skipped matchups) never reach the history, so both lookups exist.
       answerMs: required(
         required(ctx.priv.submitTimes.get(answer.authorId), "submit times").get(matchup.id),
         "submit time",

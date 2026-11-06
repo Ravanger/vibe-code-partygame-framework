@@ -45,6 +45,7 @@ export class BotPlayer<TState extends BaseGameState> {
     this.react();
   }
 
+  /** Stops the bot and leaves the room; safe to call more than once. */
   async leave(): Promise<void> {
     if (this.left) return;
     this.stop();

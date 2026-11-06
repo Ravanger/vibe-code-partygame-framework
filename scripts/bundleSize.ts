@@ -1,5 +1,5 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join, relative, sep } from "node:path";
 import { gzipSync } from "node:zlib";
 
 /** One emitted bundle file with its measured sizes. */
@@ -39,7 +39,7 @@ export const readBundle = (dir: string): BundleFile[] => {
       } else if (entry.name.endsWith(".js") || entry.name.endsWith(".css")) {
         const content = readFileSync(path);
         files.push({
-          name: relative(dir, path),
+          name: relative(dir, path).split(sep).join("/"),
           bytes: content.length,
           gzipBytes: gzipSync(content).length,
         });
@@ -53,3 +53,31 @@ export const readBundle = (dir: string): BundleFile[] => {
 /** True when the bundle's gzip total is at or under budget. */
 export const withinBudget = (totalGzipBytes: number, budgetGzipBytes: number): boolean =>
   totalGzipBytes <= budgetGzipBytes;
+
+/** Games under `gamesDir` that ship a browser client: an `index.html` and a `ui/` directory. */
+export const listClientGames = (gamesDir: string): string[] =>
+  readdirSync(gamesDir, { withFileTypes: true })
+    .filter(
+      (entry) =>
+        entry.isDirectory() &&
+        existsSync(join(gamesDir, entry.name, "index.html")) &&
+        existsSync(join(gamesDir, entry.name, "ui")),
+    )
+    .map((entry) => entry.name)
+    .sort();
+
+/** One message per game that has no budget entry or whose gzip total is over its budget. */
+export const budgetProblems = (
+  gzipTotals: Record<string, number>,
+  budget: Record<string, { gzipBytes: number }>,
+): string[] =>
+  Object.entries(gzipTotals).flatMap(([game, total]) => {
+    const limit = budget[game]?.gzipBytes;
+    if (limit === undefined)
+      return [`No budget recorded for ${game} in scripts/bundle-budget.json.`];
+    return withinBudget(total, limit)
+      ? []
+      : [
+          `${game} gzip total ${total} exceeds the budget of ${limit}; see docs/framework/README.md (Bundle size).`,
+        ];
+  });

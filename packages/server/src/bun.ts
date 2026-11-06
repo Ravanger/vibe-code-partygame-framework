@@ -10,6 +10,7 @@ import {
 } from "./createGameServer.js";
 import { resolveStartOptions, type StartPorts } from "./resolveStartOptions.js";
 
+/** Options for `startServer`: the `GameServerOptions` (minus `transport`) plus the listening ports. */
 export type StartServerOptions = Omit<GameServerOptions, "transport"> & StartPorts;
 
 /** Bun entry point: WebSocket game server plus the code-resolution API. */

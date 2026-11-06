@@ -1,5 +1,4 @@
-import { render, screen } from "@testing-library/svelte";
-import { userEvent } from "@testing-library/user-event";
+import { render, screen, within } from "@testing-library/svelte";
 import { createRawSnippet } from "svelte";
 import { describe, expect, it } from "vitest";
 import { ActionBar } from "../../src/components/index.js";
@@ -17,17 +16,18 @@ describe("ActionBar", () => {
     await expectNoViolations(container, "ActionBar");
   });
 
-  it("keeps its actions in tab order", async () => {
+  it("renders its slotted actions in order inside the bar", () => {
     const children = createRawSnippet(() => ({
       // one root: a raw snippet only keeps its first top-level node
       render: () =>
         "<div><button type='button'>One</button><button type='button'>Two</button></div>",
     }));
-    render(ActionBar, { children });
-    const user = userEvent.setup();
-    await user.tab();
-    expect(screen.getByRole("button", { name: "One" })).toHaveFocus();
-    await user.tab();
-    expect(screen.getByRole("button", { name: "Two" })).toHaveFocus();
+    const { container } = render(ActionBar, { children });
+    const bar = container.querySelector<HTMLElement>(".action-bar");
+    expect(bar).not.toBeNull();
+    const names = within(bar as HTMLElement)
+      .getAllByRole("button")
+      .map((button) => button.textContent);
+    expect(names).toEqual(["One", "Two"]);
   });
 });

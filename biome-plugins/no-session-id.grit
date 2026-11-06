@@ -9,6 +9,6 @@ or {
   TsPropertySignatureTypeMember(),
   JsPropertyClassMember()
 } as $n where {
-  $n <: r"sessionId",
+  $n <: r"(?i).*session_?id.*",
   register_diagnostic(span=$n, message="sessionId exists only inside packages/server. Key players by playerId everywhere else.")
 }

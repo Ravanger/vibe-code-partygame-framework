@@ -45,10 +45,12 @@ export class TestTable<TState extends PhaseState, TPrivate, TOptions> {
     });
   }
 
+  /** The current phase name. */
   get phase(): string {
     return this.state.phase;
   }
 
+  /** The runtime's server-only private state. */
   get priv(): TPrivate {
     return this.runtime.priv;
   }
@@ -72,6 +74,7 @@ export class TestTable<TState extends PhaseState, TPrivate, TOptions> {
     return this.host.errorsTo(playerId).filter(isServerError);
   }
 
+  /** Advances the fake clock by `ms` milliseconds, firing due timers. */
   tick(ms: number): void {
     this.host.advance(ms);
   }
@@ -87,11 +90,13 @@ export class TestTable<TState extends PhaseState, TPrivate, TOptions> {
     this.runtime.rosterChanged();
   }
 
+  /** Marks the seat disconnected without removing it. */
   drop(playerId: string): void {
     this.seatOf(playerId).isConnected = false;
     this.runtime.rosterChanged();
   }
 
+  /** Marks a dropped seat connected again. */
   rejoin(playerId: string): void {
     this.seatOf(playerId).isConnected = true;
     this.runtime.rosterChanged();

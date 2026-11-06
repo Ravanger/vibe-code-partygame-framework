@@ -1,4 +1,5 @@
 import ts from "typescript";
+import { z } from "zod";
 
 export interface TextFile {
   path: string;
@@ -6,14 +7,13 @@ export interface TextFile {
 }
 
 export interface ConventionViolation {
-  rule: "brand" | "vocabulary" | "decorators" | "root-files";
+  rule: "vocabulary" | "provenance" | "decorators" | "root-files";
   path: string;
   line: number;
   message: string;
 }
 
-const BRAND = new RegExp(["jack", "box"].join(""), "i");
-const VOCABULARY = /wit-?clash|matchup|quiplash|categor(?:y|ies)/i;
+const VOCABULARY = /wit-?clash|matchup|categor(?:y|ies)/i;
 const PROMPT = /\bprompts?\b/i;
 const ROOT_FILES = new Set([
   "README.md",
@@ -73,7 +73,6 @@ const fileViolations = (file: TextFile): ConventionViolation[] => {
       message: "file is not on the repo root allowlist",
     });
   }
-  found.push(...lineViolations(file, "brand", BRAND, "names a commercial brand"));
   if (
     inside(path, "packages") &&
     !inside(path, "packages/cli/template") &&
@@ -88,5 +87,60 @@ const fileViolations = (file: TextFile): ConventionViolation[] => {
   return found;
 };
 
-export const checkConventions = (files: TextFile[]): ConventionViolation[] =>
-  files.flatMap(fileViolations);
+const CONTENT_FILE = /^(games\/[^/]+\/content)\/(.+)$/;
+const MANIFEST = "provenance.json";
+
+const ProvenanceManifest = z.record(
+  z.string(),
+  z.union([
+    z.literal("original"),
+    z.strictObject({ source: z.string().min(1), license: z.string().min(1) }),
+  ]),
+);
+
+const provenanceViolations = (files: TextFile[]): ConventionViolation[] => {
+  const trees = new Map<string, TextFile[]>();
+  for (const file of files) {
+    const match = CONTENT_FILE.exec(file.path);
+    if (match?.[1] !== undefined) trees.set(match[1], [...(trees.get(match[1]) ?? []), file]);
+  }
+  return [...trees].flatMap(([tree, treeFiles]) => {
+    const violation = (path: string, message: string): ConventionViolation => ({
+      rule: "provenance",
+      path,
+      line: 1,
+      message,
+    });
+    const manifestPath = `${tree}/${MANIFEST}`;
+    const manifestFile = treeFiles.find((file) => file.path === manifestPath);
+    const others = treeFiles.filter((file) => file !== manifestFile);
+    if (manifestFile === undefined) {
+      return others.slice(0, 1).map((file) => violation(file.path, `${tree} has no ${MANIFEST}`));
+    }
+    let json: unknown;
+    try {
+      json = JSON.parse(manifestFile.text);
+    } catch {
+      return [violation(manifestPath, `${MANIFEST} is not valid JSON`)];
+    }
+    const parsed = ProvenanceManifest.safeParse(json);
+    if (!parsed.success) {
+      return [violation(manifestPath, `invalid manifest: ${parsed.error.issues[0]?.message}`)];
+    }
+    const listed = new Set(Object.keys(parsed.data));
+    const present = new Set(others.map((file) => file.path.slice(tree.length + 1)));
+    return [
+      ...[...listed]
+        .filter((name) => !present.has(name))
+        .map((name) => violation(manifestPath, `${name} has no file`)),
+      ...[...present]
+        .filter((name) => !listed.has(name))
+        .map((name) => violation(`${tree}/${name}`, `not listed in ${MANIFEST}`)),
+    ];
+  });
+};
+
+export const checkConventions = (files: TextFile[]): ConventionViolation[] => [
+  ...files.flatMap(fileViolations),
+  ...provenanceViolations(files),
+];

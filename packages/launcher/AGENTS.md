@@ -8,7 +8,7 @@
 
 - Game rules or game vocabulary.
 - Port-probing primitives (they live in `@partygame/server/probe`).
-- Per-game scripts; a game supplies a `LaunchConfig` (moving: #134, game-kit `launch`).
+- Per-game scripts; a game supplies a `LaunchConfig` through game-kit `launch`.
 
 ## May import
 
@@ -17,11 +17,11 @@
 
 ## Public entry points
 
-- `.`: `runLauncher`, `LaunchConfig`.
+- `.`: `runLauncher`, `Launcher`, `ProcessGroup`, `StaticSite`, `parseLaunchArgs`, `lanUrls`, `openBrowser`, types `LaunchConfig`, `LaunchArgs`, `LaunchMode`, `BrowserSpawner`, `LaunchBots`, `LaunchCommands`, `LaunchDemo`, `LaunchPorts`.
 
 ## Tests
 
-`tests/`; pure parts are unit-tested, `runLauncher.ts` is a thin coverage-excluded runner.
+`tests/`; pure parts are unit-tested and `runLauncher.ts` is covered like the rest.
 
 ## Before you add a file
 

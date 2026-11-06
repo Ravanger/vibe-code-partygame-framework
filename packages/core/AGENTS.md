@@ -30,4 +30,4 @@ The Colyseus-free game runtime: `defineGame`, `GameRuntime`, lobby built-ins, ac
 
 ## Before you add a file
 
-Does it run with no network and no Colyseus? If not -> `server`. Does one game need it? -> that game. Runtime internals are being split (#38, #39, #40).
+Does it run with no network and no Colyseus? If not -> `server`. Does one game need it? -> that game. Keep runtime internals in small files under `src/runtime/`.

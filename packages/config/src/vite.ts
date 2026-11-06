@@ -1,6 +1,7 @@
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { defineConfig, mergeConfig, type UserConfig } from "vite";
 
+/** Dev server port and Vite overrides merged into the game's client config. */
 export interface GameViteOptions {
   port?: number;
   overrides?: UserConfig;

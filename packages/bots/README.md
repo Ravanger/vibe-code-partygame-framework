@@ -4,7 +4,7 @@ Bot players for any game: you write the strategy, the package handles joining, n
 
 | Import | What |
 |---|---|
-| `@partygame/bots` | `joinBots`, `BotTable`, `DemoTable` to seat bots, `BotPlayer` (one named, paced bot), `ColyseusConnector` to open rooms; types `BotStrategy`, `BotKit`, `BotRoom` for your game |
+| `@partygame/bots` | `joinBots`, `BotTable`, `DemoTable` to seat bots, `BotPlayer` (one named, paced bot), `ColyseusConnector` to open rooms; types `BotStrategy`, `BotKit`, `BotRoom` for your game; option types `JoinBotsOptions`, `BotTableOptions`, `SeatBotsOptions`, `DemoTableOptions`, `BotHostOptions`, `DelayRange` |
 
 ## Write a strategy
 
@@ -91,7 +91,7 @@ await demo.leave();
 
 ## Tune pacing
 
-`BotOptions` (the `bot` option, or `bot` on the launcher's `create`): `thinkMs` (default `[2000, 6000]`), `reactMs` (`[500, 2500]`), `rng`, `schedule`, `log`, `onOutcome`, `host.expectedPlayers`. `joinBots` also takes `nameFor(n)` (default `Bot n`), `playerIds` and `timeoutMs`; `DemoTable` takes `hostName`, `roomOptions` and `isFinished`.
+`BotOptions` (the `bot` option, or `bot` on the launcher's `create`): `thinkMs` (default `[2000, 6000]`), `reactMs` (`[500, 2500]`) — each a `DelayRange`, a `[minMs, maxMs]` range a random delay is drawn from — `rng`, `schedule`, `log`, `onOutcome`, `host` (`BotHostOptions`: the options that make a bot the host, `expectedPlayers`). `joinBots` takes `JoinBotsOptions` (connection, kit, room code and bot count), including `nameFor(n)` (default `Bot n`), `playerIds` and `timeoutMs`; `BotTable` takes `BotTableOptions` (connection, kit and join options) and `seatBots` takes `SeatBotsOptions` (how many bots to seat and how long, in milliseconds, to wait for a human first); `DemoTable` takes `DemoTableOptions` (connection, kit, bot count and finish rule), including `hostName`, `roomOptions` and `isFinished`.
 
 Depends on: `@partygame/client-utils`, `@partygame/shared`, `@colyseus/sdk`
 

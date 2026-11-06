@@ -1,6 +1,6 @@
 # ADR 0004: Seeded randomness and an action log make sessions replayable
 
-**Status:** Proposed
+**Status:** Accepted
 
 ## Context
 
@@ -17,15 +17,16 @@ Each room gets a random seed drawn from the platform CSPRNG at creation time. Th
 
 ## Consequences
 
-The room RNG is seeded and deterministic. `ctx.newId()` returns UUIDs from the seeded RNG, so they are replayable. The action log lives in `ctx.priv` and is JSON-serializable. Games export the log via `getActionLog(priv)` to replay or analyze. The replay helper `replayLog` is in `packages/core/testing`.
+The room RNG is seeded and deterministic. `ctx.newId()` returns UUIDs from the seeded RNG, so they are replayable. The action log lives in `ctx.priv` and is JSON-serializable. Games export the log via `getActionLog(priv)` to replay or analyze. The replay helper `replayLog` lives in `@partygame/core/replay` (source `packages/core/src/replay/`) and is re-exported from `@partygame/core/testing`.
 
 ## Where it lives
 
 - `packages/core/src/utils.ts` — `mulberry32` (seeded PRNG), `randomSeed`, `newId` (UUID from RNG)
 - `packages/core/src/actionLog.ts` — `ActionLog`, `ActionLogHeader`, `getActionLog`, `actionLogMiddleware`
 - `packages/core/tests/replay.test.ts` — replay logic and determinism tests
-- `packages/core/tests/qa-action-log-replay.test.ts` — end-to-end replay suite
-- `packages/server/src/rooms/GameRoom.ts` — seed generated at line 56, recorded in action log via runtime
+- `packages/core/src/replay/` — `replayLog`, `ReplayHost`, replay bundles
+- `packages/core/tests/actionLog.test.ts` — action log recording
+- `packages/server/src/rooms/GameRoom.ts` — `GameRoom.seed` drawn with `randomSeed`, recorded in action log via runtime
 - `docs/framework/README.md` — Action log and replay section
 
 **Sources:** Code inspection, `packages/core/src/utils.ts` (comments on `mulberry32` and `newId`), `packages/core/src/actionLog.ts` (header fields, middleware behaviour), `docs/framework/README.md` (Action log and replay section, Determinism contract).

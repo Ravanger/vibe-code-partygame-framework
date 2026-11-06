@@ -27,6 +27,7 @@ const MIME: Record<string, string> = {
   ".webmanifest": "application/manifest+json",
 };
 
+/** Serves a built client directory over HTTP on one port. */
 export class StaticSite {
   private server: Server | undefined;
 
@@ -45,6 +46,7 @@ export class StaticSite {
     this.server = server;
   }
 
+  /** Stops serving and drops open connections; does nothing when not serving. */
   async close(): Promise<void> {
     const server = this.server;
     this.server = undefined;

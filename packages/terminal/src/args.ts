@@ -2,6 +2,7 @@ import { parseArgs } from "node:util";
 import { between, type Parsed } from "@partygame/client-utils";
 import { NAME_MAX_LENGTH, RoomCodeSchema } from "@partygame/shared";
 
+/** The parsed `play` command line. */
 export interface PlayArgs {
   name: string;
   bots: number;
@@ -12,6 +13,7 @@ export interface PlayArgs {
   usesDefaults: boolean;
 }
 
+/** The parsed `bots` command line. */
 export interface BotsArgs {
   code: string;
   count: number;
@@ -19,6 +21,7 @@ export interface BotsArgs {
   apiPort: number;
 }
 
+/** Limits and usage text for parsing a game's `play` and `bots` arguments. */
 export interface ArgsLimits {
   maxBots: number;
   /** Returned as the error for any bad argument. */
@@ -36,7 +39,9 @@ export interface DemoArgsLimits {
   usage: string;
 }
 
+/** Game server WebSocket URL used when none is given. */
 export const DEFAULT_ENDPOINT = "ws://localhost:2567";
+/** Code API port used when none is given. */
 export const DEFAULT_API_PORT = 3001;
 
 const read = (

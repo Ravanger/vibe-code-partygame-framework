@@ -9,9 +9,6 @@ import type { z } from "zod";
  */
 export class OptionsReader<TOptions> {
   /** The current options: what the server published, else the fallback. Reactive. */
-  // Field initializer, not a constructor assignment: Stryker wraps constructor statements in
-  // if/else, and Svelte only accepts `$derived` as a top-level constructor assignment, so the
-  // instrumented output would not compile.
   readonly current: TOptions = $derived.by(() => {
     const raw = this.manager.state?.options;
     if (!raw) return this.fallbackValue;

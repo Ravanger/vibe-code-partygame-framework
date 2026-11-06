@@ -6,7 +6,7 @@ Ships source (`.ts`/`.svelte.ts`); consumers need the Svelte plugin — Vite wit
 
 | Import | What |
 |---|---|
-| `@partygame/game-client` | `GameConnectionManager<TState>`: connect, sync, send actions; `Countdown`, `isUrgent(secondsLeft)`, `FeedbackBus`, `resolveEndpoints`, `readCodeParam`; `ClientStrings`, `defaultClientStrings` for the manager's `strings` option |
+| `@partygame/game-client` | `GameConnectionManager<TState>`: connect, sync, send actions; `Countdown`, `isUrgent(secondsLeft)`, `FeedbackBus`, `resolveEndpoints`, `readCodeParam`; `ClientStrings`, `defaultClientStrings` for the manager's `strings` option; types `GameConnectionOptions` (server endpoints, room name and storage namespace), `ConnectionStatus`, `FeedbackEvent` (any bus event, discriminated by `type`) |
 | `@partygame/game-client/testing` | `StubRoom`, `connectedClient`, `fakeFetch` for UI tests without a server |
 | `@partygame/game-client/test-setup` | jsdom setup (shims storage, fixes WebSocket for the SDK) |
 
@@ -148,7 +148,7 @@ await c.manager.sendAction("PRESS");
 c.room.requests; // what the UI sent
 ```
 
-`fakeFetch({ roomId })` stands in for the code API; `StubRoom` also has `push`, `dropConnection`, `reconnected` and `closed`.
+`connectedClient(options)` takes `ConnectedClientOptions` and returns a `ConnectedClient` (manager, state, stub room and own seat); `addSeat` takes a `SeatConfig` (overrides for the seat, unset fields take the defaults). `fakeFetch({ roomId })` stands in for the code API and returns a recording `FetchStub`; `StubRoom` also has `push`, `dropConnection`, `reconnected` and `closed`.
 
 Depends on: `@partygame/client-utils`, `@partygame/shared`, `@colyseus/sdk`, `svelte`
 

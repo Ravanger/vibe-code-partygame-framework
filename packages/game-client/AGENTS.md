@@ -9,7 +9,7 @@ The Svelte 5 SDK a game client uses to connect, join, send actions and read stat
 - Visual components or viewmodels for screens (`game-ui`).
 - Game vocabulary or rule recomputation.
 - Server code; `core` and `server` are dev-only, for tests.
-- Room-code and browser-global handling that belongs behind injection (moving: #109).
+- Room-code and browser-global handling that belongs behind injection.
 
 ## May import
 
@@ -18,13 +18,13 @@ The Svelte 5 SDK a game client uses to connect, join, send actions and read stat
 
 ## Public entry points
 
-- `.`: `GameConnectionManager`, `Countdown`, `isUrgent`, `resolveEndpoints`, `readCodeParam`.
+- `.`: `GameConnectionManager`, `Countdown`, `isUrgent`, `resolveEndpoints`, `readCodeParam`, `FeedbackBus` and its `FeedbackEvent` types.
 - `./test-setup`: vitest setup for jsdom.
 - `./testing`: `StubRoom`, `connectedClient`, `addSeat`, `fakeFetch`.
 
 ## Tests
 
-`tests/` (jsdom); use `StubRoom` or a real state object. The manager is being split (#41, #42).
+`tests/` (jsdom); use `StubRoom` or a real state object. Keep the manager's concerns in separate small classes.
 
 ## Before you add a file
 

@@ -18,6 +18,7 @@ export function collectMessages(client: ClientRoom, type: string): unknown[] {
   return received;
 }
 
+/** Options for joining a test room as one player or spectator. */
 export interface TestJoinOptions {
   playerId: string;
   name?: string;
@@ -107,6 +108,7 @@ export class TestServer {
     await Promise.all(matchMaker.disconnectAll());
   }
 
+  /** Closes the test server and its APIs; call it in `afterAll`. */
   async shutdown(): Promise<void> {
     liveTestServers.delete(this);
     await Promise.all(
@@ -134,6 +136,8 @@ export async function bootTestServer(
   const server = createGameServer({
     reconnectMs: 1000,
     emptyRoomGraceMs: 30_000,
+    greet: false,
+    gracefullyShutdown: false,
     ...options,
     roomCodeService,
     // Silent under test unless the suite opts in with its own logger.

@@ -11,6 +11,8 @@ let client: GameClient<TapState>;
 
 beforeAll(async () => {
   handle = await startNodeServer({
+    greet: false,
+    gracefullyShutdown: false,
     games: [
       {
         roomName: TAP_ROOM,

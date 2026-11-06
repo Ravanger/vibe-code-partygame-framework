@@ -58,6 +58,15 @@ describe("importsOf", () => {
     expect(importsOf(source)).toEqual(["alpha", "beta", "gamma", "./delta.js", "epsilon"]);
   });
 
+  it("finds require and import.meta.glob references", () => {
+    const source = [
+      `const a = require("@colyseus/core");`,
+      `const b = import.meta.glob("../src/*");`,
+      `const c = import.meta.globEager('../x/*');`,
+    ].join("\n");
+    expect(importsOf(source)).toEqual(["@colyseus/core", "../src/*", "../x/*"]);
+  });
+
   it("returns nothing for a file without imports", () => {
     expect(importsOf("export const x = 1;")).toEqual([]);
   });
@@ -388,6 +397,82 @@ describe("checkBoundaries", () => {
           }),
         ]),
       ).toEqual([]);
+    });
+  });
+
+  describe("game purity", () => {
+    const files = (...list: SourceFile[]): Workspace[] => [...base(), game({ files: list })];
+
+    it.each(["@partygame/game-ui", "@partygame/game-client", "svelte", "svelte/store"])(
+      "rejects %s in game src",
+      (specifier) => {
+        expect(rules(files(file("games/demo/src/a.ts", specifier)))).toEqual(["layer-purity"]);
+      },
+    );
+
+    it.each(["@colyseus/core", "@colyseus/bun-websockets", "@colyseus/ws-transport", "node:fs"])(
+      "rejects %s in game ui",
+      (specifier) => {
+        expect(rules(files(file("games/demo/ui/a.ts", specifier)))).toEqual(["layer-purity"]);
+      },
+    );
+
+    it("rejects the server and core packages in game ui", () => {
+      const found = checkBoundaries([
+        ...base(),
+        game({
+          dependencies: ["@partygame/server", "@partygame/core"],
+          files: [file("games/demo/ui/a.ts", "@partygame/server", "@partygame/core")],
+        }),
+      ]);
+      expect(found.map((violation) => violation.rule)).toEqual(["game-ui", "game-ui"]);
+    });
+  });
+
+  describe("entry files", () => {
+    const entry = (path: string, ...imports: string[]): Workspace[] => [
+      ...base(),
+      game({ files: [file(path, ...imports)] }),
+    ];
+
+    it.each(["server", "launch", "gamePackage"])("applies declared to games/demo/%s.ts", (name) => {
+      expect(checkBoundaries(entry(`games/demo/${name}.ts`, "@partygame/core"))).toEqual([
+        {
+          path: `games/demo/${name}.ts`,
+          rule: "declared",
+          detail: "@partygame/core is not in dependencies",
+        },
+      ]);
+    });
+
+    it("applies public-entry to an entry file", () => {
+      const found = checkBoundaries(entry("games/demo/server.ts", "@partygame/shared/src/x"));
+      expect(found.map((violation) => violation.rule)).toEqual(["public-entry"]);
+    });
+
+    it("lets config and setup files use dev dependencies like tests", () => {
+      const workspaces = [
+        ...base(),
+        game({
+          devDependencies: ["@partygame/config"],
+          files: [file("games/demo/vite.config.ts", "@partygame/config/vitest")],
+        }),
+      ];
+      expect(rules(workspaces)).toEqual([]);
+    });
+
+    it("rejects an undeclared import in a config file", () => {
+      const workspaces = [
+        ...base(),
+        game({ files: [file("games/demo/vite.config.ts", "@partygame/core")] }),
+      ];
+      expect(rules(workspaces)).toEqual(["declared"]);
+    });
+
+    it("scans nested package scripts as dev files", () => {
+      expect(
+        rules(withChange("cli", { files: [file("packages/cli/scripts/a.ts", "@partygame/core")] })),
+      ).toEqual(["declared"]);
     });
   });
 });

@@ -1,16 +1,47 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { checkGates, diffRange, labelsOf, NO_TEST_LABEL, OVERRIDE_LABEL } from "./checkGates.js";
+import {
+  checkGates,
+  diffRange,
+  isScannedPath,
+  labelsOf,
+  NO_TEST_LABEL,
+  OVERRIDE_LABEL,
+  scanTree,
+  trustedLabels,
+} from "./checkGates.js";
 
 const args = process.argv.slice(2);
 const eventPath = process.env.GITHUB_EVENT_PATH;
-const labels = eventPath ? labelsOf(JSON.parse(readFileSync(eventPath, "utf8"))) : [];
-const diff = execFileSync("git", ["diff", "-U0", "--no-color", ...diffRange(args)], {
+const argValue = (flag: string): string | undefined => args[args.indexOf(flag) + 1];
+const eventsPath = args.includes("--label-events") ? argValue("--label-events") : undefined;
+const owner = args.includes("--label-owner") ? argValue("--label-owner") : undefined;
+const event = eventPath ? JSON.parse(readFileSync(eventPath, "utf8")) : undefined;
+const labels =
+  eventsPath && owner
+    ? trustedLabels(event, JSON.parse(readFileSync(eventsPath, "utf8")), owner)
+    : labelsOf(event);
+const diff = execFileSync("git", ["diff", "-U10000", "--no-color", ...diffRange(args)], {
   encoding: "utf8",
   maxBuffer: 256 * 1024 * 1024,
 });
 
-const violations = checkGates(diff, labels, !args.includes("--staged"));
+// Read contents from git, never from disk: a fork's tree can contain symlinks.
+const readFromGit = (path: string): string =>
+  execFileSync("git", ["show", `:${path}`], {
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+  });
+
+const staged = args.includes("--staged");
+const treeFiles = staged
+  ? []
+  : execFileSync("git", ["ls-files", "-z"], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 })
+      .split("\0")
+      .filter((path) => path !== "" && isScannedPath(path))
+      .map((path) => ({ path, content: readFromGit(path) }));
+
+const violations = [...checkGates(diff, labels, !staged), ...scanTree(treeFiles)];
 for (const violation of violations) {
   console.error(`${violation.path}: ${violation.rule}: ${violation.detail}`);
 }

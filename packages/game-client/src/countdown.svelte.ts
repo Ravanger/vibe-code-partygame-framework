@@ -7,11 +7,7 @@ export function isUrgent(secondsLeft: number): boolean {
   return secondsLeft > 0 && secondsLeft <= 10;
 }
 
-// The client clock lives in a closure instead of a class field: Stryker wraps constructor
-// statements in if/else, so `$state` cannot be assigned in the constructor (Svelte accepts it
-// only as a top-level constructor assignment), and a `$state` class field initializer leaves
-// phantom uncovered items when v8 merges per-project maps. A local declaration inside a
-// function body compiles identically in every mode and survives instrumentation.
+// `$state` stays in a closure: assigning it in a constructor body does not compile.
 function createNow() {
   let now = $state(Date.now());
   return {
@@ -24,6 +20,7 @@ function createNow() {
   };
 }
 
+/** Seconds left until a server-set deadline, corrected for client clock skew, with `isExpired` and `isUrgent` flags. */
 export class Countdown {
   private readonly nowRef = createNow();
   private lastServerNow = 0;
@@ -38,11 +35,8 @@ export class Countdown {
     tickMs = DEFAULT_TICK_MS,
   ) {
     this.lastServerNow = this.getServerNowFn();
-    // Must be the same instant as `nowRef.value`; a second Date.now() read here can land a
-    // millisecond later, making elapsedSinceServer negative and rounding secondsLeft up.
+    // Reuse `nowRef.value`: a second Date.now() can land later and round secondsLeft up.
     this.lastServerNowClientTime = this.nowRef.value;
-    // The interval runs only while an effect reads `secondsLeft`: the first reader starts it,
-    // the last one going away clears it. Plain (non-reactive) reads compute once, no interval.
     this.track = createSubscriber((update) => {
       const interval = setInterval(() => {
         this.tick();
@@ -75,6 +69,9 @@ export class Countdown {
     }
   }
 
-  /** @deprecated The interval now starts and stops with the readers, so this no longer does anything. */
+  /**
+   * No-op kept for compatibility.
+   * @deprecated The interval now starts and stops with the readers, so this no longer does anything.
+   */
   destroy(): void {}
 }

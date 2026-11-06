@@ -3,6 +3,7 @@ import { CLIENT_MESSAGES, RoomCodeSchema, sanitizeRoomCode } from "@partygame/sh
 import type { BaseGameState } from "@partygame/shared/schema";
 import { errorText, getStrings } from "./strings.js";
 
+/** The entry screen: hosting a room, or joining or watching one by code, with an optional share-link code. */
 export class WelcomeViewModel<TState extends BaseGameState> {
   code = $state("");
   localError = $state<string | undefined>(undefined);
@@ -14,23 +15,28 @@ export class WelcomeViewModel<TState extends BaseGameState> {
     private readonly urlTvCode?: string,
   ) {}
 
+  /** True while a connection attempt is in progress. */
   get busy(): boolean {
     return this.manager.status === "connecting";
   }
 
+  /** True when the typed code has the shape of a room code. */
   get codeIsValid(): boolean {
     return RoomCodeSchema.safeParse(this.code).success;
   }
 
+  /** Sets the code field from raw input, stripped to valid room-code characters. */
   setCode(raw: string): void {
     this.code = sanitizeRoomCode(raw);
   }
 
+  /** Creates a room and joins it as the host; failures land in `localError`. */
   async host(): Promise<void> {
     this.localError = undefined;
     await this.attempt(() => this.manager.create());
   }
 
+  /** Joins the room with the typed code; an invalid code or a failure lands in `localError`. */
   async join(): Promise<void> {
     this.localError = undefined;
     if (!this.codeIsValid) {
@@ -40,6 +46,7 @@ export class WelcomeViewModel<TState extends BaseGameState> {
     await this.attempt(() => this.manager.join(this.code));
   }
 
+  /** Joins the room with the typed code as a spectator; an invalid code or a failure lands in `localError`. */
   async watch(): Promise<void> {
     this.localError = undefined;
     if (!this.codeIsValid) {
@@ -58,6 +65,7 @@ export class WelcomeViewModel<TState extends BaseGameState> {
     await (this.urlTvCode ? this.watch() : this.join());
   }
 
+  /** Clears `localError`. */
   dismissError(): void {
     this.localError = undefined;
   }

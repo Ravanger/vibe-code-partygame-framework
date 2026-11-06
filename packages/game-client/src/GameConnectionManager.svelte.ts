@@ -25,6 +25,7 @@ import { PersistedSession } from "./PersistedSession.js";
 import type { RoomLike } from "./RoomLike.js";
 import { type ClientStrings, defaultClientStrings, resolveClientMessages } from "./strings.js";
 
+/** Where the manager is in its connection lifecycle. */
 export type ConnectionStatus =
   | "idle"
   | "connecting"
@@ -32,6 +33,7 @@ export type ConnectionStatus =
   | "reconnecting"
   | "disconnected";
 
+/** Configuration for a `GameConnectionManager`: server endpoints, room name and a storage namespace. */
 export interface GameConnectionOptions<TState> {
   /** Game server URL, e.g. `http://host:2567`. */
   endpoint: string;
@@ -78,7 +80,6 @@ const SESSION_CLEARING: ReadonlySet<CloseCode> = new Set([
   CLOSE_CODES.VERSION_MISMATCH,
   CLOSE_CODES.SEAT_TAKEN,
 ]);
-// Same cadence as the Countdown's own ticker.
 const URGENCY_TICK_MS = 250;
 const URGENCY_WINDOW_MS = 10_000;
 
@@ -137,9 +138,7 @@ export class GameConnectionManager<
     this.messages = resolveClientMessages(this.strings);
     const matchMedia = options.matchMedia ?? ((query: string) => window.matchMedia(query));
     this.feedback = new FeedbackBus(() => matchMedia("(prefers-reduced-motion: reduce)").matches);
-    // The state watchers only run while someone listens for phase or urgent events.
     this.feedback.onChange(() => this.syncStateWatchers());
-    // Protocol errors are internal plumbing, not a game broadcast: no feedback relay.
     this.bus.on(ServerMessage.ERROR, (payload) => this.serverErrorReceived(payload));
   }
 
@@ -149,10 +148,12 @@ export class GameConnectionManager<
     return this.room?.state;
   }
 
+  /** The room's join code, or `undefined` before the state has synced. */
   get roomCode(): string | undefined {
     return this.state?.roomCode || undefined;
   }
 
+  /** True when this client's seat holds the host role. */
   get isHost(): boolean {
     return this.me()?.role === "host";
   }
@@ -175,6 +176,7 @@ export class GameConnectionManager<
     );
   }
 
+  /** Creates a room with the given room options and joins it as the host. */
   async create(options: Record<string, unknown> = {}): Promise<void> {
     await this.coordinator.run("create", (cancelled) =>
       this.open(
@@ -222,6 +224,7 @@ export class GameConnectionManager<
     );
   }
 
+  /** Joins the room with this code without a seat, as a TV display does. */
   joinAsSpectator(code: string): Promise<void> {
     return this.join(code, { spectator: true });
   }
@@ -264,6 +267,7 @@ export class GameConnectionManager<
     await this.closeRoom();
   }
 
+  /** Asks the server to rename this client's seat; the server validates the name. */
   setName(name: string): void {
     this.room?.send(ClientMessage.SET_NAME, name);
   }
@@ -329,7 +333,6 @@ export class GameConnectionManager<
     type: K,
     callback: (payload: TEvents[K]) => void,
   ): () => void {
-    // The bus stores untyped callbacks; the typed contract lives at this public boundary.
     const offBus = this.bus.on(type, callback as (payload: unknown) => void);
     let relay = this.messageRelays.get(type);
     if (relay === undefined) {
@@ -339,11 +342,11 @@ export class GameConnectionManager<
       };
       this.messageRelays.set(type, relay);
     }
-    const registered = relay; // the entry cannot change while a live listener holds it
+    const registered = relay;
     registered.count += 1;
     let done = false;
     return () => {
-      if (done) return; // an unsubscribe removes only its own listener, once
+      if (done) return;
       done = true;
       offBus();
       registered.count -= 1;
@@ -354,6 +357,7 @@ export class GameConnectionManager<
     };
   }
 
+  /** Clears `lastServerError`. */
   dismissError(): void {
     this.setLastError(undefined);
   }
@@ -435,7 +439,6 @@ export class GameConnectionManager<
         settle();
         resolve();
       };
-      // `settle` removes this listener, so it can only fire while the wait is still open.
       const onLeave = (): void => {
         settle();
         reject(new Error(this.strings.syncDisconnected));
@@ -484,19 +487,18 @@ export class GameConnectionManager<
       this.stopStateWatchers();
       return;
     }
-    if (this.phaseWatcher !== undefined) return; // already running
+    if (this.phaseWatcher !== undefined) return;
     const watchPhase = () => this.observePhase(room);
     room.onStateChange(watchPhase);
     this.phaseWatcher = { room, callback: watchPhase };
     this.startUrgencyTimer(room);
-    watchPhase(); // establish the baseline at the moment listening begins
+    watchPhase();
   }
 
   /** Stops the phase watcher and urgency timer and resets the phase baseline so a later (re)start re-establishes it silently. */
   private stopStateWatchers(): void {
     this.phaseWatcher?.room.onStateChange.remove(this.phaseWatcher.callback);
     this.phaseWatcher = undefined;
-    // Reset the phase baseline so a reconnect re-establishes it silently, like the urgency side.
     this.lastPhase = undefined;
     this.stopUrgencyTimer();
   }

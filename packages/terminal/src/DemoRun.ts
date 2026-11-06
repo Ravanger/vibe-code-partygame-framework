@@ -5,6 +5,7 @@ import { type NodeServerHandle, startNodeServer } from "@partygame/server/node";
 import type { BaseGameState } from "@partygame/shared/schema";
 import { GameClient, type GameRoomOf } from "./GameClient.js";
 
+/** Options for `DemoRun`: the bot kit, bot count and the verdict hooks of one all-bot game. */
 export interface DemoRunOptions<TState extends BaseGameState> {
   /** Started on free ports with `startNodeServer`; must include `kit.roomName`. */
   games: HostedGame[];

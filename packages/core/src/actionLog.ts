@@ -84,13 +84,12 @@ export interface ActionLogHeader {
   /** Definition name; `replayLog` refuses a log recorded for another game. */
   game: string;
   /**
-   * The definition's version; `replayLog` refuses a log with a different version, or one without
-   * (recorded before versioning).
+   * The definition's version; `replayLog` refuses a log with a different or missing version.
    */
   version?: string;
   /**
-   * The framework's `PROTOCOL_VERSION` at record time; `replayLog` refuses a log with a different
-   * one, or one without (recorded before protocol versioning).
+   * The framework's `PROTOCOL_VERSION` at record time; `replayLog` refuses a log with a different or
+   * missing one.
    */
   protocolVersion?: number;
   /** `ctx.now()` at the first entry (the construction-time Lobby enter). */
@@ -110,12 +109,9 @@ export interface RosterSeat {
 export interface ActionLog {
   header: ActionLogHeader;
   /**
-   * The seats in seat order, captured when START_GAME was dispatched (once — a second start after
-   * `returnToLobby` does not overwrite it). Each entry records the seat's flags at that moment so
-   * replay pre-seats them and the replayed bench-on-start and `activePlayers()` reads match live.
-   * The live host is the first seat, and replay maps the ids positionally to p1..pN, so senders
-   * re-dispatch against the matching replay seats. Absent from lobby-only sessions; `replayLog`
-   * then requires `init.players`.
+   * The seats in seat order, captured once when START_GAME was dispatched. Replay pre-seats them
+   * with the recorded flags and maps the ids positionally to p1..pN. Absent from lobby-only
+   * sessions; `replayLog` then requires `init.players`.
    */
   roster?: RosterSeat[];
   entries: ActionLogEntry[];
@@ -137,12 +133,7 @@ function isPlainObjectPayload(value: unknown): boolean {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/**
- * One recorded event. `kind` is declared first and the fields follow the order replay's shape
- * check has always reported them, so a corrupt entry fails on the same field it used to. The
- * numeric fields are bounded (non-negative safe integers, `seq` from 1) and an action's `payload`
- * must be a plain object when present — redacted entries carry none.
- */
+/** One recorded event. Field order decides which field a shape error names first; numeric fields are bounded and `payload` must be a plain object when present. */
 const ActionLogEntrySchema = z.strictObject({
   kind: z.enum(["action", "transition", "enter", "timeout", "roster-change"]),
   t: nonNegativeSafeInt,
@@ -158,7 +149,7 @@ const ActionLogEntrySchema = z.strictObject({
   ticks: nonNegativeSafeInt.optional(),
 });
 
-/** The log header, in the order replay's shape check has always reported its fields. */
+/** The log header. Field order decides which field a shape error names first. */
 const ActionLogHeaderSchema = z.strictObject({
   game: z.string(),
   seed: z.tuple([z.number(), z.number(), z.number(), z.number()]),
@@ -167,14 +158,7 @@ const ActionLogHeaderSchema = z.strictObject({
   startedAt: nonNegativeSafeInt,
 });
 
-/**
- * The wire shape of an {@link ActionLog}: strict objects, so a hand-edited log with unknown
- * fields is rejected as well. Bounded for untrusted input: `t` and `header.startedAt` are
- * non-negative safe integers, `seq` a safe integer from 1, `entries` at most
- * {@link MAX_ACTION_LOG_ENTRIES} long, and an action entry's `payload` (when present) a plain
- * object. `replayLog` validates every log against this before reading it; bundle and spectator
- * code (#19) validates untrusted logs with it too.
- */
+/** The wire shape of an {@link ActionLog}: strict objects, so unknown fields are rejected; bounded for untrusted input (`t`/`startedAt` non-negative safe integers, `seq` from 1, `entries` at most {@link MAX_ACTION_LOG_ENTRIES}, action `payload` a plain object). `replayLog` validates every log against it before reading. */
 export const ActionLogSchema = z.strictObject({
   entries: z.array(ActionLogEntrySchema).max(MAX_ACTION_LOG_ENTRIES),
   header: ActionLogHeaderSchema,
@@ -215,31 +199,22 @@ function logOf(ctx: MiddlewareContext<PhaseState, unknown, unknown>, instance: s
 }
 
 /**
- * Records every middleware-visible event — actions (type, sender, zod-parsed payload), transitions
- * (from/to), enters, timeouts and roster changes — into an append-only, JSON-serializable log kept
- * outside `ctx.priv` (a module-level store keyed by it). The header (seed, game name, start time)
- * is written on the first entry. While a ticking phase (`onTick`) is active, every entry also
- * carries `ticks` — the ticks fired since the phase was entered — so replay can cap its tick
- * delivery at the live count (#246).
- * Never touches `ctx.state`; the log stays server-side. Actions rejected before the handler chain
- * (malformed envelope, unknown action, unauthorized sender, inactive player, invalid payload) are not
- * logged; an action whose handler calls `ctx.reject()` or throws a `FrameworkError` has reached the
- * chain and is logged with `rejected: true`, so such logs replay — the re-dispatch re-runs the handler (RNG draws included)
- * and must reject again. A rejection recorded with `redactPayload: true` (a middleware that refused
- * the action before the handler ran, like the text filter) is logged with `rejected: true` and
- * `redacted: true` and no `payload`; `replayLog` skips such entries. See "Action log and replay" in
- * the framework guide.
+ * Records every middleware-visible event (actions, transitions, enters, timeouts, roster changes)
+ * into an append-only, JSON-serializable log kept outside `ctx.priv`; never touches `ctx.state`.
+ * While a ticking phase (`onTick`) is active, every entry also carries `ticks` — the ticks fired since
+ * the phase was entered — so replay can cap its tick delivery at the live count.
+ * Actions rejected before the handler chain are not logged; one rejected by its handler is logged
+ * with `rejected: true`, and a redacted rejection with `redacted: true` and no `payload`.
  * Register exactly one instance per game: a second instance recording for the same priv throws
  * {@link DuplicateActionLogMiddlewareError} instead of double-recording every event.
+ * See "Action log and replay" in the framework guide.
  */
 export function actionLogMiddleware(): PhaseMiddleware<PhaseState, unknown, unknown> {
   const instance = Symbol("actionLogMiddleware");
   return (ctx, next) => {
     const log = logOf(ctx, instance);
     const event = ctx.event;
-    // The seats when the game starts, in seat order — what replay pre-seats. The flags are
-    // recorded too: replay restores them so its bench-on-start matches live's exactly. An
-    // auto-started session has no START_GAME action, so a departure from the Lobby records it.
+    // An auto-started session has no START_GAME action, so a departure from the Lobby records the roster.
     const recordRoster = (): void => {
       if (log.roster === undefined) {
         log.roster = ctx.players().map((seat) => ({
@@ -274,7 +249,6 @@ export function actionLogMiddleware(): PhaseMiddleware<PhaseState, unknown, unkn
     if (event.kind === "action" && ctx.rejectionCount > 0) {
       entry.rejected = true;
       if (ctx.redactedRejectionCount > 0) {
-        // The rejection asked for redaction: the payload never lands in the log.
         delete entry.payload;
         entry.redacted = true;
       }

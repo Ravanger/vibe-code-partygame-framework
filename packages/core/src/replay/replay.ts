@@ -89,7 +89,7 @@ function mustBe(field: string, code: string, typeText: string): string {
   return typeText;
 }
 
-/** The type text for an entry field in a shape error, mirroring the messages replay has always thrown. */
+/** The type text for an entry field in a shape error. */
 function entryFieldType(field: string): string {
   switch (field) {
     case "kind":
@@ -130,7 +130,7 @@ function rosterFieldType(field: string): string {
   }
 }
 
-/** Describes the first {@link ActionLogSchema} issue as the named `replayLog:` message replay has always thrown. */
+/** Describes the first {@link ActionLogSchema} issue as a named `replayLog:` message. */
 function shapeMessage(issues: readonly ShapeIssue[], log: unknown): string {
   const issue = required(issues[0], "shape issue");
   const [section, index, field] = issue.path;
@@ -159,7 +159,6 @@ function shapeMessage(issues: readonly ShapeIssue[], log: unknown): string {
   }
   if (section === "roster") {
     if (typeof index !== "number") return "log.roster must be an array";
-    // A path of ["roster", i] means the schema saw an array there, so this cannot miss.
     const seat = (log as { roster: readonly unknown[] }).roster[index];
     if (field === undefined) {
       return issue.code === "unrecognized_keys"
@@ -173,30 +172,19 @@ function shapeMessage(issues: readonly ShapeIssue[], log: unknown): string {
     : "log must be an object";
 }
 
-/**
- * Validates the log's shape before `replayLog` reads it: a hand-edited or corrupt log must fail
- * with a named `replayLog:` error, never a raw `TypeError` partway through the walk. The shape is
- * {@link ActionLogSchema}; its declaration order mirrors the check replay has always reported, so
- * the messages are unchanged.
- */
+/** Validates the log's shape so a corrupt log fails with a named `replayLog:` error, never a raw `TypeError`. */
 function assertLogShape(log: ActionLog): void {
   const parsed = ActionLogSchema.safeParse(log);
   if (parsed.success) return;
   throw new Error(`replayLog: ${shapeMessage(parsed.error.issues, log)}`);
 }
 
-/**
- * Pairs each logged enter with the timeout that closed it. Per phase, one slot per enter in log
- * order, filled with the timeout entry's `t` when the phase timed out before its next enter;
- * `undefined` when the phase left early. A valid log pairs 1:1 — a timeout without an open enter
- * (a malformed log) is ignored.
- */
+/** Pairs each logged enter with the timeout that closed it; `undefined` when the phase left early. */
 function pairTimeouts(entries: ActionLogEntry[]): Map<string, (number | undefined)[]> {
   const pairs = new Map<string, (number | undefined)[]>();
   const open = new Map<string, { list: (number | undefined)[]; index: number }>();
   for (const entry of entries) {
     if (entry.kind === "enter") {
-      // Re-enters (including a timeout that re-enters its own phase) append to the existing list.
       let list = pairs.get(entry.phase);
       if (list === undefined) {
         list = [];
@@ -217,12 +205,7 @@ function pairTimeouts(entries: ActionLogEntry[]): Map<string, (number | undefine
 
 /**
  * Replaces each timed phase's duration with one that expires at the log's recorded timeout time.
- * A live room's phase timers run on Colyseus's tick-quantized clock (~17 ms grid), so a logged
- * timeout can precede or follow the nominal enter + duration deadline; the log is authoritative.
- * Enters without a logged timeout keep the original duration (their timer is cancelled on the
- * early exit, exactly as live). When the original duration is a function it is still called on
- * every enter — its value is only discarded when a recorded timeout is authoritative — so a
- * duration that draws from `ctx.rng()` consumes the same RNG draws, in the same order, as live.
+ * Enters without a logged timeout keep the original duration.
  */
 function authoritativeDurations<TState extends PhaseState, TPrivate, TOptions>(
   definition: GameDefinition<TState, TPrivate, TOptions>,
@@ -241,8 +224,7 @@ function authoritativeDurations<TState extends PhaseState, TPrivate, TOptions>(
       ...phase,
       duration: (ctx) => {
         const at = list[next++];
-        // Call the original even when the recorded timeout is authoritative: a function duration
-        // that draws the RNG must consume the same draws, in the same order, as live.
+        // Call the original even when overridden: a function duration may draw the RNG.
         const base = typeof original === "function" ? original(ctx) : original;
         return at !== undefined ? at - ctx.now() : base;
       },
@@ -323,53 +305,16 @@ function capTicks<TState extends PhaseState, TPrivate, TOptions>(
 }
 
 /**
- * Re-drives a fresh runtime from an {@link ActionLog} and returns deep-cloned state snapshots.
- * The definition's `name` and `version` must match the log's header: a different game or version
- * throws, as does a log with no recorded version (one predating versioning). The header's
- * `protocolVersion` must equal the current `PROTOCOL_VERSION`: a different one, or a log without
- * it (recorded before protocol versioning), throws too.
- * The log must start with the construction-time Lobby enter (seq 1) — every recorded session does,
- * because the middleware creates the log on its first event — and a different first entry throws.
- * Builds a {@link ReplayHost} with the log's seed (or `init.seed`) and start time and drives a
- * fresh `GameRuntime` on it, then walks the entries in order: transitions and enters are
- * consequences of the step that started them and are skipped; every other entry advances the clock
- * to its `t`, re-dispatches the action (if any) and produces one snapshot. Logged timeouts are
- * authoritative: when the replayed runtime enters a timed phase, its timer is made to expire at
- * the time recorded in the log — a live room's tick-quantized clock can fire a few ms early or
- * late relative to enter + duration — so `phaseEndsAt` in the snapshots reflects that time. Recorded
- * tick counts are authoritative too: while a ticking phase is active, each entry records the ticks
- * the live room had applied, and the replay caps that phase's tick delivery at it — a live host
- * delivers ticks up to one clock grid step late, so an action can land after a tick's nominal
- * deadline but before its delivery. Ticks past an entry's cap are deferred in fire order and apply
- * at the next entry boundary (or are discarded when the phase is left first), exactly as the live
- * room did; entries without `ticks` (legacy logs) replay every nominally due tick, as before. The
- * recorded roster (the seats at START_GAME, host first) is pre-seated with its recorded flags — so
- * the replayed bench-on-start and `activePlayers()` reads match live — and its ids are mapped
- * positionally to p1..pN so actions re-dispatch against the matching seats; a log without a roster
- * requires `init.players` instead. Roster changes during the Lobby are skipped — the table is
- * already seated — except the one an auto-started session records right before its start
- * transition, which re-runs the lobby hook against the seated table so the replay performs the
- * same start at the same time; a mid-game roster change throws, because v1 does not replay it.
- * A step whose re-run throws (the live run failed and the failure policy returned the room to the Lobby)
- * throws a `replayLog:` error saying logs with a failed run are not replayable in v1.
- * Entries must be time-ordered; a backwards clock throws. A re-dispatch that rejects where the log
- * says the action was accepted throws, and one that accepts where the log marks the entry
- * `rejected: true` throws as well — both directions of mismatch mean the log is not what this
- * definition produces. Redacted entries (`redacted: true`) are skipped: they were refused before the
- * handler ran, so no payload was logged and no state or RNG changed — the clock still advances to
- * their `t` and they produce a snapshot like any other step. Each step's logged transitions and enters
- * are asserted against the replayed
- * runtime — a log that contradicts what this definition actually does throws, naming the mismatch.
- * The log's shape is validated up front against {@link ActionLogSchema} (strict objects: `entries`
- * an array of at most {@link MAX_ACTION_LOG_ENTRIES} objects each with a known `kind`, non-negative
- * safe-integer `t` and `seq` (from 1) and a string `phase`; an action's `payload`, when present,
- * a plain object; `header` with a string `game`, four-number `seed` and non-negative safe-integer
- * `startedAt`; roster entries carrying `id` plus the seat flags; no unknown fields anywhere) — a
- * malformed log throws a named error before anything runs, and an empty `entries` array throws
- * "the log has no entries". Timer firing is budgeted too: one advance fires at most
- * MAX_TIMER_FIRES_PER_ADVANCE timers and the whole run at most MAX_TIMER_FIRES_PER_REPLAY; a log
- * whose time gaps would fire more throws a named error instead of doing unbounded work. See
- * "Action log and replay" in the framework guide.
+ * Re-drives a fresh runtime from an {@link ActionLog} and returns deep-cloned state snapshots,
+ * `states[0]` being the construction state. Throws a `replayLog:` error when the log's shape is
+ * invalid, its game, version or protocol version differs from the definition's, it has no recorded
+ * roster and `init.players` is missing, its entries are not time-ordered, a mid-game roster change
+ * or a failed run is logged, a re-dispatch's accept/reject outcome contradicts the log, or the
+ * replayed transitions and enters differ from the logged ones. While a ticking phase is active the
+ * replay caps its tick delivery at the count each entry recorded (a live host delivers ticks up to
+ * one clock grid step late), and timer firing is budgeted: one advance fires at most
+ * {@link MAX_TIMER_FIRES_PER_ADVANCE} timers, the whole run at most {@link MAX_TIMER_FIRES_PER_REPLAY}.
+ * See "Action log and replay" in the framework guide.
  */
 export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
   definition: GameDefinition<TState, TPrivate, TOptions>,
@@ -405,8 +350,6 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
       `replayLog: log was recorded with protocol version ${log.header.protocolVersion}, not ${PROTOCOL_VERSION}`,
     );
   }
-  // The middleware creates the log on its first event, and a runtime's first event is always the
-  // construction-time Lobby enter — so any valid log starts with exactly that entry.
   const first = required(log.entries[0], "first log entry");
   if (first.seq !== 1 || first.kind !== "enter" || first.phase !== LOBBY_PHASE) {
     const what = first.kind === "action" ? `action "${first.actionType}"` : `"${first.kind}" entry`;
@@ -420,10 +363,7 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
   const roster = log.roster;
   if (roster !== undefined) {
     seatCount = roster.length;
-    // The live host is the first seat and ReplayHost makes the first seated player the host, so a
-    // positional map preserves both identity and order.
     toSeat = new Map(roster.map((seat, index) => [seat.id, `p${index + 1}`] as const));
-    // Restore the recorded flags so the replayed bench-on-start and activePlayers() reads match live.
     seats = roster.map(({ isConnected, isReady, isActive }) => ({
       isConnected,
       isReady,
@@ -446,9 +386,7 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
     host,
   });
   const states: TState[] = [clone(init.state)];
-  // An auto-started session records its start transition right after the roster change that
-  // triggered it; those steps re-run the lobby hook against the already-seated table so the
-  // replay performs the same start at the same time. Other lobby roster changes stay skipped.
+  // An auto-started session's start follows its roster change; re-run the lobby hook for those steps only.
   const settleSeqs = new Set<number>();
   for (let i = 0; i + 1 < log.entries.length; ++i) {
     const entry = required(log.entries[i], "log entry");
@@ -461,8 +399,6 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
   }
   for (let i = 0; i < log.entries.length; ++i) {
     const entry = required(log.entries[i], "log entry");
-    // Transition and enter entries are consequences of the step that caused them; each step asserts
-    // its own consequence run below.
     if (entry.kind === "transition" || entry.kind === "enter") continue;
     if (entry.t < host.time) {
       throw new Error(
@@ -493,8 +429,7 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
       }
       host.advance(entry.t - host.time);
       if (settleSeqs.has(entry.seq)) runtime.rosterChanged();
-      // A redacted entry was refused before the handler ran and its payload is not in the log:
-      // re-dispatching it is impossible, and skipping it keeps state and RNG in step with live.
+      // Redacted entries carry no payload; skipping keeps state and RNG in step with live.
       if (entry.kind !== "action" || entry.redacted === true) return undefined;
       const senderId = entry.senderId ?? "";
       const seat = toSeat?.get(senderId);
@@ -504,13 +439,11 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
       };
       if (seat !== undefined) return runtime.dispatch(seat, rawAction);
       if (toSeat === undefined) return runtime.dispatch(senderId, rawAction);
-      // A sender missing from the recorded roster is an audience key: re-dispatch it seatless.
       return runtime.dispatchAudience(senderId, rawAction);
     });
     if (entry.kind === "action" && entry.redacted !== true) {
       if (entry.rejected === true) {
-        // The live handler rejected: the re-dispatch must reject again. Re-running it also consumes
-        // any RNG draws the handler made before rejecting, keeping the stream in step with live.
+        // Re-running also consumes the RNG draws the handler made before rejecting.
         if (error === undefined) {
           throw new Error(
             `replayLog: entry ${entry.seq} is logged as rejected, but the re-dispatch of action ${entry.actionType} was accepted`,
@@ -522,8 +455,6 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
         );
       }
     }
-    // The transitions and enters that follow a step are its consequences: the replayed runtime must
-    // have performed exactly what the log records, or the log is not what this definition produces.
     let expected = prePhase;
     for (let j = i + 1; j < log.entries.length; ++j) {
       const consequence = required(log.entries[j], "log entry");

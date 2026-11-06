@@ -1,5 +1,6 @@
 import { type SchemaType, schema, t } from "@colyseus/schema";
 
+/** Synced schema of one seat in the room; clients receive it inside the room state. */
 export const PlayerSchema = schema(
   {
     id: t.string().default(""),
@@ -11,4 +12,5 @@ export const PlayerSchema = schema(
   },
   "PlayerSchema",
 );
+/** The instance type of {@link PlayerSchema}. */
 export type PlayerSchema = SchemaType<typeof PlayerSchema>;

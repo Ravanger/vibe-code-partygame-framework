@@ -28,6 +28,7 @@ export class NameField<TState extends BaseGameState = BaseGameState> {
     );
   }
 
+  /** Cancels a pending debounced rename. */
   destroy(): void {
     clearTimeout(this.timer);
   }

@@ -4,7 +4,7 @@ Unified launcher: game server, code-resolution API, browser client (dev/prod), o
 
 | Import | What |
 |---|---|
-| `@partygame/launcher` | `runLauncher(config, argv)`; `Launcher`, `ProcessGroup`, `StaticSite`, `parseLaunchArgs`, `lanUrls`, `openBrowser`; types `LaunchConfig`, `LaunchMode` |
+| `@partygame/launcher` | `runLauncher(config, argv)`; `Launcher`, `ProcessGroup`, `StaticSite`, `parseLaunchArgs`, `lanUrls`, `openBrowser`; types `LaunchConfig`, `LaunchMode`, `LaunchArgs` (the parsed `launch` command line), `LaunchBots`, `LaunchDemo`, `LaunchPorts`, `LaunchCommands` |
 
 ## Launch a game
 
@@ -75,7 +75,7 @@ await runLauncher(
 
 ## Tune the config
 
-All optional: `ports` (`game` 2567, `api` 3001, `clientDev` 5173, `production` 3000), `commands` (`server`, `dev`, `build`; each a command array), `readyTimeoutMs` (30000), `openBrowser(url)` and `log(line)`.
+`LaunchBots` (`bots`) is how a game seats bots beside a human; `LaunchDemo` (`demo`) is how it opens a watch-only all-bot room. The rest is all optional: `ports` (`LaunchPorts`, the TCP ports the services listen on: `game` 2567, `api` 3001, `clientDev` 5173, `production` 3000), `commands` (`LaunchCommands`, the child-process commands: `server`, `dev`, `build`; each a command array), `readyTimeoutMs` (30000), `openBrowser(url)` and `log(line)`.
 
 ```ts
 { name: "FirstToPress", gameDir, ports: { clientDev: 5200 }, commands: { build: ["bun", "run", "build"] } }
