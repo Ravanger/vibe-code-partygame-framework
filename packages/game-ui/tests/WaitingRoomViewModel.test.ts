@@ -171,6 +171,16 @@ describe("WaitingRoomViewModel", () => {
     expect(vm.copyState).toBe("failed");
   });
 
+  it("cancels the pending copy reset when destroyed", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const vm = new WaitingRoomViewModel(client().manager, { clipboard: { writeText } });
+    await vm.copyCode();
+    expect(vm.copyState).toBe("copied");
+    vm.destroy();
+    vi.advanceTimersByTime(2000);
+    expect(vm.copyState).toBe("copied"); // the reset died with the instance
+  });
+
   it("lets the host remove others only, after a confirmation", async () => {
     const c = hostLobby();
     const vm = new WaitingRoomViewModel(c.manager);

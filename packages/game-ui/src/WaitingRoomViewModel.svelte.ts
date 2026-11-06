@@ -198,8 +198,10 @@ export class WaitingRoomViewModel<TState extends BaseGameState> {
     return "";
   }
 
-  /** Cancels the name field's pending rename. */
+  /** Cancels the name field's pending rename and the pending copy-status reset. */
   destroy(): void {
+    if (this.copyResetTimer !== undefined) clearTimeout(this.copyResetTimer);
+    this.copyResetTimer = undefined;
     this.nameField.destroy();
   }
 }
