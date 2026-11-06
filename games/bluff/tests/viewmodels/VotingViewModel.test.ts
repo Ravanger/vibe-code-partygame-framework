@@ -64,4 +64,13 @@ describe("VotingViewModel", () => {
       payload: { optionId: "o1", type: "CAST_VOTE" },
     });
   });
+
+  it("keeps the vote uncast when the server refuses it", async () => {
+    const c = connectedClient({}, "Voting");
+    c.state.choices.push(Object.assign(new BluffOption(), { id: "o1", text: "Canberra" }));
+    c.room.reply = { ok: false, error: { code: "NOT_ALLOWED", message: "You already voted" } };
+    const vm = new VotingViewModel(c.manager);
+    await vm.vote("o1");
+    expect(vm.voted).toBe(false);
+  });
 });
