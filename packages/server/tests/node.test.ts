@@ -228,6 +228,39 @@ describe("serveApi", () => {
     expect((await fetch(url)).status).toBe(204);
   });
 
+  it("answers a response whose body fails to read with a fixed 500 body and keeps serving", async () => {
+    const port = await freePort();
+    let calls = 0;
+    servers.push(
+      await serveApi(new RoomCodeService(), {
+        port,
+        host: "127.0.0.1",
+        handler: () => {
+          ++calls;
+          if (calls === 1) {
+            // A body that rejects when read: response.text() throws after the headers are known.
+            return new Response(
+              new ReadableStream<Uint8Array>({
+                start(controller) {
+                  controller.error(new Error("body failed"));
+                },
+              }),
+            );
+          }
+          return new Response(null, { status: 204 });
+        },
+      }),
+    );
+    const url = `http://127.0.0.1:${port}/api/resolve-code?code=ABCD`;
+    const boom = await fetch(url);
+    expect(boom.status).toBe(500);
+    const text = await boom.text();
+    expect(JSON.parse(text)).toEqual({ error: "Internal server error" });
+    expect(text).not.toContain("body failed");
+    // the server survived the unreadable body
+    expect((await fetch(url)).status).toBe(204);
+  });
+
   it("keys the resolve-code throttle on X-Forwarded-For when trustProxy is on", async () => {
     const port = await freePort();
     servers.push(

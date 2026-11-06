@@ -79,8 +79,11 @@ export async function serveApi(
         return;
       }
       const response = handler(request, { remoteAddress });
+      // Read the body before any header goes out: a body that fails to read must still reach the
+      // catch with unsent headers so it can answer with the fixed 500.
+      const body = await response.text();
       res.writeHead(response.status, Object.fromEntries(response.headers));
-      res.end(await response.text());
+      res.end(body);
     } catch (error) {
       // A throwing handler must not take the process down with an unhandled rejection: a fixed
       // body goes to the client and the exception to the log, never its text to the wire.
