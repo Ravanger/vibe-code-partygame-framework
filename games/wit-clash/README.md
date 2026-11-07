@@ -46,7 +46,8 @@ The bracketed tie-breaker phases only follow the final round; `HonorVote` only f
    within a game (a category that runs out of fresh prompts starts over). The phase ends when everyone has answered
    every prompt, or at the deadline; answers can be edited until then. Anything unanswered becomes `(no answer)`.
 3. **MatchupVoting**: one matchup at a time. Every active, connected player who did not write one of its answers votes.
-   Votes can be changed until the reveal and stay hidden until then.
+   Votes can be changed until the reveal and stay hidden until then. A cast vote counts at the reveal even if its voter's
+   connection drops before it; a dropped connection never delays the phase.
 4. **MatchupReveal**: authors and vote counts are shown, points are awarded, then the next matchup starts.
 5. **Tie-breaker** (final round only): see below.
 6. **HonorVote** (final round only, optional): see below.
@@ -72,7 +73,7 @@ tie stands as a shared win.
 1. **TieBreakerPrompting** (`promptSeconds`): the contenders answer one prompt. Prompt choice: an unused `tieBreakers` entry of the
    category played last, else of any other category; each is used once per game. Only contenders may `SUBMIT_ANSWER`.
 2. **TieBreakerVoting** (`voteSeconds`): the answers are shown without authors. Everyone active outside the tie votes with `CAST_VOTE`;
-   contenders cannot vote.
+   contenders cannot vote. A cast vote counts at the reveal even if its voter's connection drops before it.
 3. **TieBreakerReveal** (`revealSeconds`): authors and votes are shown.
 
 Outcomes: one clear top vote-getter wins, gets +1 point and `ScoreEntry.wonTieBreaker`, and the game goes to Results. A top vote tie
@@ -94,7 +95,8 @@ Optional, off by default (`honorVote`). When on, the end of the final round — 
 **HonorVote** (`voteSeconds`) before Results, unless there are no best answers to choose from. The candidates are the unique authors
 of `bestAnswers`, which are published before the phase starts. Every active player votes with `VOTE_HONOR { authorId }` for a
 candidate who is not themselves; a vote for oneself or for a non-candidate is refused, and the one player who is the only candidate
-cannot vote at all. The phase ends when every eligible player has voted or the timer runs out. The winner(s) — ties share — are
+cannot vote at all. The phase ends when every eligible player has voted or the timer runs out; a cast vote counts even if its
+voter's connection drops before then. The winner(s) — ties share — are
 published as `honorWinnerNames`, and an **Honor award** ("chosen by the players") joins the awards ceremony; nobody voting means no
 winner and no award.
 
@@ -217,7 +219,7 @@ The date is taken from the server clock when the first round starts and stored i
 midnight keeps the date it started with. The room seed still drives everything else (answer shuffles), so action-log replay
 of a daily game reproduces the same final state.
 
-`filterLevel` drives the room's text filter (`createTextFilter()` from `@partygame/content/filter`): answers are checked through `textFilterMiddleware` (declared as `textFields: ["answer"]` on `SUBMIT_ANSWER`, which covers tie-breakers too) and player names are checked by the server at join and on `SET_NAME`. At `moderate` slurs and profanity are refused; `strict` also refuses mild terms; `off` checks nothing. A refused answer is rejected with `CONTENT_REJECTED` and the filter's fixed reason, leaving the typed text in the player's box to fix or resend.
+`filterLevel` drives the room's text filter (`createTextFilter()` from `@partygame/content/filter`): answers are checked through `textFilterMiddleware` (declared as `textFields: ["answer"]` on `SUBMIT_ANSWER`, which covers tie-breakers too) and player names are checked by the server at join and on `SET_NAME`. At `moderate` slurs and profanity are refused; `strict` also refuses mild terms; `off` checks nothing. A refused answer is rejected with `CONTENT_REJECTED` and the fixed core message (`CLIENT_MESSAGES.CONTENT_REJECTED`; override it through the definition's `strings.contentRejected`), leaving the typed text in the player's box to fix or resend.
 
 ## Content and running
 

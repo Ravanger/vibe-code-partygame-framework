@@ -1,6 +1,6 @@
 import { tick } from "svelte";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Countdown } from "../src/countdown.svelte.js";
+import { Countdown, isUrgent } from "../src/countdown.svelte.js";
 import { observe } from "./observe.svelte.js";
 
 describe("Countdown", () => {
@@ -176,5 +176,14 @@ describe("Countdown", () => {
     expect(countdown.secondsLeft).toBe(0);
     serverNow = 1_000_000;
     expect(countdown.secondsLeft).toBe(60);
+  });
+});
+
+describe("isUrgent", () => {
+  it("flags only the last ten seconds: zero and beyond ten are not urgent", () => {
+    expect(isUrgent(0)).toBe(false);
+    expect(isUrgent(1)).toBe(true);
+    expect(isUrgent(10)).toBe(true);
+    expect(isUrgent(11)).toBe(false);
   });
 });

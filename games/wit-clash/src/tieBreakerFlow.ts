@@ -1,5 +1,6 @@
 import { awardPoints, required, shuffle } from "@partygame/core";
 import { countVoted, entriesFor, tallyVotes } from "@partygame/core/kits";
+import { seatedActiveIds } from "./eligibility.js";
 import { PHASE } from "./phaseNames.js";
 import type { WitClashContext } from "./private.js";
 import { Round } from "./round.js";
@@ -155,7 +156,10 @@ export class TieBreakerFlow {
   reveal(): void {
     const { state, priv } = this.ctx;
     const matchup = this.current();
-    const tally = tallyVotes(matchup.isForfeit ? [] : this.voterIds(), priv.matchupVotes);
+    const tally = tallyVotes(
+      matchup.isForfeit ? [] : this.tallyVotersAmong([...this.ctx.state.tieBreakerContenders]),
+      priv.matchupVotes,
+    );
     for (const answer of matchup.answers) {
       answer.votes = tally.get(answer.id) ?? 0;
       answer.authorId = this.round.authorOf(answer.id);
@@ -177,6 +181,11 @@ export class TieBreakerFlow {
       this.ctx.activePlayers().map((p) => p.id),
       contenderIds,
     );
+  }
+
+  /** The seated players outside the tie, connected or not; a dropped connection is not a departure. */
+  private tallyVotersAmong(contenderIds: readonly string[]): string[] {
+    return tieBreakerVoterIds(seatedActiveIds(this.ctx.players()), contenderIds);
   }
 
   private plan(contenderIds: string[]): boolean {

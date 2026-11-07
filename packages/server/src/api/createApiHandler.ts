@@ -15,28 +15,46 @@ const CORS_METHODS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-/** True when `origin` matches `allowed`: exactly, or against a `scheme://host:*` pattern (any port). `"*"` allows everything. */
+/** True when `origin` matches `allowed`: exactly, or against a `scheme://host:*` pattern. `"*"` allows everything. */
 function originAllowed(origin: string, allowed: string[] | "*"): boolean {
   if (allowed === "*") return true;
   return allowed.some((pattern) => {
     if (pattern === origin) return true;
     const prefix = pattern.endsWith(":*") ? pattern.slice(0, -1) : undefined;
-    return prefix !== undefined && origin.startsWith(prefix);
+    // The `:*` wildcard stands for a port: digits only, so `http://host:*` never matches
+    // `http://host:evil.example`.
+    return (
+      prefix !== undefined && origin.startsWith(prefix) && /^\d+$/.test(origin.slice(prefix.length))
+    );
   });
 }
 
-/** CORS headers for one request: the allowed origin echoed with `Vary`, `*`, or none. */
+/**
+ * CORS headers for one request. An allowed origin gets the allow headers (echoed, or `*`); in
+ * allow-list mode every response also carries `Vary: Origin`, because the CORS headers depend on
+ * the request's Origin and a shared cache must not cross origins.
+ */
 function corsHeadersFor(
   origin: string | null,
   allowedOrigins: string[] | "*",
 ): Record<string, string> {
-  if (origin === null || !originAllowed(origin, allowedOrigins)) return {};
-  const allowOrigin = allowedOrigins === "*" ? "*" : origin;
+  const allowed = origin !== null && originAllowed(origin, allowedOrigins);
   return {
-    "Access-Control-Allow-Origin": allowOrigin,
+    ...(allowed ? { "Access-Control-Allow-Origin": allowedOrigins === "*" ? "*" : origin } : {}),
     ...(allowedOrigins === "*" ? {} : { Vary: "Origin" }),
-    ...CORS_METHODS_HEADERS,
+    ...(allowed ? CORS_METHODS_HEADERS : {}),
   };
+}
+
+/**
+ * Throttle key for one request. With `trustProxy` the last hop of `X-Forwarded-For` (what the
+ * trusted proxy recorded) keys the bucket; without it — or when the header is absent or blank —
+ * the socket address does, so a spoofed header can never split or share buckets on its own.
+ */
+function throttleKey(req: Request, info: ApiRequestInfo | undefined, trustProxy: boolean): string {
+  const last = req.headers.get("x-forwarded-for")?.split(",").pop()?.trim();
+  if (trustProxy && last !== undefined && last !== "") return last;
+  return info?.remoteAddress ?? NO_ADDRESS_KEY;
 }
 
 function json(status: number, body: unknown, corsHeaders: Record<string, string>): Response {
@@ -56,20 +74,28 @@ export interface ApiRequestInfo {
 export interface ApiHandlerOptions {
   /**
    * Origins allowed to read the API: exact origins or `scheme://host:*` patterns, `"*"` for all.
-   * Defaults to loopback only. A disallowed origin gets no CORS headers (the browser blocks it).
+   * Defaults to loopback only. A disallowed origin gets no allow headers (the browser blocks it);
+   * in list mode every response still carries `Vary: Origin`.
    */
   allowedOrigins?: string[] | "*";
   /**
-   * When set, every request takes one token for the caller's remote address before anything else;
-   * an exhausted bucket answers 429 with `Retry-After`. Callers without a known address share one
-   * bucket. Observe-mode limiters never refuse.
+   * When set, every non-preflight request takes one token for the caller's address before
+   * anything else; an exhausted bucket answers 429 with `Retry-After`. Callers without a known
+   * address share one bucket. Observe-mode limiters never refuse.
    */
   limiter?: RateLimiter;
   /** The bucket those tokens come from. Default {@link DEFAULT_RESOLVE_CODE_BUCKET}. */
   resolveCode?: TokenBucket;
+  /**
+   * Key the throttle on the last hop of `X-Forwarded-For` instead of the socket address. Turn on
+   * only when every request passes a trusted reverse proxy that records the client's real address;
+   * otherwise clients behind one proxy share a single bucket, and a direct caller could spoof the
+   * header to split it.
+   */
+  trustProxy?: boolean;
 }
 
-/** `GET /api/resolve-code?code=ABCD` -> `{ roomId }`. Everything else is 404/405; CORS headers go out only for allowed origins. */
+/** `GET /api/resolve-code?code=ABCD` -> `{ roomId }`. Everything else is 404/405; CORS headers go out only for allowed origins, and `Vary: Origin` goes out in allow-list mode. */
 export function createApiHandler(
   roomCodeService: Pick<RoomCodeService, "resolve">,
   options: ApiHandlerOptions = {},
@@ -77,10 +103,13 @@ export function createApiHandler(
   const allowedOrigins = options.allowedOrigins ?? DEFAULT_ALLOWED_ORIGINS;
   const limiter = options.limiter;
   const bucket = options.resolveCode ?? DEFAULT_RESOLVE_CODE_BUCKET;
+  const trustProxy = options.trustProxy === true;
   return (req, info) => {
     const corsHeaders = corsHeadersFor(req.headers.get("origin"), allowedOrigins);
+    // Preflights are not resolve-code lookups: they answer before spending the caller's budget.
+    if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
     if (limiter !== undefined) {
-      const key = info?.remoteAddress ?? NO_ADDRESS_KEY;
+      const key = throttleKey(req, info, trustProxy);
       if (!limiter.take(key, bucket)) {
         const waitMs = limiter.waitMs(key, bucket);
         // A rate-0 bucket never refills; there is no honest retry time, so send the minimum.
@@ -95,7 +124,6 @@ export function createApiHandler(
         );
       }
     }
-    if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
     const url = new URL(req.url);
     if (url.pathname !== "/api/resolve-code") return json(404, { error: "Not found" }, corsHeaders);
     if (req.method !== "GET") return json(405, { error: "Method not allowed" }, corsHeaders);

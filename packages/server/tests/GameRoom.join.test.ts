@@ -41,17 +41,19 @@ describe("GameRoom joining", () => {
     expect(stateOf(room).players.get(pid(2))).toMatchObject({ role: "player", name: "" });
   });
 
-  it.each([{}, { playerId: "short" }, { playerId: pid(1), spectator: "yes" }])(
-    "rejects invalid join options %j with the INVALID_OPTIONS close code",
-    async (options) => {
-      const room = await t.createRoom("buzzer");
-      await expect(t.sdk.joinById(room.roomId, options)).rejects.toMatchObject({
-        code: CLOSE_CODES.INVALID_OPTIONS.code,
-        message: CLOSE_CODES.INVALID_OPTIONS.message,
-      });
-      expect(stateOf(room).players.size).toBe(0);
-    },
-  );
+  it.each([
+    {},
+    { playerId: "short" },
+    { playerId: pid(1), spectator: "yes" },
+    { playerId: pid(1), name: "\u200B\u200B" }, // invisible characters only
+  ])("rejects invalid join options %j with the INVALID_OPTIONS close code", async (options) => {
+    const room = await t.createRoom("buzzer");
+    await expect(t.sdk.joinById(room.roomId, options)).rejects.toMatchObject({
+      code: CLOSE_CODES.INVALID_OPTIONS.code,
+      message: CLOSE_CODES.INVALID_OPTIONS.message,
+    });
+    expect(stateOf(room).players.size).toBe(0);
+  });
 
   it("rejects a player past maxPlayers with the ROOM_FULL close code but still admits spectators", async () => {
     const room = await t.createRoom("buzzer");
@@ -190,6 +192,16 @@ describe("GameRoom SET_NAME", () => {
     client.send("SET_NAME", "  Ann  ");
     await waitUntil(() => stateOf(room).players.get(pid(1))?.isReady === true, "ready");
     expect(stateOf(room).players.get(pid(1))?.name).toBe("Ann");
+  });
+
+  it("rejects a name of invisible characters with INVALID_ACTION", async () => {
+    const room = await t.createRoom("buzzer");
+    const client = await t.join(room, { playerId: pid(1) });
+    const errors = collectMessages(client, "ERROR");
+    client.send("SET_NAME", "\u200BAda\u202E");
+    await waitUntil(() => errors.length === 1, "invisible name");
+    expect(errors[0]).toEqual({ code: "INVALID_ACTION", message: CLIENT_MESSAGES.INVALID_ACTION });
+    expect(stateOf(room).players.get(pid(1))?.isReady).toBe(false);
   });
 
   it("rejects a name another seat has, ignoring case and spacing, but allows re-setting your own", async () => {

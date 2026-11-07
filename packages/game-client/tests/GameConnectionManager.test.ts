@@ -573,6 +573,21 @@ describe("api base", () => {
     await expect(manager.join("WXYZ")).rejects.toThrow("Could not reach the game server");
     expect(network.urls).toEqual(["http://localhost:8080/api/resolve-code?code=WXYZ"]);
   });
+
+  it.each([
+    ["https://proxy.example/game", "https://proxy.example:8080"],
+    ["wss://proxy.example/game", "https://proxy.example:8080"],
+  ])("derives the API base like apiBaseOf for a %s endpoint", async (endpoint, apiBase) => {
+    const manager = new GameConnectionManager({
+      endpoint,
+      roomName: "stub",
+      storagePrefix: `unit${++counter}`,
+      apiPort: 8080,
+    });
+    const network = stubFetchReply(new Error("fetch failed"));
+    await expect(manager.join("WXYZ")).rejects.toThrow("Could not reach the game server");
+    expect(network.urls).toEqual([`${apiBase}/api/resolve-code?code=WXYZ`]);
+  });
 });
 
 describe("messages", () => {
@@ -641,6 +656,22 @@ describe("connection lifecycle", () => {
     expect(manager.state).toBeUndefined();
     expect(sessionStorage.getItem(`unit${counter}.reconnectionToken`)).toBeNull();
     expect(localStorage.getItem(`unit${counter}.roomCode`)).toBeNull();
+  });
+
+  it("keeps the shared secret and room code when another device takes over the seat", () => {
+    const manager = newManager();
+    localStorage.setItem(`unit${counter}.seatSecret`, "shared-secret");
+    const { room } = seated(manager);
+    manager.attach(room);
+    room.closed(CLOSE_CODES.SEAT_TAKEN_OVER.code, "internal detail");
+    expect(manager.status).toBe("disconnected");
+    expect(manager.state).toBeUndefined();
+    expect(manager.lastServerError).toEqual({
+      code: CLOSE_CODES.SEAT_TAKEN_OVER.errorCode,
+      message: CLOSE_CODES.SEAT_TAKEN_OVER.message,
+    });
+    expect(localStorage.getItem(`unit${counter}.seatSecret`)).toBe("shared-secret");
+    expect(localStorage.getItem(`unit${counter}.roomCode`)).toBe("ABCD");
   });
 
   it("records a known close code on leave and ignores unknown ones", () => {
@@ -980,6 +1011,15 @@ describe("waiting for state, bounded", () => {
 });
 
 describe("a rejecting room.leave()", () => {
+  it("leave() resolves when room.leave rejects", async () => {
+    const manager = newManager();
+    const { room } = seated(manager);
+    manager.attach(room);
+    room.leave = () => Promise.reject(new Error("boom"));
+    await expect(manager.leave()).resolves.toBeUndefined();
+    expect(manager.status).toBe("disconnected");
+  });
+
   it("dispose() swallows the rejection", async () => {
     const manager = newManager();
     const { room } = seated(manager);
@@ -1014,13 +1054,103 @@ describe("a rejecting room.leave()", () => {
 });
 
 describe("resume", () => {
-  it("clears the session and reports false when the token is rejected and no code is stored", async () => {
+  function storedSession() {
+    localStorage.setItem(`unit${counter}.roomCode`, "ABCD");
+    localStorage.setItem(`unit${counter}.seatSecret`, "keep-me");
+    sessionStorage.setItem(`unit${counter}.reconnectionToken`, "stale");
+  }
+
+  it("keeps the stored session when the token reconnect loses the connection and no code is stored", async () => {
     const manager = newManager();
     sessionStorage.setItem(`unit${counter}.reconnectionToken`, "stale");
     vi.spyOn(Client.prototype, "reconnect").mockRejectedValue(new Error("expired"));
     expect(await manager.resume()).toBe(false);
-    expect(sessionStorage.getItem(`unit${counter}.reconnectionToken`)).toBeNull();
+    expect(sessionStorage.getItem(`unit${counter}.reconnectionToken`)).toBe("stale");
     expect(manager.status).toBe("disconnected");
+  });
+
+  it("keeps the stored session when both attempts lose the connection", async () => {
+    const manager = newManager();
+    storedSession();
+    vi.spyOn(Client.prototype, "reconnect").mockRejectedValue(new Error("offline"));
+    stubFetchReply(new Error("fetch failed"));
+    expect(await manager.resume()).toBe(false);
+    expect(localStorage.getItem(`unit${counter}.roomCode`)).toBe("ABCD");
+    expect(localStorage.getItem(`unit${counter}.seatSecret`)).toBe("keep-me");
+  });
+
+  it.each([
+    CLOSE_CODES.INVALID_OPTIONS,
+    CLOSE_CODES.ROOM_FULL,
+    CLOSE_CODES.SEAT_REMOVED,
+    // 4403 covers both KICKED_REJOIN and JOIN_REFUSED.
+    CLOSE_CODES.KICKED_REJOIN,
+    CLOSE_CODES.WATCH_ONLY,
+    CLOSE_CODES.VERSION_MISMATCH,
+    CLOSE_CODES.SEAT_TAKEN,
+  ])("clears the stored session when both attempts are refused with %s", async (entry) => {
+    const manager = newManager();
+    storedSession();
+    vi.spyOn(Client.prototype, "reconnect").mockRejectedValue(
+      Object.assign(new Error("refused"), { code: entry.code }),
+    );
+    stubFetchReply({ roomId: "room-1" });
+    vi.spyOn(Client.prototype, "joinById").mockRejectedValue(
+      Object.assign(new Error("refused"), { code: entry.code }),
+    );
+    expect(await manager.resume()).toBe(false);
+    expect(localStorage.getItem(`unit${counter}.roomCode`)).toBeNull();
+    expect(localStorage.getItem(`unit${counter}.seatSecret`)).toBeNull();
+  });
+
+  it.each([CLOSE_CODES.SERVER_FULL, CLOSE_CODES.INTERNAL])(
+    "keeps the stored session when both attempts fail with %s",
+    async (entry) => {
+      const manager = newManager();
+      storedSession();
+      vi.spyOn(Client.prototype, "reconnect").mockRejectedValue(
+        Object.assign(new Error("refused"), { code: entry.code }),
+      );
+      stubFetchReply({ roomId: "room-1" });
+      vi.spyOn(Client.prototype, "joinById").mockRejectedValue(
+        Object.assign(new Error("refused"), { code: entry.code }),
+      );
+      expect(await manager.resume()).toBe(false);
+      expect(localStorage.getItem(`unit${counter}.roomCode`)).toBe("ABCD");
+      expect(localStorage.getItem(`unit${counter}.seatSecret`)).toBe("keep-me");
+    },
+  );
+
+  it("clears the stored session when the room code is unknown", async () => {
+    const manager = newManager();
+    localStorage.setItem(`unit${counter}.roomCode`, "QQQQ");
+    localStorage.setItem(`unit${counter}.seatSecret`, "keep-me");
+    stubFetchReply({ error: "Game code not found" });
+    expect(await manager.resume()).toBe(false);
+    expect(localStorage.getItem(`unit${counter}.roomCode`)).toBeNull();
+    expect(localStorage.getItem(`unit${counter}.seatSecret`)).toBeNull();
+  });
+
+  it("keeps the stored session when the resolve-code reply is unreadable", async () => {
+    const manager = newManager();
+    localStorage.setItem(`unit${counter}.roomCode`, "ABCD");
+    localStorage.setItem(`unit${counter}.seatSecret`, "keep-me");
+    stubFetchReply({ nope: true });
+    expect(await manager.resume()).toBe(false);
+    expect(localStorage.getItem(`unit${counter}.roomCode`)).toBe("ABCD");
+    expect(localStorage.getItem(`unit${counter}.seatSecret`)).toBe("keep-me");
+  });
+
+  it("shows no stale error when the token fails but the code join works", async () => {
+    const manager = newManager();
+    localStorage.setItem(`unit${counter}.roomCode`, "ABCD");
+    sessionStorage.setItem(`unit${counter}.reconnectionToken`, "stale");
+    vi.spyOn(Client.prototype, "reconnect").mockRejectedValue(new Error("expired"));
+    stubFetchReply({ roomId: "room-1" });
+    const { room } = seated(manager);
+    vi.spyOn(Client.prototype, "joinById").mockResolvedValue(room as never);
+    expect(await manager.resume()).toBe(true);
+    expect(manager.lastServerError).toBeUndefined();
   });
 });
 

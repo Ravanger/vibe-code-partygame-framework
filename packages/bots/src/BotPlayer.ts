@@ -125,14 +125,23 @@ export class BotPlayer<TState extends BaseGameState> {
 
   private later(delay: BotSpeed | DelayRange, run: () => void): void {
     const [min, max] = this.range(delay);
-    const cancel = this.schedule(
+    // `cancel` is assigned only after schedule() returns, but a scheduler may invoke the callback
+    // synchronously inside that call; read it through a guarded closure so it is never in its TDZ.
+    let cancel: (() => void) | undefined;
+    let fired = false;
+    const forget = (): void => {
+      if (cancel !== undefined) this.cancels.delete(cancel);
+    };
+    cancel = this.schedule(
       () => {
-        this.cancels.delete(cancel);
+        fired = true;
+        forget();
         run();
       },
       min + this.rng() * (max - min),
     );
-    this.cancels.add(cancel);
+    // A scheduler that already ran the callback consumed it: do not track a stale handle.
+    if (!fired) this.cancels.add(cancel);
   }
 
   private range(delay: BotSpeed | DelayRange): DelayRange {

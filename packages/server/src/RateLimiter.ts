@@ -14,6 +14,8 @@ export interface RateLimits {
   setName?: TokenBucket;
   /** `/api/resolve-code` per remote address. Default 1/s, burst 10. */
   resolveCode?: TokenBucket;
+  /** EXPORT_REPLAY per host seat (the only caller that builds a bundle). Default one per 5 s, burst 1. */
+  exportReplay?: TokenBucket;
   /** "enforce" refuses over-limit traffic; "observe" only reports it. Default "enforce". */
   mode?: "observe" | "enforce";
 }
@@ -23,24 +25,36 @@ export interface ResolvedRateLimits {
   action: TokenBucket;
   setName: TokenBucket;
   resolveCode: TokenBucket;
+  exportReplay: TokenBucket;
   mode: "observe" | "enforce";
 }
 
 interface BucketState {
   tokens: number;
   lastSeen: number;
+  /** The bucket's rate and burst at creation: a refilled-to-burst bucket is indistinguishable from a never-seen one. */
+  rate: number;
+  burst: number;
 }
+
+/** Map size past which {@link RateLimiter.take} sweeps refilled buckets. */
+const DEFAULT_SWEEP_AT = 1024;
 
 /**
  * Token-bucket rate limiter with an injectable clock (milliseconds, monotonic). Keys are opaque —
  * the room passes `(roomId, playerId, messageType)` so a reconnect cannot reset a bucket. In
  * observe mode an exhausted take is reported through `onObserve` and still allowed; enforce mode
  * refuses it.
+ *
+ * Memory stays bounded: once the map grows past `sweepAt`, a take sweeps every bucket that has
+ * refilled to its burst — such a bucket answers exactly like a never-seen key, so eviction never
+ * changes an allow/deny result.
  */
 export class RateLimiter {
   private readonly clock: () => number;
   private readonly mode: "observe" | "enforce";
   private readonly onObserve: (key: string) => void;
+  private readonly sweepAt: number;
   private readonly buckets = new Map<string, BucketState>();
 
   constructor(
@@ -48,11 +62,19 @@ export class RateLimiter {
       clock?: () => number;
       mode?: "observe" | "enforce";
       onObserve?: (key: string) => void;
+      /** Map size past which refilled buckets are swept on a take. Default {@link DEFAULT_SWEEP_AT}. */
+      sweepAt?: number;
     } = {},
   ) {
     this.clock = options.clock ?? Date.now;
     this.mode = options.mode ?? "enforce";
     this.onObserve = options.onObserve ?? (() => {});
+    this.sweepAt = options.sweepAt ?? DEFAULT_SWEEP_AT;
+  }
+
+  /** Number of keys currently tracked (for metrics and tests). */
+  get size(): number {
+    return this.buckets.size;
   }
 
   /** Take one token for `key` under `bucket`; false only when exhausted in enforce mode. */
@@ -60,7 +82,7 @@ export class RateLimiter {
     const now = this.clock();
     let state = this.buckets.get(key);
     if (state === undefined) {
-      state = { tokens: bucket.burst, lastSeen: now };
+      state = { tokens: bucket.burst, lastSeen: now, rate: bucket.rate, burst: bucket.burst };
       this.buckets.set(key, state);
     } else {
       state.tokens = Math.min(
@@ -69,15 +91,29 @@ export class RateLimiter {
       );
       state.lastSeen = now;
     }
+    let allowed: boolean;
     if (state.tokens >= 1) {
       state.tokens -= 1;
-      return true;
-    }
-    if (this.mode === "observe") {
+      allowed = true;
+    } else if (this.mode === "observe") {
       this.onObserve(key);
-      return true;
+      allowed = true;
+    } else {
+      allowed = false;
     }
-    return false;
+    if (this.buckets.size > this.sweepAt) this.sweep(now);
+    return allowed;
+  }
+
+  /** Forget every bucket that has refilled to its burst by `now`: it now answers like a never-seen key. */
+  private sweep(now: number): void {
+    for (const [key, state] of this.buckets) {
+      const refilled = Math.min(
+        state.burst,
+        state.tokens + ((now - state.lastSeen) * state.rate) / 1000,
+      );
+      if (refilled >= state.burst) this.buckets.delete(key);
+    }
   }
 
   /**

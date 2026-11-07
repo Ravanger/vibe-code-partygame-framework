@@ -2,6 +2,7 @@ import { required } from "@partygame/core";
 import { countVoted, leaders, tallyVotes } from "@partygame/core/kits";
 import { ErrorCode } from "@partygame/shared";
 import { ACTION, defineAction, VoteHonorSchema } from "../actions.js";
+import { seatedActiveIds } from "../eligibility.js";
 import { PHASE } from "../phaseNames.js";
 import type { WitClashContext, WitClashPhase } from "../private.js";
 import { Round } from "../round.js";
@@ -25,6 +26,12 @@ const voterIds = (ctx: WitClashContext): string[] => {
     .filter((id) => candidates.some((c) => c !== id));
 };
 
+/** The seated players with at least one legal target, connected or not; a dropped connection is not a departure. */
+const tallyVoterIds = (ctx: WitClashContext): string[] => {
+  const candidates = candidatesOf(ctx.state);
+  return seatedActiveIds(ctx.players()).filter((id) => candidates.some((c) => c !== id));
+};
+
 /** Publishes who may vote and how many ballots are in; the table's pick stays hidden until the end. */
 const sync = (ctx: WitClashContext): void => {
   const { state, priv } = ctx;
@@ -43,7 +50,7 @@ const sync = (ctx: WitClashContext): void => {
 /** Tallies the ballots into `honorWinnerNames` (ties share) and moves on to Results. */
 const finish = (ctx: WitClashContext): void => {
   const { state, priv } = ctx;
-  const tally = tallyVotes(voterIds(ctx), priv.honorVotes);
+  const tally = tallyVotes(tallyVoterIds(ctx), priv.honorVotes);
   state.honorWinnerNames.clear();
   for (const authorId of leaders(tally).ids) {
     state.honorWinnerNames.push(required(priv.names[authorId], "honor winner name"));

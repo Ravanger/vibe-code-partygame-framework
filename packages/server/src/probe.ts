@@ -29,11 +29,11 @@ const PROBE_TIMEOUT_MS = 800;
 
 /** Checks whether something is already running where a launcher would look. */
 export class ServerProbe {
-  /** True when a game server listens on `port` and its code API answers on `apiPort`. */
-  async isGameServer(port: number, apiPort: number): Promise<boolean> {
-    if (!(await this.canConnect(port))) return false;
+  /** True when a game server listens on `host:port` and its code API answers on `host:apiPort`. */
+  async isGameServer(port: number, apiPort: number, host = "localhost"): Promise<boolean> {
+    if (!(await this.canConnect(port, host))) return false;
     try {
-      const response = await fetch(`http://localhost:${apiPort}/api/resolve-code?code=ZZZZ`, {
+      const response = await fetch(`http://${host}:${apiPort}/api/resolve-code?code=ZZZZ`, {
         signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
       });
       return ResolveCodeResponseSchema.safeParse(await response.json()).success;

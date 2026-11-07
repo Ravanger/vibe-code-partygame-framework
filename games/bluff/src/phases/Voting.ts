@@ -8,6 +8,12 @@ export const Voting: BluffPhase = {
   duration: (ctx) => ctx.options.votingSeconds * 1000,
   onEnter: (ctx) => {
     const round = new Round(ctx);
+    if (!round.hasFakes()) {
+      ctx.transition(
+        ctx.state.roundNumber >= ctx.state.totalRounds ? PHASE.Results : PHASE.Writing,
+      );
+      return;
+    }
     round.buildOptions();
     round.syncVoting();
   },
@@ -15,6 +21,7 @@ export const Voting: BluffPhase = {
   onRosterChange: (ctx) => {
     const round = new Round(ctx);
     round.pruneDeparted();
+    round.remember();
     if (round.endIfTooFewPlayers()) return;
     round.syncVoting();
     if (round.votingComplete()) ctx.transition(PHASE.Reveal);
@@ -39,6 +46,7 @@ export const Voting: BluffPhase = {
         }
         ctx.priv.votes.set(ctx.playerId, optionId);
         const round = new Round(ctx);
+        round.mineOf(ctx.playerId).myVote = optionId;
         round.syncVoting();
         if (round.votingComplete()) ctx.transition(PHASE.Reveal);
       },

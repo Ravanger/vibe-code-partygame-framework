@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { evaluateJoin } from "../../src/index.js";
+import { evaluateJoin, type JoinGate } from "../../src/index.js";
 import type { CanJoinInput, CanJoinResult, PlayerInfo } from "../../src/runtime/types.js";
+
+/** A definition whose hook lies about its return type, like a JS game's. */
+const lyingGate = (hook: (input: CanJoinInput) => unknown): JoinGate =>
+  ({ canJoin: hook }) as JoinGate;
 
 const roster = (): PlayerInfo[] => [
   { id: "p1", name: "Ada", role: "host", isConnected: true, isReady: true, isActive: true },
@@ -65,6 +69,47 @@ describe("evaluateJoin", () => {
       },
     };
     expect(evaluateJoin(definition, input())).toEqual({
+      ok: false,
+      code: "JOIN_REFUSED",
+      message: "You cannot join this room.",
+    });
+  });
+
+  it("yields the generic refusal for a result without a message, instead of throwing", () => {
+    const definition = lyingGate(() => ({ ok: false }));
+    expect(evaluateJoin(definition, input())).toEqual({
+      ok: false,
+      code: "JOIN_REFUSED",
+      message: "You cannot join this room.",
+    });
+  });
+
+  it("yields the generic refusal for a non-string refusal message, instead of throwing", () => {
+    const definition = lyingGate(() => ({ ok: false, code: "ROOM_LOCKED", message: 42 }));
+    expect(evaluateJoin(definition, input())).toEqual({
+      ok: false,
+      code: "JOIN_REFUSED",
+      message: "You cannot join this room.",
+    });
+  });
+
+  it("yields the generic refusal when the hook returns undefined or a non-object", () => {
+    expect(
+      evaluateJoin(
+        lyingGate(() => undefined),
+        input(),
+      ),
+    ).toEqual({
+      ok: false,
+      code: "JOIN_REFUSED",
+      message: "You cannot join this room.",
+    });
+    expect(
+      evaluateJoin(
+        lyingGate(() => "nope"),
+        input(),
+      ),
+    ).toEqual({
       ok: false,
       code: "JOIN_REFUSED",
       message: "You cannot join this room.",

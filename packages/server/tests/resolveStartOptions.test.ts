@@ -66,6 +66,21 @@ describe("resolveStartOptions", () => {
   });
 
   it.each([
+    ["true", true],
+    ["1", undefined],
+    ["TRUE", undefined],
+    ["", undefined],
+  ])("reads TRUST_PROXY=%j as %j (only the exact string true turns it on)", (raw, expected) => {
+    expect(resolveStartOptions({}, { TRUST_PROXY: raw }).trustProxy).toBe(expected);
+  });
+
+  it("keeps an explicit trustProxy over the environment", () => {
+    expect(resolveStartOptions({ trustProxy: false }, { TRUST_PROXY: "true" })).toMatchObject({
+      trustProxy: false,
+    });
+  });
+
+  it.each([
     ["*", "*"],
     ["http://a.example", ["http://a.example"]],
     [" http://a.example , http://b.example ", ["http://a.example", "http://b.example"]],

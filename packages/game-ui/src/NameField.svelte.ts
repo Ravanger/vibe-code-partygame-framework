@@ -21,7 +21,9 @@ export class NameField<TState extends BaseGameState = BaseGameState> {
     const trimmed = value.trim();
     if (!trimmed) return;
     this.timer = setTimeout(
-      () => this.manager.setName(trimmed.slice(0, NAME_MAX_LENGTH)),
+      // Spread iterates code points, so the cap counts one emoji as one character and never
+      // splits a surrogate pair.
+      () => this.manager.setName([...trimmed].slice(0, NAME_MAX_LENGTH).join("")),
       this.debounceMs,
     );
   }

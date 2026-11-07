@@ -1,7 +1,6 @@
 import type { Server as HttpServer } from "node:http";
 import { matchMaker, type Room, type Server } from "@colyseus/core";
 import { type Room as ClientRoom, ColyseusSDK } from "@colyseus/sdk";
-import { waitFor } from "@partygame/client-utils";
 import { noopLogger } from "@partygame/core";
 import { PROTOCOL_VERSION } from "@partygame/shared";
 import { createGameServer, type GameServerOptions } from "../createGameServer.js";
@@ -9,16 +8,6 @@ import { listenGameServer } from "../gameTransport.js";
 import { serveApi as serveApiOnNode } from "../node.js";
 import { closeHttpServer, freePort } from "../probe.js";
 import { RoomCodeService } from "../services/RoomCodeService.js";
-
-/** Poll until `predicate` holds. A patch tick is not a barrier; wait on the condition you care about. */
-export function waitUntil(
-  predicate: () => boolean,
-  label = "condition",
-  timeoutMs = 4000,
-  stepMs = 10,
-): Promise<void> {
-  return waitFor(predicate, label, timeoutMs, stepMs);
-}
 
 /** Record every message of `type` a client room receives. */
 export function collectMessages(client: ClientRoom, type: string): unknown[] {
@@ -170,3 +159,4 @@ export {
   TestPlayer,
   testPlayerId,
 } from "./players.js";
+export { waitUntil } from "./waitUntil.js";

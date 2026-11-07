@@ -1,9 +1,9 @@
-import { END_GAME, LOBBY_PHASE } from "@partygame/shared";
+import { CLIENT_MESSAGES, END_GAME, LOBBY_PHASE } from "@partygame/shared";
 
 /**
  * Every message the core runtime owns: the lobby built-ins and the runtime's own refusals. A game
  * passes a partial table as `GameDefinition.strings`; unspecified keys keep the English default.
- * The client-visible entries (the first four) reach players in `ERROR` payloads or `state.notice`;
+ * The client-visible entries (the first five) reach players in `ERROR` payloads or `state.notice`;
  * the rest are `FrameworkError` messages for server logs and the action log, where clients see the
  * fixed `CLIENT_MESSAGES` text for the code instead.
  */
@@ -16,6 +16,8 @@ export interface CoreStrings {
   cannotKickSelf: string;
   /** `KICK_PLAYER` for an id that is not seated. */
   noSuchPlayer: string;
+  /** An action refused by `textFilterMiddleware`; the filter's own reason never reaches the client. */
+  contentRejected: string;
   /** `END_GAME` sent from the Lobby (server log). */
   endGameInLobby: string;
   /** `START_GAME` below `minPlayers` (server log). */
@@ -38,6 +40,7 @@ export const defaultCoreStrings: CoreStrings = {
   failureNotice: "The game stopped because of an unexpected error.",
   cannotKickSelf: "You cannot kick yourself",
   noSuchPlayer: "No such player",
+  contentRejected: CLIENT_MESSAGES.CONTENT_REJECTED,
   endGameInLobby: `${END_GAME} is not allowed in ${LOBBY_PHASE}`,
   needAtLeast: (minPlayers) => `Need at least ${minPlayers} players to start`,
   notAllowedToSend: (action) => `Not allowed to send ${action}`,

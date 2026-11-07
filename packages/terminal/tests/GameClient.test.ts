@@ -1,7 +1,7 @@
 import { Client } from "@colyseus/sdk";
 import { waitFor } from "@partygame/client-utils";
 import { type NodeServerHandle, startNodeServer } from "@partygame/server/node";
-import { CLOSE_CODES, PROTOCOL_VERSION } from "@partygame/shared";
+import { CLOSE_CODES, ClientMessage, PROTOCOL_VERSION, ServerMessage } from "@partygame/shared";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { GameClient } from "../src/GameClient.js";
 import { TAP_PUBLIC_FIELDS, TAP_ROOM, TapGame, TapState } from "./fixtures/tapGame.js";
@@ -81,6 +81,39 @@ describe("GameClient", () => {
     } finally {
       spy.mockRestore();
       await host.leave(true);
+    }
+  });
+
+  it("leaves the room it created when claiming the name fails", async () => {
+    const state = new TapState();
+    state.roomCode = "WXYZ";
+    const errorCallbacks: Array<(payload: unknown) => void> = [];
+    const leaveCalls: Array<boolean | undefined> = [];
+    const fakeRoom = {
+      get state() {
+        return state;
+      },
+      onMessage(type: string, callback: (payload: unknown) => void): () => void {
+        if (type === ServerMessage.ERROR) errorCallbacks.push(callback);
+        return () => undefined;
+      },
+      send(type: string): void {
+        if (type !== ClientMessage.SET_NAME) return;
+        for (const callback of errorCallbacks)
+          callback({ code: "NOT_ALLOWED", message: "Name taken" });
+      },
+      leave(reconnect?: boolean): Promise<number> {
+        leaveCalls.push(reconnect);
+        return Promise.resolve(0);
+      },
+    };
+    const createSpy = vi.spyOn(Client.prototype, "create");
+    try {
+      createSpy.mockImplementation(async () => fakeRoom as never);
+      await expect(client.create(crypto.randomUUID(), "Ann")).rejects.toThrow("Name taken");
+      expect(leaveCalls).toEqual([true]);
+    } finally {
+      createSpy.mockRestore();
     }
   });
 

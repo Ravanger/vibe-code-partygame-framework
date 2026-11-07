@@ -12,6 +12,7 @@ const strings = getStrings();
 let root = $state<HTMLElement>();
 let menuBtn = $state<HTMLButtonElement>();
 let endBtn = $state<HTMLButtonElement>();
+let noBtn = $state<HTMLButtonElement>();
 let leaveBtn = $state<HTMLButtonElement>();
 const popoverId = nextId("game-controls-popover");
 const confirmTitleId = nextId("game-controls-confirm-title");
@@ -45,6 +46,19 @@ async function onMenuClick(): Promise<void> {
   await tick();
   (vm.canEndGame ? endBtn : leaveBtn)?.focus();
 }
+
+// The confirm block replaces the focused button; without a focus move it would fall to body.
+async function onAskEnd(): Promise<void> {
+  vm.askEnd();
+  await tick();
+  noBtn?.focus();
+}
+
+async function onCancelEnd(): Promise<void> {
+  vm.cancelEnd();
+  await tick();
+  endBtn?.focus();
+}
 </script>
 
 <svelte:window onclick={closeOnOutsideClick} onkeydown={onWindowKeydown} />
@@ -60,7 +74,6 @@ async function onMenuClick(): Promise<void> {
         type="button"
         class="btn menu-btn"
         aria-label={strings.gameMenu}
-        aria-haspopup="true"
         aria-expanded={vm.menuOpen}
         aria-controls={popoverId}
         bind:this={menuBtn}
@@ -76,7 +89,9 @@ async function onMenuClick(): Promise<void> {
                   <button type="button" class="btn btn--danger" onclick={() => vm.confirmEnd()}>
                     {strings.yes}
                   </button>
-                  <button type="button" class="btn" onclick={() => vm.cancelEnd()}>{strings.no}</button>
+                  <button type="button" class="btn" bind:this={noBtn} onclick={() => onCancelEnd()}>
+                    {strings.no}
+                  </button>
                 </div>
               </div>
             {:else}
@@ -84,7 +99,7 @@ async function onMenuClick(): Promise<void> {
                 type="button"
                 class="btn btn--danger"
                 bind:this={endBtn}
-                onclick={() => vm.askEnd()}
+                onclick={() => onAskEnd()}
               >{strings.endGame}</button>
             {/if}
           {/if}

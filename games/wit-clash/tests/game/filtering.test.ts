@@ -1,3 +1,4 @@
+import { CLIENT_MESSAGES } from "@partygame/shared";
 import { describe, expect, it } from "vitest";
 import { makeCategories, nth, Table, type TableConfig } from "./support.js";
 
@@ -42,7 +43,7 @@ describe("answer filtering", () => {
     const error = submitFirst(t, "p1", PROFANE);
     expect(error).toEqual({
       code: "CONTENT_REJECTED",
-      message: "contains inappropriate language",
+      message: CLIENT_MESSAGES.CONTENT_REJECTED,
       action: "SUBMIT_ANSWER",
     });
     expect(t.errors("p1")).toContainEqual(error);
@@ -69,7 +70,7 @@ describe("answer filtering", () => {
     s.toPrompting();
     expect(submitFirst(s, "p1", MILD)).toEqual({
       code: "CONTENT_REJECTED",
-      message: "contains strong language",
+      message: CLIENT_MESSAGES.CONTENT_REJECTED,
       action: "SUBMIT_ANSWER",
     });
   });
@@ -80,7 +81,7 @@ describe("answer filtering", () => {
     t.toPrompting();
     expect(submitFirst(t, "p1", MILD)).toEqual({
       code: "CONTENT_REJECTED",
-      message: "contains strong language",
+      message: CLIENT_MESSAGES.CONTENT_REJECTED,
       action: "SUBMIT_ANSWER",
     });
   });

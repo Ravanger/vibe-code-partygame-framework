@@ -2,13 +2,14 @@ import { MatchMakeError } from "@colyseus/sdk";
 import {
   type ActionResult,
   CLIENT_MESSAGES,
+  CLOSE_CODES,
   ClientMessage,
   ErrorCode,
   ServerMessage,
 } from "@partygame/shared";
 import { afterEach, describe, expect, it } from "vitest";
 import { collectMessages, type TestServer, waitUntil } from "../src/testing/index.js";
-import { bootPoll, pollStateOf, startedPoll } from "./support.js";
+import { bootPoll, pid, pollStateOf, startedPoll } from "./support.js";
 
 let t: TestServer | undefined;
 afterEach(async () => {
@@ -123,6 +124,34 @@ describe("GameRoom audience actions", () => {
     expect(full.message).toMatch(/is locked$/);
     expect(full.code).toBe(522);
     expect(pollStateOf(room).spectatorCount).toBe(2);
+  });
+
+  it("seating a player evicts only the spectator holding that id", async () => {
+    t = await bootPoll();
+    const room = await t.createRoom("poll"); // not startedPoll: it seats pid(1) itself
+    const spec = await t.join(room, { playerId: pid(1), spectator: true });
+    await t.join(room, { playerId: "aud-0001", spectator: true }); // an innocent bystander
+    let closeCode: number | undefined;
+    spec.onLeave((code: number) => {
+      closeCode = code;
+    });
+    await t.join(room, { playerId: pid(1) }); // the real seat takes the id away
+    await waitUntil(() => closeCode !== undefined, "spectator evicted");
+    expect(closeCode).toBe(CLOSE_CODES.SEAT_TAKEN.code);
+    expect(pollStateOf(room).spectatorCount).toBe(1); // only the bystander remains
+  });
+
+  it("still admits a spectator whose id is not seated and lets it vote", async () => {
+    t = await bootPoll();
+    const { room } = await startedPoll(t); // seats pid(1)
+    const spec = await t.join(room, { playerId: "aud-0001", spectator: true });
+    expect(
+      await spec.request<unknown, ActionResult>(ClientMessage.ACTION, {
+        type: "VOTE",
+        option: "a",
+      }),
+    ).toEqual({ ok: true });
+    expect(pollStateOf(room).votesA).toBe(1);
   });
 
   it("rate-limits a spectator's actions on its own per-connection bucket", async () => {

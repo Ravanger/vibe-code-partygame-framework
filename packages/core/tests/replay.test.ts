@@ -2,12 +2,14 @@ import type { TextFilter } from "@partygame/content/filter";
 import { ErrorCode, PROTOCOL_VERSION } from "@partygame/shared";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+import { MAX_ACTION_LOG_ENTRIES } from "../src/actionLog.js";
 import {
   type ActionLog,
   type ActionLogEntry,
   actionFactory,
   actionLogMiddleware,
   defineGame,
+  type GameDefinition,
   getActionLog,
   type PhaseState,
   required,
@@ -18,6 +20,7 @@ import {
 } from "../src/index.js";
 import { replayLog } from "../src/replay/index.js";
 import { TestTable } from "../src/testing/TestTable.js";
+import { MAX_TIMER_FIRES_PER_ADVANCE, MAX_TIMER_FIRES_PER_REPLAY } from "../src/timers.js";
 import {
   type LoggedOptions,
   type LoggedPriv,
@@ -619,6 +622,35 @@ describe("replayLog log-shape validation", () => {
     ).toThrow("replayLog: log.header must be an object");
   });
 
+  it("throws a named error when the log has no entries", () => {
+    const log = liveLog();
+    const empty: ActionLog = { header: log.header, entries: [] };
+    expect(() => replayLog(definition, empty, init)).toThrow("replayLog: the log has no entries");
+  });
+
+  it("names the allowed range for an out-of-bounds t, seq or startedAt", () => {
+    const max = Number.MAX_SAFE_INTEGER;
+    const log = liveLog();
+    expect(() =>
+      replayLog(definition, withEntry(log, 1, { ...log.entries[1], t: -1 }), init),
+    ).toThrow(`"t" must be an integer between 0 and ${max}`);
+    expect(() =>
+      replayLog(definition, withEntry(log, 1, { ...log.entries[1], t: max + 1 }), init),
+    ).toThrow(`"t" must be an integer between 0 and ${max}`);
+    expect(() =>
+      replayLog(definition, withEntry(log, 1, { ...log.entries[1], seq: 0 }), init),
+    ).toThrow(`"seq" must be an integer between 1 and ${max}`);
+    expect(() =>
+      replayLog(definition, { ...log, header: { ...log.header, startedAt: -1 } }, init),
+    ).toThrow(`log.header.startedAt must be an integer between 0 and ${max}`);
+    expect(() =>
+      replayLog(definition, withEntry(log, 1, { ...log.entries[1], ticks: -1 }), init),
+    ).toThrow(`"ticks" must be an integer between 0 and ${max}`);
+    expect(() =>
+      replayLog(definition, withEntry(log, 1, { ...log.entries[1], ticks: max + 1 }), init),
+    ).toThrow(`"ticks" must be an integer between 0 and ${max}`);
+  });
+
   it("throws a named error when header.game is not a string", () => {
     const log = liveLog();
     expect(() =>
@@ -712,6 +744,13 @@ describe("replayLog log-shape validation", () => {
     ).toThrow('"t" must be a number');
   });
 
+  it("throws a named error when an entry's ticks is not a number", () => {
+    const log = liveLog();
+    expect(() =>
+      replayLog(definition, withEntry(log, 1, { ...log.entries[1], ticks: "ten" }), init),
+    ).toThrow('"ticks" must be a number');
+  });
+
   it("throws a named error when an entry's seq is not a number", () => {
     const log = liveLog();
     expect(() =>
@@ -724,6 +763,24 @@ describe("replayLog log-shape validation", () => {
     expect(() =>
       replayLog(definition, withEntry(log, 1, { ...log.entries[1], phase: 42 }), init),
     ).toThrow('"phase" must be a string');
+  });
+
+  it("throws a named error when an action entry's payload is not a plain object", () => {
+    const log = liveLog();
+    expect(() =>
+      replayLog(definition, withEntry(log, 1, { ...log.entries[1], payload: "abc" }), init),
+    ).toThrow('"payload" must be a plain object');
+  });
+
+  it("throws a named error when the log has more than MAX_ACTION_LOG_ENTRIES entries", () => {
+    const log = liveLog();
+    const entry = required(log.entries[0], "first log entry");
+    const padded = [...log.entries];
+    const extra = MAX_ACTION_LOG_ENTRIES - padded.length + 1;
+    for (let i = 0; i < extra; ++i) padded.push(entry);
+    expect(() => replayLog(definition, { ...log, entries: padded }, init)).toThrow(
+      `replayLog: log.entries has more than ${MAX_ACTION_LOG_ENTRIES} entries`,
+    );
   });
 
   it("throws a named error when the log is not an object", () => {
@@ -1020,6 +1077,259 @@ describe("redacted entries", () => {
     const { states } = replayLog(definition, log, { state: newState(), options: {} });
     const last = required(states[states.length - 1], "final replayed state");
     expect(last.log).toEqual(["maybe:fine"]);
+  });
+});
+
+describe("replayLog input bounds", () => {
+  interface CapState extends PhaseState {
+    taps: number;
+  }
+  const capAction = actionFactory<CapState, Record<string, never>, Record<string, never>>();
+
+  /** A ticking phase at 1 ms: one timer fire per logged millisecond. */
+  const capDefinition = defineGame<CapState, Record<string, never>, Record<string, never>>({
+    name: "CapTap",
+    version: "1",
+    minPlayers: 1,
+    maxPlayers: 4,
+    startPhase: "Tap",
+    createPrivateState: () => ({}),
+    phases: {
+      Tap: {
+        tickMs: 1,
+        onTick: () => {},
+        actions: {
+          TAP: capAction({
+            from: "player",
+            payload: z.object({}),
+            handler: (ctx) => {
+              ctx.state.taps += 1;
+            },
+          }),
+        },
+      },
+    },
+  });
+
+  const newCapState = (): CapState => ({ phase: "", phaseEndsAt: 0, canStart: false, taps: 0 });
+
+  /** A hand-built log: start at T+100, then `taps` TAPs each `gapMs` later. */
+  const capLog = (gapMs: number, taps: number): ActionLog => {
+    const entries: ActionLogEntry[] = [
+      { seq: 1, t: 1_000_000, phase: "Lobby", kind: "enter" },
+      {
+        seq: 2,
+        t: 1_000_100,
+        phase: "Lobby",
+        kind: "action",
+        actionType: "START_GAME",
+        senderId: "p1",
+        payload: {},
+      },
+      { seq: 3, t: 1_000_100, phase: "Lobby", kind: "transition", from: "Lobby", to: "Tap" },
+      { seq: 4, t: 1_000_100, phase: "Tap", kind: "enter" },
+    ];
+    let t = 1_000_100;
+    for (let i = 0; i < taps; ++i) {
+      t += gapMs;
+      entries.push({
+        seq: i + 5,
+        t,
+        phase: "Tap",
+        kind: "action",
+        actionType: "TAP",
+        senderId: "p1",
+        payload: {},
+      });
+    }
+    return {
+      header: {
+        game: "CapTap",
+        version: "1",
+        protocolVersion: PROTOCOL_VERSION,
+        seed: [1, 2, 3, 4],
+        startedAt: 1_000_000,
+      },
+      entries,
+    };
+  };
+
+  it("refuses a time gap that would fire more than the per-advance budget", () => {
+    const log = capLog(MAX_TIMER_FIRES_PER_ADVANCE + 1, 1);
+    expect(() =>
+      replayLog(capDefinition, log, { state: newCapState(), options: {}, players: 1 }),
+    ).toThrow(/replayLog: .*timers/);
+  });
+
+  it("refuses a run whose total timer fires exceed the replay budget", () => {
+    const gapMs = 9_000; // under the per-advance budget, so only the total can trip
+    const taps = Math.floor(MAX_TIMER_FIRES_PER_REPLAY / gapMs) + 2;
+    const log = capLog(gapMs, taps);
+    expect(() =>
+      replayLog(capDefinition, log, { state: newCapState(), options: {}, players: 1 }),
+    ).toThrow(/replayLog: .*timers/);
+  });
+
+  it("replays a long-but-within-budget ticking session", () => {
+    const log = capLog(9_000, Math.floor(MAX_TIMER_FIRES_PER_REPLAY / 9_000));
+    const { states } = replayLog(capDefinition, log, {
+      state: newCapState(),
+      options: {},
+      players: 1,
+    });
+    expect(states.length).toBe(Math.floor(MAX_TIMER_FIRES_PER_REPLAY / 9_000) + 2);
+  });
+});
+
+describe("replayLog tick quantization", () => {
+  interface QState extends PhaseState {
+    taps: number;
+    marks: number[];
+    lastTapsAtHit: number;
+    zoneEntries: number;
+  }
+  const qAction = actionFactory<QState, Record<string, never>, Record<string, never>>();
+
+  /** Zone ticks every `tickMs`; every tick and TAP draws the room RNG into `marks`. */
+  function makeQuantized(
+    tickMs: number,
+  ): GameDefinition<QState, Record<string, never>, Record<string, never>> {
+    return defineGame<QState, Record<string, never>, Record<string, never>>({
+      name: "Quantized",
+      version: "1",
+      minPlayers: 1,
+      maxPlayers: 4,
+      startPhase: "Zone",
+      createPrivateState: () => ({}),
+      phases: {
+        Zone: {
+          tickMs,
+          onEnter: (ctx) => {
+            ctx.state.zoneEntries += 1;
+          },
+          onTick: (ctx) => {
+            ctx.state.taps += 1;
+            ctx.state.marks.push(Math.floor(ctx.rng() * 1000));
+          },
+          actions: {
+            TAP: qAction({
+              from: "player",
+              payload: z.object({}),
+              handler: (ctx) => {
+                ctx.state.lastTapsAtHit = ctx.state.taps;
+                ctx.state.marks.push(Math.floor(ctx.rng() * 1000));
+              },
+            }),
+            LEAVE: qAction({
+              from: "player",
+              payload: z.object({}),
+              handler: (ctx) => ctx.transition("Done"),
+            }),
+          },
+        },
+        Done: {
+          duration: 400,
+          onTimeout: (ctx) => ctx.transition("Zone"),
+        },
+      },
+    });
+  }
+
+  const newQState = (): QState => ({
+    phase: "",
+    phaseEndsAt: 0,
+    canStart: false,
+    taps: 0,
+    marks: [],
+    lastTapsAtHit: -1,
+    zoneEntries: 0,
+  });
+
+  const quantizedTable = (
+    definition: GameDefinition<QState, Record<string, never>, Record<string, never>>,
+  ) =>
+    new TestTable<QState, Record<string, never>, Record<string, never>>({
+      definition: { ...definition, middleware: [actionLogMiddleware()] },
+      state: newQState(),
+      options: {},
+      players: 2,
+    });
+
+  const tapTicksOf = (log: ActionLog): number[] =>
+    log.entries
+      .filter((e) => e.kind === "action" && e.actionType === "TAP")
+      .map((e) => required(e.ticks, "ticks"));
+
+  it("replays an action in the late-tick window with exactly the live tick count", () => {
+    const definition = makeQuantized(100);
+    const live = quantizedTable(definition);
+    live.host.timerLatenessMs = 30; // a coarse clock: every timer fires up to one grid step late
+    expect(live.start()).toBeUndefined();
+    live.tick(115); // tick 1 is nominally due at +100, delivered at +130: not yet
+    expect(live.act("p2", "TAP")).toBeUndefined(); // sees 0 ticks
+    live.tick(120); // to +235: ticks 1 (+130) and 2 (+230) are delivered
+    expect(live.act("p2", "TAP")).toBeUndefined(); // sees 2
+    live.tick(115); // to +350: tick 3 (+330) is delivered
+    expect(live.act("p2", "TAP")).toBeUndefined(); // sees 3
+    const log = getActionLog(live.priv);
+    expect(log).toBeDefined();
+    expect(tapTicksOf(log as ActionLog)).toEqual([0, 2, 3]);
+    expect(live.state.lastTapsAtHit).toBe(3);
+    const { states } = replayLog(definition, log as ActionLog, {
+      state: newQState(),
+      options: {},
+      players: 2,
+    });
+    // The final snapshot matches the live state exactly — RNG draws included, so any tick-order
+    // skew would shift the marks.
+    expect(states[states.length - 1]).toEqual(live.state);
+  });
+
+  it("discards deferred ticks when the phase is left before they are delivered", () => {
+    const definition = makeQuantized(100);
+    const live = quantizedTable(definition);
+    live.host.timerLatenessMs = 30;
+    expect(live.start()).toBeUndefined();
+    live.tick(115); // tick 1 would be delivered at +130
+    expect(live.act("p2", "TAP")).toBeUndefined(); // sees 0 ticks
+    expect(live.act("p2", "LEAVE")).toBeUndefined(); // the pending tick is cancelled with the phase
+    live.tick(430); // to +545: Done's timeout (nominally +515, delivered at +545) re-enters Zone
+    expect(live.phase).toBe("Zone");
+    live.tick(130); // to +675: the re-entered tick 1 is delivered at +675
+    expect(live.act("p2", "TAP")).toBeUndefined(); // sees exactly one tick since re-entry
+    const log = getActionLog(live.priv);
+    expect(log).toBeDefined();
+    const { states } = replayLog(definition, log as ActionLog, {
+      state: newQState(),
+      options: {},
+      players: 2,
+    });
+    // The first Zone entry's deferred tick must not have applied: taps and the marks count for it.
+    expect(live.state.taps).toBe(1);
+    expect(states[states.length - 1]).toEqual(live.state);
+  });
+
+  it("defers every tick past the cap and applies them in order at the next entry", () => {
+    // A fast phase under a coarse clock: several ticks can be nominally due while few are
+    // delivered (a late tick reschedules its successor with zero delay, so deliveries land every
+    // grid step).
+    const definition = makeQuantized(10);
+    const live = quantizedTable(definition);
+    live.host.timerLatenessMs = 25;
+    expect(live.start()).toBeUndefined();
+    live.tick(50); // only the tick delivered at +35 has fired
+    expect(live.act("p2", "TAP")).toBeUndefined(); // sees 1 tick
+    live.tick(40); // to +90: the deliveries at +60 and +85 fire
+    expect(live.act("p2", "TAP")).toBeUndefined(); // sees 3
+    const log = getActionLog(live.priv);
+    expect(log).toBeDefined();
+    expect(tapTicksOf(log as ActionLog)).toEqual([1, 3]);
+    const { states } = replayLog(definition, log as ActionLog, {
+      state: newQState(),
+      options: {},
+      players: 2,
+    });
+    expect(states[states.length - 1]).toEqual(live.state);
   });
 });
 

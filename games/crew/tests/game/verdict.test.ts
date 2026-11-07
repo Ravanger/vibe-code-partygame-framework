@@ -16,6 +16,28 @@ describe("Verdict", () => {
     }
   });
 
+  it("reveals each player exactly once when the game finishes after shares", () => {
+    const t = Table.started({ options: { rounds: 1 } });
+    playToVerdict(t); // every player shared, so every signal is already public
+    t.guess("p2", t.priv.target);
+    expect(t.phase).toBe("Results");
+    expect(t.state.reveals.length).toBe(4);
+    expect(t.state.reveals.map((r) => r.playerId)).toEqual(["p1", "p2", "p3", "p4"]);
+  });
+
+  it("reveals the held players' signals when the game finishes", () => {
+    const t = Table.started({ options: { rounds: 1 } });
+    t.share("p1");
+    t.hold("p2");
+    t.hold("p3");
+    t.hold("p4");
+    expect(t.phase).toBe("Verdict");
+    t.guess("p1", t.priv.target);
+    expect(t.phase).toBe("Results");
+    expect(t.state.reveals.length).toBe(4);
+    expect(t.state.reveals.map((r) => r.playerId)).toEqual(["p1", "p2", "p3", "p4"]);
+  });
+
   it("records wrong guesses and loses on the third", () => {
     const t = Table.started({ options: { rounds: 1 } });
     playToVerdict(t);

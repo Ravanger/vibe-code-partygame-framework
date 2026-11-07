@@ -62,7 +62,20 @@ afterEach(() => {
   // runLauncher registers a handler per invocation; drop them so they do not accumulate in the worker.
   process.removeAllListeners("SIGINT");
   process.removeAllListeners("SIGTERM");
+  process.removeAllListeners("SIGHUP");
+  process.removeAllListeners("exit");
+  process.removeAllListeners("uncaughtException");
+  process.removeAllListeners("unhandledRejection");
 });
+
+const emitSignal = (
+  handlers: Map<string, (...args: unknown[]) => void>,
+  name: string,
+  ...args: unknown[]
+): void => {
+  const handler = handlers.get(name);
+  if (handler !== undefined) handler(...args);
+};
 
 describe("runLauncher", () => {
   it("exits with code 2 on bad argv through the injected exit", async () => {
@@ -112,6 +125,77 @@ describe("runLauncher", () => {
       await waitUntilFree(ports.clientDev);
       expect(await isFree(ports.game)).toBe(true);
       expect(await isFree(ports.clientDev)).toBe(true);
+    },
+    TIMEOUT,
+  );
+
+  it(
+    "stops the launch when the terminal closes (SIGHUP) and ignores repeated stops",
+    async () => {
+      const exit: number[] = [];
+      const handlers = new Map<string, (...args: unknown[]) => void>();
+      await runLauncher(configOf(), ["--no-browser"], {
+        exit: (code) => exit.push(code),
+        on: (name, listener) => {
+          handlers.set(name, listener);
+        },
+      });
+      emitSignal(handlers, "SIGHUP");
+      emitSignal(handlers, "SIGHUP");
+      for (let i = 0; i < 50 && exit.length === 0; ++i) {
+        await new Promise((done) => setTimeout(done, 100));
+      }
+      expect(exit).toEqual([0]);
+      await waitUntilFree(ports.game);
+      await waitUntilFree(ports.clientDev);
+      expect(await isFree(ports.game)).toBe(true);
+      expect(await isFree(ports.clientDev)).toBe(true);
+    },
+    TIMEOUT,
+  );
+
+  it(
+    "kills the processes on the exit event without calling exit again",
+    async () => {
+      const exit: number[] = [];
+      const handlers = new Map<string, (...args: unknown[]) => void>();
+      await runLauncher(configOf(), ["--no-browser"], {
+        exit: (code) => exit.push(code),
+        on: (name, listener) => {
+          handlers.set(name, listener);
+        },
+      });
+      expect(await isFree(ports.game)).toBe(false);
+      emitSignal(handlers, "exit");
+      await waitUntilFree(ports.game);
+      await waitUntilFree(ports.clientDev);
+      expect(await isFree(ports.game)).toBe(true);
+      expect(await isFree(ports.clientDev)).toBe(true);
+      expect(exit).toEqual([]);
+    },
+    TIMEOUT,
+  );
+
+  it(
+    "logs an uncaught error, kills the processes and exits 1 once",
+    async () => {
+      const exit: number[] = [];
+      const handlers = new Map<string, (...args: unknown[]) => void>();
+      await runLauncher(configOf(), ["--no-browser"], {
+        exit: (code) => exit.push(code),
+        on: (name, listener) => {
+          handlers.set(name, listener);
+        },
+      });
+      const boom = new Error("boom");
+      emitSignal(handlers, "uncaughtException", boom);
+      expect(console.error).toHaveBeenCalledWith(boom);
+      expect(exit).toEqual([1]);
+      // A second crash while exiting must not exit again.
+      emitSignal(handlers, "unhandledRejection", new Error("again"));
+      expect(exit).toEqual([1]);
+      await waitUntilFree(ports.game);
+      await waitUntilFree(ports.clientDev);
     },
     TIMEOUT,
   );

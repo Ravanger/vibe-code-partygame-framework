@@ -80,12 +80,13 @@ What the framework does and does not protect, for game authors and maintainers. 
 
 **Threat.** Per-player data (hands, secrets, private scores) leaking to other clients or spectators.
 
-**Abuse case.** A client inspects its synced state for another player's `.view()` entries — or a game author forgets to mark a field private and it syncs to everyone.
+**Abuse case.** A client inspects its synced state for another player's `.view()` entries — or a game author forgets to mark a field private and it syncs to everyone — or a spectator joins under an already-seated `playerId` and, while that seat has no live connection (the drop/reconnect window), receives the seat's private `ctx.send` messages.
 
 **Today.**
 - Each connection gets its own `StateView` at join (`GameRoom.onJoin` and `GameRoom.views` in `packages/server/src/rooms/GameRoom.ts`); the game shows/hides entries per player with `ctx.showTo`/`hideFrom`. Spectators start with an empty view.
+- A spectator can never hold a seated id: such a join closes with `SEAT_TAKEN` (both while the seat is connected and in its drop window), and seating a player evicts any spectator already holding that id with the same code — so the host's private send (`clientFor ?? spectatorClientFor`) resolves only to the seat's own connection.
 - The boundary is enforced **mechanically at boot**: every field of a state class must be `.view()`, allow-listed in the game's `publicFields`, or a `BaseGameState` field — otherwise `assertSyncedFields` throws and the server refuses to start (`assertSyncedFields` in `packages/shared/src/schema/syncedFields.ts`, called from `createGameServer`; tests in `packages/shared/tests/syncedFields.test.ts`).
-- Tests proving isolation end to end: `packages/server/tests/security.isolation.test.ts` (a spectator and another player hold no `.view()` entries, before and after a drop + fresh-session rejoin; the rejoiner gets exactly its own entry back).
+- Tests proving isolation end to end: `packages/server/tests/security.isolation.test.ts` (a spectator and another player hold no `.view()` entries, before and after a drop + fresh-session rejoin; the rejoiner gets exactly its own entry back). The seated-id refusal and eviction are pinned there too, with the audience-side behaviour in `GameRoom.audience.test.ts`.
 
 **Expectation for game authors.** Declare every field other clients may see in `publicFields`; anything else must be `.view()`. The server will not boot otherwise — that is the point.
 
@@ -114,7 +115,7 @@ What the framework does and does not protect, for game authors and maintainers. 
 **Abuse case.** A player sets the name `<img src=x onerror=…>` (names are capped at 20 characters, which shortens but does not eliminate payloads) or types a script tag into a free-text answer that the UI renders.
 
 **Today.**
-- Names: `SetNameSchema` trims and enforces 1–`NAME_MAX_LENGTH` (20) characters with no control characters (`SetNameSchema` in `packages/shared/src/protocol.ts`, `NAME_MAX_LENGTH` in `packages/shared/src/limits.ts`); duplicate names are refused (`NAME_TAKEN`), a taken join-time name is dropped.
+- Names: `SetNameSchema` trims and enforces 1–`NAME_MAX_LENGTH` (20) code points with no control, format or separator characters and at least one visible character — invisible-only names (zero-width spaces) and bidi overrides (U+202E) are refused (`SetNameSchema` in `packages/shared/src/protocol.ts`, `NAME_MAX_LENGTH` in `packages/shared/src/limits.ts`); duplicate names are refused (`NAME_TAKEN`), a taken join-time name is dropped.
 - Optional profanity filtering: a `TextFilter` from `@partygame/content` wired into `createGameServer`; names are checked at join (close 4405) and on `SET_NAME`, and action text fields via `textFilterMiddleware` (`packages/core/src/middleware.ts`) at the game's `filterLevel` (`off`/`moderate`/`strict`, default `off`). Filtered rejections are recorded **without** the offending text (`redactPayload`; `packages/core/src/actionLog.ts`). Tests: `packages/server/tests/GameRoom.filter.test.ts`.
 - The framework does not sanitize HTML. Svelte escapes text interpolation by default; rendering user content with `@html` would be an unsanitized XSS hole and is the game's responsibility.
 
@@ -131,6 +132,8 @@ What the framework does and does not protect, for game authors and maintainers. 
 **Today.**
 - The log lives server-side only: `actionLogMiddleware` appends into a module-level store keyed by `ctx.priv` (`logs` and `actionLogMiddleware` in `packages/core/src/actionLog.ts`) — it is never part of synced state.
 - Export is host-only: `EXPORT_REPLAY` from anyone else gets an `UNAUTHORIZED` refusal (`GameRoom.exportReplay` in `packages/server/src/rooms/GameRoom.ts`); the answer is a hashed bundle whose integrity can be checked by viewers.
+- Export is rate-limited per host seat (default one per 5 s, burst 1 — `DEFAULT_EXPORT_REPLAY_BUCKET` in `createGameServer.ts`, bucket `exportReplay` in `packages/server/src/RateLimiter.ts`; test in `GameRoom.rateLimit.test.ts`): a faster call gets the fixed `RATE_LIMITED` refusal instead of another full bundle build, and non-hosts are refused before spending any budget.
+- The room's memory stays bounded: it records a snapshot at each transition only while it keeps an action log (a bundle needs both halves), and keeps at most `maxReplayTransitions` (default 5,000 — `DEFAULT_MAX_REPLAY_TRANSITIONS` in `createGameServer.ts`); once the log outgrows the bound the export answers the fixed refusal instead of shipping a truncated bundle (`notifyTransition` in `GameRoom.ts`; tests in `GameRoom.replay.test.ts`).
 - Rejected text can be kept out of the log entirely (`redactPayload`, used by the text filter; `packages/core/src/actionLog.ts`).
 - Replay input is validated up front against the strict `ActionLogSchema`; malformed logs throw named `replayLog:` errors before anything runs (`replayLog` in `packages/core/src/replay/replay.ts`), and a 500-iteration seeded fuzz pins that property (`packages/core/tests/security.fuzz.test.ts`).
 
@@ -161,7 +164,7 @@ What the framework does and does not protect, for game authors and maintainers. 
 **Abuse case.** A client fires actions faster than the game can handle; a 10 MiB WebSocket frame lands on the socket; an off-LAN script opens rooms until memory runs out.
 
 **Today.**
-- Per-player token buckets throttle `ACTION` (default 10/s, burst 20) and `SET_NAME` (2/2); refusals are dropped **before** dispatch, so they never reach game code or the log (`GameRoom.limited`, called from the `ACTION` handler and `GameRoom.setName`; bucket in `packages/server/src/RateLimiter.ts`; defaults in `createGameServer.ts`; tests in `GameRoom.rateLimit.test.ts` and `RateLimiter.test.ts`). Spectator actions have a per-connection bucket (`GameRoom.actAudience`).
+- Per-player token buckets throttle `ACTION` (default 10/s, burst 20) and `SET_NAME` (2/2); refusals are dropped **before** dispatch, so they never reach game code or the log (`GameRoom.limited`, called from the `ACTION` handler and `GameRoom.setName`; bucket in `packages/server/src/RateLimiter.ts`; defaults in `createGameServer.ts`; tests in `GameRoom.rateLimit.test.ts` and `RateLimiter.test.ts`). Spectator actions have a per-connection bucket (`GameRoom.actAudience`). A host's `EXPORT_REPLAY` — the one message whose handler rebuilds and hashes the whole bundle — has its own bucket (default one per 5 s, burst 1), so a loop of exports cannot burn the process (`GameRoom.limited`, called from the `EXPORT_REPLAY` handler; tests in `GameRoom.rateLimit.test.ts`).
 - WebSocket frames above `maxPayloadBytes` (default 4 KiB) close only that connection with code 1009, leaving the room untouched (`maxPayloadBytes` in `packages/server/src/createGameServer.ts`; test in `createGameServer.test.ts`).
 - Hostile envelopes are rejected cheaply at the protocol edge: at most 32 keys (`MAX_ENVELOPE_KEYS` in `packages/shared/src/limits.ts`, enforced by `ActionEnvelopeSchema` in `packages/shared/src/protocol.ts`) and a strict action-name pattern (same schema, checked first in `DispatchPipeline.run`; pinned by `security.hostile-input.test.ts` and the fuzz in `packages/core/tests/security.fuzz.test.ts`).
 - Room flood is capped: `maxRooms` (default 100) refuses new rooms with close 4429 (`maxRooms` in `createGameServer.ts`, checked in `GameRoom.onCreate`; test in `GameRoom.limits.test.ts`); each room admits at most `maxPlayers + audienceSlots` connections (`audienceSlots`, default 32); empty rooms are disposed after `emptyRoomGraceMs` (default `DEFAULT_EMPTY_ROOM_GRACE_MS` in `createGameServer.ts`).
@@ -176,6 +179,3 @@ What the framework does and does not protect, for game authors and maintainers. 
 Abuse cases above whose Status is open. Each is tracked by an issue; none is unfiled.
 
 1. **No per-address cap on joins and room creation** (#320). The in-room throttles key on `playerId`/session inside a room, but nothing limits how many *connections* or *rooms* one remote address may open: a script can fill `maxRooms` (default 100) and lock everyone out with `SERVER_FULL` (4429).
-2. **Host-side replay export is unthrottled and unlogged** (#395). A host can call `EXPORT_REPLAY` repeatedly; every call answers with the full bundle and no trace is kept server-side.
-3. **A spectator can join under a seated player's id** (#325).
-4. **The code-resolve throttle shares one bucket behind a reverse proxy** (#326), and its bucket map grows with every distinct address.

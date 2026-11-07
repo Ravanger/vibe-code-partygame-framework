@@ -33,6 +33,23 @@ describe("Writing", () => {
     expect([...(t.priv.fakes.get("p1")?.values() ?? [])]).toEqual(["Sydney"]);
   });
 
+  it("rejects a fake that duplicates another player's answer", () => {
+    const t = Table.started();
+    t.submitFake("p1", "Sydney");
+    const error = t.act("p2", "SUBMIT_FAKE", { text: "sydney" });
+    expect(error?.code).toBe("NOT_ALLOWED");
+    expect(error?.message).toBe("An answer like that is already on the table");
+    expect(t.priv.fakes.has("p2")).toBe(false);
+  });
+
+  it("rejects a fake equal to the prompt's truth", () => {
+    const t = Table.started();
+    const error = t.act("p1", "SUBMIT_FAKE", { text: "canberra" });
+    expect(error?.code).toBe("NOT_ALLOWED");
+    expect(error?.message).toBe("An answer like that is already on the table");
+    expect(t.priv.fakes.has("p1")).toBe(false);
+  });
+
   it("rejects an empty fake answer", () => {
     const t = Table.started();
     const error = t.act("p1", "SUBMIT_FAKE", { text: "   " });
@@ -59,8 +76,12 @@ describe("Writing", () => {
 
   it("ignores SUBMIT_FAKE outside the Writing phase", () => {
     const t = Table.started();
-    t.tick(45_000);
-    const error = t.act("p1", "SUBMIT_FAKE", { text: "Sydney" });
+    t.submitFake("p1", "Sydney");
+    t.submitFake("p2", "Perth");
+    t.submitFake("p3", "Brisbane");
+    t.submitFake("p4", "Adelaide");
+    expect(t.phase).toBe("Voting");
+    const error = t.act("p1", "SUBMIT_FAKE", { text: "Melbourne" });
     expect(error?.code).toBe("WRONG_PHASE");
   });
 

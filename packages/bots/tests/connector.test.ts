@@ -1,10 +1,11 @@
+import { Client } from "@colyseus/sdk";
 import type {
   ConnectedRoom,
   RoomConnector,
   RoomCreateOptions,
   RoomJoinOptions,
 } from "@partygame/client-utils";
-import { ClientMessage } from "@partygame/shared";
+import { ClientMessage, ServerMessage } from "@partygame/shared";
 import { PlayerSchema } from "@partygame/shared/schema";
 import { describe, expect, it, vi } from "vitest";
 import { BotTable } from "../src/BotTable.js";
@@ -205,5 +206,68 @@ describe("the RoomConnector seam", () => {
   it("ColyseusConnector refuses to create rooms without a roomName", async () => {
     const connector = new ColyseusConnector("ws://localhost:1", { stateClass: TapState });
     await expect(connector.create({ playerId: "p" })).rejects.toThrow("roomName");
+  });
+});
+
+/** A joined room that fails its post-join steps: the code never syncs, or the name claim is refused. */
+class LeakyRoom {
+  readonly state = new TapState();
+  readonly leaveCalls: Array<boolean | undefined> = [];
+  private errorCallbacks: Array<(payload: unknown) => void> = [];
+
+  constructor(private readonly refuseName?: string) {}
+
+  sync(): void {
+    this.state.roomCode = "WXYZ";
+  }
+
+  onMessage(type: string, callback: (payload: unknown) => void): () => void {
+    if (type === ServerMessage.ERROR) this.errorCallbacks.push(callback);
+    return () => undefined;
+  }
+
+  send(type: string): void {
+    if (type !== ClientMessage.SET_NAME || this.refuseName === undefined) return;
+    for (const callback of this.errorCallbacks) {
+      callback({ code: "NOT_ALLOWED", message: this.refuseName });
+    }
+  }
+
+  leave(reconnect?: boolean): Promise<number> {
+    this.leaveCalls.push(reconnect);
+    return Promise.resolve(0);
+  }
+}
+
+describe("ColyseusConnector.join failure handling", () => {
+  it("leaves the room and rethrows when the state never syncs", async () => {
+    const connector = new ColyseusConnector("ws://localhost:1", { stateClass: TapState });
+    const room = new LeakyRoom();
+    const joinSpy = vi.spyOn(Client.prototype, "joinById");
+    try {
+      joinSpy.mockImplementation(async () => room as never);
+      await expect(connector.join("r1", { playerId: "p", timeoutMs: 30 })).rejects.toThrow(
+        "Timed out waiting for the room state",
+      );
+      expect(room.leaveCalls).toEqual([true]);
+    } finally {
+      joinSpy.mockRestore();
+    }
+  });
+
+  it("leaves the room and rethrows when the name claim is refused", async () => {
+    const connector = new ColyseusConnector("ws://localhost:1", { stateClass: TapState });
+    const room = new LeakyRoom("Name taken");
+    room.sync();
+    const joinSpy = vi.spyOn(Client.prototype, "joinById");
+    try {
+      joinSpy.mockImplementation(async () => room as never);
+      await expect(connector.join("r1", { playerId: "p", name: "Ann" })).rejects.toThrow(
+        "Name taken",
+      );
+      expect(room.leaveCalls).toEqual([true]);
+    } finally {
+      joinSpy.mockRestore();
+    }
   });
 });

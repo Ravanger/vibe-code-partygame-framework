@@ -87,6 +87,23 @@ describe("GameControls", () => {
     await fireEvent.click(document.body);
   });
 
+  it("does not announce the menu button as a popup", () => {
+    const { vm } = setup();
+    render(GameControls, { vm });
+    expect(menu()).not.toHaveAttribute("aria-haspopup");
+  });
+
+  it("moves focus to No when the confirm appears and back to End game on cancel", async () => {
+    const { vm } = setup("host");
+    render(GameControls, { vm });
+    await fireEvent.click(menu());
+    await waitFor(() => expect(endGame()).toHaveFocus());
+    await fireEvent.click(endGame() as HTMLElement);
+    await waitFor(() => expect(screen.getByRole("button", { name: "No" })).toHaveFocus());
+    await fireEvent.click(screen.getByRole("button", { name: "No" }));
+    await waitFor(() => expect(endGame()).toHaveFocus());
+  });
+
   it("wires the menu to its popover and moves focus on open and back on close", async () => {
     const { vm } = setup();
     const { container } = render(GameControls, { vm });

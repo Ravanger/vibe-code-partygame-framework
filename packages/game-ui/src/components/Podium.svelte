@@ -38,7 +38,7 @@ const stickerSize = (step: PodiumStep<TRow>): number => {
             </div>
           {/each}
         </div>
-        <div class="block">{step.label}</div>
+        <div class="block">{strings.podiumPlace(step.tier)}</div>
       </li>
     {/each}
   </ol>

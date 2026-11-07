@@ -35,7 +35,10 @@ export const ScoreEntry = schema(
 );
 export type ScoreEntry = SchemaType<typeof ScoreEntry>;
 
-export const PlayerPrivate = schema({ myOptionId: t.string().default("") }, "PlayerPrivate");
+export const PlayerPrivate = schema(
+  { myOptionId: t.string().default(""), myVote: t.string().default("") },
+  "PlayerPrivate",
+);
 export type PlayerPrivate = SchemaType<typeof PlayerPrivate>;
 
 export const BluffState = BaseGameState.extend(

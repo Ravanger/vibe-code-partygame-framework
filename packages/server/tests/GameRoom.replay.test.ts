@@ -9,6 +9,7 @@ import {
 } from "@partygame/shared";
 import { BaseGameState } from "@partygame/shared/schema";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import type { GameRoom } from "../src/rooms/GameRoom.js";
 import type { TestServer } from "../src/testing/index.js";
 import { bootTestServer, waitUntil } from "../src/testing/index.js";
 import {
@@ -66,8 +67,10 @@ let t: TestServer;
 beforeAll(async () => {
   t = await bootTestServer({ games: GAMES });
 });
-afterEach(() => t.cleanup());
-afterAll(() => t.shutdown());
+
+/** The room's recorded replay snapshots, read through the same seam `security.isolation.test.ts` uses for the runtime. */
+const snapshotsOf = (room: Room): Array<{ from: string; to: string; state: unknown }> =>
+  Reflect.get(room as GameRoom, "snapshots") as Array<{ from: string; to: string; state: unknown }>;
 
 async function startBuzzing(room: Room) {
   const p1 = await seat(t, room, 1);
@@ -92,6 +95,9 @@ const NOT_ALLOWED = {
 } as const;
 
 describe("GameRoom replay export", () => {
+  afterEach(() => t.cleanup());
+  afterAll(() => t.shutdown());
+
   it("answers the host with a bundle: one synced snapshot per transition, no private data", async () => {
     const room = await t.createRoom("buzzer");
     const { p1, p2 } = await startBuzzing(room);
@@ -209,5 +215,80 @@ describe("GameRoom replay export", () => {
       ok: false,
       error: { code: "INTERNAL", message: CLIENT_MESSAGES.INTERNAL },
     });
+  });
+});
+
+describe("replay snapshot recording", () => {
+  let b: TestServer | undefined;
+  afterEach(async () => {
+    if (b !== undefined) {
+      await b.cleanup();
+      await b.shutdown();
+      b = undefined;
+    }
+  });
+
+  const BUZZER_GAMES = [
+    {
+      roomName: "buzzer",
+      definition: BuzzerGame,
+      stateClass: BuzzerState,
+      publicFields: BUZZER_PUBLIC_FIELDS,
+    },
+    {
+      roomName: "logged",
+      definition: LOGGED_BUZZER,
+      stateClass: BuzzerState,
+      publicFields: BUZZER_PUBLIC_FIELDS,
+    },
+  ];
+
+  /** One Buzz→Done round plus the trip back to the lobby and a fresh start: three transitions. */
+  async function playAgainLoop(room: Room, p1: Seated, p2: Seated): Promise<void> {
+    p1.client.send("ACTION", { type: "BUZZ" });
+    p2.client.send("ACTION", { type: "BUZZ" });
+    await waitUntil(() => stateOf(room).phase === "Done", "done");
+    p1.client.send("ACTION", { type: "RESET" });
+    await waitUntil(() => stateOf(room).phase === "Lobby", "back in the lobby");
+    p1.client.send("ACTION", { type: "START_GAME" });
+    await waitUntil(() => stateOf(room).phase === "Buzz", "restarted");
+  }
+
+  it("records no snapshots while the game keeps no action log, across play-again loops", async () => {
+    b = await bootTestServer({ games: BUZZER_GAMES });
+    const room = await b.createRoom("buzzer");
+    const p1 = await seat(b, room, 1);
+    const p2 = await seat(b, room, 2);
+    await waitUntil(() => stateOf(room).phase === "Buzz", "started");
+    for (let i = 0; i < 3; ++i) {
+      await playAgainLoop(room, p1, p2);
+    }
+    expect(snapshotsOf(room)).toHaveLength(0);
+  });
+
+  it("keeps at most maxReplayTransitions snapshots and refuses the export once the log outgrows them", async () => {
+    // a roomful of export tokens: this test is about the snapshot bound, not the rate limit
+    b = await bootTestServer({
+      games: BUZZER_GAMES,
+      maxReplayTransitions: 2,
+      rateLimits: { exportReplay: { rate: 0, burst: 10 } },
+    });
+    const room = await b.createRoom("logged");
+    const p1 = await seat(b, room, 1);
+    const p2 = await seat(b, room, 2);
+    await waitUntil(() => stateOf(room).phase === "Buzz", "started"); // transition 1: Lobby->Buzz
+    p1.client.send("ACTION", { type: "BUZZ" });
+    p2.client.send("ACTION", { type: "BUZZ" });
+    await waitUntil(() => stateOf(room).phase === "Done", "done"); // transition 2: Buzz->Done, the bound
+    const fit = await p1.client.request<unknown, ExportReplayResponse>(ClientMessage.EXPORT_REPLAY);
+    // exactly at the bound the bundle is still complete: it parses and verifies
+    expect(verifyBundle(parseBundle(fit))).toEqual({ ok: true });
+    p1.client.send("ACTION", { type: "RESET" });
+    await waitUntil(() => stateOf(room).phase === "Lobby", "back in the lobby"); // transition 3: no snapshot left to record
+    expect(snapshotsOf(room)).toHaveLength(2);
+    const refused = await p1.client.request<unknown, ExportReplayResponse>(
+      ClientMessage.EXPORT_REPLAY,
+    );
+    expect(refused).toEqual(NOT_ALLOWED);
   });
 });

@@ -5,6 +5,7 @@ export {
   type ActionLogHeader,
   ActionLogSchema,
   actionLogMiddleware,
+  DuplicateActionLogMiddlewareError,
   getActionLog,
   type RosterSeat,
 } from "./actionLog.js";

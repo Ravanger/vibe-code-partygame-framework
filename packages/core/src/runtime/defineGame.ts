@@ -41,6 +41,9 @@ export function defineGame<
   if (!Number.isInteger(spec.minPlayers) || spec.minPlayers < 1) {
     problems.push("minPlayers must be an integer >= 1");
   }
+  if (!Number.isInteger(spec.maxPlayers) || spec.maxPlayers < 1) {
+    problems.push("maxPlayers must be an integer >= 1");
+  }
   if (spec.maxPlayers < spec.minPlayers) problems.push("maxPlayers must be >= minPlayers");
   if (!Object.hasOwn(spec.phases, spec.startPhase)) {
     problems.push(`startPhase "${spec.startPhase}" is not a declared phase`);
@@ -50,6 +53,12 @@ export function defineGame<
     else if (!PHASE_NAME.test(name)) problems.push(`phase name "${name}" is invalid`);
     if (phase.duration !== undefined && !phase.onTimeout) {
       problems.push(`phase "${name}" has a duration but no onTimeout`);
+    }
+    if (
+      typeof phase.duration === "number" &&
+      (!Number.isFinite(phase.duration) || phase.duration <= 0)
+    ) {
+      problems.push(`phase "${name}" has an invalid duration (must be a finite number > 0)`);
     }
     if (phase.tickMs !== undefined && phase.onTick === undefined) {
       problems.push(`phase "${name}" has a tickMs but no onTick`);

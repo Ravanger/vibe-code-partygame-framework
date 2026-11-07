@@ -167,13 +167,24 @@ describe("Waiting room", () => {
     expect(ruleCss(/main\.tv .*\.leave\b/)).toMatch(SCALED_FS_1);
   });
 
-  it("copies the room code", async () => {
+  it("copies the room code and announces the success in a live region", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal("navigator", { clipboard: { writeText } });
     render(WaitingRoom, { manager: lobby("host").manager });
     await fireEvent.click(screen.getByRole("button", { name: "Copy" }));
     expect(writeText).toHaveBeenCalledWith("ABCD");
-    vi.unstubAllGlobals();
+    const status = screen.getByText("Copied!");
+    expect(status.closest("[aria-live='polite']")).not.toBeNull();
+  });
+
+  it("tells the player to read the code out when the clipboard fails", async () => {
+    vi.stubGlobal("navigator", {
+      clipboard: { writeText: vi.fn().mockRejectedValue(new Error("denied")) },
+    });
+    render(WaitingRoom, { manager: lobby("host").manager });
+    await fireEvent.click(screen.getByRole("button", { name: "Copy" }));
+    const status = screen.getByText("Copy failed, read the code out");
+    expect(status.closest("[aria-live='polite']")).not.toBeNull();
   });
 });
 

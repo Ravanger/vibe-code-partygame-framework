@@ -52,6 +52,18 @@ describe("syncedJsonOf", () => {
     });
   });
 
+  it("keeps an own __proto__ map key as an own property of the snapshot", () => {
+    const state = new Root();
+    state.bag.set("__proto__", new Child());
+    state.nums.set("__proto__", 5);
+    const out = syncedJsonOf(state);
+    const bag = out.bag as Record<string, unknown>;
+    const nums = out.nums as Record<string, unknown>;
+    expect(Object.hasOwn(bag, "__proto__")).toBe(true);
+    expect(Object.hasOwn(nums, "__proto__")).toBe(true);
+    expect(JSON.parse(JSON.stringify(out))).toEqual(out);
+  });
+
   it("keeps inherited fields and drops view fields declared at any level of the hierarchy", () => {
     const state = new Extended();
     state.extra = 9;
@@ -139,5 +151,19 @@ describe("syncedStateFromJson", () => {
     expect(state.extra).toBe(9);
     expect(state.text).toBe("e");
     expect(state.count).toBe(1);
+  });
+
+  it("round-trips a map key that is an own __proto__ property", () => {
+    const json = JSON.parse(
+      '{"bag": {"__proto__": {"label": "p"}}, "nums": {"__proto__": 5}}',
+    ) as Record<string, unknown>;
+    expect(Object.hasOwn(json.bag as Record<string, unknown>, "__proto__")).toBe(true);
+    const state = syncedStateFromJson(FillRoot, json);
+    expect(state.bag.get("__proto__")?.label).toBe("p");
+    expect(state.nums.get("__proto__")).toBe(5);
+    // Literal { __proto__: ... } would assign the prototype, so build the expectations from JSON.
+    const out = syncedJsonOf(state);
+    expect(out.bag).toEqual(JSON.parse('{"__proto__": {"label": "p"}}'));
+    expect(out.nums).toEqual(JSON.parse('{"__proto__": 5}'));
   });
 });
