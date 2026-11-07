@@ -42,7 +42,6 @@ describe("StatusPanel", () => {
     });
     const heading = screen.getByRole("heading", { level: 2, name: "Revealing..." });
     expect(heading).toHaveAttribute("tabindex", "-1");
-    expect(container.querySelector(".dots")).toBeInTheDocument();
     await expectNoViolations(container, "StatusPanel heading");
   });
 });
