@@ -1034,7 +1034,7 @@ Write text that mixes literals and values as one template literal, `{`${choice.n
 
 | Component | Props |
 |---|---|
-| `StatusPanel` | `title: string`, `detail?: string`, `tone: "wait" \| "done" \| "info"` |
+| `StatusPanel` | `title: string`, `detail?: string`, `tone: "wait" \| "done" \| "info"`, `heading?: boolean` (renders the title as a focusable `h2` for screen-change focus) |
 | `Timer` | `seconds: number`, `total: number`, `announcement?: string` (polite live region text) |
 | `PlayerSticker` | `name: string`, `playerId: string`, `size?: number` (default 44), `ghost?: boolean` |
 | `Podium` | `steps: PodiumStep<TRow>[]` (from `podiumSteps`), `extra?: Snippet<[TRow]>` (rendered per occupant, e.g. a chip) |

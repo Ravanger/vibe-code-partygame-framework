@@ -151,7 +151,7 @@ const sound = new SoundPolicy({ storage: localStorage, storagePrefix: "my-game",
 
 ## Components
 
-Props (all render in plain markup, e.g. `<Timer seconds={12} total={30} />`): `LobbySettings` and `GameControls` take `vm`; `NameInput` takes `field` (`vm.nameField`) and `focus?`; `PlayerSticker` takes `name`, `playerId`, `size?`, `ghost?`; `QrCode` takes `text`; `SoundToggle` takes `policy` (a `SoundPolicy`); `StatusPanel` takes `title`, `detail?`, `tone` (`"wait"`, `"done"`, `"info"`); `Timer` takes `seconds`, `total`, `announcement?`.
+Props (all render in plain markup, e.g. `<Timer seconds={12} total={30} />`): `LobbySettings` and `GameControls` take `vm`; `NameInput` takes `field` (`vm.nameField`) and `focus?`; `PlayerSticker` takes `name`, `playerId`, `size?`, `ghost?`; `QrCode` takes `text`; `SoundToggle` takes `policy` (a `SoundPolicy`) and optional `on`/`off` labels; `StatusPanel` takes `title`, `detail?`, `tone` (`"wait"`, `"done"`, `"info"`), and `heading?` (renders the title as a focusable `h2` for screen-change focus); `Timer` takes `seconds`, `total`, `announcement?`.
 
 ## Podium and ranking
 
