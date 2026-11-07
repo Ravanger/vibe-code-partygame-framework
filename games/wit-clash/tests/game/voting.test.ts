@@ -263,6 +263,46 @@ describe("eligibility", () => {
     expect(t.state.votesCast).toBe(0);
   });
 
+  it("counts a vote whose voter disconnected before the reveal", () => {
+    const t = inVoting();
+    const [voter, other] = nonAuthors(t) as [string, string];
+    const winnerId = t.authors()[0] as string;
+    t.act(voter, "CAST_VOTE", { answerId: t.answerBy(winnerId) });
+    t.drop(voter);
+    t.act(other, "CAST_VOTE", { answerId: t.answerBy(winnerId) });
+    expect(t.phase).toBe("MatchupReveal");
+    expect(t.matchup().answers.find((a) => a.authorId === winnerId)?.votes).toBe(2);
+  });
+
+  it("keeps the clash and its points when the last voter disconnects after voting", () => {
+    const t = inVoting();
+    const [voter, other] = nonAuthors(t) as [string, string];
+    const winnerId = t.authors()[0] as string;
+    t.act(voter, "CAST_VOTE", { answerId: t.answerBy(winnerId) });
+    t.drop(voter);
+    t.act(other, "CAST_VOTE", { answerId: t.answerBy(winnerId) });
+    expect(t.matchup().isClash).toBe(true);
+    expect(t.priv.scores[winnerId]).toBe(400);
+  });
+
+  it("does not count a vote from a player who left before the reveal", () => {
+    const t = inVoting();
+    const [voter, other] = nonAuthors(t) as [string, string];
+    const winnerId = t.authors()[0] as string;
+    t.act(voter, "CAST_VOTE", { answerId: t.answerBy(winnerId) });
+    t.leave(voter);
+    t.act(other, "CAST_VOTE", { answerId: t.answerBy(winnerId) });
+    expect(t.phase).toBe("MatchupReveal");
+    expect(t.matchup().answers.find((a) => a.authorId === winnerId)?.votes).toBe(1);
+  });
+
+  it("keeps a mid-game joiner out of the clash denominator", () => {
+    const t = inVoting();
+    t.joinLate("p9");
+    t.voteFor(t.authors()[0] as string);
+    expect(t.matchup().isClash).toBe(true);
+  });
+
   it("keeps a player who named themselves after the start out of the round, then lets them in", () => {
     const t = new Table({ players: 4, options: { totalRounds: 2 } });
     const late = t.host.seat("p9", { isReady: false });

@@ -94,6 +94,8 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
   private duration = 0;
   /** Pending `onTick` timer of the current phase, while it has one. */
   private tickHandle: TimerHandle | undefined = undefined;
+  /** Ticks fired since entry into the current phase, while it has `onTick`. */
+  private tickCount = 0;
   private stopped = false;
   private hasStarted = false;
   private lobbyReturnFailed = false;
@@ -236,6 +238,17 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     this.clearTick();
   }
 
+  /**
+   * Run `fn` as one full runtime step: a throw is collected and reported like any other failed
+   * run, and transitions queued during it (for example by an `onTick`) are drained before it
+   * returns. Replay uses it to apply deferred ticks at entry boundaries (#246). A stopped
+   * runtime ignores the call.
+   */
+  runStep(fn: () => void): void {
+    if (this.stopped) return;
+    this.run(fn);
+  }
+
   private context(): GameContext<TState, TPrivate, TOptions> {
     return {
       state: this.state,
@@ -265,6 +278,7 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
       gameName: this.spec.name,
       gameVersion: this.spec.version,
       seed: this.host.seed,
+      strings: this.strings,
     };
   }
 
@@ -308,6 +322,9 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
     const runtime = this;
     return {
       ...this.context(),
+      // Present only while a ticking phase is active, so the action log can record the live tick
+      // count and replay can cap its tick delivery at it (#246).
+      ...(this.current.onTick !== undefined ? { ticks: this.tickCount } : {}),
       event,
       get rejectionCount() {
         return rejections.length;
@@ -357,6 +374,8 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
 
   private enter(name: string, phase: PhaseDefinition<TState, TPrivate, TOptions>): void {
     this.clearTick();
+    // Reset before the enter event is observed, so the recorded entry carries 0 ticks.
+    this.tickCount = 0;
     this.phaseName = name;
     this.hasStarted ||= name !== LOBBY_PHASE;
     this.current = phase;
@@ -382,18 +401,26 @@ export class GameRuntime<TState extends PhaseState, TPrivate, TOptions = Record<
 
   /**
    * Arms the first `onTick` of a ticking phase, one interval after entry. Each tick reschedules
-   * the next, so tick k fires at enter + k·tickMs (the replay clock reproduces exactly those).
-   * Ticks stop when the phase is left: every transition and `stop()` clears the pending timer,
-   * including one scheduled by a tick that itself queued the transition.
+   * the next anchored to the entry time, so tick k is due at enter + k·tickMs and a late delivery
+   * is not carried into the next tick (#327). Every fired tick increments {@link GameRuntime.tickCount},
+   * which middleware see as `ctx.ticks` so the action log can record it and replay can cap tick
+   * delivery at the live count (#246). Ticks stop when the phase is left: every transition and
+   * `stop()` clears the pending timer, including one scheduled by a tick that itself queued the
+   * transition.
    */
   private startTicks(phase: PhaseDefinition<TState, TPrivate, TOptions>): void {
     const onTick = phase.onTick;
     if (onTick === undefined) return;
     const dtMs = phase.tickMs ?? DEFAULT_TICK_MS;
+    const enterAt = this.host.now();
     const step = (): void => {
       this.run(() => {
         onTick(this.context(), dtMs);
-        this.tickHandle = this.host.setTimeout(step, dtMs);
+        ++this.tickCount;
+        this.tickHandle = this.host.setTimeout(
+          step,
+          Math.max(0, enterAt + (this.tickCount + 1) * dtMs - this.host.now()),
+        );
       });
     };
     this.tickHandle = this.host.setTimeout(step, dtMs);

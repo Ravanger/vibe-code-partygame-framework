@@ -34,8 +34,10 @@ export class Round {
     return this.ctx.player(playerId)?.name ?? this.ctx.priv.names[playerId] ?? "";
   }
 
-  /** Creates the player's private entry and reveals it to them. */
+  /** Returns the player's private entry, creating and revealing it when missing. */
   mineOf(playerId: string): PlayerPrivate {
+    const existing = this.ctx.state.mine.get(playerId);
+    if (existing) return existing;
     const created = new PlayerPrivate();
     this.ctx.state.mine.set(playerId, created);
     this.ctx.showTo(playerId, created);
@@ -76,6 +78,7 @@ export class Round {
 
   startRound(): void {
     const { state, priv } = this.ctx;
+    this.remember();
     if (state.roundNumber === 0) state.totalRounds = this.ctx.options.rounds;
     ++state.roundNumber;
     priv.clearRound();
@@ -98,8 +101,23 @@ export class Round {
     return new Map(this.activeIds().map((id) => [id, [FAKE_SLOT]]));
   }
 
+  /** One slot per seated, ready, active player, connected or not, all for the fake answer. */
+  seatedSlots(): Map<string, readonly string[]> {
+    return new Map(
+      this.ctx
+        .players()
+        .filter((p) => p.isActive && p.isReady)
+        .map((p) => [p.id, [FAKE_SLOT]]),
+    );
+  }
+
   writingComplete(): boolean {
     return allResponded(this.slots(), this.ctx.priv.fakes, new Set(this.activeIds()));
+  }
+
+  /** True once at least one player has stored a fake answer for this round. */
+  hasFakes(): boolean {
+    return this.ctx.priv.fakes.size > 0;
   }
 
   /** Shuffles the truth with every submitted fake and reveals each player's own option privately. */
@@ -107,7 +125,7 @@ export class Round {
     const { state, priv } = this.ctx;
     const prompt = required(priv.prompts.byId(priv.currentPromptId), "current prompt");
     const fakes: { text: string; authorId: string }[] = [];
-    for (const entry of entriesFor(FAKE_SLOT, this.slots(), priv.fakes)) {
+    for (const entry of entriesFor(FAKE_SLOT, this.seatedSlots(), priv.fakes)) {
       if (entry.text !== undefined) fakes.push({ text: entry.text, authorId: entry.playerId });
     }
     const raw = [...fakes, { text: prompt.truth, authorId: "" }];

@@ -28,7 +28,7 @@ const idPrefix = nextId("lobby-settings");
                   aria-pressed={vm.valueOf(field.key) === choice}
                   onclick={() => vm.choose(field.key, choice)}
                 >
-                  {choice}
+                  {vm.choiceLabel(field.key, choice)}
                 </button>
               {/each}
             </fieldset>
@@ -71,7 +71,7 @@ const idPrefix = nextId("lobby-settings");
     <dl>
       {#each vm.fields as field (field.key)}
         <dt>{field.label}</dt>
-        <dd>{vm.valueOf(field.key)}</dd>
+        <dd>{vm.choiceLabel(field.key, vm.valueOf(field.key))}</dd>
       {/each}
     </dl>
   {/if}

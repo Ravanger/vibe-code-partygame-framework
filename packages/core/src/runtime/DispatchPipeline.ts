@@ -139,6 +139,7 @@ export class DispatchPipeline<TState extends PhaseState, TPrivate, TOptions> {
         actionType: type,
         senderId: audienceKey,
         payload: payload.data,
+        ...(action.textFields ? { textFields: action.textFields } : {}),
         filterLevel: this.deps.filterLevel(),
       },
       () => action.handler(actionContext),

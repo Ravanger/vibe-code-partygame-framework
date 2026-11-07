@@ -30,7 +30,7 @@ describe("Voting screen", () => {
     expect(screen.getByRole("button", { name: /sydney/i })).toBeEnabled();
   });
 
-  it("locks in a vote and stops offering choices", async () => {
+  it("casts a vote", async () => {
     const c = connectedClient({}, "Voting");
     addChoice(c, "o1", "Canberra");
     addChoice(c, "o2", "Sydney");
@@ -42,7 +42,19 @@ describe("Voting screen", () => {
       type: "ACTION",
       payload: { optionId: "o2", type: "CAST_VOTE" },
     });
-    expect(await screen.findByText(/vote locked in/i)).toBeInTheDocument();
+  });
+
+  it("shows the waiting state when the synced private state holds a vote", () => {
+    const c = connectedClient({}, "Voting");
+    addChoice(c, "o1", "Canberra");
+    addChoice(c, "o2", "Sydney");
+    c.state.mine.set(
+      c.me.id,
+      Object.assign(new PlayerPrivate(), { myOptionId: "o1", myVote: "o2" }),
+    );
+    render(Voting, { manager: c.manager });
+
+    expect(screen.getByText(/vote locked in/i)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /sydney/i })).not.toBeInTheDocument();
   });
 

@@ -108,7 +108,7 @@ export const LOBBY_PHASE = "Lobby";
 /** Built-in host action that leaves the Lobby for the game's start phase. */
 export const START_GAME = "START_GAME";
 
-/** Built-in host action `{ type, playerId }`: remove a player. Any phase; not yourself. */
+/** Built-in host action `{ type, playerId }`: remove a player. Any phase; not yourself. `playerId` is validated as a player id — a malformed or oversized one gets `INVALID_ACTION`. */
 export const KICK_PLAYER = "KICK_PLAYER";
 
 /** Built-in host action: any phase but the Lobby; runs onEndGame, then returns everyone to the Lobby. */
@@ -125,8 +125,7 @@ export const ACTION_NAME_PATTERN = /^[A-Z][A-Z0-9_]{0,63}$/;
  * in total; other fields pass through for the phase's own schema.
  */
 export const ActionEnvelopeSchema = z
-  .object({ type: z.string().regex(ACTION_NAME_PATTERN) })
-  .passthrough()
+  .looseObject({ type: z.string().regex(ACTION_NAME_PATTERN) })
   .superRefine((envelope, ctx) => {
     if (Object.keys(envelope).length > MAX_ENVELOPE_KEYS) {
       ctx.addIssue({
@@ -136,13 +135,21 @@ export const ActionEnvelopeSchema = z
     }
   });
 
-/** Payload of `SET_NAME`: trimmed, 1 to {@link NAME_MAX_LENGTH} characters, no control characters. */
+/**
+ * Payload of `SET_NAME`: trimmed, 1 to {@link NAME_MAX_LENGTH} code points (one emoji is one
+ * character), no control, format or line/paragraph separator characters, and at least one
+ * visible character. Format characters include zero-width spaces and bidi overrides.
+ */
 export const SetNameSchema = z
   .string()
   .trim()
   .min(1)
-  .max(NAME_MAX_LENGTH)
-  .refine((name) => /^[^\p{Cc}]+$/u.test(name));
+  .refine((name) =>
+    /^[^\p{Cc}\p{Cf}\p{Zl}\p{Zp}]*[^\p{Cc}\p{Cf}\p{Z}\p{M}][^\p{Cc}\p{Cf}\p{Zl}\p{Zp}]*$/u.test(
+      name,
+    ),
+  )
+  .refine((name) => [...name].length <= NAME_MAX_LENGTH);
 
 const ROOM_CODE_PATTERN = new RegExp(`^[${ROOM_CODE_ALPHABET}]` + `{${ROOM_CODE_LENGTH}}$`);
 

@@ -1,14 +1,17 @@
 <script lang="ts">
+import { getStrings } from "../strings.js";
+
 const {
   title,
   detail = "",
   tone,
 }: { title: string; detail?: string; tone: "wait" | "done" | "info" } = $props();
+const strings = getStrings();
 </script>
 
 <div class={`status-panel card taped tone-${tone}`}>
   {#if tone === "done"}
-    <span class="sticker done-sticker" aria-hidden="true">&#10003; Done</span>
+    <span class="sticker done-sticker" aria-hidden="true">{strings.done}</span>
   {/if}
   <p class="title">{title}</p>
   {#if detail}
@@ -51,6 +54,11 @@ const {
 
   .done-sticker {
     background: var(--color-3);
+  }
+
+  /* The checkmark is decorative; keeping it out of the text node keeps the label a single string. */
+  .done-sticker::before {
+    content: "\2713\00a0";
   }
 
   .dots {

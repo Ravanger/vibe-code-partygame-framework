@@ -30,12 +30,41 @@ describe("Timer", () => {
     await expectNoViolations(over.container, "Timer");
   });
 
-  it("turns urgent at ten seconds", async () => {
+  it("turns urgent at ten seconds, but not at zero", async () => {
     const calm = render(Timer, { seconds: 11, total: 30 });
     expect(calm.container.querySelector(".sparkler")).not.toHaveClass("urgent");
     const urgent = render(Timer, { seconds: 10, total: 30 });
     expect(urgent.container.querySelector(".sparkler")).toHaveClass("urgent");
+    const zero = render(Timer, { seconds: 0, total: 30 });
+    expect(zero.container.querySelector(".sparkler")).not.toHaveClass("urgent");
     await expectNoViolations(urgent.container, "Timer");
+  });
+
+  it("hides the number from screen readers; the live region announces it", async () => {
+    const { container } = render(Timer, { seconds: 10, total: 30, announcement: "10 left" });
+    expect(container.querySelector(".number")).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText("10 left")).toHaveClass("sr-only");
+    await expectNoViolations(container, "Timer");
+  });
+
+  it("does not animate the stick with the dead x2 property", () => {
+    render(Timer, { seconds: 10, total: 30 });
+    const styleRules = (rules: CSSRuleList): CSSStyleRule[] => {
+      const out: CSSStyleRule[] = [];
+      for (const rule of rules) {
+        if (rule instanceof CSSMediaRule) out.push(...styleRules(rule.cssRules));
+        else if (rule instanceof CSSStyleRule) out.push(rule);
+      }
+      return out;
+    };
+    const rules = [...document.styleSheets].flatMap((sheet) => {
+      try {
+        return styleRules(sheet.cssRules);
+      } catch {
+        return [];
+      }
+    });
+    expect(rules.some((rule) => rule.cssText.includes("transition: x2"))).toBe(false);
   });
 
   it("announces politely", async () => {

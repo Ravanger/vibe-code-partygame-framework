@@ -218,6 +218,39 @@ describe("PhaseDefinition.onTick", () => {
     expect(t.priv.ticks).toBe(1);
   });
 
+  it("does not carry a late delivery into the next tick", () => {
+    interface LatePriv {
+      times: number[];
+    }
+    const t = new TestTable<TickState, LatePriv, Record<string, never>>({
+      definition: defineGame<TickState, LatePriv, Record<string, never>>({
+        name: "LateTick",
+        version: "1",
+        minPlayers: 1,
+        maxPlayers: 4,
+        startPhase: "Ticking",
+        createPrivateState: () => ({ times: [] }),
+        phases: {
+          Ticking: {
+            tickMs: 100,
+            onTick: (ctx) => ctx.priv.times.push(ctx.now()),
+          },
+        },
+      }),
+      state: newState(),
+      options: {},
+      players: 2,
+    });
+    t.host.timerLatenessMs = 5;
+    t.start();
+    const enterAt = t.host.now(); // start() does not advance the fake clock
+    t.tick(4 * 100);
+    expect(t.priv.times.length).toBeGreaterThanOrEqual(3);
+    for (let i = 0; i < t.priv.times.length; ++i) {
+      expect(t.priv.times[i]).toBeLessThanOrEqual(enterAt + (i + 1) * 100 + 5);
+    }
+  });
+
   it("is reproduced by replayLog", () => {
     const definition = makeDefinition();
     const live = new TestTable({

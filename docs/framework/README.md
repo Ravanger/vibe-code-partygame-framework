@@ -78,7 +78,7 @@ Every rejection is sent only to the sender as `ERROR { code, message, action }`:
 | `WRONG_PHASE` | action exists, but not in the current phase |
 | `UNAUTHORIZED` | role check failed (for example a guest sent a host action) |
 | `NOT_ACTIVE` | the sender is waiting for the next round |
-| `CONTENT_REJECTED` | free text failed the room's text filter: an action's declared `textFields` (via `textFilterMiddleware`) or a player name via `SET_NAME`; the message is the filter's fixed per-level reason. A join with a filtered name is refused with close code 4405 instead |
+| `CONTENT_REJECTED` | free text failed the room's text filter: an action's declared `textFields` (via `textFilterMiddleware`; the message is the fixed core string `CoreStrings.contentRejected`) or a player name via `SET_NAME` (the message is the filter's fixed per-level reason). A join with a filtered name is refused with close code 4405 instead |
 | `NOT_ENOUGH_PLAYERS` | `START_GAME` below `minPlayers` |
 | `NOT_ALLOWED` | game rule; use `ctx.reject("NOT_ALLOWED", "why")` in a handler |
 | `NAME_TAKEN` | `SET_NAME` with a name another seat already has (compared trimmed and case-insensitively); the seat keeps its name |
@@ -127,7 +127,8 @@ every scope when the phase changes (`RuntimeHost.audienceOnce`, cleared in `noti
 
 Refusals mirror the player path: a seated player who sends an audience action gets `NOT_ALLOWED`; an audience key that sends
 anything but an audience action gets `UNAUTHORIZED`. Payload validation, middleware and the failure policy are identical to
-`dispatch`. In replay, an entry whose sender is not in the recorded roster is re-dispatched through `dispatchAudience` (legacy
+`dispatch` — an audience action can declare `textFields`, which `textFilterMiddleware` checks exactly as for a player action.
+In replay, an entry whose sender is not in the recorded roster is re-dispatched through `dispatchAudience` (legacy
 logs without a roster keep player dispatch).
 
 On the server, spectators are the audience. A seatless connection may send `ACTION` only for an action declared
@@ -142,7 +143,7 @@ gets fresh scopes — so audience votes count participation, not commitments.
 The runtime handles these host-only actions for you; do not declare them (`defineGame` rejects the names):
 
 - `START_GAME` (Lobby), see Lobby below.
-- `KICK_PLAYER { playerId }`: any phase, not yourself. The host implementation removes the seat, then `onRosterChange` runs. The ban is per `playerId` and per the kicked seat's secret hash: a kicked client that rejoins with a fresh id but its stored secret is refused with `KICKED_REJOIN` too (IPs are not used — they are shared on a LAN). A player who leaves normally can rejoin.
+- `KICK_PLAYER { playerId }`: any phase, not yourself; `playerId` is validated as a player id (a malformed or oversized one gets `INVALID_ACTION`, an unknown but well-formed one the "no such player" refusal). The host implementation removes the seat, then `onRosterChange` runs. The ban is per `playerId` and per the kicked seat's secret hash: a kicked client that rejoins with a fresh id but its stored secret is refused with `KICKED_REJOIN` too (IPs are not used — they are shared on a LAN). A player who leaves normally can rejoin.
 - `SET_OPTIONS { ...partial }`: Lobby only. If the game declares no `definition.options` schema, it rejects any key but `type` (`INVALID_ACTION`); a room for such a game also refuses create options. Otherwise the partial is merged into the current options and validated, then published; a failed parse or a result whose JSON is longer than `MAX_OPTIONS_JSON_LENGTH` is `INVALID_ACTION` and keeps the previous options. `ctx.options` reflects the new value.
 - `END_GAME`: any phase but the Lobby (`WRONG_PHASE` there). It runs `onEndGame(ctx)`, where a game can set a notice for the players, and then returns everyone to the Lobby as `ctx.returnToLobby()` does (`onReturnToLobby` runs, waiting joiners are let in). The hook cannot veto it.
 
@@ -188,10 +189,10 @@ canJoin: (input) =>
 The server owns the clock: clients render a countdown from `phaseEndsAt`.
 
 A real-time phase declares `onTick(ctx, dtMs)`, called every `tickMs` while the phase is active — default 100 ms (10 Hz); it must be an integer >= 1 and is rejected at definition time without `onTick`.
-`dtMs` is that nominal interval, not wall-clock elapsed time, so integrating state by it (`pos += speed * dtMs / 1000`) is deterministic: tick k fires at enter + k·tickMs, and `replayLog` reproduces exactly those ticks because the replay clock advances fire precisely the ones due between logged entries.
+`dtMs` is that nominal interval, not wall-clock elapsed time, so integrating state by it (`pos += speed * dtMs / 1000`) is deterministic: tick k is due at enter + k·tickMs.
 Ticks stop as soon as the phase is left — including a transition queued from within `onTick` — and on shutdown; leaving and re-entering restarts the cadence.
 Like `onPlayerSync`, ticks are not wrapped by phase middleware.
-On a live room the Colyseus clock quantizes delivery to its ~16 ms grid, so a tick can land up to one grid step late relative to enter + k·tickMs: an action in that window sees one fewer tick than a replay would. Timeouts have the same skew and the log corrects them; ticks are too chatty to log; closing the gap is tracked in #246.
+On a live room the Colyseus clock quantizes delivery to its ~16 ms grid. Ticks are anchored to the phase entry — tick k is scheduled for enter + k·tickMs regardless of when tick k−1 actually fired — so a tick can land up to one grid step late but never more: lateness is not carried into the next tick. An action in that window would otherwise replay with one extra tick, so the log corrects it without logging each tick (which would be too chatty): while a ticking phase is active, every entry records `ticks` — the ticks fired since the phase was entered — and `replayLog` caps that phase's delivery at the recorded count, applying deferred ticks in fire order at the next entry boundary (or discarding them when the phase is left first), exactly as the live room did. Legacy logs without `ticks` replay every nominally due tick, as before. Timeouts have the same skew; the log corrects those too (see the Determinism contract).
 
 ### Lobby
 Built in. `START_GAME` is host only and needs `minPlayers` active players (else `NOT_ENOUGH_PLAYERS`).
@@ -249,12 +250,15 @@ outside the chain), no cancelling queued transitions.
 - `loggingMiddleware({ log })` — one line per event, no hardcoded console. Exact formats: `enter <phase>`, `timeout <phase>`, `action <ACTION_TYPE> by <senderId> in <phase>`, `transition <from> -> <to>`. No line for `roster-change`.
 - `timingMiddleware()` — records per-phase durations into a store kept outside `ctx.priv` (keyed by it; read back with `getPhaseTimings(priv)`); each phase gets `{ enteredAt: number, durationsMs: number[] }`. Started on enter (before the hook), closed when a transition out of that phase is observed. The currently open phase has no final duration yet. Never touches `ctx.state` (it is synced to clients) or `ctx.priv`; timing metadata stays server-side.
 - `actionLogMiddleware()` — append-only, JSON-serializable record of every middleware-visible event, kept outside `ctx.priv` (read back with `getActionLog(priv)`); see Action log and replay below.
-- `textFilterMiddleware(filter)` — rejects an action whose declared text fields fail the room's filter level. Declare which payload fields are free text per action (`textFields: ["..."]` on the action definition; the framework never guesses) and how strict this room is via `filterLevel?: (options) => "off" | "moderate" | "strict"` on the game definition (default `"off"`). For each declared string field it runs `filter.check(value, level)` in declaration order and, on the first failure, rejects with `CONTENT_REJECTED` and the filter's reason — always with `redactPayload`, so an action log records the rejection without the offending text — without running the handler. Pass `{ onRejected?(ctx, reason) }` as the second argument to be told about each refusal (after the rejection is recorded); the game can react (e.g. count rejections) but cannot change the outcome. A `TextFilter` comes from `@partygame/content` (`createTextFilter()` is the default English one); at `"off"` the filter is never called, and actions without `textFields` pass untouched.
+- `textFilterMiddleware(filter)` — rejects an action whose declared text fields fail the room's filter level; player and audience actions alike (an audience action declares its `textFields` the same way). Declare which payload fields are free text per action (`textFields: ["..."]` on the action definition; the framework never guesses) and how strict this room is via `filterLevel?: (options) => "off" | "moderate" | "strict"` on the game definition (default `"off"`). For each declared string field it runs `filter.check(value, level)` in declaration order and, on the first failure, rejects with `CONTENT_REJECTED` and a fixed core string (`CoreStrings.contentRejected`, default `CLIENT_MESSAGES.CONTENT_REJECTED`) — always with `redactPayload`, so an action log records the rejection without the offending text — without running the handler. The filter's own reason never reaches a client; it is passed only to `{ onRejected?(ctx, reason) }` (the second argument), which fires after the rejection is recorded; the game can react (e.g. count rejections) but cannot change the outcome. A `TextFilter` comes from `@partygame/content` (`createTextFilter()` is the default English one); at `"off"` the filter is never called, and actions without `textFields` pass untouched.
 
 ### Action log and replay
 `actionLogMiddleware()` records everything the middleware sees into an append-only, JSON-serializable log
 kept alongside `ctx.priv` — a server-side record of the whole room session. Register it like any other
 middleware; unregistered games pay nothing (the chain early-returns on an empty array).
+Register exactly one instance per game: a second instance recording for the same priv throws
+`DuplicateActionLogMiddlewareError` instead of silently double-recording every event (colliding `seq`s,
+broken replay).
 
 ```ts
 import { actionLogMiddleware, getActionLog } from "@partygame/core";
@@ -295,6 +299,7 @@ every room and replay table append to one log and one timing store.
 | `rejected` | `kind === "action"` only; `true` when the handler called `ctx.reject()` or threw a `FrameworkError` (the action ran but changed nothing). Absent on accepted actions |
 | `redacted` | `kind === "action"` only; `true` when the rejection asked for payload redaction (`ctx.reject` with `redactPayload: true`) — the entry then carries no `payload`. The action was refused before the handler ran, so it changed no state and `replayLog` skips re-dispatching it. Implies `rejected: true` |
 | `from`, `to` | `kind === "transition"` only |
+| `ticks` | While a ticking phase (`onTick`) is active, on every entry kind: the ticks fired since the phase was entered (0 on its own `enter`). Absent otherwise; logs without it replay every nominally due tick |
 
 Actions rejected **before the handler chain** — malformed envelope, unknown action, unauthorized sender,
 inactive player, invalid payload — are **not** logged: they never reach the middleware and change no state.
@@ -326,7 +331,12 @@ positionally to `p1..pN`, so every recorded sender re-dispatches against the mat
   logged timeouts are authoritative — when replay enters a timed phase, its timer is made to expire at the
   time recorded in the log. A live room's phase timers run on Colyseus's tick-quantized clock (a ~17 ms
   grid), so a timeout can fire a few ms early or late relative to enter + duration; `phaseEndsAt` in
-  replayed snapshots is the logged timeout time, not enter + duration.
+  replayed snapshots is the logged timeout time, not enter + duration. Recorded tick counts are
+  authoritative the same way: while a ticking phase is active, each entry's `ticks` caps how many of that
+  phase's ticks the replay fires before it — a live host delivers them up to one grid step late — so an
+  action that landed in the late-tick window replays with exactly the live tick count. The cap applies
+  deferred ticks through `GameRuntime.runStep`, which runs them as one full step so any transition they
+  queue drains before the next entry.
 - **IDs.** Identifiers that land in synced state or an action payload must come from `ctx.newId()` (drawn
   from the room RNG). `crypto.randomUUID()` breaks replay: re-dispatched payloads reference ids the fresh
   runtime never generated.
@@ -372,6 +382,16 @@ drives: a minimal `RuntimeHost` with a manual clock (`advance(ms)`), seats and t
 recording or assertion helpers — client traffic is dropped. Build one directly to drive a `GameRuntime`
 over a log yourself.
 
+**Input limits.** A log may come from anywhere, so validation bounds it before anything runs: `t` and
+`header.startedAt` are non-negative safe integers, `seq` a safe integer from 1 (an out-of-range value is
+rejected naming its allowed range), `entries` holds at most `MAX_ACTION_LOG_ENTRIES` (100,000) entries —
+more throws a named error, and an empty log throws "the log has no entries" — and an action entry's
+`payload`, when present, must be a plain object (redacted entries carry none and stay valid). Timer
+firing is budgeted the same way: one `advance` fires at most `MAX_TIMER_FIRES_PER_ADVANCE` (10,000)
+timers and a whole `replayLog` run at most `MAX_TIMER_FIRES_PER_REPLAY` (1,000,000); a log whose time
+gaps would fire more throws a named error instead of doing unbounded work (`FakeHost.advance` enforces
+the per-advance budget for tests).
+
 **Bundles.** A `ReplayBundle` (from `@partygame/core/replay`) is what a finished session is shared as: the
 action log plus `name`, `frameworkVersion`, `gameVersion` and a game-supplied `contentHash`, and
 `snapshots` — one synced-state snapshot per phase transition, for viewing without re-running the runtime.
@@ -380,7 +400,11 @@ after the transition's middleware event, and the server serializes the state wit
 `@partygame/shared/schema`) — plain JSON of the synced state with `.view()` fields dropped at every level, so
 a snapshot never carries `ctx.priv` or per-client data. Each snapshot names the `seq` of the log's
 `transition` entry it belongs to and shows that transition's `from` phase — the final state of the phase
-being left.
+being left. Recording is tied to the log: a room keeps snapshots only while the game registered
+`actionLogMiddleware` (a bundle needs both halves, so a log-less game records nothing), and at most
+`maxReplayTransitions` of them (`GameServerOptions.maxReplayTransitions`, default 5,000 — no normal party
+reaches it); once the log outgrows the bound the export answers the fixed `NOT_ALLOWED` refusal instead of
+shipping a truncated bundle.
 
 The host exports with `room.request(ClientMessage.EXPORT_REPLAY)` — on a game client, `manager.exportReplay()`
 from `@partygame/game-client`, which normalizes the answer the same way `sendAction` does (a well-formed
@@ -532,7 +556,7 @@ mismatch is a close, not a negotiation.
 
 ### Errors at definition time
 `defineGame` throws `GameDefinitionError` listing every problem: empty `name` or `version`, reserved or unknown
-phase names, missing `startPhase`, `duration` without `onTimeout`, `tickMs` without `onTick` or a non-integer `tickMs` below 1, bad player limits, bad action names.
+phase names, missing `startPhase`, `duration` without `onTimeout` or a numeric `duration` that is not a finite number > 0, `tickMs` without `onTick` or a non-integer `tickMs` below 1, bad player limits (non-integer, below 1, or `maxPlayers` < `minPlayers`), bad action names.
 A `ctx.transition()` to an undeclared phase throws at the call site.
 
 ### Errors at runtime
@@ -598,9 +622,9 @@ number. Both live in `packages/shared/src/errors.ts`, the single source for the 
 
 The protocol does not change: errors keep their `ErrorCode` and English `message`, and the text is decided on the client. `GameConnectionManager` takes an optional `strings` table (`Partial<ClientStrings>`, defaults in `defaultClientStrings`, both from `@partygame/game-client`) that replaces every client-owned message — the room-code validation text, the client-side codes `NOT_CONNECTED`, `INVALID_ACTION`, `BAD_REPLY`, `CONNECTION_LOST`, `ROOM_NOT_FOUND`, and the two state-sync rejection messages (`syncDisconnected`, `syncTimedOut`). In addition, `strings.errors[code]` overrides the text of any code that lands in `lastServerError`; the server's own `message` is used only as a fallback when the table has no entry for the code.
 
-The generic `@partygame/game-ui` components read their labels from one more table, `defaultUiStrings`, set with `setStrings(partial)` at the app root (GameControls menu and dialog, LobbySettings summary, NameInput, Podium, QrCode, and the `PhaseClock` announcement through its `secondsRemaining(n)` function entry). The table carries a `clientStrings` field: pass the same object to both the manager's `strings` option and `setStrings`, and one table localises both layers. Server error text resolves as `clientStrings.errors[code] ?? message`, so codes you do not translate keep the server's own message.
+The generic `@partygame/game-ui` components read their labels from one more table, `defaultUiStrings`, set with `setStrings(partial)` at the app root (GameControls menu and dialog, LobbySettings summary, NameInput, Podium, QrCode, the SoundToggle label, the StatusPanel done sticker, and the `PhaseClock` announcement through its `secondsRemaining(n)` function entry). The table carries a `clientStrings` field: pass the same object to both the manager's `strings` option and `setStrings`, and one table localises both layers. Server error text resolves as `clientStrings.errors[code] ?? message`, so codes you do not translate keep the server's own message.
 
-On the server side, every message the core runtime owns (the lobby built-ins' refusals, the failure notice in `state.notice`, the stopped-runtime error, and the dispatch pipeline's refusal log messages) comes from `defaultCoreStrings` (`@partygame/core`). Pass a partial table as the definition's `strings` field — it lives on the game definition, so replays and tests see it; `defineGame` fills in the defaults:
+On the server side, every message the core runtime owns (the lobby built-ins' refusals, the failure notice in `state.notice`, the stopped-runtime error, the text-filter rejection, and the dispatch pipeline's refusal log messages) comes from `defaultCoreStrings` (`@partygame/core`). Pass a partial table as the definition's `strings` field — it lives on the game definition, so replays and tests see it; `defineGame` fills in the defaults:
 
 ```ts
 const game = defineGame<ButtonState, Priv>({
@@ -702,6 +726,7 @@ host.advance(3_000);                                      // fires due phase tim
 host.errorsTo("p1");                                      // rejections the player received
 host.views, host.sent, host.broadcasts, host.kicked, host.published   // everything the host was asked to do
 host.rng = () => 0.99;                                    // steer random choices
+host.timerLatenessMs = 16;                                // make every timer fire late, like a grid-quantized clock
 ```
 
 `TestTable` wraps that setup (seats `p1..pN`, the real runtime, a manual clock). Extend it with your game's scenario steps:
@@ -768,13 +793,13 @@ await startServer({ games });   // WebSocket on PORT (2567) + /api/resolve-code 
 ```
 
 Elsewhere: `createGameServer({ games, roomCodeService?, transport?, maxPayloadBytes?, maxRooms?, reconnectMs?, emptyRoomGraceMs?, audienceSlots?, textFilter?, greet?, gracefullyShutdown? })` returns the Colyseus `Server`,
-and `createApiHandler(roomCodeService, { allowedOrigins? })` is the pure `(request, info?) => Response` behind `/api/resolve-code`: it answers with CORS headers only for origins in `allowedOrigins` (exact origins or `scheme://host:*` patterns; `"*"` for all) — by default loopback on any port, the dev client — echoing the origin with `Vary: Origin`; a disallowed origin gets no CORS headers, so the browser blocks it while non-browser callers still get the answer. The HTTP entries (`serveApi`, the Bun `startServer`) forward the request's method and headers and pass `{ remoteAddress }` as the second argument, and they bind the code API to loopback by default: `host` (or env `HOST`) picks another interface, and `allowedOrigins` (or env `ALLOWED_ORIGINS`, comma-separated, `*` for all) widens who may read it.
+and `createApiHandler(roomCodeService, { allowedOrigins?, limiter?, resolveCode?, trustProxy? })` is the pure `(request, info?) => Response` behind `/api/resolve-code`: it answers with CORS allow headers only for origins in `allowedOrigins` (exact origins or `scheme://host:*` patterns — the `*` stands for a port, so digits only; `"*"` for all) — by default loopback on any port, the dev client — echoing the origin; in list mode every response also carries `Vary: Origin`, so a shared cache cannot serve one origin's CORS headers to another; a disallowed origin gets no allow headers, so the browser blocks it while non-browser callers still get the answer. An `OPTIONS` preflight is answered with 204 before spending any throttle budget. The HTTP entries (`serveApi`, the Bun `startServer`) forward the request's method and headers and pass `{ remoteAddress }` as the second argument, and they bind the code API to loopback by default: `host` (or env `HOST`) picks another interface, `allowedOrigins` (or env `ALLOWED_ORIGINS`, comma-separated, `*` for all) widens who may read it, and `trustProxy` (or env `TRUST_PROXY=true`) keys the throttle on the last hop of `X-Forwarded-For` instead of the socket address — only when every request passes a trusted reverse proxy that records the client's real address; otherwise clients behind one proxy share a single bucket, and a direct caller could split it by spoofing the header. The Node entry never lets one request take the process down: a method Node's parser accepts but the `Request` constructor forbids (such as `TRACE`) gets 405, and a handler failure gets a fixed 500 JSON body — the exception is logged, not sent to the client.
 `greet` (default `true`) prints the Colyseus start-up banner; `gracefullyShutdown` (default `true`) registers the Colyseus `SIGINT`/`SIGTERM` handlers that shut the server down. `bootTestServer` sets both to `false`, so a test run prints no banner and no `MaxListenersExceededWarning`; a test that starts a server itself passes the same two.
 The largest accepted WebSocket frame is `maxPayloadBytes` (default `DEFAULT_MAX_PAYLOAD_BYTES`, 4096), enforced on both transports; a bigger frame closes only that connection (code 1009) and leaves the room and its other players untouched.
 The number of concurrent rooms across all games is capped by `maxRooms` (default `DEFAULT_MAX_ROOMS`, 100; `Infinity` removes the cap): a create beyond the cap is refused with close code 4429 (`SERVER_FULL`, "Server is full") and existing rooms keep working; a slot frees again when one of the rooms is disposed.
-Rate limits are configured with `rateLimits`: actions per player (default 10/s, burst 20), `SET_NAME` per player (default 2/s, burst 2) and `/api/resolve-code` per remote address (default 1/s, burst 10), plus `mode: "observe" | "enforce"` (default `"enforce"`). Actions and `SET_NAME` are enforced in every room through one shared limiter: buckets are keyed by room, player and message type, so a reconnect cannot reset them, and they are freed when a seat leaves or the room is disposed. An over-limit message is refused with `RATE_LIMITED` — pushed as `ERROR` and returned in the `ActionResult` of a request — without touching other players; the refusal happens before the runtime, so it is not logged and replay is unaffected. The code API enforces its bucket in the HTTP entries: an exhausted address gets 429 with `Retry-After` (seconds until the next token) and the CORS headers of its origin, and callers whose remote address is unknown share one bucket instead of getting unlimited access. In observe mode an over-limit message or request is logged through `console.warn` instead of being refused.
+Rate limits are configured with `rateLimits`: actions per player (default 10/s, burst 20), `SET_NAME` per player (default 2/s, burst 2), the host's `EXPORT_REPLAY` (default one per 5 s, burst 1 — the message whose handler rebuilds and hashes the whole bundle) and `/api/resolve-code` per remote address (default 1/s, burst 10), plus `mode: "observe" | "enforce"` (default `"enforce"`). Actions, `SET_NAME` and a host's `EXPORT_REPLAY` are enforced in every room through one shared limiter: buckets are keyed by room, player and message type, so a reconnect cannot reset them, and they are freed when a seat leaves or the room is disposed. An over-limit message is refused with `RATE_LIMITED` — pushed as `ERROR` and returned in the `ActionResult` of a request — without touching other players; the refusal happens before the runtime, so it is not logged and replay is unaffected. The code API enforces its bucket in the HTTP entries: an exhausted address gets 429 with `Retry-After` (seconds until the next token) and the CORS headers of its origin, and callers whose remote address is unknown share one bucket instead of getting unlimited access. Each limiter bounds its own memory: once it tracks more than 1024 keys, the next take forgets every bucket that has refilled to full — such a bucket answers exactly like a never-seen key, so eviction never changes an allow/deny result. In observe mode an over-limit message or request is logged through the configured `logger` (event `rate.limit`, field `key`) instead of being refused; without one it falls back to `console.warn`.
 
-Clients join with `{ playerId, name?, seatSecret? }` (`spectator: true` for a TV display: no seat, counted in `spectatorCount`; spectators need no secret).
+Clients join with `{ playerId, name?, seatSecret? }` (`spectator: true` for a TV display: no seat, counted in `spectatorCount`; spectators need no secret). A spectator must not reuse an already-seated `playerId`: such a join is refused with `4406 "Seat is taken"`, and a spectator holding an id that later gets seated is evicted with the same code.
 Create a watch-only room with the framework option `seats: string[]` (the playerIds allowed to take a seat): any other non-spectator join is refused with `4404 "This room is watch-only"`, spectators still join. It is not a game option and is not published in `state.options`.
 `SET_NAME` readies a seat (a name another seat has is refused with `NAME_TAKEN`; a join-time `name` that is taken is ignored and the seat joins unnamed). With a `textFilter` on `createGameServer`, names are also checked against it at the level of the game's `filterLevel` over the room's current options (default `"off"`): a join with a filtered name is refused with close code 4405 (`CONTENT_REJECTED`) and a `SET_NAME` with one is refused with `CONTENT_REJECTED` and the filter's reason, keeping the old name; a level raised mid-lobby applies to the next `SET_NAME`, not to names already set. A room is kept alive only by connected seats: once the last one is gone for `emptyRoomGraceMs`, the room is disposed and any spectators are disconnected. `ACTION` carries your actions (`room.send` or `room.request`, see Actions). `EXPORT_REPLAY` (host only, via `room.request`) answers with the room's replay bundle — see **Bundles** under Action log and replay; a non-host gets an `UNAUTHORIZED` refusal. A dropped connection holds the seat for `reconnectMs`: a token reconnect, or a new session presenting the same `playerId` and that seat's `seatSecret`, resumes it.
 Every non-spectator join must present a `seatSecret`: the server stores its sha256 per seat (never in synced state) and refuses a missing or wrong one with `4406 "Seat is taken"` — including the first join of a new player, so there is no migration for secretless clients.
@@ -856,7 +881,7 @@ const result = await manager.sendAction("PRESS", { power: 3 });
 | `sendAction(type, payload?)` | `Promise<ActionResult>`, see below |
 | `lastServerError`, `dismissError()` | last rejected action or pushed `ERROR` (`$state`), for a toast. A kick arrives as `KICKED`, after which `status` is `"disconnected"` |
 | `onMessage(type, cb)` | returns an unsubscribe function; survives room changes. Pass a second generic, `GameConnectionManager<State, Events>`, with `Events` mapping message names to payload types, and `type` is limited to those names and `cb` gets the matching payload; the default accepts any name with an `unknown` payload |
-| `countdown()` | a `Countdown` (`secondsLeft`, `isUrgent`, `isExpired`) to `phaseEndsAt`, corrected for client clock skew; ticks only while read in a Svelte effect. `destroy()` is a deprecated no-op |
+| `countdown()` | a `Countdown` (`secondsLeft`, `isUrgent`, `isExpired`) to `phaseEndsAt`, corrected for client clock skew; ticks only while read in a Svelte effect. `destroy()` is a deprecated no-op. The urgent rule (more than 0 and at most 10 seconds left) is also exported as `isUrgent(secondsLeft)` from `@partygame/game-client` |
 | `dispose()` | stop listening and close without forgetting the session |
 
 ### Browser-safe state classes
@@ -881,6 +906,7 @@ The manager shows `status === "reconnecting"` meanwhile and `"connected"` again 
 when the server ends the session for good (kick, room closed, retries exhausted). After a page reload call `resume()`: it uses the
 reconnection token in `sessionStorage`, then falls back to the room code in `localStorage` (the server reattaches the seat by `playerId`).
 A client that joined with `joinAsSpectator` is remembered as a spectator and `resume()` rejoins it as one by code, never as a seated player.
+A failed `resume()` keeps the stored session so a later retry can reclaim the seat, unless an attempt was definitively refused (seat taken, room not found, kicked or seat removed, version mismatch, join refused, watch-only, full or invalid options), which clears it.
 `leave()` forgets the room code, token and spectator flag (a reload does not rejoin) and sets `status` to `"disconnected"`.
 Joins are de-duplicated per code and mode, so watching and playing the same room are different joins and the newest wins.
 
@@ -1211,7 +1237,7 @@ bot pacing) merged in.
 | `--bots[=N]` | open a room for you and seat N bots (1 to `bots.max`, default `bots.default` or 3) once you have entered your name |
 | `--demo[=N]` | a watch-only room that N bots plus a host bot play alone; the browser opens its TV view (`demo.min` to `demo.max`). Excludes `--bots` |
 
-The launcher refuses to start when a port is taken, stops everything on Ctrl+C and exits 1 if a service dies. Its full config
+The launcher refuses to start when a port is taken, stops everything on Ctrl+C or a closed terminal (SIGHUP), kills every spawned process if it crashes or the process exits, and exits 1 if a service dies. Its full config
 (`ports`, `commands`, `readyTimeoutMs`, `openBrowser`, `log`) and pieces (`Launcher`, `parseLaunchArgs`, `ProcessGroup`, `StaticSite`,
 `lanUrls`, `openBrowser`) are documented in `packages/launcher/README.md` for tests and custom launchers.
 
@@ -1300,7 +1326,7 @@ export { svelteConfig as default } from "@partygame/config/svelte";
 | `@partygame/core` | `shuffle(items, rng)`, `required(value, what)`; roster guards: `seatedCount(ctx)` (active and ready seats, counting briefly disconnected ones), `isBelowMinimum(ctx, min)`, `departedIds(ids, ctx)` — they only report; the game writes its own notice and decides to end |
 | `@partygame/core/kits` | Phase kits (`@experimental`). collectResponses: `allResponded(slots, responses, presentIds)` (complete when every present author responded to every slot), `entriesFor(slotId, slots, responses)` (one entry per author, `text` undefined when unanswered); types `Slots`, `Responses`. voteAndTally: `tallyVotes(voterIds, votes)`, `allHaveVoted(voterIds, votes)`, `countVoted(voterIds, votes)`, `eligibleVoters(activeIds, excludedIds)` (an empty exclusion list allows self-vote), `leaders(counts)` → `{ top, ids }` (a tie shows up as `ids.length > 1`). drawPool: `drawPool(items, usedIds, needed)` → `{ items, exhausted }` — the unused items when at least `needed` remain, otherwise all items with their ids cleared from the mutable `usedIds` set |
 | `@partygame/server/node` | `startNodeServer({ games, port?, apiPort? })` (a game server and its API in this process; `.stop()`), `serveApi(codes, { port, host? })`: the code API on Node's `http` (the Bun entry serves its own) |
-| `@partygame/server/probe` | `ServerProbe` (`isGameServer(port, apiPort)`, `canConnect(port)`, `answers(url)`), `freePort()`, `closeHttpServer(server)` (resolves when the server already stopped): port probing without Colyseus |
+| `@partygame/server/probe` | `ServerProbe` (`isGameServer(port, apiPort, host?)` — `host` defaults to `localhost` and is used for both the TCP check and the code-API fetch; `canConnect(port)`, `answers(url)`), `freePort()`, `closeHttpServer(server)` (resolves when the server already stopped): port probing without Colyseus |
 | `@partygame/content` | `loadJsoncDir(dir, schema, { idOf, label, onInvalid?, maxFiles?, maxFileBytes? })`: a folder of commented JSON files (symlinks ignored), validated; bad files throw by default (`onInvalid: "skip"` warns and skips), caps at 256 files / 1 MiB per file; `stripJsonComments` |
 | `@partygame/content/filter` | `createTextFilter()`: a `TextFilter` over the English obscenity dataset — `check(text, "off" \| "moderate" \| "strict")` returns `{ ok: true }` or `{ ok: false, reason }`; moderate blocks slurs and profanity, strict adds mild terms; the reason is a fixed per-level string that never names the matched word |
 | `@partygame/game-client` | `resolveEndpoints(overrides, pageHost)`, `readCodeParam(search, "code" \| "tv")` |

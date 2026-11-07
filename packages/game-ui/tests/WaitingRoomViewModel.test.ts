@@ -138,20 +138,47 @@ describe("WaitingRoomViewModel", () => {
     expect(c.room.sent).toEqual([]);
   });
 
-  it("copies through the injected clipboard and swallows its rejection", async () => {
+  it("marks the code copied and back to idle after 2000 ms, a second copy extending the window", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
-    const vm = new WaitingRoomViewModel(client().manager, {
-      clipboard: { writeText },
-    });
+    const vm = new WaitingRoomViewModel(client().manager, { clipboard: { writeText } });
+    expect(vm.copyState).toBe("idle");
     await vm.copyCode();
     expect(writeText).toHaveBeenCalledWith("ABCD");
-    writeText.mockRejectedValueOnce(new Error("denied"));
-    await expect(vm.copyCode()).resolves.toBeUndefined();
+    expect(vm.copyState).toBe("copied");
+    vi.advanceTimersByTime(1500);
+    await vm.copyCode();
+    vi.advanceTimersByTime(1999); // past the first copy's 2000 ms, within the second's
+    expect(vm.copyState).toBe("copied");
+    vi.advanceTimersByTime(1);
+    expect(vm.copyState).toBe("idle");
   });
 
-  it("swallows a failing browser clipboard", async () => {
+  it("marks the copy failed when the clipboard rejects, and a failure survives a pending reset", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const vm = new WaitingRoomViewModel(client().manager, { clipboard: { writeText } });
+    await vm.copyCode();
+    writeText.mockRejectedValueOnce(new Error("denied"));
+    vi.advanceTimersByTime(1000);
+    await expect(vm.copyCode()).resolves.toBeUndefined();
+    expect(vm.copyState).toBe("failed");
+    vi.advanceTimersByTime(2000); // the first copy's pending reset must not clear a failure
+    expect(vm.copyState).toBe("failed");
+  });
+
+  it("marks the copy failed when the browser has no clipboard", async () => {
     const vm = new WaitingRoomViewModel(client().manager);
     await expect(vm.copyCode()).resolves.toBeUndefined();
+    expect(vm.copyState).toBe("failed");
+  });
+
+  it("cancels the pending copy reset when destroyed", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const vm = new WaitingRoomViewModel(client().manager, { clipboard: { writeText } });
+    await vm.copyCode();
+    expect(vm.copyState).toBe("copied");
+    vm.destroy();
+    vi.advanceTimersByTime(2000);
+    expect(vm.copyState).toBe("copied"); // the reset died with the instance
   });
 
   it("lets the host remove others only, after a confirmation", async () => {

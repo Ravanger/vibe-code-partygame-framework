@@ -40,19 +40,37 @@ describe("VotingViewModel", () => {
     ]);
     expect(vm.votesCast).toBe(1);
     expect(vm.votesExpected).toBe(4);
+    expect(vm.voted).toBe(false);
   });
 
-  it("marks the vote once the server accepts it, and not on a rejection", async () => {
+  it("shows the voted state from the synced private state after a reload", () => {
+    const c = connectedClient({}, "Voting");
+    c.state.choices.push(Object.assign(new BluffOption(), { id: "o1", text: "Canberra" }));
+    c.state.mine.set(
+      c.me.id,
+      Object.assign(new PlayerPrivate(), { myOptionId: "o1", myVote: "o2" }),
+    );
+    const vm = new VotingViewModel(c.manager);
+    expect(vm.voted).toBe(true);
+  });
+
+  it("sends the cast vote action", async () => {
     const c = connectedClient({}, "Voting");
     c.state.choices.push(Object.assign(new BluffOption(), { id: "o1", text: "Canberra" }));
     const vm = new VotingViewModel(c.manager);
+    await vm.vote("o1");
+    expect(c.room.requests).toContainEqual({
+      type: "ACTION",
+      payload: { optionId: "o1", type: "CAST_VOTE" },
+    });
+  });
 
+  it("keeps the vote uncast when the server refuses it", async () => {
+    const c = connectedClient({}, "Voting");
+    c.state.choices.push(Object.assign(new BluffOption(), { id: "o1", text: "Canberra" }));
     c.room.reply = { ok: false, error: { code: "NOT_ALLOWED", message: "You already voted" } };
+    const vm = new VotingViewModel(c.manager);
     await vm.vote("o1");
     expect(vm.voted).toBe(false);
-
-    c.room.reply = { ok: true };
-    await vm.vote("o1");
-    expect(vm.voted).toBe(true);
   });
 });

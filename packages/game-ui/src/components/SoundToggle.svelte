@@ -1,19 +1,18 @@
 <script lang="ts">
   import type { SoundPolicy } from "../SoundPolicy.svelte.js";
+  import { getStrings } from "../strings.js";
 
-  const {
-    policy,
-    on = "Sound on",
-    off = "Sound off",
-  }: { policy: SoundPolicy; on?: string; off?: string } = $props();
+  const { policy }: { policy: SoundPolicy } = $props();
+  const strings = getStrings();
 </script>
 
 <button type="button" aria-pressed={policy.enabled} onclick={() => policy.toggle()}>
-  {policy.enabled ? on : off}
+  {strings.sound}
 </button>
 
 <style>
   button {
+    min-height: 44px;
     padding: 0.4rem 0.9rem;
     border: var(--outline);
     border-radius: var(--radius-btn);

@@ -11,8 +11,6 @@ export interface ChoiceRow {
 
 /** The shuffled options, the private "this one is yours" mark and the vote action. */
 export class VotingViewModel {
-  /** True once this client's vote was accepted by the server. */
-  voted = $state(false);
   private readonly clock: PhaseClock;
 
   constructor(private readonly manager: BluffManager) {
@@ -41,6 +39,11 @@ export class VotingViewModel {
     }));
   }
 
+  /** True once the server has recorded this client's vote for the current round; survives a reload. */
+  get voted(): boolean {
+    return (this.manager.state?.mine.get(this.manager.playerId)?.myVote ?? "") !== "";
+  }
+
   get votesCast(): number {
     return this.manager.state?.votesCast ?? 0;
   }
@@ -61,8 +64,8 @@ export class VotingViewModel {
     return this.clock.announcement;
   }
 
+  /** Casts this client's vote; the synced private state reports it through {@link voted}. */
   async vote(optionId: string): Promise<void> {
-    const result = await this.manager.sendAction(ACTION.CAST_VOTE, { optionId });
-    if (result.ok) this.voted = true;
+    await this.manager.sendAction(ACTION.CAST_VOTE, { optionId });
   }
 }

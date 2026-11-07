@@ -1,4 +1,4 @@
-export { Countdown } from "./countdown.svelte.js";
+export { Countdown, isUrgent } from "./countdown.svelte.js";
 export {
   FeedbackBus,
   type FeedbackEvent,

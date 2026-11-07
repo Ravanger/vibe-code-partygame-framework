@@ -133,6 +133,11 @@ export interface GameContext<TState extends PhaseState, TPrivate, TOptions> {
   readonly gameVersion: string;
   /** The room RNG seed; see `sfc32`. Recorded in the action log header. */
   readonly seed: Seed;
+  /**
+   * The definition's merged strings table (its `strings` over {@link defaultCoreStrings}); the
+   * client-visible core messages — the text-filter refusal among them — come from here.
+   */
+  readonly strings: CoreStrings;
 }
 
 /** Context of an action handler. */
@@ -208,6 +213,12 @@ export interface MiddlewareContext<TState extends PhaseState, TPrivate, TOptions
    * by itself: omit `next()` to skip what is inside.
    */
   reject(code: ErrorCode, message: string, options?: RejectOptions): void;
+  /**
+   * Ticks fired since entry into the current phase — present only while a ticking phase
+   * (`onTick`) is active. The action log records it on every entry of that window so replay can
+   * cap tick delivery at the live count (#246).
+   */
+  readonly ticks?: number;
 }
 
 /**
@@ -239,6 +250,8 @@ export interface AudienceActionDefinition<TState extends PhaseState, TPrivate, T
   readonly from: "audience";
   /** Validates the whole action object (`type` plus flat fields). */
   payload: z.ZodType<TPayload>;
+  /** Payload fields that hold free text; `textFilterMiddleware` checks exactly these, as for player actions. The framework never guesses. */
+  textFields?: readonly string[];
   handler(ctx: AudienceActionContext<TState, TPrivate, TOptions, TPayload>): void;
 }
 
@@ -278,11 +291,13 @@ export interface PhaseDefinition<TState extends PhaseState, TPrivate, TOptions> 
   /**
    * Called every {@link PhaseDefinition.tickMs} while the phase is active (for real-time phases),
    * with the tick interval in ms as `dtMs` — a fixed nominal value, not wall-clock elapsed time,
-   * so integrating state by it (`pos += speed * dtMs / 1000`) is deterministic. Tick k fires at
-   * enter + k·tickMs; `replayLog` reproduces the same ticks because replay clock advances fire
-   * exactly the due ones between logged entries. Stops as soon as the phase is left (including a
-   * transition queued from within `onTick`) and on `GameRuntime.stop`. Not wrapped by phase
-   * middleware, like `onPlayerSync`; read absolute time with `ctx.now()` when you need it.
+   * so integrating state by it (`pos += speed * dtMs / 1000`) is deterministic. Tick k is due at
+   * enter + k·tickMs: ticks are anchored to the phase entry, so a late delivery on a live host is
+   * not carried into the next tick (#327). `replayLog` reproduces the same ticks because replay
+   * clock advances fire exactly the due ones between logged entries (replay exactness under
+   * quantized delivery remains #246). Stops as soon as the phase is left (including a transition
+   * queued from within `onTick`) and on `GameRuntime.stop`. Not wrapped by phase middleware, like
+   * `onPlayerSync`; read absolute time with `ctx.now()` when you need it.
    */
   onTick?(ctx: GameContext<TState, TPrivate, TOptions>, dtMs: number): void;
   /** Required when `duration` is set. */

@@ -1,7 +1,25 @@
-import { type ActionResult, ClientMessage } from "@partygame/shared";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { actionLogMiddleware, type LogFields, type Logger } from "@partygame/core";
+import { parseBundle, verifyBundle } from "@partygame/core/replay";
+import {
+  type ActionResult,
+  CLIENT_MESSAGES,
+  ClientMessage,
+  type ExportReplayResponse,
+} from "@partygame/shared";
+import { afterEach, describe, expect, it } from "vitest";
 import { type TestServer, waitUntil } from "../src/testing/index.js";
+import { BUZZER_PUBLIC_FIELDS, BuzzerGame, BuzzerState } from "./fixtures/buzzer.js";
 import { bootBuzzer, pid, sleep, startedRoom, stateOf } from "./support.js";
+
+/** A buzzer that records an action log, so the export builds a real bundle. */
+const LOGGED_BUZZER_GAMES = [
+  {
+    roomName: "buzzer",
+    definition: { ...BuzzerGame, middleware: [actionLogMiddleware()] },
+    stateClass: BuzzerState,
+    publicFields: BUZZER_PUBLIC_FIELDS,
+  },
+];
 
 let t: TestServer | undefined;
 afterEach(async () => {
@@ -78,21 +96,28 @@ describe("GameRoom rate limits", () => {
     ).toBe(true);
   });
 
-  it("refuses nothing in observe mode and reports each hit through console.warn", async () => {
-    t = await bootBuzzer({ rateLimits: { action: { rate: 0, burst: 1 }, mode: "observe" } });
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    try {
-      const { p1 } = await startedRoom(t);
-      expect(
-        await p1.client.request<unknown, ActionResult>(ClientMessage.ACTION, { type: "JUNK" }),
-      ).toEqual({ ok: true });
-      expect(
-        await p1.client.request<unknown, ActionResult>(ClientMessage.ACTION, { type: "JUNK" }),
-      ).toEqual({ ok: true }); // over the limit, but only observed
-      expect(warn.mock.calls.some(([message]) => String(message).includes(pid(1)))).toBe(true);
-    } finally {
-      warn.mockRestore();
-    }
+  it("refuses nothing in observe mode and reports each hit through the configured logger", async () => {
+    const lines: Array<{ event: string; fields?: LogFields | undefined }> = [];
+    const logger: Logger = {
+      info: () => {},
+      warn: (event, fields) => {
+        lines.push({ event, fields });
+      },
+      error: () => {},
+    };
+    t = await bootBuzzer({
+      rateLimits: { action: { rate: 0, burst: 1 }, mode: "observe" },
+      logger,
+    });
+    const { p1 } = await startedRoom(t);
+    expect(
+      await p1.client.request<unknown, ActionResult>(ClientMessage.ACTION, { type: "JUNK" }),
+    ).toEqual({ ok: true });
+    expect(
+      await p1.client.request<unknown, ActionResult>(ClientMessage.ACTION, { type: "JUNK" }),
+    ).toEqual({ ok: true }); // over the limit, but only observed
+    const hit = lines.find((line) => line.event === "rate.limit");
+    expect(hit?.fields).toMatchObject({ key: expect.stringContaining(pid(1)) });
   });
 
   it("throttles SET_NAME on its own bucket and leaves actions alone", async () => {
@@ -106,5 +131,64 @@ describe("GameRoom rate limits", () => {
     expect(
       await p1.client.request<unknown, ActionResult>(ClientMessage.ACTION, { type: "JUNK" }),
     ).toEqual({ ok: true });
+  });
+
+  it("refuses the host's EXPORT_REPLAY past the burst with RATE_LIMITED and leaves non-hosts at UNAUTHORIZED", async () => {
+    t = await bootBuzzer({
+      games: LOGGED_BUZZER_GAMES,
+      rateLimits: { exportReplay: { rate: 0, burst: 1 } },
+    });
+    const { p1, p2 } = await startedRoom(t);
+    const first = await p1.client.request<unknown, ExportReplayResponse>(
+      ClientMessage.EXPORT_REPLAY,
+    );
+    // the first export spends the token and builds a real bundle
+    expect(verifyBundle(parseBundle(first))).toEqual({ ok: true });
+    expect(
+      await p1.client.request<unknown, ExportReplayResponse>(ClientMessage.EXPORT_REPLAY),
+    ).toEqual({
+      ok: false,
+      error: { code: "RATE_LIMITED", message: CLIENT_MESSAGES.RATE_LIMITED },
+    });
+    // a non-host is refused for being a non-host, whatever the host's bucket holds
+    expect(
+      await p2.client.request<unknown, ExportReplayResponse>(ClientMessage.EXPORT_REPLAY),
+    ).toEqual({
+      ok: false,
+      error: { code: "UNAUTHORIZED", message: CLIENT_MESSAGES.UNAUTHORIZED },
+    });
+  });
+
+  it("refuses nothing for EXPORT_REPLAY in observe mode and reports the hit through the configured logger", async () => {
+    const lines: Array<{ event: string; fields?: LogFields | undefined }> = [];
+    const logger: Logger = {
+      info: () => {},
+      warn: (event, fields) => {
+        lines.push({ event, fields });
+      },
+      error: () => {},
+    };
+    t = await bootBuzzer({
+      games: LOGGED_BUZZER_GAMES,
+      rateLimits: { exportReplay: { rate: 0, burst: 1 }, mode: "observe" },
+      logger,
+    });
+    const { p1 } = await startedRoom(t);
+    expect(
+      verifyBundle(
+        parseBundle(
+          await p1.client.request<unknown, ExportReplayResponse>(ClientMessage.EXPORT_REPLAY),
+        ),
+      ),
+    ).toEqual({ ok: true });
+    expect(
+      verifyBundle(
+        parseBundle(
+          await p1.client.request<unknown, ExportReplayResponse>(ClientMessage.EXPORT_REPLAY),
+        ),
+      ),
+    ).toEqual({ ok: true }); // over the limit, but only observed
+    const hit = lines.find((line) => line.event === "rate.limit");
+    expect(hit?.fields).toMatchObject({ key: expect.stringContaining(pid(1)) });
   });
 });

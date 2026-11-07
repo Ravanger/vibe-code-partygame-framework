@@ -47,6 +47,12 @@ export interface GameServerOptions {
   /** How long an empty room lives before it is disposed. Default 120 s. */
   emptyRoomGraceMs?: number;
   /**
+   * Most phase transitions a room keeps as replay snapshots, recorded only while the game keeps an
+   * action log (a bundle needs both halves). Once the log outgrows the bound the export answers
+   * the fixed refusal instead of shipping a truncated bundle. Default {@link DEFAULT_MAX_REPLAY_TRANSITIONS}.
+   */
+  maxReplayTransitions?: number;
+  /**
    * Spectator (audience) connections a room admits on top of `maxPlayers`. The room's `maxClients`
    * is `maxPlayers + audienceSlots`, so once it is full Colyseus refuses further joins. Default
    * {@link DEFAULT_AUDIENCE_SLOTS}.
@@ -55,9 +61,9 @@ export interface GameServerOptions {
   /** When set, player names are checked against it at join and on `SET_NAME`, at the level of each game's `filterLevel`. */
   textFilter?: TextFilter;
   /**
-   * Per-player and per-address rate limits ({@link RateLimits}). Every room enforces the action and
-   * SET_NAME buckets through one shared limiter; the HTTP entries enforce `resolveCode` on
-   * `/api/resolve-code` (429 with `Retry-After`).
+   * Per-player and per-address rate limits ({@link RateLimits}). Every room enforces the action,
+   * SET_NAME and EXPORT_REPLAY buckets through one shared limiter; the HTTP entries enforce
+   * `resolveCode` on `/api/resolve-code` (429 with `Retry-After`).
    */
   rateLimits?: RateLimits;
   /** Structured lifecycle logger for every room. Defaults to {@link jsonLineLogger} (one JSON line per event on stdout). */
@@ -88,6 +94,10 @@ export const DEFAULT_ACTION_BUCKET: TokenBucket = { rate: 10, burst: 20 };
 export const DEFAULT_SET_NAME_BUCKET: TokenBucket = { rate: 2, burst: 2 };
 /** Default `/api/resolve-code` limit per remote address: 1/s, burst 10. */
 export const DEFAULT_RESOLVE_CODE_BUCKET: TokenBucket = { rate: 1, burst: 10 };
+/** Default EXPORT_REPLAY limit per host seat: one per 5 s, burst 1. */
+export const DEFAULT_EXPORT_REPLAY_BUCKET: TokenBucket = { rate: 0.2, burst: 1 };
+/** Default most phase transitions a room keeps as replay snapshots; no normal party reaches it. */
+export const DEFAULT_MAX_REPLAY_TRANSITIONS = 5_000;
 
 /** Resolve `rateLimits` against the defaults, which leave a normal party unaffected. */
 export function resolveRateLimits(options?: RateLimits): ResolvedRateLimits {
@@ -95,17 +105,28 @@ export function resolveRateLimits(options?: RateLimits): ResolvedRateLimits {
     action: options?.action ?? DEFAULT_ACTION_BUCKET,
     setName: options?.setName ?? DEFAULT_SET_NAME_BUCKET,
     resolveCode: options?.resolveCode ?? DEFAULT_RESOLVE_CODE_BUCKET,
+    exportReplay: options?.exportReplay ?? DEFAULT_EXPORT_REPLAY_BUCKET,
     mode: options?.mode ?? "enforce",
   };
 }
 
-/** Reports one observed (not enforced) limit hit; the observe-mode `onObserve` of {@link createGameServer}. */
-export function warnRateLimit(key: string): void {
+/**
+ * Reports one observed (not enforced) limit hit. With a `logger` it writes the structured line
+ * `rate.limit { key }` through it; without one it falls back to `console.warn`.
+ */
+export function warnRateLimit(key: string, logger?: Logger): void {
+  if (logger !== undefined) {
+    logger.warn("rate.limit", { key });
+    return;
+  }
   console.warn(`[rate-limit] ${key} is over its limit`);
 }
 
 /** The limiter and resolved bucket the HTTP entries use to throttle `/api/resolve-code`. */
-export function createResolveCodeThrottle(rateLimits?: RateLimits): {
+export function createResolveCodeThrottle(
+  rateLimits?: RateLimits,
+  logger?: Logger,
+): {
   limiter: RateLimiter;
   bucket: TokenBucket;
 } {
@@ -113,7 +134,7 @@ export function createResolveCodeThrottle(rateLimits?: RateLimits): {
   return {
     limiter: new RateLimiter({
       mode: resolved.mode,
-      ...(resolved.mode === "observe" ? { onObserve: warnRateLimit } : {}),
+      ...(resolved.mode === "observe" ? { onObserve: (key) => warnRateLimit(key, logger) } : {}),
     }),
     bucket: resolved.resolveCode,
   };
@@ -137,10 +158,12 @@ export function createGameServer(options: GameServerOptions): GameColyseusServer
       ? { ...processOptions, transport: options.transport }
       : defaultTransportOptions,
   );
+  // One logger for the rooms and for observe-mode limit hits; a configured logger wins over stdout.
+  const logger = options.logger ?? jsonLineLogger();
   const rateLimits = resolveRateLimits(options.rateLimits);
   const rateLimiter = new RateLimiter({
     mode: rateLimits.mode,
-    ...(rateLimits.mode === "observe" ? { onObserve: warnRateLimit } : {}),
+    ...(rateLimits.mode === "observe" ? { onObserve: (key) => warnRateLimit(key, logger) } : {}),
   });
   for (const game of options.games) {
     assertSyncedFields(game.stateClass, game.publicFields ?? []);
@@ -150,12 +173,13 @@ export function createGameServer(options: GameServerOptions): GameColyseusServer
       roomCodeService,
       reconnectMs: options.reconnectMs ?? DEFAULT_RECONNECT_MS,
       emptyRoomGraceMs: options.emptyRoomGraceMs ?? DEFAULT_EMPTY_ROOM_GRACE_MS,
+      maxReplayTransitions: options.maxReplayTransitions ?? DEFAULT_MAX_REPLAY_TRANSITIONS,
       maxRooms: options.maxRooms ?? DEFAULT_MAX_ROOMS,
       audienceSlots: options.audienceSlots ?? DEFAULT_AUDIENCE_SLOTS,
       ...(options.textFilter ? { textFilter: options.textFilter } : {}),
       rateLimiter,
       rateLimits,
-      logger: options.logger ?? jsonLineLogger(),
+      logger,
     };
     server.define(
       game.roomName,

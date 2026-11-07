@@ -213,6 +213,21 @@ describe("BotPlayer", () => {
     expect(room.sent).toEqual([{ type: "TAP" }]);
   });
 
+  it("runs the move when the scheduler invokes its callback synchronously", () => {
+    const room = new FakeRoom();
+    room.state.phase = "Play";
+    // A scheduler that fires immediately must not read the cancel handle before it exists (TDZ).
+    new BotPlayer(room, ME, "Bot 1", tapOnce, {
+      rng: () => 0,
+      reactMs: [0, 0],
+      schedule: (run) => {
+        run();
+        return () => undefined;
+      },
+    });
+    expect(room.sent).toEqual([{ type: "TAP" }]);
+  });
+
   it("ignores state changes after leaving", async () => {
     const { room, clock, bot } = setup(tapOnce);
     await bot.leave();

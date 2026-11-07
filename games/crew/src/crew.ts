@@ -43,6 +43,11 @@ export class Crew {
     this.ctx.state.mine.clear();
   }
 
+  /** True when the player's signal is already public (shared in a round or revealed by an earlier departure). */
+  private isRevealed(playerId: string): boolean {
+    return this.ctx.state.reveals.some((entry) => entry.playerId === playerId);
+  }
+
   /** Drops the data of players who left for good and reveals their signal publicly; a dropped connection is not a departure. */
   pruneDeparted(): void {
     const { state, priv } = this.ctx;
@@ -54,9 +59,11 @@ export class Crew {
     }
     for (const playerId of departed) {
       const signal = required(priv.signals[playerId], "leaver's signal");
-      state.reveals.push(
-        Object.assign(new RevealEntry(), { playerId, name: this.nameOf(playerId), signal }),
-      );
+      if (!this.isRevealed(playerId)) {
+        state.reveals.push(
+          Object.assign(new RevealEntry(), { playerId, name: this.nameOf(playerId), signal }),
+        );
+      }
       delete priv.signals[playerId];
       state.roles.delete(playerId);
       priv.responses.delete(playerId);
@@ -137,6 +144,7 @@ export class Crew {
     state.outcome = won ? "win" : "lose";
     state.target = priv.target;
     for (const [playerId, signal] of Object.entries(priv.signals)) {
+      if (this.isRevealed(playerId)) continue;
       state.reveals.push(
         Object.assign(new RevealEntry(), { playerId, name: this.nameOf(playerId), signal }),
       );

@@ -11,6 +11,26 @@ import { deepFreeze, type Seed } from "./utils.js";
 /** One log per `ctx.priv` object; the priv itself never gains a framework key. */
 const logs = new WeakMap<object, ActionLog>();
 
+/** The middleware instance that created each log; a second instance must fail loudly. */
+const owners = new WeakMap<object, symbol>();
+
+/**
+ * Thrown when a second `actionLogMiddleware()` instance records an event for a priv whose log
+ * already exists: both instances would append to the same log, colliding `seq`s and breaking
+ * replay silently. Register the middleware once per game.
+ */
+export class DuplicateActionLogMiddlewareError extends Error {
+  constructor() {
+    super(
+      "actionLogMiddleware is registered more than once for one game; every event would be recorded twice",
+    );
+    this.name = "DuplicateActionLogMiddlewareError";
+  }
+}
+
+/** The most entries one log may hold; `ActionLogSchema` rejects longer logs. */
+export const MAX_ACTION_LOG_ENTRIES = 100_000;
+
 /** The kind of event an {@link ActionLogEntry} records. */
 export type ActionLogEntryKind = "action" | "transition" | "enter" | "timeout" | "roster-change";
 
@@ -46,6 +66,15 @@ export interface ActionLogEntry {
   from?: string;
   /** `kind === "transition"`: target phase. */
   to?: string;
+  /**
+   * Ticks fired since entry into the current phase, recorded on every entry kind while a ticking
+   * phase (`onTick`) is active — absent otherwise. A live host delivers ticks up to one clock
+   * grid step late, so an action can be logged after a tick's nominal deadline but before its
+   * delivery; `replayLog` caps the replayed tick count at this value so such an action replays
+   * with exactly the ticks the live room had applied (#246). Logs recorded before this field
+   * carry no `ticks`; they replay every nominally due tick, as before.
+   */
+  ticks?: number;
 }
 
 /** Written on the first recorded event. */
@@ -96,19 +125,28 @@ const RosterSeatSchema = z.strictObject({
   isActive: z.boolean(),
 });
 
-/** One recorded event. Field order decides which field a shape error names first. */
+/** A non-negative safe integer — the bound every recorded timestamp obeys. */
+const nonNegativeSafeInt = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
+
+/** True for the plain-object payloads action entries carry (never an array, never a primitive). */
+function isPlainObjectPayload(value: unknown): boolean {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** One recorded event. Field order decides which field a shape error names first; numeric fields are bounded and `payload` must be a plain object when present. */
 const ActionLogEntrySchema = z.strictObject({
   kind: z.enum(["action", "transition", "enter", "timeout", "roster-change"]),
-  t: z.number(),
-  seq: z.number(),
+  t: nonNegativeSafeInt,
+  seq: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER),
   phase: z.string(),
   actionType: z.string().optional(),
   senderId: z.string().optional(),
-  payload: z.unknown().optional(),
+  payload: z.unknown().refine(isPlainObjectPayload).optional(),
   rejected: z.boolean().optional(),
   redacted: z.boolean().optional(),
   from: z.string().optional(),
   to: z.string().optional(),
+  ticks: nonNegativeSafeInt.optional(),
 });
 
 /** The log header. Field order decides which field a shape error names first. */
@@ -117,12 +155,12 @@ const ActionLogHeaderSchema = z.strictObject({
   seed: z.tuple([z.number(), z.number(), z.number(), z.number()]),
   version: z.string().optional(),
   protocolVersion: z.number().int().optional(),
-  startedAt: z.number(),
+  startedAt: nonNegativeSafeInt,
 });
 
-/** The wire shape of an {@link ActionLog}: strict objects, so unknown fields are rejected. `replayLog` validates every log against it. */
+/** The wire shape of an {@link ActionLog}: strict objects, so unknown fields are rejected; bounded for untrusted input (`t`/`startedAt` non-negative safe integers, `seq` from 1, `entries` at most {@link MAX_ACTION_LOG_ENTRIES}, action `payload` a plain object). `replayLog` validates every log against it before reading. */
 export const ActionLogSchema = z.strictObject({
-  entries: z.array(ActionLogEntrySchema),
+  entries: z.array(ActionLogEntrySchema).max(MAX_ACTION_LOG_ENTRIES),
   header: ActionLogHeaderSchema,
   roster: z.array(RosterSeatSchema).optional(),
 });
@@ -137,7 +175,7 @@ export function getActionLog(priv: unknown): ActionLog | undefined {
   return logs.get(priv);
 }
 
-function logOf(ctx: MiddlewareContext<PhaseState, unknown, unknown>): ActionLog {
+function logOf(ctx: MiddlewareContext<PhaseState, unknown, unknown>, instance: symbol): ActionLog {
   const priv = ctx.priv;
   if (typeof priv !== "object" || priv === null) throw new InvalidPrivateStateError();
   let log = logs.get(priv);
@@ -153,6 +191,9 @@ function logOf(ctx: MiddlewareContext<PhaseState, unknown, unknown>): ActionLog 
       entries: [],
     };
     logs.set(priv, log);
+    owners.set(priv, instance);
+  } else if (owners.get(priv) !== instance) {
+    throw new DuplicateActionLogMiddlewareError();
   }
   return log;
 }
@@ -160,13 +201,18 @@ function logOf(ctx: MiddlewareContext<PhaseState, unknown, unknown>): ActionLog 
 /**
  * Records every middleware-visible event (actions, transitions, enters, timeouts, roster changes)
  * into an append-only, JSON-serializable log kept outside `ctx.priv`; never touches `ctx.state`.
+ * While a ticking phase (`onTick`) is active, every entry also carries `ticks` — the ticks fired since
+ * the phase was entered — so replay can cap its tick delivery at the live count.
  * Actions rejected before the handler chain are not logged; one rejected by its handler is logged
  * with `rejected: true`, and a redacted rejection with `redacted: true` and no `payload`.
+ * Register exactly one instance per game: a second instance recording for the same priv throws
+ * {@link DuplicateActionLogMiddlewareError} instead of double-recording every event.
  * See "Action log and replay" in the framework guide.
  */
 export function actionLogMiddleware(): PhaseMiddleware<PhaseState, unknown, unknown> {
+  const instance = Symbol("actionLogMiddleware");
   return (ctx, next) => {
-    const log = logOf(ctx);
+    const log = logOf(ctx, instance);
     const event = ctx.event;
     // An auto-started session has no START_GAME action, so a departure from the Lobby records the roster.
     const recordRoster = (): void => {
@@ -195,6 +241,9 @@ export function actionLogMiddleware(): PhaseMiddleware<PhaseState, unknown, unkn
       entry.to = event.to;
       if (event.from === LOBBY_PHASE) recordRoster();
     }
+    // While a ticking phase is active, the live tick count so far: replay caps its tick delivery
+    // at it (#246). Absent otherwise — legacy logs keep their old shape.
+    if (ctx.ticks !== undefined) entry.ticks = ctx.ticks;
     log.entries.push(entry);
     next();
     if (event.kind === "action" && ctx.rejectionCount > 0) {

@@ -2,7 +2,8 @@ import type { Room } from "@colyseus/core";
 import type { Room as ClientRoom } from "@colyseus/sdk";
 import { ClientMessage, isServerError, type ServerError, ServerMessage } from "@partygame/shared";
 import type { BaseGameState } from "@partygame/shared/schema";
-import { type TestServer, waitUntil } from "./index.js";
+import type { TestServer } from "./index.js";
+import { waitUntil } from "./waitUntil.js";
 
 /** `player-0001` style ids that pass `PlayerIdSchema`. */
 export function testPlayerId(n: number): string {

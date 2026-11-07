@@ -113,7 +113,7 @@ jobs:
     name: mutation
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v7
         with:

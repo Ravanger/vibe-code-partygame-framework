@@ -47,6 +47,9 @@ describe("defineGame", () => {
     expect(errorsOf({ ...valid(), minPlayers: 0 })).toContain("minPlayers");
     expect(errorsOf({ ...valid(), minPlayers: 1.5 })).toContain("minPlayers");
     expect(errorsOf({ ...valid(), minPlayers: 5, maxPlayers: 4 })).toContain("maxPlayers");
+    expect(errorsOf({ ...valid(), maxPlayers: Number.NaN })).toContain("maxPlayers");
+    expect(errorsOf({ ...valid(), maxPlayers: Number.POSITIVE_INFINITY })).toContain("maxPlayers");
+    expect(errorsOf({ ...valid(), maxPlayers: 2.5 })).toContain("maxPlayers");
   });
 
   it("reserves Lobby", () => {
@@ -79,6 +82,14 @@ describe("defineGame", () => {
     expect(errorsOf({ ...valid(), phases: { Play: { duration: 1, onTimeout: () => {} } } })).toBe(
       "",
     );
+  });
+
+  it("rejects a numeric duration that is not a finite number > 0", () => {
+    for (const duration of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(
+        errorsOf({ ...valid(), phases: { Play: { duration, onTimeout: () => {} } } }),
+      ).toContain("duration");
+    }
   });
 
   it("rejects a tickMs without onTick", () => {

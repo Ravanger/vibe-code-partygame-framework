@@ -61,4 +61,28 @@ describe("Results", () => {
     expect(error?.code).toBe("UNAUTHORIZED");
     expect(t.phase).toBe("Results");
   });
+
+  it("ends the game when a departure drops the room below the minimum", () => {
+    const t = Table.started({ players: 3, options: { rounds: 1 } });
+    t.submitFake("p1", "Sydney");
+    t.submitFake("p2", "Perth");
+    t.submitFake("p3", "Brisbane");
+    t.voteFor("p1", indexOf(t, "Perth"));
+    t.voteFor("p2", indexOf(t, "Canberra"));
+    t.voteFor("p3", indexOf(t, "Sydney"));
+    t.tick(15_000);
+    expect(t.phase).toBe("Results");
+    t.leave("p3");
+    expect(t.phase).toBe("Lobby");
+    expect(t.state.notice).toBe("Fewer than 3 players were left, so the game ended.");
+  });
+
+  it("keeps showing results when enough players remain after a departure", () => {
+    const t = Table.started({ options: { rounds: 1 } });
+    playToResults(t);
+    t.leave("p4");
+    expect(t.phase).toBe("Results");
+    expect(t.state.notice).toBe("");
+    expect(t.state.scoreboard.find((s) => s.playerId === "p4")?.name).toBe("p4");
+  });
 });

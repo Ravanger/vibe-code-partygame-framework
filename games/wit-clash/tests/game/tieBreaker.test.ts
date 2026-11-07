@@ -260,6 +260,15 @@ describe("voting on the tie-breaker", () => {
     expect(t.phase).toBe("TieBreakerReveal");
   });
 
+  it("counts a vote whose voter disconnected before the reveal", () => {
+    const t = voting(topTwo);
+    t.act("p3", "CAST_VOTE", { answerId: answerBy(t, "p1") });
+    t.drop("p3");
+    t.act("p4", "CAST_VOTE", { answerId: answerBy(t, "p1") });
+    expect(t.phase).toBe("TieBreakerReveal");
+    expect(current(t).answers.find((a) => a.authorId === "p1")?.votes).toBe(2);
+  });
+
   it("recounts when a voter leaves", () => {
     const t = voting(topTwo);
     t.act("p3", "CAST_VOTE", { answerId: answerBy(t, "p1") });

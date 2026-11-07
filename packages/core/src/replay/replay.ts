@@ -1,12 +1,19 @@
 import { LOBBY_PHASE, PROTOCOL_VERSION, type ServerError } from "@partygame/shared";
-import { type ActionLog, type ActionLogEntry, ActionLogSchema } from "../actionLog.js";
 import {
+  type ActionLog,
+  type ActionLogEntry,
+  ActionLogSchema,
+  MAX_ACTION_LOG_ENTRIES,
+} from "../actionLog.js";
+import {
+  type GameContext,
   type GameDefinition,
   GameRuntime,
   type PhaseDefinition,
   type PhaseState,
   type PlayerInfo,
 } from "../runtime/index.js";
+import { TimerLimitError } from "../timers.js";
 import { required, type Seed } from "../utils.js";
 import { ReplayHost } from "./ReplayHost.js";
 
@@ -43,6 +50,8 @@ function failedRunGuard(
   try {
     return step();
   } catch (cause) {
+    // A budget breach is a verdict on the log itself; rethrow it as-is so its message stands.
+    if (cause instanceof TimerLimitError) throw cause;
     throw new Error(
       `replayLog: entry ${entry.seq} re-ran into a failed run (${String(cause)}); logs containing a failed run are not replayable in v1`,
       { cause },
@@ -63,6 +72,23 @@ interface ShapeIssue {
   path: readonly PropertyKey[];
 }
 
+/** The integer range of each bounded numeric field, for out-of-range shape messages. */
+const FIELD_RANGES: Record<string, readonly [number, number]> = {
+  t: [0, Number.MAX_SAFE_INTEGER],
+  seq: [1, Number.MAX_SAFE_INTEGER],
+  startedAt: [0, Number.MAX_SAFE_INTEGER],
+  ticks: [0, Number.MAX_SAFE_INTEGER],
+};
+
+/** The "must be" text for a field, naming its integer range when the issue is an out-of-range value. */
+function mustBe(field: string, code: string, typeText: string): string {
+  const range = FIELD_RANGES[field];
+  if (range !== undefined && (code === "too_small" || code === "too_big")) {
+    return `an integer between ${range[0]} and ${range[1]}`;
+  }
+  return typeText;
+}
+
 /** The type text for an entry field in a shape error. */
 function entryFieldType(field: string): string {
   switch (field) {
@@ -70,7 +96,10 @@ function entryFieldType(field: string): string {
       return `one of ${ENTRY_KINDS.join(", ")}`;
     case "t":
     case "seq":
+    case "ticks":
       return "a number";
+    case "payload":
+      return "a plain object";
     case "rejected":
     case "redacted":
       return "a boolean";
@@ -106,14 +135,19 @@ function shapeMessage(issues: readonly ShapeIssue[], log: unknown): string {
   const issue = required(issues[0], "shape issue");
   const [section, index, field] = issue.path;
   if (section === "entries") {
-    if (typeof index !== "number") return "log.entries must be an array";
+    if (typeof index !== "number") {
+      return issue.code === "too_big"
+        ? `log.entries has more than ${MAX_ACTION_LOG_ENTRIES} entries`
+        : "log.entries must be an array";
+    }
+    // A path of ["entries", i] means the schema saw an array there, so this cannot miss.
     const entry = (log as { entries: readonly unknown[] }).entries[index];
     if (field === undefined) {
       return issue.code === "unrecognized_keys"
         ? `malformed log entry ${JSON.stringify(entry)}: has unrecognized fields`
         : `malformed log entry ${JSON.stringify(entry)}: must be an object`;
     }
-    return `malformed log entry ${JSON.stringify(entry)}: "${String(field)}" must be ${entryFieldType(String(field))}`;
+    return `malformed log entry ${JSON.stringify(entry)}: "${String(field)}" must be ${mustBe(String(field), issue.code, entryFieldType(String(field)))}`;
   }
   if (section === "header") {
     if (index === undefined) {
@@ -121,7 +155,7 @@ function shapeMessage(issues: readonly ShapeIssue[], log: unknown): string {
         ? "log.header has unrecognized fields"
         : "log.header must be an object";
     }
-    return `log.header.${String(index)} must be ${headerFieldType(String(index))}`;
+    return `log.header.${String(index)} must be ${mustBe(String(index), issue.code, headerFieldType(String(index)))}`;
   }
   if (section === "roster") {
     if (typeof index !== "number") return "log.roster must be an array";
@@ -199,14 +233,88 @@ function authoritativeDurations<TState extends PhaseState, TPrivate, TOptions>(
   return { ...definition, phases };
 }
 
+/** The replay-side bookkeeping for one ticking phase's capped tick delivery (#246). */
+interface CappedTicks<TState extends PhaseState, TPrivate, TOptions> {
+  /** The most ticks the current entry allows; `undefined` until an entry with `ticks` sets it. */
+  limit: number | undefined;
+  /** Ticks applied since the last enter. */
+  applied: number;
+  /** Ticks that fired nominally but must wait for a later entry's cap, in fire order. */
+  pending: { ctx: GameContext<TState, TPrivate, TOptions>; dtMs: number }[];
+  /** The phase's original `onTick`. */
+  onTick: (ctx: GameContext<TState, TPrivate, TOptions>, dtMs: number) => void;
+}
+
+/**
+ * Caps each ticking phase's tick delivery at the count its log entries record (#246). A live host
+ * delivers ticks up to one clock grid step late, so an action can be logged after a tick's nominal
+ * deadline but before its delivery; firing every nominally due tick would then apply one the live
+ * room had not. Every phase's `onEnter` resets all caps — mirroring `enter()`'s cancel of the
+ * pending tick when a phase is left, which also discards ticks deferred for a phase that never
+ * got to deliver them. A ticking phase's `onTick` applies inline while under its entry's cap and
+ * defers beyond it, in fire order; the walk sets each cap's limit from the entry's recorded
+ * `ticks` and pumps the deferred ticks before advancing the clock. Entries without `ticks` (legacy
+ * logs) leave the caps unbounded and replay every nominally due tick, as before.
+ */
+function capTicks<TState extends PhaseState, TPrivate, TOptions>(
+  definition: GameDefinition<TState, TPrivate, TOptions>,
+): {
+  definition: GameDefinition<TState, TPrivate, TOptions>;
+  caps: Map<string, CappedTicks<TState, TPrivate, TOptions>>;
+} {
+  const caps = new Map<string, CappedTicks<TState, TPrivate, TOptions>>();
+  const resetAll = (): void => {
+    for (const cap of caps.values()) {
+      cap.limit = undefined;
+      cap.applied = 0;
+      cap.pending.length = 0;
+    }
+  };
+  const phases: Record<string, PhaseDefinition<TState, TPrivate, TOptions>> = {};
+  for (const [name, phase] of Object.entries(definition.phases)) {
+    const onEnter = phase.onEnter;
+    const wrapped: PhaseDefinition<TState, TPrivate, TOptions> = {
+      ...phase,
+      // Reset before the original hook runs, like enter() clears the tick timer before onEnter.
+      onEnter: (ctx) => {
+        resetAll();
+        onEnter?.(ctx);
+      },
+    };
+    if (phase.onTick !== undefined) {
+      const cap: CappedTicks<TState, TPrivate, TOptions> = {
+        limit: undefined,
+        applied: 0,
+        pending: [],
+        onTick: phase.onTick,
+      };
+      caps.set(name, cap);
+      wrapped.onTick = (ctx, dtMs) => {
+        // Deferred ticks must apply before any later one, so a non-empty queue defers too.
+        if (cap.pending.length > 0 || (cap.limit !== undefined && cap.applied + 1 > cap.limit)) {
+          cap.pending.push({ ctx, dtMs });
+          return;
+        }
+        cap.applied += 1;
+        cap.onTick(ctx, dtMs);
+      };
+    }
+    phases[name] = wrapped;
+  }
+  return { definition: { ...definition, phases }, caps };
+}
+
 /**
  * Re-drives a fresh runtime from an {@link ActionLog} and returns deep-cloned state snapshots,
  * `states[0]` being the construction state. Throws a `replayLog:` error when the log's shape is
  * invalid, its game, version or protocol version differs from the definition's, it has no recorded
  * roster and `init.players` is missing, its entries are not time-ordered, a mid-game roster change
  * or a failed run is logged, a re-dispatch's accept/reject outcome contradicts the log, or the
- * replayed transitions and enters differ from the logged ones. See "Action log and replay" in the
- * framework guide.
+ * replayed transitions and enters differ from the logged ones. While a ticking phase is active the
+ * replay caps its tick delivery at the count each entry recorded (a live host delivers ticks up to
+ * one clock grid step late), and timer firing is budgeted: one advance fires at most
+ * {@link MAX_TIMER_FIRES_PER_ADVANCE} timers, the whole run at most {@link MAX_TIMER_FIRES_PER_REPLAY}.
+ * See "Action log and replay" in the framework guide.
  */
 export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
   definition: GameDefinition<TState, TPrivate, TOptions>,
@@ -214,6 +322,11 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
   init: ReplayInit<TState, TOptions>,
 ): ReplayResult<TState> {
   assertLogShape(log);
+  // The schema allows an empty array (it cannot know a session always records at least the
+  // construction-time Lobby enter); refuse it with a named error instead of an index miss.
+  if (log.entries.length === 0) {
+    throw new Error("replayLog: the log has no entries");
+  }
   if (definition.name !== log.header.game) {
     throw new Error(
       `replayLog: log was recorded for game "${log.header.game}", not "${definition.name}"`,
@@ -265,8 +378,9 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
   const host = new ReplayHost(init.seed ?? log.header.seed);
   for (let i = 0; i < seatCount; ++i) host.seat(`p${i + 1}`, seats?.[i] ?? {});
   host.time = log.header.startedAt;
+  const { definition: cappedDefinition, caps } = capTicks(definition);
   const runtime = new GameRuntime({
-    definition: authoritativeDurations(definition, pairTimeouts(log.entries)),
+    definition: authoritativeDurations(cappedDefinition, pairTimeouts(log.entries)),
     state: init.state,
     options: init.options,
     host,
@@ -298,6 +412,21 @@ export function replayLog<TState extends PhaseState, TPrivate, TOptions>(
     }
     const prePhase = init.state.phase;
     const error = failedRunGuard(entry, () => {
+      // The entry's recorded tick count is authoritative for its phase: cap the delivery at it and
+      // apply what earlier entries deferred, before the clock advances past this entry's time.
+      // Legacy entries carry no `ticks`, leaving the cap unbounded (the old behavior).
+      const tickCap = caps.get(entry.phase);
+      if (tickCap !== undefined && entry.ticks !== undefined) {
+        const limit = entry.ticks;
+        tickCap.limit = limit;
+        runtime.runStep(() => {
+          while (tickCap.pending.length > 0 && tickCap.applied < limit) {
+            const item = required(tickCap.pending.shift(), "pending tick");
+            tickCap.applied += 1;
+            tickCap.onTick(item.ctx, item.dtMs);
+          }
+        });
+      }
       host.advance(entry.t - host.time);
       if (settleSeqs.has(entry.seq)) runtime.rosterChanged();
       // Redacted entries carry no payload; skipping keeps state and RNG in step with live.

@@ -81,6 +81,42 @@ describe("RateLimiter", () => {
     expect(limiter.take("a", once)).toBe(false); // enforce by default
   });
 
+  describe("memory bound", () => {
+    it("evicts refilled buckets once the map grows past sweepAt, like they were never seen", () => {
+      let now = 0;
+      const limiter = new RateLimiter({ clock: () => now, sweepAt: 4 });
+      for (let i = 0; i < 4; ++i) expect(limiter.take(`k${i}`, bucket)).toBe(true);
+      now += 1000; // at 10/s each of them refills to its burst of two long before this
+      expect(limiter.take("k5", bucket)).toBe(true); // the fifth key grows the map past sweepAt and sweeps
+      expect(limiter.size).toBe(1); // k0..k3 were refilled to full and swept; only k5 remains
+      // an evicted key behaves exactly like a never-seen one
+      expect(limiter.waitMs("k0", bucket)).toBe(0);
+      expect(limiter.take("k0", bucket)).toBe(true);
+      expect(limiter.take("k0", bucket)).toBe(true);
+      expect(limiter.take("k0", bucket)).toBe(false); // fresh burst of two, as if new
+    });
+
+    it("keeps non-refilled buckets during a sweep", () => {
+      let now = 0;
+      const limiter = new RateLimiter({ clock: () => now, sweepAt: 2 });
+      const frozen = { rate: 0, burst: 1 }; // never refills, so it can never be swept
+      expect(limiter.take("frozen", frozen)).toBe(true); // exhausted at t=0
+      for (let i = 0; i < 5; ++i) {
+        limiter.take(`gone${i}`, bucket);
+        now += 1000; // each earlier "gone" key refills to full before the next one arrives
+      }
+      expect(limiter.size).toBe(2); // the frozen bucket plus the last fresh key
+      expect(limiter.take("frozen", frozen)).toBe(false); // still exhausted: state kept, not just presence
+    });
+
+    it("does not sweep below sweepAt", () => {
+      const now = 0;
+      const limiter = new RateLimiter({ clock: () => now, sweepAt: 4 });
+      for (let i = 0; i < 4; ++i) limiter.take(`k${i}`, bucket);
+      expect(limiter.size).toBe(4); // at the threshold, not past it
+    });
+  });
+
   describe("waitMs", () => {
     it("is 0 for a key that has never been seen", () => {
       const limiter = new RateLimiter({ clock: () => 1_000 });

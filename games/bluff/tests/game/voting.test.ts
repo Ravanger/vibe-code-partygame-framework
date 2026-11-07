@@ -8,6 +8,9 @@ const submitAll = (t: Table): void => {
   t.submitFake("p4", "Adelaide");
 };
 
+const indexOf = (t: Table, text: string): number =>
+  t.state.choices.findIndex((o) => o.text === text);
+
 describe("Voting", () => {
   it("builds one option per submitted fake plus the truth, with no author info", () => {
     const t = Table.started();
@@ -30,6 +33,40 @@ describe("Voting", () => {
     t.tick(45_000);
     expect(t.phase).toBe("Voting");
     expect(t.state.choices.length).toBe(4);
+  });
+
+  it("skips Voting and Reveal to the next round when nobody wrote a fake", () => {
+    const t = Table.started({ options: { rounds: 2 } });
+    t.tick(45_000);
+    expect(t.phase).toBe("Writing");
+    expect(t.state.roundNumber).toBe(2);
+    expect(t.state.promptText).toBe("Which ocean is the largest on Earth?");
+  });
+
+  it("skips to Results when nobody wrote a fake in the final round", () => {
+    const t = Table.started({ options: { rounds: 1 } });
+    t.tick(45_000);
+    expect(t.phase).toBe("Results");
+  });
+
+  it("keeps the fake of an author who is disconnected when Voting starts", () => {
+    const t = Table.started();
+    t.submitFake("p1", "Sydney");
+    t.submitFake("p2", "Perth");
+    t.submitFake("p4", "Adelaide");
+    t.drop("p4");
+    t.submitFake("p3", "Brisbane");
+    expect(t.phase).toBe("Voting");
+    const texts = t.state.choices.map((o) => o.text).sort();
+    expect(texts).toEqual(["Adelaide", "Brisbane", "Canberra", "Perth", "Sydney"]);
+  });
+
+  it("ignores an inactive seat when building options", () => {
+    const t = Table.started();
+    t.joinLate("p5");
+    submitAll(t);
+    expect(t.phase).toBe("Voting");
+    expect(t.state.choices.length).toBe(5);
   });
 
   it("shuffles options deterministically for the same seed", () => {
@@ -82,6 +119,16 @@ describe("Voting", () => {
     expect(t.priv.votes.get("p1")).toBe(t.state.choices[0]?.id);
     expect(t.state.votesCast).toBe(1);
     expect(t.state.votesExpected).toBe(4);
+  });
+
+  it("records the vote in the player's private state without erasing their own option", () => {
+    const t = Table.started();
+    submitAll(t);
+    t.voteFor("p1", 0);
+    const own = t.state.choices.find((o) => t.priv.optionAuthor.get(o.id) === "p1");
+    expect(t.state.mine.get("p1")?.myVote).toBe(t.state.choices[0]?.id);
+    expect(t.state.mine.get("p1")?.myOptionId).toBe(own?.id ?? "");
+    expect(t.state.mine.get("p2")?.myVote).toBe("");
   });
 
   it("rejects a vote for an unknown option", () => {
@@ -160,5 +207,18 @@ describe("Voting", () => {
     t.leave("p3");
     expect(t.phase).toBe("Lobby");
     expect(t.state.notice).toBe("Fewer than 3 players were left, so the game ended.");
+  });
+
+  it("keeps a leaver's name on their option, result and scoreboard", () => {
+    const t = Table.started();
+    submitAll(t);
+    t.leave("p4");
+    t.voteFor("p1", indexOf(t, "Perth"));
+    t.voteFor("p2", indexOf(t, "Sydney"));
+    t.voteFor("p3", indexOf(t, "Adelaide"));
+    expect(t.phase).toBe("Reveal");
+    expect(t.state.choices.find((o) => o.text === "Adelaide")?.authorName).toBe("p4");
+    expect(t.state.results.find((r) => r.playerId === "p4")?.name).toBe("p4");
+    expect(t.state.scoreboard.find((s) => s.playerId === "p4")?.name).toBe("p4");
   });
 });

@@ -2,6 +2,7 @@ import { CLIENT_MESSAGES, ErrorCode, FrameworkError, type ServerError } from "@p
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { DispatchPipeline } from "../../src/runtime/DispatchPipeline.js";
+import { defaultCoreStrings } from "../../src/runtime/strings.js";
 import {
   type ActionContext,
   type ActionDefinition,
@@ -36,6 +37,7 @@ const fakeContext = (): GameContext<PhaseState, unknown, unknown> => ({
   gameName: "Test",
   gameVersion: "1",
   seed: [0, 0, 0, 0],
+  strings: defaultCoreStrings,
 });
 
 const player = (over: Partial<PlayerInfo> = {}): PlayerInfo => ({

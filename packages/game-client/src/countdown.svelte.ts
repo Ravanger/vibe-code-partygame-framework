@@ -2,6 +2,11 @@ import { createSubscriber } from "svelte/reactivity";
 
 const DEFAULT_TICK_MS = 250;
 
+/** Whether a countdown is in its last stretch: more than 0 seconds left and at most 10, so an expired timer (0) is not urgent. */
+export function isUrgent(secondsLeft: number): boolean {
+  return secondsLeft > 0 && secondsLeft <= 10;
+}
+
 // `$state` stays in a closure: assigning it in a constructor body does not compile.
 function createNow() {
   let now = $state(Date.now());
@@ -21,7 +26,7 @@ export class Countdown {
   private lastServerNow = 0;
   private lastServerNowClientTime = 0;
   readonly isExpired: boolean = $derived(this.secondsLeft <= 0);
-  readonly isUrgent: boolean = $derived(this.secondsLeft > 0 && this.secondsLeft <= 10);
+  readonly isUrgent: boolean = $derived(isUrgent(this.secondsLeft));
   private readonly track: () => void;
 
   constructor(

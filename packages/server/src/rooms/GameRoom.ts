@@ -68,6 +68,8 @@ export interface GameRoomConfig {
   roomCodeService: RoomCodeService;
   reconnectMs: number;
   emptyRoomGraceMs: number;
+  /** Most phase transitions kept as replay snapshots; once the log outgrows them the export refuses. */
+  maxReplayTransitions: number;
   /** Maximum concurrent rooms across all games; a create beyond it closes with `SERVER_FULL` (4429). */
   maxRooms: number;
   /** Spectator connections admitted on top of `maxPlayers`; the room's `maxClients`. */
@@ -235,7 +237,18 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
         }
         return this.act(seat.id, raw);
       });
-      this.onMessage(ClientMessage.EXPORT_REPLAY, (client): unknown => this.exportReplay(client));
+      this.onMessage(ClientMessage.EXPORT_REPLAY, (client): unknown => {
+        // Only a host reaches the bundle build, so only host seats spend the export bucket.
+        const seat = this.seatBySession(client);
+        if (
+          seat?.role === "host" &&
+          !this.limited(seat.id, ClientMessage.EXPORT_REPLAY, this.config.rateLimits.exportReplay)
+        ) {
+          client.send(ServerMessage.ERROR, RATE_LIMITED_ERROR);
+          return { ok: false, error: RATE_LIMITED_ERROR };
+        }
+        return this.exportReplay(client);
+      });
       this.logLine("info", "room.created");
     } catch (error) {
       roomCodeService.unregister(code);
@@ -275,18 +288,23 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     client.view = view;
     this.views.set(client.sessionId, view);
     if (spectator) {
+      // A spectator holding a seated id would receive that seat's private sends while the seat
+      // has no live client (the drop window): refuse it (#325).
+      if (this.state.players.has(playerId)) throw this.closeWith(CLOSE_CODES.SEAT_TAKEN);
       this.spectators.add(client.sessionId);
       this.spectatorIds.set(client.sessionId, playerId);
       ++this.state.spectatorCount;
       return;
     }
-    this.cancelDispose();
     const existing = this.state.players.get(playerId);
     if (existing) {
       const stored = this.seatSecrets.get(playerId);
       if (!seatSecret || stored === undefined || !timingSafeEqual(stored, sha256(seatSecret))) {
         throw this.closeWith(CLOSE_CODES.SEAT_TAKEN);
       }
+      // Every refusal check passed: cancel only now, so a refused join keeps the empty-room
+      // disposal armed (#324).
+      this.cancelDispose();
       const oldClient = this.bind(playerId, client.sessionId);
       this.reconnected(existing, client);
       oldClient?.leave(CLOSE_CODES.SEAT_TAKEN_OVER.code);
@@ -298,6 +316,17 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     }
     if (name && this.nameRejected(name) !== undefined) {
       throw this.closeWith(CLOSE_CODES.CONTENT_REJECTED);
+    }
+    // Every refusal check passed: cancel only now, so a refused join keeps the empty-room
+    // disposal armed (#324).
+    this.cancelDispose();
+    // A spectator may hold this id (it joined while the seat was free): seating takes the id
+    // away for good, so evict it with the same close code (#325). Iterate a snapshot: leave()
+    // closes the socket and the client leaves this.clients only when that close is processed.
+    for (const client of [...this.clients]) {
+      if (this.spectatorIds.get(client.sessionId) === playerId) {
+        client.leave(CLOSE_CODES.SEAT_TAKEN.code);
+      }
     }
     const seat = new PlayerSchema();
     seat.id = playerId;
@@ -370,7 +399,14 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     broadcast: (type, payload) => this.broadcast(type, payload),
     notifyTransition: (from, to) => {
       this.safely(() => {
-        this.snapshots.push({ from, to, state: syncedJsonOf(this.state) });
+        // A bundle needs both halves: without an action log the snapshots could never be exported,
+        // and past the bound the export's length check refuses instead of shipping a truncated bundle.
+        if (
+          getActionLog(this.runtime.priv) !== undefined &&
+          this.snapshots.length < this.config.maxReplayTransitions
+        ) {
+          this.snapshots.push({ from, to, state: syncedJsonOf(this.state) });
+        }
         this.audienceScopes.clear();
       });
     },

@@ -1,4 +1,4 @@
-import { ErrorCode, FrameworkError, START_GAME } from "@partygame/shared";
+import { CLIENT_MESSAGES, ErrorCode, FrameworkError, START_GAME } from "@partygame/shared";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
@@ -46,6 +46,7 @@ describe("CoreStrings and defineGame", () => {
     );
     expect(defaultCoreStrings.cannotKickSelf).toBe("You cannot kick yourself");
     expect(defaultCoreStrings.noSuchPlayer).toBe("No such player");
+    expect(defaultCoreStrings.contentRejected).toBe(CLIENT_MESSAGES.CONTENT_REJECTED);
     expect(defaultCoreStrings.endGameInLobby).toBe("END_GAME is not allowed in Lobby");
     expect(defaultCoreStrings.needAtLeast(3)).toBe("Need at least 3 players to start");
     expect(defaultCoreStrings.notAllowedToSend("PRESS")).toBe("Not allowed to send PRESS");
@@ -104,9 +105,11 @@ describe("client-visible core strings through the runtime", () => {
 
   it("keeps the English defaults without a strings table", () => {
     const { host, runtime } = started();
-    runtime.dispatch("p1", { type: "KICK_PLAYER", playerId: "p1" });
-    runtime.dispatch("p1", { type: "KICK_PLAYER", playerId: "ghost" });
-    expect(host.errorsTo("p1")).toEqual([
+    host.seat("player-one");
+    host.setHost?.("player-one");
+    runtime.dispatch("player-one", { type: "KICK_PLAYER", playerId: "player-one" });
+    runtime.dispatch("player-one", { type: "KICK_PLAYER", playerId: "ghost-player" });
+    expect(host.errorsTo("player-one")).toEqual([
       { code: ErrorCode.NOT_ALLOWED, message: "You cannot kick yourself", action: "KICK_PLAYER" },
       { code: ErrorCode.NOT_ALLOWED, message: "No such player", action: "KICK_PLAYER" },
     ]);
@@ -122,9 +125,11 @@ describe("client-visible core strings through the runtime", () => {
       cannotKickSelf: "Du kannst dich nicht selbst rausschmeißen",
       stopped: "Das Spiel ist vorbei",
     });
-    runtime.dispatch("p1", { type: "KICK_PLAYER", playerId: "p1" });
-    runtime.dispatch("p1", { type: "KICK_PLAYER", playerId: "ghost" });
-    expect(host.errorsTo("p1")).toEqual([
+    host.seat("player-one");
+    host.setHost?.("player-one");
+    runtime.dispatch("player-one", { type: "KICK_PLAYER", playerId: "player-one" });
+    runtime.dispatch("player-one", { type: "KICK_PLAYER", playerId: "ghost-player" });
+    expect(host.errorsTo("player-one")).toEqual([
       {
         code: ErrorCode.NOT_ALLOWED,
         message: "Du kannst dich nicht selbst rausschmeißen",
@@ -203,6 +208,7 @@ describe("log-only core strings", () => {
     gameName: "Test",
     gameVersion: "1",
     seed: [0, 0, 0, 0],
+    strings: defaultCoreStrings,
   });
 
   const frameworkError = (fn: () => void): FrameworkError => {

@@ -15,7 +15,7 @@ export type StartServerOptions = Omit<GameServerOptions, "transport"> & StartPor
 
 /** Bun entry point: WebSocket game server plus the code-resolution API. */
 export async function startServer(options: StartServerOptions) {
-  const { port, apiPort, roomCodeService, host, allowedOrigins } = resolveStartOptions(
+  const { port, apiPort, roomCodeService, host, allowedOrigins, trustProxy } = resolveStartOptions(
     options,
     process.env,
   );
@@ -27,9 +27,10 @@ export async function startServer(options: StartServerOptions) {
       maxPayloadLength: options.maxPayloadBytes ?? DEFAULT_MAX_PAYLOAD_BYTES,
     }),
   });
-  const { limiter, bucket } = createResolveCodeThrottle(options.rateLimits);
+  const { limiter, bucket } = createResolveCodeThrottle(options.rateLimits, options.logger);
   const handler = createApiHandler(roomCodeService, {
     ...(allowedOrigins !== undefined ? { allowedOrigins } : {}),
+    ...(trustProxy !== undefined ? { trustProxy } : {}),
     limiter,
     resolveCode: bucket,
   });
@@ -42,6 +43,12 @@ export async function startServer(options: StartServerOptions) {
       return handler(req, remoteAddress === undefined ? {} : { remoteAddress });
     },
   });
-  await server.listen(port);
+  try {
+    await server.listen(port);
+  } catch (error) {
+    // A failed game-server bind must not leave the code API listening.
+    api.stop();
+    throw error;
+  }
   return { server, api };
 }

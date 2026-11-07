@@ -1,5 +1,6 @@
 import { createServer, request as httpRequest, type Server } from "node:http";
 import { networkInterfaces } from "node:os";
+import type { LogFields, Logger } from "@partygame/core";
 import { afterEach, describe, expect, it } from "vitest";
 import { type NodeServerHandle, serveApi, startNodeServer } from "../src/node.js";
 import { freePort, ServerProbe } from "../src/probe.js";
@@ -30,6 +31,25 @@ const start = async (
   handles.push(handle);
   return handle;
 };
+
+/** A raw request with an arbitrary method; node's client sends it as-is, where fetch would refuse. */
+const rawRequest = (
+  port: number,
+  method: string,
+  path: string,
+): Promise<{ status: number; body: string }> =>
+  new Promise((resolve, reject) => {
+    const request = httpRequest({ host: "127.0.0.1", port, method, path }, (res) => {
+      let body = "";
+      res.setEncoding("utf8");
+      res.on("data", (chunk: string) => {
+        body += chunk;
+      });
+      res.on("end", () => resolve({ status: res.statusCode ?? 0, body }));
+    });
+    request.on("error", reject);
+    request.end();
+  });
 
 const occupyLoopback = async (): Promise<number> => {
   const port = await freePort();
@@ -172,6 +192,111 @@ describe("serveApi", () => {
     });
     expect(seen).toEqual([["a=1", "b=2"]]);
   });
+
+  it("refuses methods the Request constructor forbids and keeps serving", async () => {
+    const port = await freePort();
+    servers.push(await serveApi(new RoomCodeService(), { port, host: "127.0.0.1" }));
+    const trace = await rawRequest(port, "TRACE", "/api/resolve-code");
+    expect(trace.status).toBe(405);
+    expect(JSON.parse(trace.body)).toEqual({ error: "Method not allowed" });
+    // the server survived the unbuildable request
+    const after = await fetch(`http://127.0.0.1:${port}/api/resolve-code?code=ZZZZ`);
+    expect(after.status).toBe(404);
+  });
+
+  it("answers a throwing handler with a fixed 500 body and keeps serving", async () => {
+    const port = await freePort();
+    let calls = 0;
+    servers.push(
+      await serveApi(new RoomCodeService(), {
+        port,
+        host: "127.0.0.1",
+        handler: () => {
+          ++calls;
+          if (calls === 1) throw new Error("secret internals");
+          return new Response(null, { status: 204 });
+        },
+      }),
+    );
+    const url = `http://127.0.0.1:${port}/api/resolve-code?code=ABCD`;
+    const boom = await fetch(url);
+    expect(boom.status).toBe(500);
+    const text = await boom.text();
+    expect(JSON.parse(text)).toEqual({ error: "Internal server error" });
+    expect(text).not.toContain("secret internals");
+    // the server survived the handler failure
+    expect((await fetch(url)).status).toBe(204);
+  });
+
+  it("answers a response whose body fails to read with a fixed 500 body and keeps serving", async () => {
+    const port = await freePort();
+    let calls = 0;
+    servers.push(
+      await serveApi(new RoomCodeService(), {
+        port,
+        host: "127.0.0.1",
+        handler: () => {
+          ++calls;
+          if (calls === 1) {
+            // A body that rejects when read: response.text() throws after the headers are known.
+            return new Response(
+              new ReadableStream<Uint8Array>({
+                start(controller) {
+                  controller.error(new Error("body failed"));
+                },
+              }),
+            );
+          }
+          return new Response(null, { status: 204 });
+        },
+      }),
+    );
+    const url = `http://127.0.0.1:${port}/api/resolve-code?code=ABCD`;
+    const boom = await fetch(url);
+    expect(boom.status).toBe(500);
+    const text = await boom.text();
+    expect(JSON.parse(text)).toEqual({ error: "Internal server error" });
+    expect(text).not.toContain("body failed");
+    // the server survived the unreadable body
+    expect((await fetch(url)).status).toBe(204);
+  });
+
+  it("keys the resolve-code throttle on X-Forwarded-For when trustProxy is on", async () => {
+    const port = await freePort();
+    servers.push(
+      await serveApi(new RoomCodeService(), {
+        port,
+        host: "127.0.0.1",
+        trustProxy: true,
+        rateLimits: { resolveCode: { rate: 0, burst: 1 } },
+      }),
+    );
+    const ask = (xff: string) =>
+      fetch(`http://127.0.0.1:${port}/api/resolve-code?code=ZZZZ`, {
+        headers: { "X-Forwarded-For": xff },
+      });
+    expect((await ask("203.0.113.7")).status).toBe(404); // A's one token is spent (unknown code)
+    expect((await ask("203.0.113.8")).status).toBe(404); // B behind the same proxy: its own bucket
+    expect((await ask("203.0.113.7")).status).toBe(429); // A's bucket is spent
+  });
+
+  it("ignores X-Forwarded-For when trustProxy is off", async () => {
+    const port = await freePort();
+    servers.push(
+      await serveApi(new RoomCodeService(), {
+        port,
+        host: "127.0.0.1",
+        rateLimits: { resolveCode: { rate: 0, burst: 1 } },
+      }),
+    );
+    const ask = (xff: string) =>
+      fetch(`http://127.0.0.1:${port}/api/resolve-code?code=ZZZZ`, {
+        headers: { "X-Forwarded-For": xff },
+      });
+    expect((await ask("203.0.113.7")).status).toBe(404);
+    // the spoofed header changes nothing: one socket, one bucket
+    expect((await ask("203.0.113.8")).status).toBe(429);
+  });
 });
 
 describe("startNodeServer", () => {
@@ -255,6 +380,34 @@ describe("startNodeServer", () => {
     const refused = await fetch(url);
     expect(refused.status).toBe(429);
     expect(refused.headers.get("Retry-After")).toBe("1");
+  });
+
+  it("keys the code API throttle on X-Forwarded-For and routes limit hits to the configured logger", async () => {
+    const lines: Array<{ event: string; fields?: LogFields | undefined }> = [];
+    const logger: Logger = {
+      info: () => {},
+      warn: (event, fields) => {
+        lines.push({ event, fields });
+      },
+      error: () => {},
+    };
+    const handle = await start({
+      games: GAMES,
+      host: "127.0.0.1",
+      trustProxy: true,
+      rateLimits: { resolveCode: { rate: 0, burst: 1 }, mode: "observe" },
+      logger,
+    });
+    const ask = (xff: string) =>
+      fetch(`http://127.0.0.1:${handle.apiPort}/api/resolve-code?code=ZZZZ`, {
+        headers: { "X-Forwarded-For": xff },
+      });
+    expect((await ask("203.0.113.7")).status).toBe(404); // A spends its one token (unknown code)
+    expect((await ask("203.0.113.8")).status).toBe(404); // B behind the same proxy: its own bucket
+    const observed = await ask("203.0.113.7"); // A is over its limit, but observe mode only reports
+    expect(observed.status).toBe(404);
+    const hits = lines.filter((line) => line.event === "rate.limit");
+    expect(hits.map((line) => line.fields?.key)).toEqual(["203.0.113.7"]); // keyed by the proxy hop, not the socket
   });
 
   it("refuses one port for both servers", async () => {

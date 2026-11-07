@@ -13,6 +13,8 @@ export interface LobbySettingsConfig {
   defaults?: Readonly<Record<string, unknown>>;
   /** Overrides the generated label of a field. */
   labels?: Readonly<Record<string, string>>;
+  /** Labels for the choices of select fields, by field key and raw value; a choice without an entry shows its raw value. */
+  choiceLabels?: Readonly<Record<string, Readonly<Record<string, string>>>>;
   /** Reports each option the form cannot render; the default is a console warning, once per key per instance. */
   onUnsupported?: (key: string, reason: string) => void;
 }
@@ -21,12 +23,18 @@ export interface LobbySettingsConfig {
 export class LobbySettingsViewModel<TState extends BaseGameState> {
   readonly fields: OptionField[];
   private readonly drafts = $state<Record<string, string>>({});
+  /** The published value of each key when its draft started; a draft older than a newer publish no longer shows. */
+  private readonly baselines: Record<string, string> = {};
+  /** Keys with a SET_OPTIONS in flight; their typed value keeps showing until the server answers. */
+  private readonly inFlight = new Set<string>();
   private readonly reader: OptionsReader<Record<string, unknown>>;
+  private readonly choiceLabels: Readonly<Record<string, Readonly<Record<string, string>>>>;
 
   constructor(
     private readonly manager: GameConnectionManager<TState>,
     config: LobbySettingsConfig,
   ) {
+    this.choiceLabels = config.choiceLabels ?? {};
     this.fields = new OptionFields(config.labels, config.onUnsupported).from(
       z.toJSONSchema(config.schema),
     );
@@ -48,24 +56,37 @@ export class LobbySettingsViewModel<TState extends BaseGameState> {
     return this.canEdit || this.manager.isSpectator;
   }
 
-  /** What the field shows: what the host is typing, else what the server published. */
+  /** What the field shows: what the host is typing while it is current or its commit is in flight, else what the server published. */
   valueOf(key: string): string {
-    return this.drafts[key] ?? String(this.reader.current[key] ?? "");
+    const draft = this.drafts[key];
+    if (draft !== undefined && !this.stale(key)) return draft;
+    return this.publishedOf(key);
+  }
+
+  /** The display label of a select field's value; the raw value when `choiceLabels` has no entry for it. */
+  choiceLabel(key: string, value: string): string {
+    return this.choiceLabels[key]?.[value] ?? value;
   }
 
   /** Stores what the host is typing for a field without sending it; `commit` sends it. */
   setDraft(key: string, raw: string): void {
+    if (this.drafts[key] === undefined || this.stale(key)) {
+      // No draft yet, or the published value moved on since this one started: start fresh from it.
+      this.dropDraft(key);
+      this.baselines[key] = this.publishedOf(key);
+    }
     this.drafts[key] = raw;
   }
 
-  /** Picks one of a choice field's options and sends it; a rejection puts the published value back. */
+  /** Picks one of a choice field's options and sends it; once the server answers, the field shows what it published. */
   async choose(key: string, value: string): Promise<void> {
     this.setDraft(key, value);
     await this.commit(key);
   }
 
-  /** Sends the typed value with the field's own JSON type. A number draft that is empty or not a number, a boolean draft that is neither "true" nor "false", or a choice that is not one of the field's options is dropped without sending; a rejection (also shown by the app's error toast) puts the published value back. */
+  /** Sends the typed value with the field's own JSON type. A number draft that is empty or not a number, a boolean draft that is neither "true" nor "false", or a choice that is not one of the field's options is dropped without sending; once the server answers (a rejection is also shown by the app's error toast), the field shows what it published. */
   async commit(key: string): Promise<void> {
+    if (this.drafts[key] !== undefined && this.stale(key)) this.dropDraft(key);
     const raw = this.drafts[key];
     if (raw === undefined || !this.canEdit) return;
     const field = this.fields.find((candidate) => candidate.key === key);
@@ -74,25 +95,47 @@ export class LobbySettingsViewModel<TState extends BaseGameState> {
     if (field.kind === "number") {
       value = Number(raw);
       if (raw.trim() === "" || !Number.isFinite(value)) {
-        delete this.drafts[key];
+        this.dropDraft(key);
         return;
       }
     } else if (field.kind === "boolean") {
       if (raw !== "true" && raw !== "false") {
-        delete this.drafts[key];
+        this.dropDraft(key);
         return;
       }
       value = raw === "true";
     } else if (field.kind === "select") {
       if (!field.choices.includes(raw)) {
-        delete this.drafts[key];
+        this.dropDraft(key);
         return;
       }
       value = raw;
     } else {
       value = raw;
     }
-    const result = await this.manager.sendAction(SET_OPTIONS, { [key]: value });
-    if (!result.ok) delete this.drafts[key];
+    this.inFlight.add(key);
+    try {
+      await this.manager.sendAction(SET_OPTIONS, { [key]: value });
+    } finally {
+      // Accepted or rejected, the local draft no longer decides what the field shows.
+      this.inFlight.delete(key);
+      this.dropDraft(key);
+    }
+  }
+
+  /** The value the server currently publishes for `key`, as the field would show it. */
+  private publishedOf(key: string): string {
+    return String(this.reader.current[key] ?? "");
+  }
+
+  /** True when the published value of `key` changed since its draft started and no commit for it is in flight. */
+  private stale(key: string): boolean {
+    return !this.inFlight.has(key) && this.publishedOf(key) !== this.baselines[key];
+  }
+
+  /** Removes a key's draft and the baseline it was compared against. */
+  private dropDraft(key: string): void {
+    delete this.drafts[key];
+    delete this.baselines[key];
   }
 }

@@ -49,6 +49,7 @@ describe("Round (choices)", () => {
     const t = Table.started();
     t.share("p1");
     expect(t.state.choices.map((c) => [c.playerId, c.choice])).toEqual([["p1", "share"]]);
+    expect(t.state.reveals.length).toBe(1);
     expect(revealOf(t, "p1")).toBe(t.priv.signals["p1"]);
   });
 
