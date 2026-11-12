@@ -142,6 +142,7 @@
           "default": "./dist/index.js"
         },
         "symbols": {
+          "ACTION_LOG_ENTRY_KINDS": {},
           "ActionContext": {},
           "ActionDefinition": {},
           "ActionLog": {},
@@ -152,6 +153,7 @@
           "AudienceActionContext": {},
           "AudienceActionDefinition": {},
           "AudienceScope": {},
+          "AudienceScopes": {},
           "CanJoinInput": {},
           "CanJoinResult": {},
           "ContextLogger": {},

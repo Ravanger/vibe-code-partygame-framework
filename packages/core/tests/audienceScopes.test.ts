@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AudienceScopes } from "../src/rooms/AudienceScopes.js";
+import { AudienceScopes } from "../src/index.js";
 
 describe("AudienceScopes", () => {
   it("returns true once per key and scope, false on a repeat", () => {

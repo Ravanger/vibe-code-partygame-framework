@@ -3,6 +3,7 @@ import { type Client, type Delayed, logger, Room, ServerError } from "@colyseus/
 import { type Schema, StateView } from "@colyseus/schema";
 import type { FilterLevel, TextFilter } from "@partygame/content/filter";
 import {
+  AudienceScopes,
   evaluateJoin,
   type GameDefinition,
   GameRuntime,
@@ -41,7 +42,6 @@ import { PlayerSchema, syncedJsonOf } from "@partygame/shared/schema";
 import type { ZodError } from "zod";
 import type { RateLimiter, ResolvedRateLimits, TokenBucket } from "../RateLimiter.js";
 import type { RoomCodeService } from "../services/RoomCodeService.js";
-import { AudienceScopes } from "./AudienceScopes.js";
 
 const FRAMEWORK_KEYS = ["playerId", "name", "spectator", "seatSecret", "seats", "protocolVersion"];
 const SPECTATOR_ERROR: ProtocolError = {

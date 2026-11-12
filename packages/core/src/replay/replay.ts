@@ -1,5 +1,6 @@
 import { LOBBY_PHASE, PROTOCOL_VERSION, type ServerError } from "@partygame/shared";
 import {
+  ACTION_LOG_ENTRY_KINDS,
   type ActionLog,
   type ActionLogEntry,
   ActionLogSchema,
@@ -63,9 +64,6 @@ function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
-/** The kinds a recorded entry may carry — the set the replay walk dispatches on. */
-const ENTRY_KINDS = ["action", "transition", "enter", "timeout", "roster-change"] as const;
-
 /** The fields of a schema issue this mapper reads. */
 interface ShapeIssue {
   code: string;
@@ -93,7 +91,7 @@ function mustBe(field: string, code: string, typeText: string): string {
 function entryFieldType(field: string): string {
   switch (field) {
     case "kind":
-      return `one of ${ENTRY_KINDS.join(", ")}`;
+      return `one of ${ACTION_LOG_ENTRY_KINDS.join(", ")}`;
     case "t":
     case "seq":
     case "ticks":

@@ -1,4 +1,5 @@
 export {
+  ACTION_LOG_ENTRY_KINDS,
   type ActionLog,
   type ActionLogEntry,
   type ActionLogEntryKind,
@@ -10,6 +11,7 @@ export {
   type RosterSeat,
 } from "./actionLog.js";
 export { EmptyPayloadSchema, playAgainAction } from "./actions.js";
+export { AudienceScopes } from "./audienceScopes.js";
 export {
   getPhaseTimings,
   type LoggingMiddlewareOptions,
