@@ -9,8 +9,6 @@ import { MatchupRevealViewModel } from "../viewmodels/MatchupRevealViewModel.js"
 const { manager }: { manager: WitClashManager } = $props();
 
 const vm = untrack(() => new MatchupRevealViewModel(manager));
-
-$effect(() => () => vm.destroy());
 </script>
 
 <div class="reveal-screen">

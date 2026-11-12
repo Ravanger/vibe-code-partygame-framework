@@ -82,10 +82,6 @@ export class MatchupVoteViewModel {
     return this.clock.secondsLeft;
   }
 
-  get isUrgent(): boolean {
-    return this.clock.isUrgent;
-  }
-
   get announcement(): string {
     return this.clock.announcement;
   }
@@ -97,9 +93,5 @@ export class MatchupVoteViewModel {
   async vote(answerId: string): Promise<void> {
     const payload: CastVotePayload = { answerId };
     if (this.canVote) await this.manager.sendAction(ACTION.CAST_VOTE, payload);
-  }
-
-  destroy(): void {
-    this.clock.destroy();
   }
 }

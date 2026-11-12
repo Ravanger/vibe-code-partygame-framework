@@ -100,7 +100,7 @@ if (response.ok === false) console.warn(manager.lastServerError?.message);
 
 ## Show the phase clock
 
-`countdown()` counts down to `state.phaseEndsAt`, corrected for client clock skew. It ticks only while something reads it inside a Svelte effect and stops when the last reader goes away — no cleanup needed. `destroy()` is a deprecated no-op kept for existing callers.
+`countdown()` counts down to `state.phaseEndsAt`, corrected for client clock skew. It ticks only while something reads it inside a Svelte effect and stops when the last reader goes away — no cleanup needed.
 
 ```ts
 const clock = manager.countdown();

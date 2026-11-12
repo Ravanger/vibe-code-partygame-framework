@@ -881,7 +881,7 @@ const result = await manager.sendAction("PRESS", { power: 3 });
 | `sendAction(type, payload?)` | `Promise<ActionResult>`, see below |
 | `lastServerError`, `dismissError()` | last rejected action or pushed `ERROR` (`$state`), for a toast. A kick arrives as `KICKED`, after which `status` is `"disconnected"` |
 | `onMessage(type, cb)` | returns an unsubscribe function; survives room changes. Pass a second generic, `GameConnectionManager<State, Events>`, with `Events` mapping message names to payload types, and `type` is limited to those names and `cb` gets the matching payload; the default accepts any name with an `unknown` payload |
-| `countdown()` | a `Countdown` (`secondsLeft`, `isUrgent`, `isExpired`) to `phaseEndsAt`, corrected for client clock skew; ticks only while read in a Svelte effect. `destroy()` is a deprecated no-op. The urgent rule (more than 0 and at most 10 seconds left) is also exported as `isUrgent(secondsLeft)` from `@partygame/game-client` |
+| `countdown()` | a `Countdown` (`secondsLeft`, `isUrgent`, `isExpired`) to `phaseEndsAt`, corrected for client clock skew; ticks only while read in a Svelte effect. The urgent rule (more than 0 and at most 10 seconds left) is also exported as `isUrgent(secondsLeft)` from `@partygame/game-client` |
 | `dispose()` | stop listening and close without forgetting the session |
 
 ### Browser-safe state classes

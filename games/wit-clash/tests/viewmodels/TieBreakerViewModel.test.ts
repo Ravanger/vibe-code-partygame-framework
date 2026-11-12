@@ -61,7 +61,6 @@ describe("TieBreakerViewModel answering", () => {
     expect(vm.contenderNames).toEqual(["Me", "Zed"]);
     expect(vm.isContender).toBe(true);
     expect(vm.secondsLeft).toBe(30);
-    expect(vm.isUrgent).toBe(false);
     c.state.tieBreakerContenders.push("ghost");
     expect(vm.contenderNames).toEqual(["Me", "Zed", ""]);
     vm.destroy();

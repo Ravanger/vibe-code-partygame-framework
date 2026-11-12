@@ -8,8 +8,6 @@ import { CategoryVoteViewModel } from "../viewmodels/CategoryVoteViewModel.js";
 const { manager }: { manager: WitClashManager } = $props();
 
 const vm = untrack(() => new CategoryVoteViewModel(manager));
-
-$effect(() => () => vm.destroy());
 </script>
 
 <div class="category-vote">

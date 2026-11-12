@@ -803,14 +803,12 @@ describe("countdown", () => {
     const manager = newManager();
     const none = manager.countdown();
     expect(none.secondsLeft).toBe(0);
-    none.destroy();
     const { state, room } = seated(manager);
     state.serverNow = 5_000_000;
     state.phaseEndsAt = 5_030_000;
     manager.attach(room);
     const countdown = manager.countdown();
     expect(countdown.secondsLeft).toBe(30);
-    countdown.destroy();
     vi.useRealTimers();
   });
 });

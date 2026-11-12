@@ -88,7 +88,6 @@ describe("a round through the real client SDK and view models", () => {
       expect(view.roundLabel).toBe("Round 1 of 1");
       expect(view.options).toHaveLength(3);
       await view.vote(view.options[0]?.id as string);
-      view.destroy();
     }
 
     await waitUntil(everyoneOn(all, "Prompting"), "prompting screens");
@@ -128,8 +127,6 @@ describe("a round through the real client SDK and view models", () => {
       expect(reveal.matchup?.answers.every((a) => a.authorName.startsWith("Player"))).toBe(true);
       expect(voter.choices[0]?.isMine).toBe(true);
       ++revealed;
-      for (const view of views) view.destroy();
-      reveal.destroy();
       await waitUntil(
         () => screens(all).every((s) => s === "MatchupVoting" || s === "Results"),
         "next matchup",

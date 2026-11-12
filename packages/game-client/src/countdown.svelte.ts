@@ -68,10 +68,4 @@ export class Countdown {
       this.lastServerNowClientTime = this.nowRef.value;
     }
   }
-
-  /**
-   * No-op kept for compatibility.
-   * @deprecated The interval now starts and stops with the readers, so this no longer does anything.
-   */
-  destroy(): void {}
 }

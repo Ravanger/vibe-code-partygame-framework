@@ -81,8 +81,4 @@ export class HonorVoteViewModel {
     const payload: VoteHonorPayload = { authorId };
     await this.manager.sendAction(ACTION.VOTE_HONOR, payload);
   }
-
-  destroy(): void {
-    this.clock.destroy();
-  }
 }

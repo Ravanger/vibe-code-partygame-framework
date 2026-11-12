@@ -40,8 +40,4 @@ export class MatchupRevealViewModel {
   get myVoteId(): string {
     return this.manager.state?.mine.get(this.manager.playerId)?.matchupVote ?? "";
   }
-
-  destroy(): void {
-    this.clock.destroy();
-  }
 }

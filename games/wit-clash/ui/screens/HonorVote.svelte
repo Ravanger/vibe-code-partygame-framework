@@ -7,8 +7,6 @@
   const { manager }: { manager: WitClashManager } = $props();
 
   const vm = untrack(() => new HonorVoteViewModel(manager));
-
-  $effect(() => () => vm.destroy());
 </script>
 
 <div class="honor-vote">

@@ -131,10 +131,6 @@ export class TieBreakerViewModel {
     return this.clock.secondsLeft;
   }
 
-  get isUrgent(): boolean {
-    return this.clock.isUrgent;
-  }
-
   get announcement(): string {
     return this.clock.announcement;
   }
@@ -164,6 +160,5 @@ export class TieBreakerViewModel {
 
   destroy(): void {
     this.typing.stop();
-    this.clock.destroy();
   }
 }

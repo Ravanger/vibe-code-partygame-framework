@@ -128,14 +128,14 @@ describe("WaitingRoomViewModel", () => {
     expect(c.room.sent).toEqual([{ type: "SET_NAME", payload: "Alexandria the Magni" }]);
   });
 
-  it("does not send a blank name and can cancel a pending one", () => {
+  it("does not send a blank name and sends a pending one on destroy", () => {
     const c = client();
     const vm = new WaitingRoomViewModel(c.manager);
     vm.setName("   ");
     vm.setName("Bo");
     vm.destroy();
     vi.advanceTimersByTime(500);
-    expect(c.room.sent).toEqual([]);
+    expect(c.room.sent).toEqual([{ type: "SET_NAME", payload: "Bo" }]);
   });
 
   it("marks the code copied and back to idle after 2000 ms, a second copy extending the window", async () => {

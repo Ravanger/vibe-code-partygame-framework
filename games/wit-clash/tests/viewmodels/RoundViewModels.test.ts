@@ -52,7 +52,6 @@ describe("CategoryVoteViewModel", () => {
     expect(vm.votesExpected).toBe(4);
     expect(vm.roundLabel).toBe("Round 2 of 3");
     expect(c.manager.me()).toBeDefined();
-    vm.destroy();
   });
 
   it("counts down and announces only at 30, 10 and 5 seconds", () => {
@@ -60,12 +59,9 @@ describe("CategoryVoteViewModel", () => {
     expect(vm.secondsLeft).toBe(30);
     expect(vm.totalSeconds).toBe(60);
     expect(vm.announcement).toBe("30 seconds remaining");
-    expect(vm.isUrgent).toBe(false);
     c.state.phaseEndsAt = 1_000_000 + 7000;
     c.patch();
     expect(vm.announcement).toBe("");
-    expect(vm.isUrgent).toBe(true);
-    vm.destroy();
   });
 
   it("votes through the action protocol", async () => {
@@ -74,7 +70,6 @@ describe("CategoryVoteViewModel", () => {
     expect(c.room.requests).toEqual([
       { type: "ACTION", payload: { categoryId: "a", type: "VOTE_CATEGORY" } },
     ]);
-    vm.destroy();
   });
 
   it("is empty without a room", () => {
@@ -87,7 +82,6 @@ describe("CategoryVoteViewModel", () => {
       0,
       "Round 0 of 0",
     ]);
-    vm.destroy();
   });
 });
 
@@ -111,7 +105,6 @@ describe("PromptingViewModel", () => {
     expect(vm.current?.matchupId).toBe("m1");
     expect(vm.roundLabel).toBe("Round 1 of 3");
     expect(vm.secondsLeft).toBe(90);
-    expect(vm.isUrgent).toBe(false);
     expect(vm.totalSeconds).toBe(90);
     expect(vm.answersIn).toBe(1);
     expect(vm.answersExpected).toBe(4);
@@ -312,16 +305,13 @@ describe("MatchupVoteViewModel", () => {
     expect(vm.votesCast).toBe(1);
     expect(vm.votesExpected).toBe(3);
     expect(vm.secondsLeft).toBe(20);
-    expect(vm.isUrgent).toBe(false);
     expect(vm.totalSeconds).toBe(20);
     expect(vm.announcement).toBe("");
-    vm.destroy();
   });
 
   it("highlights only my own vote", () => {
     const { vm } = voting({ canVote: true, isOwnMatchup: false, matchupVote: "a2" });
     expect(vm.choices.map((c) => c.isMine)).toEqual([false, true]);
-    vm.destroy();
   });
 
   it("casts a vote when allowed", async () => {
@@ -330,7 +320,6 @@ describe("MatchupVoteViewModel", () => {
     expect(c.room.requests).toEqual([
       { type: "ACTION", payload: { answerId: "a1", type: "CAST_VOTE" } },
     ]);
-    vm.destroy();
   });
 
   it("does not offer a vote to the author of the matchup", async () => {
@@ -339,7 +328,6 @@ describe("MatchupVoteViewModel", () => {
     expect(vm.canVote).toBe(false);
     await vm.vote("a1");
     expect(c.room.requests).toEqual([]);
-    vm.destroy();
   });
 
   it("does not offer a vote on a forfeit", () => {
@@ -348,7 +336,6 @@ describe("MatchupVoteViewModel", () => {
     if (active) active.isForfeit = true;
     expect(vm.isForfeit).toBe(true);
     expect(vm.canVote).toBe(false);
-    vm.destroy();
   });
 
   it("is empty before a matchup and without my private entry", () => {
@@ -365,7 +352,6 @@ describe("MatchupVoteViewModel", () => {
     expect([vm.matchupNumber, vm.totalMatchups, vm.votesCast, vm.votesExpected]).toEqual([
       0, 0, 0, 0,
     ]);
-    vm.destroy();
   });
 });
 
@@ -425,7 +411,6 @@ describe("MatchupRevealViewModel and Results recap", () => {
     expect(vm.totalMatchups).toBe(2);
     expect(vm.secondsLeft).toBe(5);
     expect(vm.totalSeconds).toBe(5);
-    vm.destroy();
   });
 
   it("remembers who I voted for", () => {
@@ -435,7 +420,6 @@ describe("MatchupRevealViewModel and Results recap", () => {
     expect(vm.myVoteId).toBe("a2");
     c.manager.dispose();
     expect(vm.myVoteId).toBe("");
-    vm.destroy();
   });
 
   it("shows nothing until the matchup is revealed or when there is none", () => {
@@ -446,7 +430,6 @@ describe("MatchupRevealViewModel and Results recap", () => {
     expect(vm.matchup).toBeUndefined();
     c.manager.dispose();
     expect([vm.matchup, vm.matchupNumber, vm.totalMatchups]).toEqual([undefined, 0, 0]);
-    vm.destroy();
   });
 
   it("lists only revealed matchups in the results", () => {

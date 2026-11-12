@@ -46,13 +46,31 @@ describe("NameField", () => {
     expect(c.room.sent).toEqual([]);
   });
 
-  it("cancels a pending name on destroy", () => {
+  it("sends a pending name once on destroy, trimmed and capped", () => {
+    const c = connectedClient({ stateClass: BaseGameState });
+    const field = new NameField(c.manager);
+    field.set(`  ${"x".repeat(NAME_MAX_LENGTH + 5)}  `);
+    field.destroy();
+    vi.advanceTimersByTime(500);
+    expect(c.room.sent).toEqual([{ type: "SET_NAME", payload: "x".repeat(NAME_MAX_LENGTH) }]);
+  });
+
+  it("sends nothing on destroy when no rename is pending", () => {
+    const c = connectedClient({ stateClass: BaseGameState });
+    const field = new NameField(c.manager);
+    field.destroy();
+    vi.advanceTimersByTime(500);
+    expect(c.room.sent).toEqual([]);
+  });
+
+  it("sends the pending name once when destroyed twice", () => {
     const c = connectedClient({ stateClass: BaseGameState });
     const field = new NameField(c.manager);
     field.set("Bo");
     field.destroy();
+    field.destroy();
     vi.advanceTimersByTime(500);
-    expect(c.room.sent).toEqual([]);
+    expect(c.room.sent).toEqual([{ type: "SET_NAME", payload: "Bo" }]);
   });
 
   it("waits for a custom pause", () => {

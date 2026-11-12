@@ -56,10 +56,6 @@ export class CategoryVoteViewModel {
     return this.clock.secondsLeft;
   }
 
-  get isUrgent(): boolean {
-    return this.clock.isUrgent;
-  }
-
   get announcement(): string {
     return this.clock.announcement;
   }
@@ -70,9 +66,5 @@ export class CategoryVoteViewModel {
 
   async vote(categoryId: string): Promise<void> {
     await this.manager.sendAction(ACTION.VOTE_CATEGORY, { categoryId });
-  }
-
-  destroy(): void {
-    this.clock.destroy();
   }
 }

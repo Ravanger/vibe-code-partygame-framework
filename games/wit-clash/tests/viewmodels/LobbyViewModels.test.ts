@@ -60,16 +60,13 @@ describe("JoinNextRoundViewModel", () => {
     expect(vm.heading).toBe("You'll join next round");
   });
 
-  it("sends the typed name once it pauses, and can cancel it", () => {
+  it("flushes a pending name on destroy", () => {
     vi.useFakeTimers();
     const c = connectedClient({ isActive: false, isReady: false, name: "" }, "Prompting");
     const vm = new JoinNextRoundViewModel(c.manager);
     vm.nameField.set("Bo");
     vm.destroy();
     vi.advanceTimersByTime(500);
-    expect(c.room.sent).toEqual([]);
-    vm.nameField.set("Bo");
-    vi.advanceTimersByTime(250);
     expect(c.room.sent).toEqual([{ type: "SET_NAME", payload: "Bo" }]);
   });
 

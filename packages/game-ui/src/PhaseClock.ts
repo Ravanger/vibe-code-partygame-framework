@@ -36,12 +36,4 @@ export class PhaseClock {
   get totalSeconds(): number {
     return this.readTotalSeconds();
   }
-
-  /**
-   * No-op kept for compatibility.
-   * @deprecated The countdown now starts and stops with its readers; this no longer does anything.
-   */
-  destroy(): void {
-    this.countdown.destroy();
-  }
 }

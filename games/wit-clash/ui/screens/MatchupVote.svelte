@@ -8,8 +8,6 @@ import { MatchupVoteViewModel } from "../viewmodels/MatchupVoteViewModel.js";
 const { manager }: { manager: WitClashManager } = $props();
 
 const vm = untrack(() => new MatchupVoteViewModel(manager));
-
-$effect(() => () => vm.destroy());
 </script>
 
 <div class="matchup-vote">
