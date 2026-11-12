@@ -208,3 +208,15 @@ Locally the pre-commit hook runs the same check on staged files. To commit an in
 ## Maintainer: a change that needs no test
 
 `gates` also fails a PR that changes `packages/*/src/` or `games/*/src/` without changing a `*.test.ts` in the same package or game (`d.ts` files, pure renames and removals are exempt). For a change with nothing to test, such as a comment or type-only edit, a maintainer adds the `no-test-needed` label. It overrides only this rule; `gate-change` does not. The pre-commit hook skips this rule, so tests can be committed separately. Create the label once in the repository settings.
+
+## Knip configuration hints on headless games
+
+`bun run check:unused` matches every game against one `games/*` workspace block in `knip.json`, which lists the entry and project patterns of a full game (`server.ts`, `launch.ts`, `bots/cli.ts`, `terminal/*.ts`, `ui/**`, `bots/**`, `**/*.svelte`). A game that lacks some of those files prints one line per pattern that matches nothing, under "Configuration hints":
+
+```text
+Refine entry pattern (no matches)
+Refine project pattern (no matches)
+Extension in project not registered as a compiler   (for **/*.svelte, when the game has no Svelte files)
+```
+
+The hints are expected noise: they never fail the gate — `unused` fails only on genuinely unused files, exports and dependencies. Knip has no way to mark a pattern optional per game; silencing them means editing `knip.json` (a per-game workspace block with just the patterns that match) or adding the global `--no-config-hints` flag to the gate script — both are gate config that needs the `gate-change` label (see "Maintainer: changing a gate"). Until then, ignore the lines when the rest of the run is clean.
