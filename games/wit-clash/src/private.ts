@@ -1,4 +1,5 @@
 import type { GameContext, PhaseDefinition } from "@partygame/core";
+import { RosterLedger } from "@partygame/core";
 import type { AnswerRecord } from "./bestAnswers.js";
 import type { CategoryRepository } from "./content/CategoryRepository.js";
 import type { WitClashOptions } from "./options.js";
@@ -12,8 +13,7 @@ export type WitClashPhase = PhaseDefinition<WitClashState, WitClashPrivate, WitC
 /** Server-only game state: content, authorship, drafts, votes and scores. Everything is keyed by playerId. */
 export class WitClashPrivate {
   scores: Record<string, number> = {};
-  names: Record<string, string> = {};
-  participants = new Set<string>();
+  roster = new RosterLedger();
   usedPromptIds = new Set<string>();
   categoryId = "";
   /** The UTC date (`YYYY-MM-DD`) a daily game started on; empty outside daily mode. */
@@ -56,8 +56,7 @@ export class WitClashPrivate {
     this.clearRound();
     this.honorVotes.clear();
     this.scores = {};
-    this.names = {};
-    this.participants.clear();
+    this.roster.clear();
     this.usedPromptIds.clear();
     this.answerHistory = [];
     this.tieBreakerWinnerId = "";

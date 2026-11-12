@@ -1,11 +1,12 @@
-import { required } from "@partygame/core";
+import { endIfBelowMinimum, ensureMine } from "@partygame/core";
 import { countVoted, leaders, tallyVotes } from "@partygame/core/kits";
 import { ErrorCode } from "@partygame/shared";
 import { ACTION, defineAction, VoteHonorSchema } from "../actions.js";
 import { seatedActiveIds } from "../eligibility.js";
+import { META } from "../meta.js";
 import { PHASE } from "../phaseNames.js";
 import type { WitClashContext, WitClashPhase } from "../private.js";
-import { Round } from "../round.js";
+import { newPlayerPrivate, Round, TOO_FEW_PLAYERS_NOTICE } from "../round.js";
 import type { WitClashState } from "../state.js";
 
 /** The unique authors of the best answers, in order — the candidates. */
@@ -36,11 +37,12 @@ const tallyVoterIds = (ctx: WitClashContext): string[] => {
 const sync = (ctx: WitClashContext): void => {
   const { state, priv } = ctx;
   const candidates = candidatesOf(state);
-  const round = new Round(ctx);
   const active = new Set(ctx.activePlayers().map((p) => p.id));
   for (const player of ctx.players()) {
     if (!active.has(player.id) && !state.mine.has(player.id)) continue;
-    round.mineOf(player.id).canVote = candidates.some((c) => c !== player.id);
+    ensureMine(ctx, state.mine, player.id, newPlayerPrivate).canVote = candidates.some(
+      (c) => c !== player.id,
+    );
   }
   const voters = voterIds(ctx);
   state.votesExpected = voters.length;
@@ -53,7 +55,7 @@ const finish = (ctx: WitClashContext): void => {
   const tally = tallyVotes(tallyVoterIds(ctx), priv.honorVotes);
   state.honorWinnerNames.clear();
   for (const authorId of leaders(tally).ids) {
-    state.honorWinnerNames.push(required(priv.names[authorId], "honor winner name"));
+    state.honorWinnerNames.push(priv.roster.nameOf(ctx, authorId));
   }
   ctx.transition(PHASE.Results);
 };
@@ -74,8 +76,8 @@ export const HonorVote: WitClashPhase = {
   onTimeout: (ctx) => finish(ctx),
   onRosterChange: (ctx) => {
     const round = new Round(ctx);
-    if (round.endIfTooFewPlayers()) return;
-    round.remember();
+    if (endIfBelowMinimum(ctx, META.minPlayers, TOO_FEW_PLAYERS_NOTICE)) return;
+    ctx.priv.roster.remember(ctx);
     round.pruneDeparted();
     sync(ctx);
     done(ctx);
@@ -95,7 +97,7 @@ export const HonorVote: WitClashPhase = {
           return;
         }
         ctx.priv.honorVotes.set(ctx.playerId, authorId);
-        new Round(ctx).mineOf(ctx.playerId).honorVote = authorId;
+        ensureMine(ctx, ctx.state.mine, ctx.playerId, newPlayerPrivate).honorVote = authorId;
         sync(ctx);
         done(ctx);
       },

@@ -1,9 +1,9 @@
-import { awardPoints, required, shuffle } from "@partygame/core";
+import { awardPoints, ensureMine, required, shuffle } from "@partygame/core";
 import { countVoted, entriesFor, tallyVotes } from "@partygame/core/kits";
 import { seatedActiveIds } from "./eligibility.js";
 import { PHASE } from "./phaseNames.js";
 import type { WitClashContext } from "./private.js";
-import { Round } from "./round.js";
+import { newPlayerPrivate, Round } from "./round.js";
 import { Answer, Matchup, PromptAssignment } from "./state.js";
 import {
   pickTieBreakerPrompt,
@@ -58,7 +58,7 @@ export class TieBreakerFlow {
     const { state, priv } = this.ctx;
     const plan = required(priv.tieBreakerPlan, "tie-breaker plan");
     priv.tieBreakerPlan = undefined;
-    this.round.remember();
+    this.ctx.priv.roster.remember(this.ctx);
     const contenders = plan.contenderIds.filter((id) => this.ctx.player(id));
     state.tieBreakerContenders.clear();
     for (const id of contenders) state.tieBreakerContenders.push(id);
@@ -85,14 +85,15 @@ export class TieBreakerFlow {
       entry.isOwnMatchup = false;
       entry.ownAnswerId = "";
     }
-    for (const player of this.ctx.activePlayers()) this.round.mineOf(player.id);
+    for (const player of this.ctx.activePlayers())
+      ensureMine(this.ctx, state.mine, player.id, newPlayerPrivate);
     for (const id of contenders) {
       priv.assignments.set(id, [matchup.id]);
       state.progress.set(id, 0);
       const assignment = new PromptAssignment();
       assignment.matchupId = matchup.id;
       assignment.promptText = matchup.promptText;
-      this.round.mineOf(id).prompts.push(assignment);
+      ensureMine(this.ctx, state.mine, id, newPlayerPrivate).prompts.push(assignment);
     }
   }
 
@@ -144,7 +145,7 @@ export class TieBreakerFlow {
     const active = new Set(this.ctx.activePlayers().map((p) => p.id));
     for (const player of this.ctx.players()) {
       if (!active.has(player.id) && !state.mine.has(player.id)) continue;
-      const mine = this.round.mineOf(player.id);
+      const mine = ensureMine(this.ctx, state.mine, player.id, newPlayerPrivate);
       mine.canVote = eligible.includes(player.id);
       mine.isOwnMatchup = state.tieBreakerContenders.includes(player.id);
       mine.ownAnswerId = answers.find((a) => this.round.authorOf(a.id) === player.id)?.id ?? "";
@@ -164,12 +165,12 @@ export class TieBreakerFlow {
       answer.votes = tally.get(answer.id) ?? 0;
       answer.authorId = this.round.authorOf(answer.id);
     }
-    this.round.remember();
+    this.ctx.priv.roster.remember(this.ctx);
     matchup.isRevealed = true;
     state.votesCast = [...tally.values()].reduce((n, v) => n + v, 0);
     const result = resolveTieBreaker([...matchup.answers]);
     for (const answer of matchup.answers) {
-      answer.authorName = required(priv.names[answer.authorId], "author name");
+      answer.authorName = priv.roster.nameOf(this.ctx, answer.authorId);
       answer.isWinner = answer.authorId === result.winnerId;
     }
     if (result.winnerId !== undefined) this.win(result.winnerId);

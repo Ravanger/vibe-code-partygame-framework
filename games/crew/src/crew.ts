@@ -1,4 +1,4 @@
-import { departedIds, isBelowMinimum, required, shuffle } from "@partygame/core";
+import { ensureMine, pruneMine, required, resetMine, shuffle } from "@partygame/core";
 import { allResponded } from "@partygame/core/kits";
 import { META } from "./meta.js";
 import { PHASE } from "./phaseNames.js";
@@ -15,33 +15,12 @@ const MAX_GUESSES = 3;
 
 type Choice = "share" | "hold";
 
+/** The lobby notice when a departure drops the room below its minimum. */
+export const TOO_FEW_PLAYERS_NOTICE = `Fewer than ${META.minPlayers} players were left, so the game ended.`;
+
 /** Writes the shared rules' results into the synced state. One per hook call; holds no state of its own. */
 export class Crew {
   constructor(private readonly ctx: CrewContext) {}
-
-  remember(): void {
-    for (const player of this.ctx.players()) {
-      if (player.name) this.ctx.priv.names[player.id] = player.name;
-      if (player.isActive && player.isReady) this.ctx.priv.participants.add(player.id);
-    }
-  }
-
-  nameOf(playerId: string): string {
-    return this.ctx.player(playerId)?.name ?? this.ctx.priv.names[playerId] ?? "";
-  }
-
-  /** Creates the player's private entry and reveals it to them. */
-  mineOf(playerId: string): PlayerPrivate {
-    const created = new PlayerPrivate();
-    this.ctx.state.mine.set(playerId, created);
-    this.ctx.showTo(playerId, created);
-    return created;
-  }
-
-  resetMine(): void {
-    for (const [playerId, entry] of this.ctx.state.mine) this.ctx.hideFrom(playerId, entry);
-    this.ctx.state.mine.clear();
-  }
 
   /** True when the player's signal is already public (shared in a round or revealed by an earlier departure). */
   private isRevealed(playerId: string): boolean {
@@ -51,23 +30,22 @@ export class Crew {
   /** Drops the data of players who left for good and reveals their signal publicly; a dropped connection is not a departure. */
   pruneDeparted(): void {
     const { state, priv } = this.ctx;
-    const departed = new Set(departedIds([...state.mine.keys(), ...state.roles.keys()], this.ctx));
-    for (const [playerId, entry] of [...state.mine]) {
-      if (!departed.has(playerId)) continue;
-      this.ctx.hideFrom(playerId, entry);
-      state.mine.delete(playerId);
-    }
+    const departed = pruneMine(this.ctx, state.mine, [...state.mine.keys(), ...state.roles.keys()]);
     for (const playerId of departed) {
       const signal = required(priv.signals[playerId], "leaver's signal");
       if (!this.isRevealed(playerId)) {
         state.reveals.push(
-          Object.assign(new RevealEntry(), { playerId, name: this.nameOf(playerId), signal }),
+          Object.assign(new RevealEntry(), {
+            playerId,
+            name: priv.roster.nameOf(this.ctx, playerId),
+            signal,
+          }),
         );
       }
+      priv.roster.drop(playerId);
       delete priv.signals[playerId];
       state.roles.delete(playerId);
       priv.responses.delete(playerId);
-      priv.participants.delete(playerId);
       for (let i = state.choices.length - 1; i >= 0; --i) {
         if (state.choices[i]?.playerId === playerId) state.choices.splice(i, 1);
       }
@@ -78,7 +56,7 @@ export class Crew {
   deal(): void {
     const { state, priv } = this.ctx;
     state.totalRounds = this.ctx.options.rounds;
-    const ids = [...priv.participants];
+    const ids = priv.roster.participantIds;
     const roles = shuffle([...ROLES], this.ctx.rng);
     let target = 0;
     for (let i = 0; i < ids.length; ++i) {
@@ -87,7 +65,7 @@ export class Crew {
       priv.signals[id] = signal;
       target += signal;
       state.roles.set(id, required(roles[i], "dealt role"));
-      this.mineOf(id).signal = signal;
+      ensureMine(this.ctx, state.mine, id, () => new PlayerPrivate()).signal = signal;
     }
     priv.target = target;
   }
@@ -110,12 +88,20 @@ export class Crew {
     const { state, priv } = this.ctx;
     priv.responses.set(playerId, new Map([[CHOICE_SLOT, choice]]));
     state.choices.push(
-      Object.assign(new ChoiceEntry(), { playerId, name: this.nameOf(playerId), choice }),
+      Object.assign(new ChoiceEntry(), {
+        playerId,
+        name: priv.roster.nameOf(this.ctx, playerId),
+        choice,
+      }),
     );
     if (choice === "share") {
       const signal = required(priv.signals[playerId], "player's signal");
       state.reveals.push(
-        Object.assign(new RevealEntry(), { playerId, name: this.nameOf(playerId), signal }),
+        Object.assign(new RevealEntry(), {
+          playerId,
+          name: priv.roster.nameOf(this.ctx, playerId),
+          signal,
+        }),
       );
     }
   }
@@ -132,7 +118,12 @@ export class Crew {
     const { state, priv } = this.ctx;
     const correct = value === priv.target;
     state.guesses.push(
-      Object.assign(new GuessEntry(), { playerId, name: this.nameOf(playerId), value, correct }),
+      Object.assign(new GuessEntry(), {
+        playerId,
+        name: priv.roster.nameOf(this.ctx, playerId),
+        value,
+        correct,
+      }),
     );
     if (correct) this.finishGame(true);
     else if (state.guesses.length >= MAX_GUESSES) this.finishGame(false);
@@ -146,25 +137,22 @@ export class Crew {
     for (const [playerId, signal] of Object.entries(priv.signals)) {
       if (this.isRevealed(playerId)) continue;
       state.reveals.push(
-        Object.assign(new RevealEntry(), { playerId, name: this.nameOf(playerId), signal }),
+        Object.assign(new RevealEntry(), {
+          playerId,
+          name: priv.roster.nameOf(this.ctx, playerId),
+          signal,
+        }),
       );
     }
-    this.resetMine();
+    resetMine(this.ctx, state.mine);
     this.ctx.transition(PHASE.Results);
-  }
-
-  endIfTooFewPlayers(): boolean {
-    if (!isBelowMinimum(this.ctx, META.minPlayers)) return false;
-    this.ctx.state.notice = `Fewer than ${META.minPlayers} players were left, so the game ended.`;
-    this.ctx.returnToLobby();
-    return true;
   }
 
   /** Clears everything for a fresh game after returning to the lobby. */
   clearGame(): void {
     const { state } = this.ctx;
     this.ctx.priv.clearGame();
-    this.resetMine();
+    resetMine(this.ctx, state.mine);
     state.round = 0;
     state.totalRounds = this.ctx.options.rounds;
     state.roles.clear();

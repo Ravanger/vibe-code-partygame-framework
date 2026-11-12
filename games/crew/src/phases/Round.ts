@@ -1,6 +1,8 @@
+import { endIfBelowMinimum } from "@partygame/core";
 import { ErrorCode } from "@partygame/shared";
 import { ACTION, defineAction, NoPayloadSchema } from "../actions.js";
-import { Crew } from "../crew.js";
+import { Crew, TOO_FEW_PLAYERS_NOTICE } from "../crew.js";
+import { META } from "../meta.js";
 import type { CrewPhase } from "../private.js";
 
 const DURATION = 20_000;
@@ -8,9 +10,8 @@ const DURATION = 20_000;
 export const Round: CrewPhase = {
   duration: DURATION,
   onEnter: (ctx) => {
-    const crew = new Crew(ctx);
-    crew.remember();
-    if (ctx.state.round === 0) crew.deal();
+    ctx.priv.roster.remember(ctx);
+    if (ctx.state.round === 0) new Crew(ctx).deal();
     ++ctx.state.round;
     ctx.priv.clearRound();
     ctx.state.choices.clear();
@@ -19,7 +20,7 @@ export const Round: CrewPhase = {
   onRosterChange: (ctx) => {
     const crew = new Crew(ctx);
     crew.pruneDeparted();
-    if (crew.endIfTooFewPlayers()) return;
+    if (endIfBelowMinimum(ctx, META.minPlayers, TOO_FEW_PLAYERS_NOTICE)) return;
     if (crew.roundComplete()) crew.advance();
   },
   actions: {

@@ -122,11 +122,11 @@ describe("Round (choices)", () => {
     const t = Table.started();
     t.joinLate("p5");
     expect(t.state.roles.size).toBe(4);
-    expect(t.priv.participants.has("p5")).toBe(false);
+    expect(t.priv.roster.participantIds).not.toContain("p5");
     for (const id of ["p1", "p2", "p3", "p4"]) t.share(id);
     expect(t.phase).toBe("Round");
     expect(t.state.round).toBe(2);
-    expect(t.priv.participants.has("p5")).toBe(false);
+    expect(t.priv.roster.participantIds).not.toContain("p5");
   });
 
   it("shows an empty name for a player who never chose one", () => {

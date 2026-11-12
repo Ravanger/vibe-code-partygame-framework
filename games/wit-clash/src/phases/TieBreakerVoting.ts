@@ -1,8 +1,10 @@
+import { endIfBelowMinimum, ensureMine } from "@partygame/core";
 import { ErrorCode } from "@partygame/shared";
 import { ACTION, CastVoteSchema, defineAction } from "../actions.js";
+import { META } from "../meta.js";
 import { PHASE } from "../phaseNames.js";
 import type { WitClashContext, WitClashPhase } from "../private.js";
-import { Round } from "../round.js";
+import { newPlayerPrivate, Round, TOO_FEW_PLAYERS_NOTICE } from "../round.js";
 import { TieBreakerFlow } from "../tieBreakerFlow.js";
 
 const revealWhenDone = (ctx: WitClashContext): void => {
@@ -18,8 +20,8 @@ export const TieBreakerVoting: WitClashPhase = {
   onTimeout: (ctx) => ctx.transition(PHASE.TieBreakerReveal),
   onRosterChange: (ctx) => {
     const round = new Round(ctx);
-    if (round.endIfTooFewPlayers()) return;
-    round.remember();
+    if (endIfBelowMinimum(ctx, META.minPlayers, TOO_FEW_PLAYERS_NOTICE)) return;
+    ctx.priv.roster.remember(ctx);
     round.pruneDeparted();
     const flow = new TieBreakerFlow(ctx);
     if (flow.dropDeparted() || flow.endIfNoVoters()) return;
@@ -32,7 +34,6 @@ export const TieBreakerVoting: WitClashPhase = {
       payload: CastVoteSchema,
       handler: (ctx) => {
         const flow = new TieBreakerFlow(ctx);
-        const round = new Round(ctx);
         const answer = flow.current().answers.find((a) => a.id === ctx.payload.answerId);
         if (!answer) {
           ctx.reject(ErrorCode.INVALID_ACTION, "That answer is not up for a vote");
@@ -43,7 +44,7 @@ export const TieBreakerVoting: WitClashPhase = {
           return;
         }
         ctx.priv.matchupVotes.set(ctx.playerId, answer.id);
-        round.mineOf(ctx.playerId).matchupVote = answer.id;
+        ensureMine(ctx, ctx.state.mine, ctx.playerId, newPlayerPrivate).matchupVote = answer.id;
         flow.syncVoting();
         revealWhenDone(ctx);
       },

@@ -1,8 +1,9 @@
+import { ensureMine } from "@partygame/core";
 import { allResponded } from "@partygame/core/kits";
 import { ErrorCode } from "@partygame/shared";
 import { ACTION, defineAction, SetTypingSchema, SubmitAnswerSchema } from "../actions.js";
 import type { WitClashContext, WitClashPhase } from "../private.js";
-import { Round } from "../round.js";
+import { newPlayerPrivate } from "../round.js";
 
 export const answersComplete = (ctx: WitClashContext): boolean =>
   allResponded(
@@ -36,9 +37,8 @@ export function answeringActions(
           times.set(matchupId, Math.max(0, ctx.now() - startedAt)),
         );
         ctx.state.progress.set(ctx.playerId, drafts.size);
-        const prompt = new Round(ctx)
-          .mineOf(ctx.playerId)
-          .prompts.find((p) => p.matchupId === matchupId);
+        const mine = ensureMine(ctx, ctx.state.mine, ctx.playerId, newPlayerPrivate);
+        const prompt = mine.prompts.find((p) => p.matchupId === matchupId);
         if (prompt) prompt.submitted = true;
         if (drafts.size >= assigned.length) ctx.state.typing.delete(ctx.playerId);
         if (answersComplete(ctx)) finish(ctx);

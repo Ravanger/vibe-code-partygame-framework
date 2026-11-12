@@ -1,11 +1,12 @@
-import { departedIds, required, shuffle } from "@partygame/core";
+import { departedIds, endIfBelowMinimum, ensureMine, required, shuffle } from "@partygame/core";
 import { drawPool, entriesFor } from "@partygame/core/kits";
 import { dailyRng } from "../dailySeed.js";
 import { classifyMatchup } from "../drafts.js";
 import { buildMatchups } from "../matchups.js";
+import { META } from "../meta.js";
 import { PHASE } from "../phaseNames.js";
 import type { WitClashContext, WitClashPhase } from "../private.js";
-import { PLACEHOLDER_TEXT, Round } from "../round.js";
+import { newPlayerPrivate, PLACEHOLDER_TEXT, Round, TOO_FEW_PLAYERS_NOTICE } from "../round.js";
 import { Answer, Matchup, PromptAssignment } from "../state.js";
 import { TieBreakerFlow } from "../tieBreakerFlow.js";
 import { answeringActions, answersComplete } from "./answering.js";
@@ -40,8 +41,7 @@ const finish = (ctx: WitClashContext): void => {
 
 const deal = (ctx: WitClashContext): void => {
   const { state, priv } = ctx;
-  const round = new Round(ctx);
-  round.remember();
+  ctx.priv.roster.remember(ctx);
   const players = ctx.activePlayers();
   const repository = ctx.options.mode === "daily" ? priv.canon : priv.content;
   const category = required(repository.byId(priv.categoryId), "selected category");
@@ -74,7 +74,7 @@ const deal = (ctx: WitClashContext): void => {
     const matchupIds = required(priv.assignments.get(player.id), "assignments");
     state.progress.set(player.id, 0);
     state.answersPerPlayer = Math.max(state.answersPerPlayer, matchupIds.length);
-    const mine = round.mineOf(player.id);
+    const mine = ensureMine(ctx, state.mine, player.id, newPlayerPrivate);
     for (const matchupId of matchupIds) {
       const assignment = new PromptAssignment();
       assignment.matchupId = matchupId;
@@ -91,8 +91,8 @@ export const Prompting: WitClashPhase = {
   onTimeout: finish,
   onRosterChange: (ctx) => {
     const round = new Round(ctx);
-    if (round.endIfTooFewPlayers()) return;
-    round.remember();
+    if (endIfBelowMinimum(ctx, META.minPlayers, TOO_FEW_PLAYERS_NOTICE)) return;
+    ctx.priv.roster.remember(ctx);
     for (const playerId of departedIds(ctx.priv.assignments.keys(), ctx)) {
       ctx.priv.assignments.delete(playerId);
       ctx.priv.drafts.delete(playerId);

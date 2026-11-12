@@ -1,4 +1,5 @@
 import type { GameContext, PhaseDefinition } from "@partygame/core";
+import { RosterLedger } from "@partygame/core";
 import type { PromptRepository } from "./content/PromptRepository.js";
 import type { BluffOptions } from "./options.js";
 import type { BluffState } from "./state.js";
@@ -12,8 +13,7 @@ export const FAKE_SLOT = "fake";
 /** Server-only game state: content, fakes, option authorship and votes. Everything is keyed by playerId. */
 export class BluffPrivate {
   scores: Record<string, number> = {};
-  names: Record<string, string> = {};
-  participants = new Set<string>();
+  roster = new RosterLedger();
   usedPromptIds = new Set<string>();
   currentPromptId = "";
   fakes = new Map<string, Map<string, string>>();
@@ -36,8 +36,7 @@ export class BluffPrivate {
   clearGame(): void {
     this.clearRound();
     this.scores = {};
-    this.names = {};
-    this.participants.clear();
+    this.roster.clear();
     this.usedPromptIds.clear();
   }
 }

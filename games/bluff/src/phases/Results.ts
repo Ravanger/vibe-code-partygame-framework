@@ -1,13 +1,14 @@
+import { endIfBelowMinimum } from "@partygame/core";
 import { ACTION, defineAction, NoPayloadSchema } from "../actions.js";
+import { META } from "../meta.js";
 import type { BluffPhase } from "../private.js";
-import { Round } from "../round.js";
+import { Round, TOO_FEW_PLAYERS_NOTICE } from "../round.js";
 
 export const Results: BluffPhase = {
   onEnter: (ctx) => new Round(ctx).writeScoreboard(),
   onRosterChange: (ctx) => {
-    const round = new Round(ctx);
-    round.pruneDeparted();
-    if (round.endIfTooFewPlayers()) return;
+    new Round(ctx).pruneDeparted();
+    endIfBelowMinimum(ctx, META.minPlayers, TOO_FEW_PLAYERS_NOTICE);
   },
   actions: {
     [ACTION.PLAY_AGAIN]: defineAction({
