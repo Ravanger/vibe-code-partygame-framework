@@ -1,0 +1,30 @@
+{
+  "id": "geography",
+  "prompts": [
+    {
+      "id": "most-time-zones",
+      "question": "Which country spans the most time zones, counting overseas territories?",
+      "truth": "France"
+    },
+    {
+      "id": "un-languages",
+      "question": "How many official languages does the United Nations have?",
+      "truth": "six"
+    },
+    {
+      "id": "most-lakes",
+      "question": "Which country has more natural lakes than all other countries combined?",
+      "truth": "Canada"
+    },
+    {
+      "id": "one-syllable-state",
+      "question": "Which US state is the only one with a single syllable?",
+      "truth": "Maine"
+    },
+    {
+      "id": "deepest-lake",
+      "question": "Which country is home to the world's deepest lake?",
+      "truth": "Russia"
+    }
+  ]
+}

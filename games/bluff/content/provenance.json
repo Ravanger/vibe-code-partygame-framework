@@ -1,3 +1,8 @@
 {
-  "prompts.jsonc": "original"
+  "prompts/README.md": "original",
+  "prompts/animals.jsonc": "original",
+  "prompts/geography.jsonc": "original",
+  "prompts/history.jsonc": "original",
+  "prompts/plants.jsonc": "original",
+  "prompts/surprises.jsonc": "original"
 }

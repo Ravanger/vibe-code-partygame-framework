@@ -1,3 +1,4 @@
+import { createTextFilter } from "@partygame/content/filter";
 import { defineGamePackage } from "@partygame/game-kit";
 import { bluffKit } from "./bots/bluffBot.js";
 import { createBluffGame } from "./src/game.js";
@@ -13,6 +14,7 @@ export const gamePackage = defineGamePackage({
   displayName: "Bluff",
   load: (env) => loadContent(contentDir(env, import.meta.url)),
   definition: (prompts) => createBluffGame({ prompts }),
+  textFilter: createTextFilter(),
   stateClass: BluffState,
   publicFields: BLUFF_PUBLIC_FIELDS,
   isFinished: isGameOver,

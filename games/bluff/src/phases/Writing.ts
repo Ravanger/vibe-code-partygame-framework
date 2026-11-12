@@ -21,6 +21,7 @@ export const Writing: BluffPhase = {
     [ACTION.SUBMIT_FAKE]: defineAction({
       from: "player",
       payload: SubmitFakeSchema,
+      textFields: ["text"],
       handler: (ctx) => {
         if (ctx.priv.fakes.has(ctx.playerId)) {
           ctx.reject(ErrorCode.NOT_ALLOWED, "You already submitted your answer");

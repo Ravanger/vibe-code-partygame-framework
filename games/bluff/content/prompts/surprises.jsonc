@@ -1,0 +1,25 @@
+{
+  "id": "surprises",
+  "prompts": [
+    {
+      "id": "baby-bones",
+      "question": "Roughly how many bones does a newborn baby have?",
+      "truth": "about 300"
+    },
+    {
+      "id": "fastest-checkmate",
+      "question": "What is the fastest possible checkmate in chess?",
+      "truth": "two moves (Fool's mate)"
+    },
+    {
+      "id": "coffee-champion",
+      "question": "Which country drinks the most coffee per person?",
+      "truth": "Finland"
+    },
+    {
+      "id": "alphabetical-word",
+      "question": "Which common English word has its letters in alphabetical order?",
+      "truth": "forty"
+    }
+  ]
+}

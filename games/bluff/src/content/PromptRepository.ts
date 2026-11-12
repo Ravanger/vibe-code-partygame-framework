@@ -1,4 +1,4 @@
-import { loadJsoncFile } from "@partygame/content";
+import { loadJsoncDirWithFiles } from "@partygame/content";
 import { z } from "zod";
 
 const PromptSchema = z.object({
@@ -9,7 +9,8 @@ const PromptSchema = z.object({
 
 export type Prompt = z.infer<typeof PromptSchema>;
 
-const PromptsFileSchema = z.object({
+const PromptPackSchema = z.object({
+  id: z.string().regex(/^[a-z0-9-]+$/, "id must be lowercase kebab-case"),
   prompts: z.array(PromptSchema).min(1, "prompts must not be empty"),
 });
 
@@ -32,15 +33,25 @@ export function promptsFromArray(prompts: Prompt[]): PromptRepository {
 
 /**
  * Server-side only: touches node:fs. Clients receive the prompt through synced room state.
- * Reads one JSONC file shaped `{ "prompts": [...] }`; a missing file, invalid JSON, a schema
- * failure or a duplicate id throws.
+ * Reads the directory's `.jsonc` pack files, each shaped `{ "id", "prompts": [...] }`; a missing
+ * directory, invalid JSON, a schema failure, a duplicate pack id or a duplicate prompt id throws.
  */
-export async function loadPrompts(file: string): Promise<PromptRepository> {
-  const data = await loadJsoncFile(file, PromptsFileSchema, { label: "Prompt" });
-  const seen = new Set<string>();
-  for (const prompt of data.prompts) {
-    if (seen.has(prompt.id)) throw new Error(`Duplicate Prompt id "${prompt.id}" in ${file}`);
-    seen.add(prompt.id);
+export async function loadPrompts(dir: string): Promise<PromptRepository> {
+  const packs = await loadJsoncDirWithFiles(dir, PromptPackSchema, {
+    idOf: (pack) => pack.id,
+    label: "Prompt",
+  });
+  const seenIn = new Map<string, string>();
+  for (const pack of packs) {
+    for (const prompt of pack.value.prompts) {
+      const earlier = seenIn.get(prompt.id);
+      if (earlier !== undefined) {
+        throw new Error(
+          `Duplicate Prompt id "${prompt.id}" in ${pack.file}; already used in ${earlier}`,
+        );
+      }
+      seenIn.set(prompt.id, pack.file);
+    }
   }
-  return new PromptRepository(data.prompts);
+  return new PromptRepository(packs.flatMap((pack) => pack.value.prompts));
 }
