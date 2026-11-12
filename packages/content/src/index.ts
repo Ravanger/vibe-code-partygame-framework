@@ -1,7 +1,17 @@
 import type { Dirent } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { prettifyError, type z } from "zod";
+
+/** The content directory of a game entry: `override` when set (an empty string counts as set, `??` semantics), else the absolute folder `relative` next to `entryUrl` (the entry file's `import.meta.url`). */
+export function contentDirFrom(
+  override: string | undefined,
+  entryUrl: string,
+  relative: string,
+): string {
+  return override ?? fileURLToPath(new URL(relative, entryUrl));
+}
 
 /**
  * Remove // and /* *\/ comments from JSON text WITHOUT touching comment-like

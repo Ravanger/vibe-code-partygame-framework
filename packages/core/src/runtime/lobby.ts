@@ -9,6 +9,7 @@ import {
   START_GAME,
 } from "@partygame/shared";
 import { z } from "zod";
+import { EmptyPayloadSchema } from "../actions.js";
 import { type CoreStrings, mergeCoreStrings } from "./strings.js";
 import type {
   ActionDefinition,
@@ -78,7 +79,7 @@ export class Lobby<TState extends PhaseState, TPrivate, TOptions> {
     const { definition } = this.bindings;
     return {
       from: "host",
-      payload: z.object({}),
+      payload: EmptyPayloadSchema,
       handler: (ctx) => {
         if (ctx.phase === LOBBY_PHASE) {
           throw new FrameworkError(ErrorCode.WRONG_PHASE, this.strings.endGameInLobby);
@@ -93,7 +94,7 @@ export class Lobby<TState extends PhaseState, TPrivate, TOptions> {
     const { definition } = this.bindings;
     return {
       from: "host",
-      payload: z.object({}),
+      payload: EmptyPayloadSchema,
       handler: (ctx) => {
         if (!this.canStart(ctx)) {
           throw new FrameworkError(

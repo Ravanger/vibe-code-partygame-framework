@@ -1,12 +1,12 @@
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { contentDirFrom } from "@partygame/content";
 import { loadPrompts, type PromptRepository } from "./content/PromptRepository.js";
 
 export const MIN_PROMPTS = 6;
 
 /** `BLUFF_CONTENT_DIR`, or `content` next to `entryUrl` (the entry file's `import.meta.url`). */
 export function contentDir(env: Record<string, string | undefined>, entryUrl: string): string {
-  return env.BLUFF_CONTENT_DIR ?? fileURLToPath(new URL("./content", entryUrl));
+  return contentDirFrom(env.BLUFF_CONTENT_DIR, entryUrl, "./content");
 }
 
 /** Loads `prompts.jsonc` from the content dir and refuses to start with fewer than {@link MIN_PROMPTS}. */

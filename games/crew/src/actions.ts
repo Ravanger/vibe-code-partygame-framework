@@ -10,5 +10,4 @@ export { ACTION };
 /** Typed action builder: the handler's `payload` is inferred from the zod schema. */
 export const defineAction = actionFactory<CrewState, CrewPrivate, CrewOptions>();
 
-export const NoPayloadSchema = z.object({});
 export const GuessSchema = z.object({ value: z.number().int().min(GUESS_MIN).max(GUESS_MAX) });

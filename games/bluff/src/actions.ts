@@ -10,7 +10,6 @@ export { ACTION };
 /** Typed action builder: the handler's `payload` is inferred from the zod schema. */
 export const defineAction = actionFactory<BluffState, BluffPrivate, BluffOptions>();
 
-export const NoPayloadSchema = z.object({});
 export const SubmitFakeSchema = z.object({
   text: z.string().trim().min(1).max(ANSWER_MAX_LENGTH),
 });

@@ -1,4 +1,5 @@
-import { ACTION, defineAction, NoPayloadSchema } from "../actions.js";
+import { EmptyPayloadSchema } from "@partygame/core";
+import { ACTION, defineAction } from "../actions.js";
 import { PHASE } from "../phaseNames.js";
 import type { __PascalName__Phase } from "../private.js";
 
@@ -11,7 +12,7 @@ export const Waving: __PascalName__Phase = {
   actions: {
     [ACTION.WAVE]: defineAction({
       from: "player",
-      payload: NoPayloadSchema,
+      payload: EmptyPayloadSchema,
       handler: (ctx) => {
         const waves = (ctx.state.waves.get(ctx.playerId) ?? 0) + 1;
         ctx.state.waves.set(ctx.playerId, waves);
@@ -20,7 +21,7 @@ export const Waving: __PascalName__Phase = {
     }),
     [ACTION.FINISH]: defineAction({
       from: "host",
-      payload: NoPayloadSchema,
+      payload: EmptyPayloadSchema,
       handler: (ctx) => ctx.transition(PHASE.Results),
     }),
   },

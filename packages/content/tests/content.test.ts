@@ -1,9 +1,15 @@
 import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { loadJsoncDir, loadJsoncDirWithFiles, stripJsonComments } from "../src/index.js";
+import {
+  contentDirFrom,
+  loadJsoncDir,
+  loadJsoncDirWithFiles,
+  stripJsonComments,
+} from "../src/index.js";
 
 describe("stripJsonComments", () => {
   it("removes line comments", () => {
@@ -176,5 +182,20 @@ describe("loadJsoncDirWithFiles", () => {
     await expect(loadJsoncDirWithFiles(dir, Item, byId)).rejects.toThrow(
       'Duplicate Item id "x" in b.json',
     );
+  });
+});
+
+describe("contentDirFrom", () => {
+  it("returns the override when set", () => {
+    expect(contentDirFrom("/somewhere", "file:///game/server.ts", "./content")).toBe("/somewhere");
+  });
+
+  it("resolves the folder next to the entry file when unset", () => {
+    const entry = pathToFileURL(join(tmpdir(), "game", "server.ts")).href;
+    expect(contentDirFrom(undefined, entry, "./content")).toBe(join(tmpdir(), "game", "content"));
+  });
+
+  it("treats an empty-string override as set, keeping ?? semantics", () => {
+    expect(contentDirFrom("", "file:///game/server.ts", "./content")).toBe("");
   });
 });

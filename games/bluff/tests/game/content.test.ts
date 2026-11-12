@@ -19,12 +19,6 @@ const fileText = (prompts: unknown[]) => JSON.stringify({ prompts });
 const writePrompts = (text: string) => writeFile(join(dir, FILE), text);
 
 describe("contentDir", () => {
-  it("prefers BLUFF_CONTENT_DIR", () => {
-    expect(contentDir({ BLUFF_CONTENT_DIR: "/somewhere" }, "file:///game/server.ts")).toBe(
-      "/somewhere",
-    );
-  });
-
   it("defaults to content next to the entry file", () => {
     const entry = pathToFileURL(join(dir, "server.ts")).href;
     expect(contentDir({}, entry)).toBe(join(dir, "content"));

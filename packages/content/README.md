@@ -6,7 +6,7 @@ Content tooling for games: parse commented-JSON (`.json`/`.jsonc`) content folde
 
 | Subpath | What |
 |---|---|
-| `@partygame/content` | `stripJsonComments`, `loadJsoncDir`, `loadJsoncDirWithFiles` |
+| `@partygame/content` | `stripJsonComments`, `loadJsoncDir`, `loadJsoncDirWithFiles`, `contentDirFrom` |
 | `@partygame/content/filter` | `TextFilter`, `FilterLevel`, `FilterResult`, `createTextFilter` |
 
 ```ts
@@ -20,6 +20,7 @@ const items = await loadJsoncDir("./content/items", Item, { idOf: (item) => item
 ```
 
 - `stripJsonComments(input)` removes `//` and `/* */` comments without touching comment-like sequences inside string literals.
+- `contentDirFrom(override, entryUrl, relative)` — a game entry's content directory: the `override` when set (an empty string counts as set, `??` semantics), else the absolute folder `relative` next to `entryUrl` (the entry file's `import.meta.url`).
 - `loadJsoncDir(dir, schema, { idOf, label, onInvalid?, maxFiles?, maxFileBytes? })` (options type `LoadJsoncDirOptions`: how items are identified, labelled and validated) loads every regular `.json`/`.jsonc` file in `dir` (name order; symlinks and subdirectories are ignored), parses it with `schema`, and refuses duplicate ids. A missing directory throws.
 - `loadJsoncDirWithFiles(dir, schema, options)` is the same loader but returns `{ file, value }` per item, so a caller can name the source file in its own errors (e.g. cross-file checks).
 - Fail loudly by default: an unparsable file or a schema failure throws, naming the file (and the failing entry for schema errors). Pass `onInvalid: "skip"` to skip such files with a `console.warn` instead.

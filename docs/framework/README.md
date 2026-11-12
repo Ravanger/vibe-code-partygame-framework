@@ -68,7 +68,9 @@ The envelope is flat and capped at 32 top-level keys (more is `INVALID_ACTION`).
 action name: do not declare it in a payload schema, and `sendAction` refuses to send a payload that carries a
 `type` field. Write payload schemas that keep unknown keys out of your handler: plain `z.object` strips them
 (the default — dispatch parses the whole envelope, so a strict schema would also reject the reserved `type`),
-while `z.looseObject` passes them through and should be avoided.
+while `z.looseObject` passes them through and should be avoided. An action with no fields uses
+`EmptyPayloadSchema` from `@partygame/core` instead of writing `z.object({})`; and to end the game back in
+the lobby, put `playAgainAction()` (host-only, empty payload) in your own end phase under your own action name.
 Every rejection is sent only to the sender as `ERROR { code, message, action }`:
 
 | Code | Cause |
@@ -653,8 +655,7 @@ Log lines are structured: `{ ts, level, event, roomId, ...fields }`, where field
 ## Minimal game: first to press the button
 
 ```ts
-import { actionFactory, defineGame } from "@partygame/core";
-import { z } from "zod";
+import { actionFactory, defineGame, EmptyPayloadSchema } from "@partygame/core";
 
 interface State { phase: string; phaseEndsAt: number; canStart: boolean; winner: string }
 interface Priv { presses: string[] }
@@ -676,7 +677,7 @@ export const ButtonGame = defineGame<State, Priv>({
       actions: {
         PRESS: action({
           from: "player",
-          payload: z.object({}),
+          payload: EmptyPayloadSchema,
           handler: (ctx) => {
             ctx.priv.presses.push(ctx.playerId);
             ctx.state.winner = ctx.priv.presses[0] ?? "";
@@ -1323,7 +1324,7 @@ export { svelteConfig as default } from "@partygame/config/svelte";
 |---|---|
 | `@partygame/shared` | `NAME_MAX_LENGTH`: the cap `SET_NAME` enforces on player names; `MAX_SEATS`: the most playerIds a room's `seats` option may list; `MAX_OPTIONS_JSON_LENGTH`: the cap on serialized options at room creation and in `SET_OPTIONS`; `ROOM_CODE_LENGTH` and `ROOM_CODE_ALPHABET`: the shape of a room code; `sanitizeRoomCode(raw)`: uppercases, drops other characters and cuts to the code length (for a code input); `FRAMEWORK_VERSION`: recorded in exported replay bundles |
 | `@partygame/client-utils` | `Parsed<T>` (`{ ok: true, value } \| { ok: false, error }`) and `between(value, min, max)` for argument parsing; `waitFor(predicate, what, timeoutMs)` poll loop; `resolveRoomCode(apiBase, code)` (rejects with `RoomCodeError`, `reason` `"not-found"` or `"bad-reply"`); `joinUrl(base, code)` / `tvUrl(base, code)` share links; `claimName(room, playerId, name, timeoutMs?)` (type `SeatRoom`), `apiBaseOf(endpoint, apiPort)` |
-| `@partygame/core` | `shuffle(items, rng)`, `required(value, what)`; roster guards: `seatedCount(ctx)` (active and ready seats, counting briefly disconnected ones), `isBelowMinimum(ctx, min)`, `departedIds(ids, ctx)` — they only report; `endIfBelowMinimum(ctx, min, notice)` sets the notice and queues the return to the lobby instead; `RosterLedger` (a private-state ledger: `remember(ctx)`, `nameOf(ctx, id)`, `participantIds`, `rememberedNames`, `drop(id)`, `clear()`); synced per-player entry helpers `ensureMine(ctx, mine, playerId, create)`, `resetMine(ctx, mine)`, `pruneMine(ctx, mine, ids)` |
+| `@partygame/core` | `EmptyPayloadSchema` (the payload of an action with no fields), `playAgainAction()` (host-only return-to-lobby action for a game's own end phase); `shuffle(items, rng)`, `required(value, what)`; roster guards: `seatedCount(ctx)` (active and ready seats, counting briefly disconnected ones), `isBelowMinimum(ctx, min)`, `departedIds(ids, ctx)` — they only report; `endIfBelowMinimum(ctx, min, notice)` sets the notice and queues the return to the lobby instead; `RosterLedger` (a private-state ledger: `remember(ctx)`, `nameOf(ctx, id)`, `participantIds`, `rememberedNames`, `drop(id)`, `clear()`); synced per-player entry helpers `ensureMine(ctx, mine, playerId, create)`, `resetMine(ctx, mine)`, `pruneMine(ctx, mine, ids)` |
 | `@partygame/core/kits` | Phase kits (`@experimental`). collectResponses: `allResponded(slots, responses, presentIds)` (complete when every present author responded to every slot), `entriesFor(slotId, slots, responses)` (one entry per author, `text` undefined when unanswered); types `Slots`, `Responses`. voteAndTally: `tallyVotes(voterIds, votes)`, `allHaveVoted(voterIds, votes)`, `countVoted(voterIds, votes)`, `eligibleVoters(activeIds, excludedIds)` (an empty exclusion list allows self-vote), `leaders(counts)` → `{ top, ids }` (a tie shows up as `ids.length > 1`). drawPool: `drawPool(items, usedIds, needed)` → `{ items, exhausted }` — the unused items when at least `needed` remain, otherwise all items with their ids cleared from the mutable `usedIds` set |
 | `@partygame/server/node` | `startNodeServer({ games, port?, apiPort? })` (a game server and its API in this process; `.stop()`), `serveApi(codes, { port, host? })`: the code API on Node's `http` (the Bun entry serves its own) |
 | `@partygame/server/probe` | `ServerProbe` (`isGameServer(port, apiPort, host?)` — `host` defaults to `localhost` and is used for both the TCP check and the code-API fetch; `canConnect(port)`, `answers(url)`), `freePort()`, `closeHttpServer(server)` (resolves when the server already stopped): port probing without Colyseus |

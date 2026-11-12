@@ -1,6 +1,6 @@
-import { endIfBelowMinimum } from "@partygame/core";
+import { EmptyPayloadSchema, endIfBelowMinimum } from "@partygame/core";
 import { ErrorCode } from "@partygame/shared";
-import { ACTION, defineAction, NoPayloadSchema } from "../actions.js";
+import { ACTION, defineAction } from "../actions.js";
 import { Crew, TOO_FEW_PLAYERS_NOTICE } from "../crew.js";
 import { META } from "../meta.js";
 import type { CrewPhase } from "../private.js";
@@ -26,7 +26,7 @@ export const Round: CrewPhase = {
   actions: {
     [ACTION.SHARE]: defineAction({
       from: "player",
-      payload: NoPayloadSchema,
+      payload: EmptyPayloadSchema,
       handler: (ctx) => {
         if (ctx.priv.responses.has(ctx.playerId)) {
           ctx.reject(ErrorCode.NOT_ALLOWED, "You already chose this round");
@@ -39,7 +39,7 @@ export const Round: CrewPhase = {
     }),
     [ACTION.HOLD]: defineAction({
       from: "player",
-      payload: NoPayloadSchema,
+      payload: EmptyPayloadSchema,
       handler: (ctx) => {
         if (ctx.priv.responses.has(ctx.playerId)) {
           ctx.reject(ErrorCode.NOT_ALLOWED, "You already chose this round");

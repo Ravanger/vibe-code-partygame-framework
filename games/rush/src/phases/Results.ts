@@ -1,4 +1,5 @@
-import { ACTION, defineAction, NoPayloadSchema } from "../actions.js";
+import { playAgainAction } from "@partygame/core";
+import { ACTION } from "../actions.js";
 import type { RushPhase } from "../private.js";
 import { ScoreEntry } from "../state.js";
 
@@ -22,10 +23,6 @@ export const Results: RushPhase = {
     }
   },
   actions: {
-    [ACTION.PLAY_AGAIN]: defineAction({
-      from: "host",
-      payload: NoPayloadSchema,
-      handler: (ctx) => ctx.returnToLobby(),
-    }),
+    [ACTION.PLAY_AGAIN]: playAgainAction(),
   },
 };

@@ -113,6 +113,7 @@
         "symbols": {
           "ContentFile": {},
           "LoadJsoncDirOptions": {},
+          "contentDirFrom": {},
           "loadJsoncDir": {},
           "loadJsoncDirWithFiles": {},
           "stripJsonComments": {}
@@ -154,6 +155,7 @@
           "ContextLogger": {},
           "CoreStrings": {},
           "DuplicateActionLogMiddlewareError": {},
+          "EmptyPayloadSchema": {},
           "GameContext": {},
           "GameDefinition": {},
           "GameDefinitionError": {},
@@ -204,6 +206,7 @@
           "mulberry32": {},
           "newId": {},
           "noopLogger": {},
+          "playAgainAction": {},
           "pruneMine": {},
           "randomSeed": {},
           "required": {},

@@ -1,5 +1,6 @@
+import { EmptyPayloadSchema, playAgainAction } from "@partygame/core";
 import { ErrorCode } from "@partygame/shared";
-import { ACTION, defineAction, NoPayloadSchema } from "../actions.js";
+import { ACTION, defineAction } from "../actions.js";
 import { writeAwards } from "../awards.js";
 import { PHASE } from "../phaseNames.js";
 import type { WitClashPhase } from "../private.js";
@@ -24,7 +25,7 @@ export const Results: WitClashPhase = {
   actions: {
     [ACTION.NEXT_ROUND]: defineAction({
       from: "host",
-      payload: NoPayloadSchema,
+      payload: EmptyPayloadSchema,
       handler: (ctx) => {
         if (ctx.state.isFinalRound) {
           ctx.reject(ErrorCode.NOT_ALLOWED, "That was the final round");
@@ -33,10 +34,6 @@ export const Results: WitClashPhase = {
         ctx.transition(PHASE.CategorySelection);
       },
     }),
-    [ACTION.PLAY_AGAIN]: defineAction({
-      from: "host",
-      payload: NoPayloadSchema,
-      handler: (ctx) => ctx.returnToLobby(),
-    }),
+    [ACTION.PLAY_AGAIN]: playAgainAction(),
   },
 };

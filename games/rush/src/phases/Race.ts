@@ -1,5 +1,5 @@
-import { endIfBelowMinimum } from "@partygame/core";
-import { ACTION, defineAction, NoPayloadSchema } from "../actions.js";
+import { EmptyPayloadSchema, endIfBelowMinimum } from "@partygame/core";
+import { ACTION, defineAction } from "../actions.js";
 import { META } from "../meta.js";
 import { PHASE } from "../phaseNames.js";
 import type { RushPhase } from "../private.js";
@@ -37,7 +37,7 @@ export const Race: RushPhase = {
   actions: {
     [ACTION.TAP]: defineAction({
       from: "player",
-      payload: NoPayloadSchema,
+      payload: EmptyPayloadSchema,
       handler: (ctx) => {
         const taps = ctx.state.taps;
         taps.set(ctx.playerId, (taps.get(ctx.playerId) ?? 0) + 1);

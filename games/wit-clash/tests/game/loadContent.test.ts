@@ -19,12 +19,6 @@ const category = (id: string) =>
   JSON.stringify({ id, name: id, prompts: [{ id: `${id}-1`, text: "Say something." }] });
 
 describe("contentDir", () => {
-  it("prefers WITCLASH_CONTENT_DIR", () => {
-    expect(contentDir({ WITCLASH_CONTENT_DIR: "/somewhere" }, "file:///game/server.ts")).toBe(
-      "/somewhere",
-    );
-  });
-
   it("defaults to content/categories next to the entry file", () => {
     const entry = pathToFileURL(join(dir, "server.ts")).href;
     expect(contentDir({}, entry)).toBe(join(dir, "content", "categories"));

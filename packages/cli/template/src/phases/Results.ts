@@ -1,4 +1,5 @@
-import { ACTION, defineAction, NoPayloadSchema } from "../actions.js";
+import { playAgainAction } from "@partygame/core";
+import { ACTION } from "../actions.js";
 import type { __PascalName__Context, __PascalName__Phase } from "../private.js";
 
 const writeWinner = (ctx: __PascalName__Context): void => {
@@ -18,10 +19,6 @@ const writeWinner = (ctx: __PascalName__Context): void => {
 export const Results: __PascalName__Phase = {
   onEnter: writeWinner,
   actions: {
-    [ACTION.PLAY_AGAIN]: defineAction({
-      from: "host",
-      payload: NoPayloadSchema,
-      handler: (ctx) => ctx.returnToLobby(),
-    }),
+    [ACTION.PLAY_AGAIN]: playAgainAction(),
   },
 };
