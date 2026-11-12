@@ -13,6 +13,7 @@ export { GameClient, type GameRoomOf } from "./GameClient.js";
 export { PlaySession, type PlaySessionOptions, type SessionPlayer } from "./PlaySession.js";
 export { type Prompter, ReadlinePrompter } from "./Prompter.js";
 export {
+  BadBotsArgsError,
   type BotsCommandHandle,
   type BotsCommandOptions,
   runBotsCommand,

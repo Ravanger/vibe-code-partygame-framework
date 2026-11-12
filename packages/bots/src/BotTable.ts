@@ -1,10 +1,9 @@
 import type { RoomConnector } from "@partygame/client-utils";
-import { RoomCodeSchema } from "@partygame/shared";
 import type { BaseGameState } from "@partygame/shared/schema";
 import type { BotPlayer } from "./BotPlayer.js";
-import { ColyseusConnector } from "./ColyseusConnector.js";
+import { defaultConnector } from "./ColyseusConnector.js";
 import { type JoinBotsOptions, joinBots } from "./joinBots.js";
-import { RoomWatch } from "./RoomWatch.js";
+import { captureRoomCode, RoomWatch } from "./RoomWatch.js";
 import type { BotConnection, BotKit, BotRoom } from "./types.js";
 
 /** Connection, bot kit and join options for a {@link BotTable}. */
@@ -23,7 +22,6 @@ export interface SeatBotsOptions {
 }
 
 const DEFAULT_SEAT_TIMEOUT_MS = 120_000;
-const OPEN_TIMEOUT_MS = 5000;
 
 /** Opens an empty room as a spectator, then seats bots once a human has joined and named themselves. */
 export class BotTable<TState extends BaseGameState> {
@@ -34,7 +32,7 @@ export class BotTable<TState extends BaseGameState> {
   constructor(private readonly options: BotTableOptions<TState>) {
     this.connector =
       options.connector ??
-      new ColyseusConnector(options.endpoint, {
+      defaultConnector(options.endpoint, {
         roomName: options.roomName,
         stateClass: options.stateClass,
       });
@@ -47,20 +45,7 @@ export class BotTable<TState extends BaseGameState> {
     const watch = new RoomWatch(room);
     this.seat = { room, watch, code: "" };
     // Capture the code at its first well-formed value; a later read can be malformed.
-    let code = "";
-    await watch.until(
-      () => {
-        const candidate = room.state?.roomCode ?? "";
-        if (RoomCodeSchema.safeParse(candidate).success) {
-          code = candidate;
-          return true;
-        }
-        return false;
-      },
-      OPEN_TIMEOUT_MS,
-      "the room code",
-    );
-    this.seat.code = code;
+    this.seat.code = await captureRoomCode(watch, () => room.state);
     return this.seat.code;
   }
 

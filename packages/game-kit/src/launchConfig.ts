@@ -1,7 +1,21 @@
-import { type BotConnection, DemoTable, type DemoTableOptions } from "@partygame/bots";
+import {
+  type BotConnection,
+  type BotOptions,
+  DemoTable,
+  type DemoTableOptions,
+} from "@partygame/bots";
 import type { LaunchConfig } from "@partygame/launcher";
 import type { BaseGameState } from "@partygame/shared/schema";
 import type { GameDeclaration } from "./types.js";
+
+/** Merges one demo run's bot options: the launcher connection wins over the declaration, which wins over `defaults`. */
+export function demoBotOptions(
+  defaults: BotOptions,
+  declared?: BotOptions,
+  connection?: BotOptions,
+): BotOptions {
+  return { ...defaults, ...declared, ...connection };
+}
 
 /** The `DemoTable` options the launch demo builds for one connection. */
 export function demoTableOptions<TState extends BaseGameState, TContent>(
@@ -18,7 +32,7 @@ export function demoTableOptions<TState extends BaseGameState, TContent>(
     ...(pkg.demo?.roomOptions !== undefined ? { roomOptions: pkg.demo.roomOptions } : {}),
     ...(pkg.demo?.hostName !== undefined ? { hostName: pkg.demo.hostName } : {}),
     ...(connection.bot !== undefined || pkg.demo?.bot !== undefined
-      ? { bot: { ...pkg.demo?.bot, ...connection.bot } }
+      ? { bot: demoBotOptions({}, pkg.demo?.bot, connection.bot) }
       : {}),
   };
 }

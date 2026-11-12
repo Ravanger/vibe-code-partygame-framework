@@ -1,4 +1,7 @@
 import { waitFor } from "@partygame/client-utils";
+import { RoomCodeSchema } from "@partygame/shared";
+import type { BaseGameState } from "@partygame/shared/schema";
+import { OPEN_TIMEOUT_MS } from "./timeouts.js";
 
 const POLL_MS = 20;
 
@@ -28,4 +31,30 @@ export class RoomWatch {
       POLL_MS,
     );
   }
+}
+
+/**
+ * Captures the room code at its first well-formed value — a later read can be malformed after a
+ * decode hiccup — and rejects when the room closes or `timeoutMs` passes.
+ */
+export function captureRoomCode(
+  watch: RoomWatch,
+  stateOf: () => BaseGameState | undefined,
+  timeoutMs = OPEN_TIMEOUT_MS,
+): Promise<string> {
+  let code = "";
+  return watch
+    .until(
+      () => {
+        const candidate = stateOf()?.roomCode ?? "";
+        if (RoomCodeSchema.safeParse(candidate).success) {
+          code = candidate;
+          return true;
+        }
+        return false;
+      },
+      timeoutMs,
+      "the room code",
+    )
+    .then(() => code);
 }

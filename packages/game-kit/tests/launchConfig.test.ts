@@ -1,6 +1,7 @@
 import { DemoTable } from "@partygame/bots";
 import { describe, expect, it } from "vitest";
 import { buildLaunchConfig, demoTableOptions } from "../src/index.js";
+import { demoBotOptions } from "../src/launchConfig.js";
 import { TAP_ROOM, TapGame, TapState, tapKit } from "./fixtures/tapGame.js";
 
 const isFinished = (state: TapState): boolean => state.done;
@@ -119,6 +120,19 @@ describe("demoTableOptions", () => {
   it("throws when no kit resolves", () => {
     expect(() => demoTableOptions(base, { endpoint: "ws://x", apiPort: 1, bots: 2 })).toThrowError(
       /no bot kit/,
+    );
+  });
+
+  it("resolves demo bot options identically in demoCli and the launcher", () => {
+    const log = (line: string) => line;
+    const declared = { thinkMs: [1, 2] as const, reactMs: [3, 4] as const };
+    // The expression demoCli passes to DemoRun (log is the lowest default) must equal what the
+    // launcher resolves for the same inputs, its connection carrying only the log.
+    expect(demoBotOptions({ log }, declared)).toEqual(
+      demoTableOptions(
+        { ...base, botKit: tapKit(), demo: { bot: declared } },
+        { endpoint: "ws://x", apiPort: 1, bots: 1, bot: { log } },
+      ).bot,
     );
   });
 });

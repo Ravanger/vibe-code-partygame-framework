@@ -1110,10 +1110,11 @@ await demo.leave();
 Overridable: `BotOptions` `thinkMs` (default `[2000, 6000]`), `reactMs` (`[500, 2500]`), `rng`, `schedule(run, ms) => cancel`,
 `log`, `onOutcome`, `host.expectedPlayers`; `joinBots` `nameFor(n)` (default `Bot n`, taken names skipped), `playerIds`,
 `timeoutMs` (`BotTable` and `DemoTable` also take `nameFor` and `timeoutMs`); `DemoTable` `hostName`, `roomOptions`, `isFinished`. Every failure leaves the seats it took.
+`joinKitBots({ kit, ... })` is the same seating with the kit passed as `kit` instead of spread.
 
 Every entry point opens rooms through a `RoomConnector` (the interface and option types live in `@partygame/client-utils`):
-pass `connector` to any of them, or let it default to this package's `ColyseusConnector`, which holds the join flow (`joinById`,
-wait for the state sync, claim a name) over one Colyseus client. The room code is resolved to an id once per batch — by default
+pass `connector` to any of them, or let it default to `defaultConnector(endpoint, { roomName?, stateClass })`, a
+`ColyseusConnector` that holds the join flow (`joinById`, wait for the state sync, claim a name) over one Colyseus client. The room code is resolved to an id once per batch — by default
 `resolveRoomCode` against `apiBaseOf(endpoint, apiPort)` (injectable as `resolveCode`) — and the id goes to every join. A table
 reuses its connector for the bots it seats. Example: `games/wit-clash/bots/witClashBot.ts`.
 
@@ -1126,7 +1127,7 @@ the bots in a room made elsewhere (usage bounded by `meta.maxPlayers - 1`) and r
 `@partygame/terminal` lets a human play at a prompt. You write a `TerminalStrategy` (what to ask in each stage); the kit's `play`
 entry drives it through a `TerminalPlayer` that keeps the lobby, the countdown, action replies and quitting, and a `PlaySession` that
 finds or starts a server, creates or joins a room and seats bots. Rooms are opened through `GameClient`, a thin wrapper over
-`ColyseusConnector` (Bots). The samples here and in Launcher reuse `buttonKit`, `ButtonState` and `ButtonGame` from Bots and Minimal game.
+the bots package's default connector (`defaultConnector`, Bots). The samples here and in Launcher reuse `buttonKit`, `ButtonState` and `ButtonGame` from Bots and Minimal game.
 
 ```ts
 import { type TerminalStrategy } from "@partygame/terminal";

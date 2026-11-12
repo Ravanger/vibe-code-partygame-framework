@@ -1,5 +1,5 @@
 import type { Room } from "@colyseus/sdk";
-import { type BotKit, ColyseusConnector } from "@partygame/bots";
+import { type BotKit, type ColyseusConnector, defaultConnector } from "@partygame/bots";
 import { apiBaseOf, claimName, resolveRoomCode } from "@partygame/client-utils";
 import type { BaseGameState } from "@partygame/shared/schema";
 
@@ -16,7 +16,7 @@ export class GameClient<TState extends BaseGameState> {
     apiPort: number,
     game: Pick<BotKit<TState>, "roomName" | "stateClass">,
   ) {
-    this.connector = new ColyseusConnector(endpoint, game);
+    this.connector = defaultConnector(endpoint, game);
     this.apiBase = apiBaseOf(endpoint, apiPort);
   }
 

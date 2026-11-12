@@ -3,6 +3,7 @@ import { DemoRun, parseDemoArgs } from "@partygame/terminal";
 import { failWith } from "./fail.js";
 import { hostedGame } from "./hostedGame.js";
 import { defaultIo } from "./io.js";
+import { demoBotOptions } from "./launchConfig.js";
 import type { GameDeclaration, GameKitIo, GameMeta } from "./types.js";
 
 /** The usage line for the `demo` command, bounded by the game's seats. */
@@ -40,7 +41,7 @@ export async function demoCli<TState extends BaseGameState, TContent>(
       bots,
       ...(demo?.roomOptions !== undefined ? { roomOptions: demo.roomOptions } : {}),
       ...(demo?.hostName !== undefined ? { hostName: demo.hostName } : {}),
-      bot: { log: io.log, ...demo?.bot },
+      bot: demoBotOptions({ log: io.log }, demo?.bot),
       finished: pkg.isFinished,
       ...(demo?.narrate !== undefined ? { narrate: demo.narrate } : {}),
       ...(demo?.problems !== undefined ? { problems: demo.problems } : {}),

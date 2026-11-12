@@ -1,13 +1,10 @@
-import { claimName, type RoomConnector, waitFor } from "@partygame/client-utils";
-import { RoomCodeSchema } from "@partygame/shared";
+import { claimName, type RoomConnector } from "@partygame/client-utils";
 import type { BaseGameState } from "@partygame/shared/schema";
 import { BotPlayer } from "./BotPlayer.js";
-import { ColyseusConnector } from "./ColyseusConnector.js";
+import { defaultConnector } from "./ColyseusConnector.js";
 import { type JoinBotsOptions, joinBots } from "./joinBots.js";
-import { RoomWatch } from "./RoomWatch.js";
+import { captureRoomCode, RoomWatch } from "./RoomWatch.js";
 import type { BotConnection, BotKit, BotRoom } from "./types.js";
-
-const OPEN_TIMEOUT_MS = 5000;
 
 /** Connection, bot kit, bot count and finish rule for a {@link DemoTable}. */
 export interface DemoTableOptions<TState extends BaseGameState>
@@ -38,7 +35,7 @@ export class DemoTable<TState extends BaseGameState> {
     this.botIds = Array.from({ length: options.bots }, () => crypto.randomUUID());
     this.connector =
       options.connector ??
-      new ColyseusConnector(options.endpoint, {
+      defaultConnector(options.endpoint, {
         roomName: options.roomName,
         stateClass: options.stateClass,
       });
@@ -56,21 +53,10 @@ export class DemoTable<TState extends BaseGameState> {
       seats: [this.hostId, ...this.botIds],
     });
     const watch = new RoomWatch(room);
-    // Capture the code at its first well-formed value, before claimName's round trip can blank it.
     let code = "";
     try {
-      await waitFor(
-        () => {
-          const candidate = room.state?.roomCode ?? "";
-          if (RoomCodeSchema.safeParse(candidate).success) {
-            code = candidate;
-            return true;
-          }
-          return false;
-        },
-        "the room state",
-        OPEN_TIMEOUT_MS,
-      );
+      // Capture the code at its first well-formed value, before claimName's round trip can blank it.
+      code = await captureRoomCode(watch, () => room.state);
       await claimName(room, this.hostId, hostName);
     } catch (error) {
       await Promise.allSettled([room.leave(true)]);

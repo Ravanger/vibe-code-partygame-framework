@@ -17,7 +17,7 @@ import { z } from "zod";
 import type { BotPlayer } from "../src/BotPlayer.js";
 import { BotTable } from "../src/BotTable.js";
 import { DemoTable } from "../src/DemoTable.js";
-import { joinBots } from "../src/joinBots.js";
+import { joinBots, joinKitBots } from "../src/joinBots.js";
 import type { BotKit } from "../src/types.js";
 import { TAP_PUBLIC_FIELDS, TAP_ROOM, TapGame, TapState } from "./fixtures/tapGame.js";
 
@@ -189,6 +189,20 @@ describe("joinBots", () => {
     const room = await humanRoom("Bot 1");
     const bots = await join(room.state.roomCode, 2);
     expect(bots.map((bot) => bot.name)).toEqual(["Bot 2", "Bot 3"]);
+  });
+
+  it("joinKitBots seats the same bots from a kit", async () => {
+    const room = await humanRoom("Ann");
+    const bots = await joinKitBots({
+      kit: tapper,
+      code: room.state.roomCode,
+      count: 2,
+      endpoint: t.endpoint,
+      apiPort,
+      bot: FAST,
+    });
+    leavers.push(...bots);
+    expect(bots.map((bot) => bot.name)).toEqual(["Bot 1", "Bot 2"]);
   });
 
   it("uses the given names and playerIds", async () => {
@@ -724,6 +738,32 @@ describe("DemoTable", () => {
       spy.mockRestore();
     }
   });
+
+  it("open() fails fast when the room closes before the code arrives", async () => {
+    // A room that dies while opening must reject as soon as it is gone, not run out its open budget.
+    const table = new DemoTable({
+      ...tapper,
+      endpoint: t.endpoint,
+      apiPort,
+      bots: 0,
+      isFinished: () => true,
+    });
+    leavers.push(table);
+    const fakeRoom = {
+      state: undefined,
+      onLeave: (callback: () => void) => setTimeout(callback, 10),
+      leave: async () => 0,
+    };
+    const spy = vi.spyOn(Client.prototype, "create");
+    try {
+      spy.mockImplementation(async () => fakeRoom as never);
+      const started = Date.now();
+      await expect(table.open()).rejects.toThrow(/closed/);
+      expect(Date.now() - started).toBeLessThan(4000);
+    } finally {
+      spy.mockRestore();
+    }
+  }, 15_000);
 
   it("refuses to open twice", async () => {
     const table = new DemoTable({

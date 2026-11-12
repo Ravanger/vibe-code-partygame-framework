@@ -1,6 +1,6 @@
 import { ROOM_CODE_LENGTH } from "@partygame/shared";
 import type { BaseGameState } from "@partygame/shared/schema";
-import { parseBotsArgs, runBotsCommand } from "@partygame/terminal";
+import { BadBotsArgsError, runBotsCommand } from "@partygame/terminal";
 import { defaultIo } from "./io.js";
 import type { GameDeclaration, GameKitIo, GameMeta } from "./types.js";
 
@@ -20,12 +20,6 @@ export async function botsCli<TState extends BaseGameState, TContent>(
     return;
   }
   const usage = botsUsage(pkg.meta);
-  const parsed = parseBotsArgs(io.argv, { maxBots: pkg.meta.maxPlayers - 1, usage });
-  if (!parsed.ok) {
-    io.error(parsed.error);
-    io.exit(2);
-    return;
-  }
   try {
     await runBotsCommand({
       kit,
@@ -37,7 +31,7 @@ export async function botsCli<TState extends BaseGameState, TContent>(
       bot: { log: io.log },
       onInterrupt: (stop) => io.onSignal("SIGINT", () => void stop().finally(() => io.exit(0))),
     });
-  } catch {
-    io.exit(1);
+  } catch (error) {
+    io.exit(error instanceof BadBotsArgsError ? 2 : 1);
   }
 }

@@ -2,7 +2,7 @@
 
 Terminal client: a human at a prompt, bots, or an all-bot demo run. You write the strategy.
 
-- `@partygame/terminal`: `TerminalPlayer`, `PlaySession`, `ReadlinePrompter`, `DemoRun`, `parsePlayArgs`, `parseDemoArgs`, `runBotsCommand`; `DEFAULT_ENDPOINT` (`ws://localhost:2567`), `DEFAULT_API_PORT` (3001); types `TerminalStrategy`, `TerminalTurn`, `TerminalPlayerOptions` (optional clock and quit word), `GameRoomOf<TState>` (the client-side room), `PlayArgs`, `BotsArgs`, `ArgsLimits`, `PlaySessionOptions`, `DemoRunOptions`, `BotsCommandOptions`, `BotsCommandHandle`
+- `@partygame/terminal`: `TerminalPlayer`, `PlaySession`, `ReadlinePrompter`, `DemoRun`, `parsePlayArgs`, `parseDemoArgs`, `runBotsCommand` (throws `BadBotsArgsError` on a bad argv; map it to your bad-arguments exit code); `DEFAULT_ENDPOINT` (`ws://localhost:2567`), `DEFAULT_API_PORT` (3001); types `TerminalStrategy`, `TerminalTurn`, `TerminalPlayerOptions` (optional clock and quit word), `GameRoomOf<TState>` (the client-side room), `PlayArgs`, `BotsArgs`, `ArgsLimits`, `PlaySessionOptions`, `DemoRunOptions`, `BotsCommandOptions`, `BotsCommandHandle`
 - `@partygame/terminal/testing`: `ScriptedIo`, a scripted `Prompter`
 
 ## Write a strategy
@@ -37,7 +37,7 @@ Optional: `stageOf(state)`; `narrate(state)` returns lines printed on every stat
 
 ## Wire `terminal/play.ts`
 
-`parsePlayArgs` reads `--bots`, `--name`, `--join`, `--endpoint`, `--api-port`. `parseDemoArgs(argv, { minBots, maxBots, usage })` reads `--bots=N` for an all-bot demo (default 3, clamped into the range; the space form and unknown flags are rejected with `usage`). `PlayArgs` and `BotsArgs` are the parsed command lines; `ArgsLimits` carries the limits and usage text. Entries exit 2 on bad arguments. `PlaySession` (options `PlaySessionOptions`: where the server is, which room to enter, who plays) finds or starts a server, creates or joins a room and seats bots from your `BotKit`; rooms are opened through `GameClient`, a thin wrapper over `ColyseusConnector` from `@partygame/bots`.
+`parsePlayArgs` reads `--bots`, `--name`, `--join`, `--endpoint`, `--api-port`. `parseDemoArgs(argv, { minBots, maxBots, usage })` reads `--bots=N` for an all-bot demo (default 3, clamped into the range; the space form and unknown flags are rejected with `usage`). `PlayArgs` and `BotsArgs` are the parsed command lines; `ArgsLimits` carries the limits and usage text. Entries exit 2 on bad arguments. `PlaySession` (options `PlaySessionOptions`: where the server is, which room to enter, who plays) finds or starts a server, creates or joins a room and seats bots from your `BotKit`; rooms are opened through `GameClient`, a thin wrapper over the default room connector (`defaultConnector`) from `@partygame/bots`.
 
 ```ts
 import { createInterface } from "node:readline/promises";

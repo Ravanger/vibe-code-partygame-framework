@@ -8,9 +8,8 @@ import {
 } from "@partygame/client-utils";
 import { PROTOCOL_VERSION } from "@partygame/shared";
 import type { BaseGameState } from "@partygame/shared/schema";
+import { DEFAULT_TIMEOUT_MS } from "./timeouts.js";
 import type { BotKit } from "./types.js";
-
-const DEFAULT_TIMEOUT_MS = 5000;
 
 /** `RoomConnector` over a real game server: one Colyseus client for every room it opens. */
 export class ColyseusConnector<TState extends BaseGameState> implements RoomConnector<TState> {
@@ -61,3 +60,9 @@ export class ColyseusConnector<TState extends BaseGameState> implements RoomConn
     return room;
   }
 }
+
+/** The default {@link RoomConnector}: a Colyseus client for `endpoint` playing `game`. */
+export const defaultConnector = <TState extends BaseGameState>(
+  endpoint: string,
+  game: Pick<BotKit<TState>, "stateClass"> & { roomName?: string },
+): ColyseusConnector<TState> => new ColyseusConnector(endpoint, game);

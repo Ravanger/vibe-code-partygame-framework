@@ -64,7 +64,7 @@ The `HostedGame` a server hosts: `meta.roomName`, `definition(content)`, `stateC
 
 ### `buildLaunchConfig(pkg, { gameDir })` / `demoTableOptions(pkg, connection)`
 
-The pure parts of `launch`: the `LaunchConfig`, and the per-connection `DemoTableOptions` its demo tables are built from — the declaration's `demo` extras (kit, room options, host name, bot pacing) merged under the connection's. The config omits its bot section when there is no `botKit` and its demo section when neither `botKit` nor `demo.kit` is declared; asking the launcher for `--bots`/`--demo` then fails with "`<name>` has no bots"/"has no demo", and calling `demoTableOptions` on such a declaration throws.
+The pure parts of `launch`: the `LaunchConfig`, and the per-connection `DemoTableOptions` its demo tables are built from — the declaration's `demo` extras (kit, room options, host name, bot pacing) merged under the connection's. The config omits its bot section when there is no `botKit` and its demo section when neither `botKit` nor `demo.kit` is declared; asking the launcher for `--bots`/`--demo` then fails with "`<name>` has no bots"/"has no demo", and calling `demoTableOptions` on such a declaration throws. `demoCli` resolves its run's `bot` options the same way — connection over declaration over defaults, with the entry's `log` as the lowest default.
 
 ### `GameKitIo`
 
