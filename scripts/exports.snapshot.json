@@ -565,6 +565,7 @@
           "seatPlayers": {},
           "stateOf": {},
           "testPlayerId": {},
+          "waitForOwnEntry": {},
           "waitUntil": {}
         }
       }

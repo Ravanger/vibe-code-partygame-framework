@@ -1,7 +1,7 @@
 import { type ActionResult, CLIENT_MESSAGES, CLOSE_CODES, ClientMessage } from "@partygame/shared";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { TestServer } from "../src/testing/index.js";
-import { collectMessages, waitUntil } from "../src/testing/index.js";
+import { collectMessages, waitForOwnEntry, waitUntil } from "../src/testing/index.js";
 import { bootBuzzer, clientState, pid, seat, startedRoom, stateOf } from "./support.js";
 
 let t: TestServer;
@@ -233,11 +233,20 @@ describe("GameRoom host controls", () => {
 describe("GameRoom views", () => {
   it("shows each player only their own .view() entry and hides it again", async () => {
     const { room, p1, p2 } = await startedRoom(t);
-    await waitUntil(() => clientState(p1.client).secrets?.size === 1, "p1 secret");
-    await waitUntil(() => clientState(p2.client).secrets?.size === 1, "p2 secret");
-    expect([...clientState(p1.client).secrets.keys()]).toEqual([pid(1)]);
-    expect([...clientState(p2.client).secrets.keys()]).toEqual([pid(2)]);
-    expect(clientState(p1.client).secrets.get(pid(1))?.word).toBe(`secret-${pid(1)}`);
+    const secret1 = await waitForOwnEntry(
+      clientState(p1.client),
+      pid(1),
+      (s) => s.secrets,
+      "p1 secret",
+    );
+    const secret2 = await waitForOwnEntry(
+      clientState(p2.client),
+      pid(2),
+      (s) => s.secrets,
+      "p2 secret",
+    );
+    expect(secret1.word).toBe(`secret-${pid(1)}`);
+    expect(secret2.word).toBe(`secret-${pid(2)}`);
     p1.client.send("ACTION", { type: "BUZZ" });
     p2.client.send("ACTION", { type: "BUZZ" });
     await waitUntil(() => stateOf(room).phase === "Done", "done");
