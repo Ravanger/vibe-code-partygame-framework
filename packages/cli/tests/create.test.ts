@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { errorMessage, formatGame, parseCreateArgs, runCreate } from "../src/create.js";
 
 const TEMPLATE = fileURLToPath(new URL("./fixtures/template", import.meta.url));
+const SHIPPED_TEMPLATE = fileURLToPath(new URL("../template", import.meta.url));
 const fresh = (prefix: string) => mkdtemp(join(tmpdir(), prefix));
 const makeRoot = async (): Promise<string> => {
   const root = await fresh("cli-root-");
@@ -55,6 +56,29 @@ describe("parseCreateArgs", () => {
       ok: true,
       slug: "my-game",
       name: "My Game",
+    });
+  });
+
+  it("parses --headless", () => {
+    expect(parseCreateArgs(["my-game", "--headless"])).toEqual({
+      ok: true,
+      slug: "my-game",
+      headless: true,
+    });
+  });
+
+  it("parses a slug with --name and --headless in either order", () => {
+    expect(parseCreateArgs(["my-game", "--name", "My Game", "--headless"])).toEqual({
+      ok: true,
+      slug: "my-game",
+      name: "My Game",
+      headless: true,
+    });
+    expect(parseCreateArgs(["my-game", "--headless", "--name", "My Game"])).toEqual({
+      ok: true,
+      slug: "my-game",
+      name: "My Game",
+      headless: true,
     });
   });
 
@@ -280,6 +304,41 @@ describe("runCreate", () => {
     expect(log).toHaveBeenCalledWith(
       expect.stringMatching(/Commit games\/my-game\/ together with the updated bun\.lock/),
     );
+  });
+
+  it("scaffolds a headless game with one discoverable vitest config and no UI files", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const root = await makeRoot();
+    const code = await runCreate({
+      slug: "my-game",
+      headless: true,
+      cwd: root,
+      templateDir: SHIPPED_TEMPLATE,
+      format: () => 0,
+      install: () => 0,
+    });
+    expect(code).toBe(0);
+    const gameDir = join(root, "games", "my-game");
+    // The surviving config takes the name `vitest run` auto-discovers; the UI project and its files are gone.
+    expect(existsSync(join(gameDir, "vitest.config.ts"))).toBe(true);
+    expect(existsSync(join(gameDir, "vitest.game.config.ts"))).toBe(false);
+    for (const gone of [
+      "ui",
+      "index.html",
+      "vite.config.ts",
+      "svelte.config.js",
+      "tests/App.test.ts",
+      "tests/config.test.ts",
+      "tests/screens",
+      "tests/helpers/client.ts",
+    ]) {
+      expect(existsSync(join(gameDir, gone)), gone).toBe(false);
+    }
+    const pkg = JSON.parse(await readFile(join(gameDir, "package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+    };
+    expect(pkg.scripts["test:all"]).toBeUndefined();
+    expect(pkg.scripts.test).toBe("vitest run");
   });
 });
 

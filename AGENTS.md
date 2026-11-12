@@ -86,7 +86,7 @@ Docs: [`docs/framework/README.md`](docs/framework/README.md) (game author guide)
 | `bun run verify` | lint, typecheck of `scripts/`, packages and games, coverage |
 | `bun run test:coverage` | `vitest run --coverage`, 100% thresholds |
 | `bun run lint` / `typecheck` / `typecheck:scripts` / `build` | the single steps |
-| `bun run new <slug> [--name "..."]` | scaffold a game under `games/<slug>/` |
+| `bun run new <slug> [--name "..."] [--headless]` | scaffold a game under `games/<slug>/`; `--headless` emits rules, bots and terminal only (no browser UI) |
 | `bun run games` | list games and their entries |
 | `bun run launch` / `launch:host` / `launch:prod` | server (2567), API (3001), Vite (5173) or built client (3000); `--no-browser` |
 | `bun run launch:bots` / `launch:demo` | dev launch plus 3 bots / a watch-only all-bot room |

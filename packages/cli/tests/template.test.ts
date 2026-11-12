@@ -1,4 +1,5 @@
-import { mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -54,6 +55,26 @@ describe("renderTemplate", () => {
     const dest = await freshDir("cli-out-");
     await renderTemplate({ templateDir: src, outDir: dest, names: NAMES });
     expect(await readFile(join(dest, "myGameBot.txt"), "utf8")).toBe("bot for my-game\n");
+  });
+
+  it("skips excluded paths and renames the rest", async () => {
+    const src = await freshDir("cli-tmpl-");
+    await writeFile(join(src, "keep.txt"), "__slug__\n");
+    await writeFile(join(src, "drop.txt"), "gone\n");
+    await mkdir(join(src, "ui"));
+    await writeFile(join(src, "ui/app.svelte"), "<p>__slug__</p>\n");
+    const dest = await freshDir("cli-out-");
+    await renderTemplate({
+      templateDir: src,
+      outDir: dest,
+      names: NAMES,
+      exclude: ["drop.txt", "ui/"],
+      rename: { "keep.txt": "renamed.txt" },
+    });
+    expect(await readFile(join(dest, "renamed.txt"), "utf8")).toBe("my-game\n");
+    for (const gone of ["keep.txt", "drop.txt", "ui"]) {
+      expect(existsSync(join(dest, gone)), gone).toBe(false);
+    }
   });
 
   it("treats substituted values as data: a display name containing token text stays literal", async () => {

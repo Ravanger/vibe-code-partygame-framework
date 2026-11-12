@@ -13,13 +13,13 @@ export interface ChildResult {
   signal?: string | null;
 }
 
-/** Runs a child process and reports its outcome. */
-export type RunFn = (command: string, args: readonly string[]) => ChildResult;
+/** Runs a child process and reports its outcome; `cwd` overrides the runner's default directory. */
+export type RunFn = (command: string, args: readonly string[], cwd?: string) => ChildResult;
 
-/** Default runner: `spawnSync` in `root` with inherited stdio. */
+/** Default runner: `spawnSync` in `cwd ?? root` with inherited stdio. */
 export function spawnRun(root: string): RunFn {
-  return (command, args) => {
-    const result = spawnSync(command, args, { cwd: root, stdio: "inherit" });
+  return (command, args, cwd) => {
+    const result = spawnSync(command, args, { cwd: cwd ?? root, stdio: "inherit" });
     if (result.error) console.error(`[smoke] could not start ${command}: ${result.error.message}`);
     return { status: result.status, signal: result.signal };
   };
@@ -38,9 +38,12 @@ export function exitCodeOf(child: ChildResult): number {
   return child.status ?? 1;
 }
 
-/** One smoke step: a command to run, or a function returning an exit code. */
+/**
+ * One smoke step: a command to run (optionally in `cwd` instead of the runner's default), or a
+ * function returning an exit code.
+ */
 export type SmokeStep =
-  | { name: string; command: string; args: readonly string[] }
+  | { name: string; command: string; args: readonly string[]; cwd?: string }
   | { name: string; run: () => number | Promise<number> };
 
 export interface SmokeRunOptions {
@@ -71,8 +74,13 @@ export async function runSmokeSteps(
   for (const step of steps) {
     try {
       if ("command" in step) {
-        log(`[smoke] $ ${step.command} ${step.args.join(" ")}`);
-        const code = exitCodeOf(run(step.command, step.args));
+        const where = step.cwd === undefined ? "" : ` (in ${step.cwd})`;
+        log(`[smoke] $ ${step.command} ${step.args.join(" ")}${where}`);
+        const code = exitCodeOf(
+          step.cwd === undefined
+            ? run(step.command, step.args)
+            : run(step.command, step.args, step.cwd),
+        );
         if (code !== 0) {
           log(`[smoke] FAILED: ${step.name} (exit code ${code})`);
           return { ok: false, failedStep: step.name };

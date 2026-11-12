@@ -9,6 +9,10 @@ export interface RenderTemplateOptions {
   outDir: string;
   /** Values substituted for each token. */
   names: Names;
+  /** Relative paths (to `templateDir`) to skip: a file path, or a directory prefix ending in `/`. */
+  exclude?: readonly string[];
+  /** Relative source path (to `templateDir`) -> relative destination path, for a file that moves while rendering. */
+  rename?: Record<string, string>;
 }
 
 // One pass, so substituted values are never re-scanned: a `--name` containing token text stays literal.
@@ -63,19 +67,29 @@ async function filesIn(dir: string): Promise<string[]> {
   return files;
 }
 
+/** True when `rel` is a file listed in `exclude`, or lives under an excluded directory prefix. */
+function excluded(rel: string, exclude: readonly string[]): boolean {
+  return exclude.some(
+    (pattern) => rel === pattern || (pattern.endsWith("/") && rel.startsWith(pattern)),
+  );
+}
+
 /** Recursively copies `templateDir` to `outDir`, replacing every token with its derived value. */
 export async function renderTemplate({
   templateDir,
   outDir,
   names,
+  exclude = [],
+  rename,
 }: RenderTemplateOptions): Promise<void> {
   const source = await stat(templateDir).catch(() => undefined);
   if (!source?.isDirectory()) throw new Error(`template directory not found: ${templateDir}`);
   const values = tokenValues(names);
   for (const file of await filesIn(templateDir)) {
-    const content = await readFile(file, "utf8");
     const rel = relative(templateDir, file);
-    const dest = join(outDir, substitute(rel, values));
+    if (excluded(rel, exclude)) continue;
+    const content = await readFile(file, "utf8");
+    const dest = join(outDir, substitute(rename?.[rel] ?? rel, values));
     await mkdir(dirname(dest), { recursive: true });
     await writeFile(dest, substitute(content, values), "utf8");
     await chmod(dest, (await stat(file)).mode & 0o777);

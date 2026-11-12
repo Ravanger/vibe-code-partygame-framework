@@ -48,6 +48,25 @@ describe("runSmokeSteps", () => {
     expect(lines).toContain("[smoke] $ bun install");
   });
 
+  it("passes a step's cwd to the runner and logs it", async () => {
+    const lines: string[] = [];
+    const run = vi.fn().mockReturnValue(child(0));
+    const result = await runSmokeSteps({ root: "/smoke", run, log: (line) => lines.push(line) }, [
+      { name: "local test", command: "bun", args: ["run", "test"], cwd: "/smoke/games/zz" },
+    ]);
+    expect(result).toEqual({ ok: true });
+    expect(run).toHaveBeenCalledWith("bun", ["run", "test"], "/smoke/games/zz");
+    expect(lines).toContain("[smoke] $ bun run test (in /smoke/games/zz)");
+  });
+
+  it("runs a step without cwd with no third argument", async () => {
+    const run = vi.fn().mockReturnValue(child(0));
+    await runSmokeSteps({ root: "/smoke", run, log: () => {} }, [
+      { name: "install", command: "bun", args: ["install"] },
+    ]);
+    expect(run).toHaveBeenCalledWith("bun", ["install"]);
+  });
+
   it("stops after a failing command step and names it", async () => {
     const lines: string[] = [];
     const fn = vi.fn().mockResolvedValue(0);
