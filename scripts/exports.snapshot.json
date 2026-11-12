@@ -113,9 +113,11 @@
         "symbols": {
           "ContentFile": {},
           "LoadJsoncDirOptions": {},
+          "LoadJsoncFileOptions": {},
           "contentDirFrom": {},
           "loadJsoncDir": {},
           "loadJsoncDirWithFiles": {},
+          "loadJsoncFile": {},
           "stripJsonComments": {}
         }
       },
@@ -216,7 +218,8 @@
           "sfc32": {},
           "shuffle": {},
           "textFilterMiddleware": {},
-          "timingMiddleware": {}
+          "timingMiddleware": {},
+          "weightedSample": {}
         }
       },
       "./awards": {

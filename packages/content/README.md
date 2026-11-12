@@ -6,7 +6,7 @@ Content tooling for games: parse commented-JSON (`.json`/`.jsonc`) content folde
 
 | Subpath | What |
 |---|---|
-| `@partygame/content` | `stripJsonComments`, `loadJsoncDir`, `loadJsoncDirWithFiles`, `contentDirFrom` |
+| `@partygame/content` | `stripJsonComments`, `loadJsoncFile`, `loadJsoncDir`, `loadJsoncDirWithFiles`, `contentDirFrom` |
 | `@partygame/content/filter` | `TextFilter`, `FilterLevel`, `FilterResult`, `createTextFilter` |
 
 ```ts
@@ -22,7 +22,8 @@ const items = await loadJsoncDir("./content/items", Item, { idOf: (item) => item
 - `stripJsonComments(input)` removes `//` and `/* */` comments without touching comment-like sequences inside string literals.
 - `contentDirFrom(override, entryUrl, relative)` — a game entry's content directory: the `override` when set (an empty string counts as set, `??` semantics), else the absolute folder `relative` next to `entryUrl` (the entry file's `import.meta.url`).
 - `loadJsoncDir(dir, schema, { idOf, label, onInvalid?, maxFiles?, maxFileBytes? })` (options type `LoadJsoncDirOptions`: how items are identified, labelled and validated) loads every regular `.json`/`.jsonc` file in `dir` (name order; symlinks and subdirectories are ignored), parses it with `schema`, and refuses duplicate ids. A missing directory throws.
-- `loadJsoncDirWithFiles(dir, schema, options)` is the same loader but returns `{ file, value }` per item, so a caller can name the source file in its own errors (e.g. cross-file checks).
+- `loadJsoncDirWithFiles(dir, schema, options)` is the same loader but returns `{ file, value }` per item, so a caller can name the source file in its own errors (e.g. cross-file checks). It calls `loadJsoncFile` per file; an oversized file still throws even with `onInvalid: "skip"`.
+- `loadJsoncFile(file, schema, { label, maxFileBytes? })` (options type `LoadJsoncFileOptions`) loads one JSONC file with the same parsing, validation and messages as `loadJsoncDir`: it returns the validated value, and a missing file, a file above `maxFileBytes`, invalid JSON or a schema failure throws, each naming the file.
 - Fail loudly by default: an unparsable file or a schema failure throws, naming the file (and the failing entry for schema errors). Pass `onInvalid: "skip"` to skip such files with a `console.warn` instead.
 - Caps: more than `maxFiles` files (default 256) or a file above `maxFileBytes` bytes (default 1 MiB) throws.
 

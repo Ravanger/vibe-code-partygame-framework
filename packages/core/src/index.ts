@@ -46,4 +46,5 @@ export {
   seedFromNumber,
   sfc32,
   shuffle,
+  weightedSample,
 } from "./utils.js";

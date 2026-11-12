@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mulberry32, newId, randomSeed, required, shuffle } from "../src/index.js";
+import { mulberry32, newId, randomSeed, required, shuffle, weightedSample } from "../src/index.js";
 
 describe("required", () => {
   it("returns a defined value, including falsy ones", () => {
@@ -23,6 +23,57 @@ describe("shuffle", () => {
 
   it("keeps the order when the rng always picks the current slot", () => {
     expect(shuffle([1, 2, 3], () => 0.999)).toEqual([1, 2, 3]);
+  });
+});
+
+describe("weightedSample", () => {
+  it("never picks an item whose weight is 0", () => {
+    const items = [
+      { id: "a", w: 1 },
+      { id: "b", w: 0 },
+      { id: "c", w: 2 },
+    ];
+    for (let i = 0; i < 40; ++i) {
+      expect(
+        weightedSample(items, 3, mulberry32(i), (item) => item.w).map((item) => item.id),
+      ).not.toContain("b");
+    }
+  });
+
+  it("matches a uniform shuffle for the same seed when all weights are equal", () => {
+    const items = [1, 2, 3, 4, 5];
+    expect(weightedSample(items, 3, mulberry32(7), () => 1)).toEqual(
+      shuffle(items, mulberry32(7)).slice(0, 3),
+    );
+  });
+
+  it("picks a much heavier item far more often", () => {
+    const items = [
+      { id: "light", w: 1 },
+      { id: "heavy", w: 50 },
+    ];
+    let heavy = 0;
+    for (let i = 0; i < 200; ++i) {
+      const picked = weightedSample(items, 1, mulberry32(i), (item) => item.w);
+      if (picked[0]?.id === "heavy") ++heavy;
+    }
+    expect(heavy).toBeGreaterThan(150);
+  });
+
+  it("returns the whole pool when asked for more than exist", () => {
+    const items = [
+      { id: "a", w: 1 },
+      { id: "b", w: 2 },
+    ];
+    expect(
+      weightedSample(items, 5, mulberry32(3), (item) => item.w)
+        .map((item) => item.id)
+        .sort(),
+    ).toEqual(["a", "b"]);
+  });
+
+  it("requires an rng: no default Math.random", () => {
+    expect(weightedSample.length).toBe(4);
   });
 });
 

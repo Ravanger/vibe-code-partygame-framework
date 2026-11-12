@@ -1,6 +1,5 @@
-import { readFile } from "node:fs/promises";
-import { stripJsonComments } from "@partygame/content";
-import { prettifyError, z } from "zod";
+import { loadJsoncFile } from "@partygame/content";
+import { z } from "zod";
 
 const PromptSchema = z.object({
   id: z.string().regex(/^[a-z0-9-]+$/, "id must be lowercase kebab-case"),
@@ -37,26 +36,11 @@ export function promptsFromArray(prompts: Prompt[]): PromptRepository {
  * failure or a duplicate id throws.
  */
 export async function loadPrompts(file: string): Promise<PromptRepository> {
-  let text: string;
-  try {
-    text = await readFile(file, "utf-8");
-  } catch {
-    throw new Error(`Prompt file not found: ${file}`);
-  }
-  let json: unknown;
-  try {
-    json = JSON.parse(stripJsonComments(text));
-  } catch (error) {
-    throw new Error(`[Prompt] Invalid JSON in ${file}: ${String(error)}`);
-  }
-  const parsed = PromptsFileSchema.safeParse(json);
-  if (!parsed.success) {
-    throw new Error(`[Prompt] ${file} failed validation: ${prettifyError(parsed.error)}`);
-  }
+  const data = await loadJsoncFile(file, PromptsFileSchema, { label: "Prompt" });
   const seen = new Set<string>();
-  for (const prompt of parsed.data.prompts) {
+  for (const prompt of data.prompts) {
     if (seen.has(prompt.id)) throw new Error(`Duplicate Prompt id "${prompt.id}" in ${file}`);
     seen.add(prompt.id);
   }
-  return new PromptRepository(parsed.data.prompts);
+  return new PromptRepository(data.prompts);
 }

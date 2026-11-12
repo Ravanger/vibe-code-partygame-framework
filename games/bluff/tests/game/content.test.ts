@@ -70,7 +70,7 @@ describe("loadPrompts", () => {
   });
 
   it("rejects a missing file", async () => {
-    await expect(loadPrompts(join(dir, "nope.jsonc"))).rejects.toThrow("Prompt file not found");
+    await expect(loadPrompts(join(dir, "nope.jsonc"))).rejects.toThrow("[Prompt] File not found");
   });
 });
 

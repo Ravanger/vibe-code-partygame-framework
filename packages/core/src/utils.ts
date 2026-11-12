@@ -76,6 +76,30 @@ export function shuffle<T>(items: readonly T[], rng: () => number): T[] {
 }
 
 /**
+ * `count` distinct items from those with a positive weight, without replacement. Equal weights
+ * deal a uniform {@link shuffle}; differing weights use Efraimidis–Spirakis sampling, where each
+ * candidate draws a key of `rng() ** (1 / weight)` and the highest keys win, so an item's share of
+ * picks tracks its weight. A weight of 0 means never picked. Pass a seeded `rng` for replayable
+ * draws; there is no default.
+ */
+export function weightedSample<T>(
+  items: readonly T[],
+  count: number,
+  rng: () => number,
+  weightOf: (item: T) => number,
+): T[] {
+  const pool = items.filter((item) => weightOf(item) > 0);
+  if (new Set(pool.map(weightOf)).size <= 1) {
+    return shuffle(pool, rng).slice(0, Math.min(count, pool.length));
+  }
+  return pool
+    .map((item) => ({ item, key: rng() ** (1 / weightOf(item)) }))
+    .sort((a, b) => b.key - a.key)
+    .slice(0, count)
+    .map(({ item }) => item);
+}
+
+/**
  * A UUID-shaped identifier drawn from a seeded rng: 128 bits of PRNG output with the version and
  * variant nibbles set. The same seed yields the same ids, which is what makes identifiers that land
  * in synced state or action payloads replayable (`crypto.randomUUID()` would not).
