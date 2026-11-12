@@ -1,6 +1,5 @@
 import { RoomCodeSchema } from "@partygame/shared";
-import { DEFAULT_RESOLVE_CODE_BUCKET } from "../createGameServer.js";
-import type { RateLimiter, TokenBucket } from "../RateLimiter.js";
+import { DEFAULT_RESOLVE_CODE_BUCKET, type RateLimiter, type TokenBucket } from "../RateLimiter.js";
 import type { RoomCodeService } from "../services/RoomCodeService.js";
 
 /** Origins allowed to read the API by default: loopback on any port (the dev client). */
