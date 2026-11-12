@@ -13,10 +13,11 @@ const vm = untrack(() => new MatchupRevealViewModel(manager));
 
 <div class="reveal-screen">
   {#if vm.matchup}
-    <p class="count"><span class="chip chip--paper">{`Matchup ${vm.matchupNumber} of ${vm.totalMatchups}`}</span></p>
+    <h2 class="count" tabindex="-1"><span class="chip chip--paper">{`Matchup ${vm.matchupNumber} of ${vm.totalMatchups}`}</span></h2>
     <MatchupCard matchup={vm.matchup} myVoteId={vm.myVoteId} flip />
     <NextUpBar seconds={vm.secondsLeft} total={vm.totalSeconds} />
   {:else}
+    <h2 class="sr-only" tabindex="-1">Revealing...</h2>
     <StatusPanel tone="wait" title="Revealing..." />
   {/if}
 </div>
