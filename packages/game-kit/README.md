@@ -40,7 +40,7 @@ export const gamePackage = defineGamePackage({
 | `stateClass` | the synced state class (a `BaseGameState` subclass) |
 | `publicFields?` | the state's public fields, handed to the server as `HostedGame.publicFields`; a field neither listed here nor tagged `.view()` (fields of `BaseGameState` excepted) fails the server at startup |
 | `isFinished(state)` | true once the game is over; the demo tables and the demo run watch for it |
-| `botKit` | the game's `BotKit` (`roomName`, `stateClass`, `strategy`) |
+| `botKit?` | the game's `BotKit` (`roomName`, `stateClass`, `strategy`); optional — without it `serve` and `launch` keep working, but `botsCli`, `demoCli` and `play` print "This game declares no bots." and exit 1 |
 | `terminal?` | `() => TerminalStrategy`; without it `play` prints "This game has no terminal strategy." and exits 1 |
 | `demo?` | extras beyond the kit: `kit`, `roomOptions`, `hostName`, `bot` (pacing), `narrate(state)`, `problems(state)` and `passMessage` |
 
@@ -52,9 +52,9 @@ Each entry file is a stub; only `launch` takes `gameDir`, the directory of the s
 |---|---|---|
 | `server.ts` | `serve(pkg)` | loads the content (`pkg.load` with `io.env`, or `undefined`), builds the hosted game and starts the Bun game server plus code API on `PORT`/`API_PORT` (defaults 2567/3001; `startServer` validates them as whole numbers 1-65535); a failure prints one line and exits 1 |
 | `launch.ts` | `launch(pkg, { gameDir })` | builds a `LaunchConfig` from the declaration — `name` from `displayName` (or `meta.roomName`), bots capped at `maxPlayers - 1`, demo tables between `minPlayers - 1` and `maxPlayers - 1` bots finished by `isFinished` with the `demo` extras merged in — and runs it with `io.argv` |
-| `bots/cli.ts` | `botsCli(pkg)` | seats bots in a room made elsewhere, `<CODE> [count]` bounded by `meta.maxPlayers - 1`; the SIGINT handler removes them and exits 0; bad arguments exit 2, a failed join exits 1 |
-| `terminal/play.ts` | `play(pkg)` | one human at a terminal driven by `pkg.terminal`, optionally with bots; starts a server when the endpoint defaults are used and no room is joined; exit 2 on bad arguments, 1 on failure or when the game has no `terminal` |
-| `terminal/demo.ts` | `demoCli(pkg)` | one all-bot game on its own server with a PASS/FAIL verdict; `--bots=` defaults to 3 and must stay within `meta.minPlayers - 1 .. meta.maxPlayers - 1` and is parsed by `parseDemoArgs` (only the `=` form; anything else exits 2); exit 0 on PASS, 1 on FAIL or when loading fails |
+| `bots/cli.ts` | `botsCli(pkg)` | seats bots in a room made elsewhere, `<CODE> [count]` bounded by `meta.maxPlayers - 1`; the SIGINT handler removes them and exits 0; bad arguments exit 2, a failed join exits 1, and a declaration without `botKit` exits 1 with "This game declares no bots." |
+| `terminal/play.ts` | `play(pkg)` | one human at a terminal driven by `pkg.terminal`, optionally with bots; starts a server when the endpoint defaults are used and no room is joined; exit 2 on bad arguments, 1 on failure, when the game has no `terminal`, or when it declares no bots (the client needs the kit's state class) |
+| `terminal/demo.ts` | `demoCli(pkg)` | one all-bot game on its own server with a PASS/FAIL verdict; `--bots=` defaults to 3 and must stay within `meta.minPlayers - 1 .. meta.maxPlayers - 1` and is parsed by `parseDemoArgs` (only the `=` form; anything else exits 2); exit 0 on PASS, 1 on FAIL, when loading fails, or when neither `botKit` nor `demo.kit` is declared |
 
 ## Helpers
 
@@ -64,7 +64,7 @@ The `HostedGame` a server hosts: `meta.roomName`, `definition(content)`, `stateC
 
 ### `buildLaunchConfig(pkg, { gameDir })` / `demoTableOptions(pkg, connection)`
 
-The pure parts of `launch`: the `LaunchConfig`, and the per-connection `DemoTableOptions` its demo tables are built from — the declaration's `demo` extras (kit, room options, host name, bot pacing) merged under the connection's.
+The pure parts of `launch`: the `LaunchConfig`, and the per-connection `DemoTableOptions` its demo tables are built from — the declaration's `demo` extras (kit, room options, host name, bot pacing) merged under the connection's. The config omits its bot section when there is no `botKit` and its demo section when neither `botKit` nor `demo.kit` is declared; asking the launcher for `--bots`/`--demo` then fails with "`<name>` has no bots"/"has no demo", and calling `demoTableOptions` on such a declaration throws.
 
 ### `GameKitIo`
 

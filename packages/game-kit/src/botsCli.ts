@@ -13,6 +13,12 @@ export async function botsCli<TState extends BaseGameState, TContent>(
   pkg: GameDeclaration<TState, TContent>,
   io: GameKitIo = defaultIo(),
 ): Promise<void> {
+  const kit = pkg.botKit;
+  if (kit === undefined) {
+    io.error("This game declares no bots.");
+    io.exit(1);
+    return;
+  }
   const usage = botsUsage(pkg.meta);
   const parsed = parseBotsArgs(io.argv, { maxBots: pkg.meta.maxPlayers - 1, usage });
   if (!parsed.ok) {
@@ -22,7 +28,7 @@ export async function botsCli<TState extends BaseGameState, TContent>(
   }
   try {
     await runBotsCommand({
-      kit: pkg.botKit,
+      kit,
       maxBots: pkg.meta.maxPlayers - 1,
       argv: io.argv,
       out: io.log,

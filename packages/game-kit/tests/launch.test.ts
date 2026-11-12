@@ -36,4 +36,31 @@ describe("launch", () => {
     expect(config.name).toBe("Tap Game");
     expect(config.bots?.kit).toBe(kit);
   });
+
+  it("launches a game without a bot kit and drops the bot and demo sections", async () => {
+    const calls: [LaunchConfig<BaseGameState>, string[]][] = [];
+    const game = defineGamePackage({
+      meta: { roomName: TAP_ROOM, minPlayers: 2, maxPlayers: 6 },
+      definition: () => TapGame,
+      stateClass: TapState,
+      isFinished: (state) => state.done,
+    });
+
+    await launch(
+      game,
+      { gameDir: "/game" },
+      fakeIo(["dev"], {
+        runLauncher: async (config, argv) => {
+          calls.push([config, argv]);
+        },
+      }).io,
+    );
+
+    expect(calls).toHaveLength(1);
+    const [first] = calls;
+    if (first === undefined) throw new Error("runLauncher never ran");
+    const [config] = first;
+    expect(config.bots).toBeUndefined();
+    expect(config.demo).toBeUndefined();
+  });
 });

@@ -45,6 +45,18 @@ describe("buildLaunchConfig", () => {
     const table = config.demo?.create({ endpoint: "ws://127.0.0.1:1", apiPort: 2, bots: 2 });
     expect(table).toBeInstanceOf(DemoTable);
   });
+
+  it("omits the bot and demo sections when no kit is declared", () => {
+    const config = buildLaunchConfig(base, { gameDir: "/game" });
+    expect(config.bots).toBeUndefined();
+    expect(config.demo).toBeUndefined();
+  });
+
+  it("keeps only the demo section when a demo kit stands in for a missing botKit", () => {
+    const config = buildLaunchConfig({ ...base, demo: { kit: tapKit() } }, { gameDir: "/game" });
+    expect(config.bots).toBeUndefined();
+    expect(config.demo?.min).toBe(1);
+  });
 });
 
 describe("demoTableOptions", () => {
@@ -102,5 +114,11 @@ describe("demoTableOptions", () => {
       { endpoint: "ws://x", apiPort: 1, bots: 1 },
     );
     expect(options.bot).toBeUndefined();
+  });
+
+  it("throws when no kit resolves", () => {
+    expect(() => demoTableOptions(base, { endpoint: "ws://x", apiPort: 1, bots: 2 })).toThrowError(
+      /no bot kit/,
+    );
   });
 });

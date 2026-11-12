@@ -50,7 +50,12 @@ export interface GameDeclaration<TState extends BaseGameState, TContent = undefi
   publicFields?: readonly string[];
   /** True once the game is over; the demo tables watch for it. */
   isFinished(state: TState): boolean;
-  botKit: BotKit<TState>;
+  /**
+   * The game's `BotKit` (`roomName`, `stateClass`, `strategy`). Optional for games that ship no
+   * bots: `serve` and `launch` keep working, but `botsCli`, `demoCli` and `play` print "This game
+   * declares no bots." and exit 1, and `buildLaunchConfig` drops its bot and demo sections.
+   */
+  botKit?: BotKit<TState>;
   /** The terminal screens `play` drives. */
   terminal?: () => TerminalStrategy<TState>;
   /** Demo extras beyond the kit. */

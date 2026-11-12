@@ -14,7 +14,11 @@ const board = (state: __PascalName__State): string =>
 
 let announcedResults = false;
 
-/** The wave game declared once: the server, launch and terminal entries are stubs over this. */
+/**
+ * The wave game declared once: the server, launch and terminal entries are stubs over this.
+ * `botKit` is optional: a game without bots drops it (and its `bots/` folder) and keeps serving
+ * and launching; the bot entries then refuse with "This game declares no bots."
+ */
 export const gamePackage = defineGamePackage({
   meta: META,
   displayName: __DisplayNameJson__,

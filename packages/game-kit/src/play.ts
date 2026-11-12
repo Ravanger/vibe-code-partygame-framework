@@ -30,12 +30,18 @@ export async function play<TState extends BaseGameState, TContent>(
     io.exit(1);
     return;
   }
+  const kit = pkg.botKit;
+  if (kit === undefined) {
+    io.error("This game declares no bots.");
+    io.exit(1);
+    return;
+  }
   let session: PlaySession<TState> | undefined;
   try {
     const options: PlaySessionOptions<TState> = {
       ...parsed.value,
       startServer: startsServer(parsed.value),
-      kit: pkg.botKit,
+      kit,
       games: [hostedGame(pkg, await pkg.load?.(io.env))],
       player: (room, playerId, prompter) =>
         new TerminalPlayer(room, playerId, prompter, terminal()),

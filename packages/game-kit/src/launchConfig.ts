@@ -9,6 +9,7 @@ export function demoTableOptions<TState extends BaseGameState, TContent>(
   connection: BotConnection & { bots: number },
 ): DemoTableOptions<TState> {
   const kit = pkg.demo?.kit ?? pkg.botKit;
+  if (kit === undefined) throw new Error("demoTableOptions: the declaration has no bot kit");
   return {
     ...connection,
     ...kit,
@@ -22,20 +23,29 @@ export function demoTableOptions<TState extends BaseGameState, TContent>(
   };
 }
 
-/** The `LaunchConfig` a game's `launch.ts` runs. */
+/**
+ * The `LaunchConfig` a game's `launch.ts` runs. The bot and demo sections are omitted when the
+ * declaration resolves no kit (`botKit`, or `demo.kit` for the demo); asking the launcher for
+ * `--bots`/`--demo` then fails with "<name> has no bots"/"has no demo".
+ */
 export function buildLaunchConfig<TState extends BaseGameState, TContent>(
   pkg: GameDeclaration<TState, TContent>,
   options: { gameDir: string },
 ): LaunchConfig<TState> {
   const { meta } = pkg;
+  const kit = pkg.botKit;
   return {
     name: pkg.displayName ?? meta.roomName,
     gameDir: options.gameDir,
-    bots: { kit: pkg.botKit, max: meta.maxPlayers - 1 },
-    demo: {
-      min: meta.minPlayers - 1,
-      max: meta.maxPlayers - 1,
-      create: (connection) => new DemoTable(demoTableOptions(pkg, connection)),
-    },
+    ...(kit !== undefined ? { bots: { kit, max: meta.maxPlayers - 1 } } : {}),
+    ...((pkg.demo?.kit ?? kit) !== undefined
+      ? {
+          demo: {
+            min: meta.minPlayers - 1,
+            max: meta.maxPlayers - 1,
+            create: (connection) => new DemoTable(demoTableOptions(pkg, connection)),
+          },
+        }
+      : {}),
   };
 }

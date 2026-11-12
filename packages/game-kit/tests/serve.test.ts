@@ -59,6 +59,26 @@ describe("serve", () => {
     expect(options.games.map((each) => each.roomName)).toEqual([TAP_ROOM]);
   });
 
+  it("serves a game that declares no bots", async () => {
+    const started: NodeServerHandle[] = [];
+    const seens: ServeOptions[] = [];
+    const game = defineGamePackage({
+      meta: { roomName: TAP_ROOM, minPlayers: 2, maxPlayers: 6 },
+      definition: () => TapGame,
+      stateClass: TapState,
+      publicFields: TAP_PUBLIC_FIELDS,
+      isFinished: () => true,
+    });
+
+    await serve(game, ioWith({}, started, seens));
+
+    expect(started).toHaveLength(1);
+    const [handle] = started;
+    if (handle === undefined) throw new Error("the server starter never ran");
+    expect(await new ServerProbe().isGameServer(handle.port, handle.apiPort)).toBe(true);
+    await handle.stop();
+  });
+
   it("hands the declaration's text filter to the server starter", async () => {
     const started: NodeServerHandle[] = [];
     const seens: ServeOptions[] = [];

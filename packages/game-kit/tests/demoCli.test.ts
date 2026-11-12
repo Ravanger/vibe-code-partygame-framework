@@ -16,6 +16,14 @@ const base = {
 };
 
 describe("demoCli", () => {
+  it("refuses a game that declares no bots and exits 1", async () => {
+    const { io, log, err, exits } = fakeIo([]);
+    await demoCli(base, io);
+    expect(log).toEqual([]);
+    expect(err).toEqual(["This game declares no bots."]);
+    expect(exits).toEqual([1]);
+  });
+
   it("prints the usage and exits 2 on a bad --bots, a space-separated value or an unknown flag", async () => {
     for (const argv of [
       ["--bots=0"],

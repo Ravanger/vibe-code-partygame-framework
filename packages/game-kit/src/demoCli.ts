@@ -14,6 +14,13 @@ export async function demoCli<TState extends BaseGameState, TContent>(
   pkg: GameDeclaration<TState, TContent>,
   io: GameKitIo = defaultIo(),
 ): Promise<void> {
+  const demo = pkg.demo;
+  const kit = demo?.kit ?? pkg.botKit;
+  if (kit === undefined) {
+    io.error("This game declares no bots.");
+    io.exit(1);
+    return;
+  }
   const meta = pkg.meta;
   const parsed = parseDemoArgs(io.argv, {
     minBots: meta.minPlayers - 1,
@@ -26,11 +33,10 @@ export async function demoCli<TState extends BaseGameState, TContent>(
     return;
   }
   const { bots } = parsed.value;
-  const demo = pkg.demo;
   try {
     const passed = await new DemoRun<TState>({
       games: [hostedGame(pkg, await pkg.load?.(io.env))],
-      kit: demo?.kit ?? pkg.botKit,
+      kit,
       bots,
       ...(demo?.roomOptions !== undefined ? { roomOptions: demo.roomOptions } : {}),
       ...(demo?.hostName !== undefined ? { hostName: demo.hostName } : {}),

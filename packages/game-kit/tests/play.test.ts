@@ -51,6 +51,21 @@ describe("play", () => {
     expect(exits).toEqual([1]);
   });
 
+  it("reports a game that declares no bots and exits 1", async () => {
+    const noBots = defineGamePackage({
+      meta: { roomName: TAP_ROOM, minPlayers: 2, maxPlayers: 6 },
+      definition: () => TapGame,
+      stateClass: TapState,
+      publicFields: TAP_PUBLIC_FIELDS,
+      isFinished: (state) => state.done,
+      terminal: tapTerminal,
+    });
+    const { io, err, exits } = fakeIo(["--name=Ann"], { prompter: () => new ScriptedIo() });
+    await play(noBots, io);
+    expect(err).toEqual(["This game declares no bots."]);
+    expect(exits).toEqual([1]);
+  });
+
   it("refuses a bot count above the game's seats", async () => {
     const { io, err, exits } = fakeIo(["--bots=6"], { prompter: () => new ScriptedIo() });
     await play(bare, io);
