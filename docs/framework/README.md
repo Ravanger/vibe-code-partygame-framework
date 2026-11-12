@@ -1205,10 +1205,10 @@ demo: {
 import { demoCli } from "@partygame/game-kit";
 import { buttonPackage } from "../gamePackage.js";
 
-await demoCli(buttonPackage);   // bun run demo [--bots=1..7]
+await demoCli(buttonPackage);   // bun run demo [--bots=1..7]; from the repo root: bun run demo <game>
 ```
 
-`--bots=N` sets the bot count (default 3, bounded by `meta`; parsed by `parseDemoArgs`, so `--bots 4`, `--bots=` and unknown flags print the usage and exit 2). The field's extras are all optional: `kit` (a demo-specific kit),
+`--bots N` (both the space and `=` forms) sets the bot count (default 3, bounded by `meta`; parsed by `parseDemoArgs`, so an empty value, a non-integer or an out-of-range count prints the usage and exits 2). The field's extras are all optional: `kit` (a demo-specific kit),
 `roomOptions`, `hostName`, `bot` (pacing and outcome logging), `narrate(state)`, `problems(state)` and `passMessage`. Under the hood
 `demoCli` drives a `DemoRun` from `@partygame/terminal`. Example: `games/wit-clash/gamePackage.ts` (the Narrator narrates and checks).
 
@@ -1228,7 +1228,8 @@ await launch(buttonPackage, { gameDir: fileURLToPath(new URL(".", import.meta.ur
 `launch` builds the config from the declaration (`buildLaunchConfig`) and runs it with `runLauncher`: `name` is `displayName` (or
 `meta.roomName`), `bots` is the declaration's `botKit` capped at `maxPlayers - 1`, and the demo tables run `minPlayers - 1` to
 `maxPlayers - 1` bots plus a host bot, finished by `isFinished`, with the declaration's `demo` extras (kit, room options, host name,
-bot pacing) merged in.
+bot pacing) merged in. The port defaults live in one place — `DEFAULT_PORTS` of `@partygame/launcher`; a test fails if the Vite
+preset's copy drifts — and `launch` forwards an optional `ports` (a partial of it), which the launcher pins Vite to with `--port`.
 
 `gameDir` holds `server.ts` (run with env `PORT` and `API_PORT`), a `package.json` with `dev` and `build` scripts, and the built `dist/`.
 
@@ -1241,10 +1242,11 @@ bot pacing) merged in.
 
 The launcher refuses to start when a port is taken, stops everything on Ctrl+C or a closed terminal (SIGHUP), kills every spawned process if it crashes or the process exits, and exits 1 if a service dies. Its full config
 (`ports`, `commands`, `readyTimeoutMs`, `openBrowser`, `log`) and pieces (`Launcher`, `parseLaunchArgs`, `ProcessGroup`, `StaticSite`,
-`lanUrls`, `openBrowser`) are documented in `packages/launcher/README.md` for tests and custom launchers.
+`lanUrls`, `openBrowser`, `DEFAULT_PORTS`, `defaultCommands`) are documented in `packages/launcher/README.md` for tests and custom launchers.
 
 The repo root has no game code. `scripts/game.ts <command> [game] [...args]` runs `games/<game>/<entry>.ts` by convention:
-`launch` runs `launch.ts`, `play` runs `terminal/play.ts`, `bots` runs `bots/cli.ts`. A game is a folder under `games/` with a
+`launch` runs `launch.ts`, `play` runs `terminal/play.ts`, `bots` runs `bots/cli.ts`, `demo` runs `terminal/demo.ts`. The one-shot
+commands (`play`, `demo`) run to completion and the dispatcher exits with their exit code; `launch` and `bots` stay up until Ctrl+C. A game is a folder under `games/` with a
 `package.json`. It is picked by the first argument when that names a game folder; otherwise the only game is used; with several games
 and a terminal it asks (`Pick a game [1-N]:`; empty input or end of input exits 2), and without a terminal it prints the list and exits 2.
 `bun run games` lists every game and the commands it has an entry for.

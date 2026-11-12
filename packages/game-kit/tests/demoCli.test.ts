@@ -24,21 +24,23 @@ describe("demoCli", () => {
     expect(exits).toEqual([1]);
   });
 
-  it("prints the usage and exits 2 on a bad --bots, a space-separated value or an unknown flag", async () => {
-    for (const argv of [
-      ["--bots=0"],
-      ["--bots=9"],
-      ["--bots=x"],
-      ["--bots="],
-      ["--bots", "4"],
-      ["--foo"],
-    ]) {
+  it("prints the usage and exits 2 on a bad --bots or an unknown flag", async () => {
+    for (const argv of [["--bots=0"], ["--bots=9"], ["--bots=x"], ["--bots="], ["--foo"]]) {
       const { io, err, exits } = fakeIo(argv);
       await demoCli({ ...base, botKit: tapKit() }, io);
-      expect(err).toEqual(["Usage: bun run demo [--bots=1..5]"]);
+      expect(err).toEqual([
+        "Usage: bun run demo [--bots=1..5] — from the repo root: bun run demo <game>",
+      ]);
       expect(exits).toEqual([2]);
     }
   });
+
+  it("seats the bots in the space-separated --bots form and exits 0", async () => {
+    const { io, log, exits } = fakeIo(["--bots", "2"]);
+    await demoCli({ ...base, botKit: tapKit() }, io);
+    expect(exits).toEqual([0]);
+    expect(log.some((line) => roomLine(3).test(line))).toBe(true);
+  }, 30_000);
 
   it("plays an all-bot game with the default bots and exits 0", async () => {
     const { io, log, exits } = fakeIo([]);
@@ -90,7 +92,9 @@ describe("demoCli", () => {
   it("refuses a bot count above the game's seats", async () => {
     const { io, err, exits } = fakeIo(["--bots=6"]);
     await demoCli({ ...base, botKit: tapKit() }, io);
-    expect(err).toEqual(["Usage: bun run demo [--bots=1..5]"]);
+    expect(err).toEqual([
+      "Usage: bun run demo [--bots=1..5] — from the repo root: bun run demo <game>",
+    ]);
     expect(exits).toEqual([2]);
   });
 

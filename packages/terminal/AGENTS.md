@@ -17,7 +17,7 @@ Terminal clients for any game: `TerminalPlayer`, `PlaySession`, arg parsers and 
 
 ## Public entry points
 
-- `.`: `TerminalPlayer`, `PlaySession`, `ReadlinePrompter`, `parsePlayArgs`, `parseBotsArgs`, `runBotsCommand`, `DemoRun`, `GameClient`, `parseDemoArgs`.
+- `.`: `TerminalPlayer`, `PlaySession`, `ReadlinePrompter`, `parsePlayArgs`, `parseBotsArgs`, `runBotsCommand`, `DemoRun`, `GameClient`, `parseDemoArgs`, types `PlayArgs`, `BotsArgs`, `ArgsLimits`, `DemoArgs`, `DemoArgsLimits`.
 - `./testing`: terminal test helpers.
 
 ## Tests

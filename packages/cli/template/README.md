@@ -16,7 +16,7 @@ bun run play __slug__ --join=CODE  # join from a terminal (Waving/Results)
 bun run bots __slug__ CODE [count] # seat bots in a browser-created room
 ```
 
-`bun run --cwd games/__slug__ demo` runs a narrated all-bot game and prints PASS or FAIL.
+`bun run demo __slug__` from the repo root (or `bun run demo` in the game folder) runs a narrated all-bot game and prints PASS or FAIL; `--bots N` sets the bot count.
 
 ## Tests
 

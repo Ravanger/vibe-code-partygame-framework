@@ -5,9 +5,14 @@ const ENTRIES = {
   launch: "launch.ts",
   play: "terminal/play.ts",
   bots: "bots/cli.ts",
+  demo: "terminal/demo.ts",
 } as const;
 
 export type GameCommand = keyof typeof ENTRIES;
+
+/** True when the command exits on its own once finished; the dispatcher waits for it and propagates its exit code instead of treating the exit as a failure. */
+export const isOneShot = (command: GameCommand): boolean =>
+  command === "play" || command === "demo";
 
 export interface FolderRecord {
   folder: string;

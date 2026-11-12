@@ -32,6 +32,19 @@ describe("buildLaunchConfig", () => {
     expect(config.demo?.max).toBe(5);
   });
 
+  it("forwards the ports option to the launcher config", () => {
+    const config = buildLaunchConfig(
+      { ...base, botKit: tapKit() },
+      { gameDir: "/game", ports: { clientDev: 4000 } },
+    );
+    expect(config.ports).toEqual({ clientDev: 4000 });
+  });
+
+  it("omits ports when none are given", () => {
+    const config = buildLaunchConfig({ ...base, botKit: tapKit() }, { gameDir: "/game" });
+    expect(config.ports).toBeUndefined();
+  });
+
   it("keeps the declaration's botKit for --bots even when the demo overrides the kit", () => {
     const kit = tapKit();
     const config = buildLaunchConfig(

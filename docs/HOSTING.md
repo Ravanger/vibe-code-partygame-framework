@@ -37,6 +37,8 @@ The launcher refuses to start if one of its ports is already in use.
 | 5173 | Vite dev server (`launch`, `launch:dev`, `launch:host`) |
 | 3000 | Built client (`launch:prod`) |
 
+The defaults are defined once, in `DEFAULT_PORTS` of `@partygame/launcher`; a test fails if the Vite preset's copy drifts. A game can move them by passing `ports` to its launch (the launcher then pins Vite to the dev client port with `--port`).
+
 ## Playing Over LAN
 
 Players on the same network open `http://<YOUR-LAN-IP>:5173` (`:3000` with `launch:prod`). The client talks to the game server and the API
@@ -82,7 +84,7 @@ bun run launch wit-clash --demo   # watch-only room: bots play one game, the bro
 ```bash
 bun run play wit-clash              # host a room; 3 bots join; uses the server on 2567/3001 or starts its own
 bun run play wit-clash --join=ABCD  # join a room as a normal player
-bun run --cwd games/wit-clash demo  # all-bot game, narrated; prints PASS/FAIL (--bots=N bots, 2 to 7, default 3) — WitClash-only
+bun run demo wit-clash              # all-bot game, narrated; prints PASS/FAIL (--bots N bots, 2 to 7, default 3) — WitClash-only
 ```
 
 `play` needs a game with a terminal entry: WitClash has one, the other bundled games do not. You are the host in `play`; browser players can join the same room with the printed code while Vite runs.

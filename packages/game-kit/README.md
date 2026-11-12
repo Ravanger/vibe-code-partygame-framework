@@ -51,10 +51,10 @@ Each entry file is a stub; only `launch` takes `gameDir`, the directory of the s
 | Stub | Calls | What it does |
 |---|---|---|
 | `server.ts` | `serve(pkg)` | loads the content (`pkg.load` with `io.env`, or `undefined`), builds the hosted game and starts the Bun game server plus code API on `PORT`/`API_PORT` (defaults 2567/3001; `startServer` validates them as whole numbers 1-65535); a failure prints one line and exits 1 |
-| `launch.ts` | `launch(pkg, { gameDir })` | builds a `LaunchConfig` from the declaration — `name` from `displayName` (or `meta.roomName`), bots capped at `maxPlayers - 1`, demo tables between `minPlayers - 1` and `maxPlayers - 1` bots finished by `isFinished` with the `demo` extras merged in — and runs it with `io.argv` |
+| `launch.ts` | `launch(pkg, { gameDir, ports? })` | builds a `LaunchConfig` from the declaration — `name` from `displayName` (or `meta.roomName`), bots capped at `maxPlayers - 1`, demo tables between `minPlayers - 1` and `maxPlayers - 1` bots finished by `isFinished` with the `demo` extras merged in, `ports` (a partial of the launcher's `DEFAULT_PORTS`) forwarded when given — and runs it with `io.argv` |
 | `bots/cli.ts` | `botsCli(pkg)` | seats bots in a room made elsewhere, `<CODE> [count]` bounded by `meta.maxPlayers - 1`; the SIGINT handler removes them and exits 0; bad arguments exit 2, a failed join exits 1, and a declaration without `botKit` exits 1 with "This game declares no bots." |
 | `terminal/play.ts` | `play(pkg)` | one human at a terminal driven by `pkg.terminal`, optionally with bots; starts a server when the endpoint defaults are used and no room is joined; exit 2 on bad arguments, 1 on failure, when the game has no `terminal`, or when it declares no bots (the client needs the kit's state class) |
-| `terminal/demo.ts` | `demoCli(pkg)` | one all-bot game on its own server with a PASS/FAIL verdict; `--bots=` defaults to 3 and must stay within `meta.minPlayers - 1 .. meta.maxPlayers - 1` and is parsed by `parseDemoArgs` (only the `=` form; anything else exits 2); exit 0 on PASS, 1 on FAIL, when loading fails, or when neither `botKit` nor `demo.kit` is declared |
+| `terminal/demo.ts` | `demoCli(pkg)` | one all-bot game on its own server with a PASS/FAIL verdict; `--bots N` (both the space and `=` forms) defaults to 3 and must stay within `meta.minPlayers - 1 .. meta.maxPlayers - 1` and is parsed by `parseDemoArgs` (anything else exits 2); run it as `bun run demo` in a game folder or `bun run demo <game>` from the repo root; exit 0 on PASS, 1 on FAIL, when loading fails, or when neither `botKit` nor `demo.kit` is declared |
 
 ## Helpers
 
@@ -62,9 +62,9 @@ Each entry file is a stub; only `launch` takes `gameDir`, the directory of the s
 
 The `HostedGame` a server hosts: `meta.roomName`, `definition(content)`, `stateClass` and, when declared, `publicFields`.
 
-### `buildLaunchConfig(pkg, { gameDir })` / `demoTableOptions(pkg, connection)`
+### `buildLaunchConfig(pkg, { gameDir, ports? })` / `demoTableOptions(pkg, connection)`
 
-The pure parts of `launch`: the `LaunchConfig`, and the per-connection `DemoTableOptions` its demo tables are built from — the declaration's `demo` extras (kit, room options, host name, bot pacing) merged under the connection's. The config omits its bot section when there is no `botKit` and its demo section when neither `botKit` nor `demo.kit` is declared; asking the launcher for `--bots`/`--demo` then fails with "`<name>` has no bots"/"has no demo", and calling `demoTableOptions` on such a declaration throws. `demoCli` resolves its run's `bot` options the same way — connection over declaration over defaults, with the entry's `log` as the lowest default.
+The pure parts of `launch`: the `LaunchConfig`, and the per-connection `DemoTableOptions` its demo tables are built from — the declaration's `demo` extras (kit, room options, host name, bot pacing) merged under the connection's. The config omits its bot section when there is no `botKit` and its demo section when neither `botKit` nor `demo.kit` is declared; asking the launcher for `--bots`/`--demo` then fails with "`<name>` has no bots"/"has no demo", and calling `demoTableOptions` on such a declaration throws. `ports` (a partial of the launcher's `DEFAULT_PORTS`) is forwarded when given, so a game can move the client port without editing the Vite preset — the launcher pins Vite to it with `--port`. `play` derives its join links from `DEFAULT_PORTS.clientDev` the same way. `demoCli` resolves its run's `bot` options the same way — connection over declaration over defaults, with the entry's `log` as the lowest default.
 
 ### `GameKitIo`
 

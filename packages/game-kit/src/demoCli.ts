@@ -6,9 +6,9 @@ import { defaultIo } from "./io.js";
 import { demoBotOptions } from "./launchConfig.js";
 import type { GameDeclaration, GameKitIo, GameMeta } from "./types.js";
 
-/** The usage line for the `demo` command, bounded by the game's seats. */
+/** The usage line for the `demo` command, bounded by the game's seats; names both entry forms. */
 const demoUsage = (meta: GameMeta): string =>
-  `Usage: bun run demo [--bots=${meta.minPlayers - 1}..${meta.maxPlayers - 1}]`;
+  `Usage: bun run demo [--bots=${meta.minPlayers - 1}..${meta.maxPlayers - 1}] — from the repo root: bun run demo <game>`;
 
 /** The `demo` entry: one all-bot game on its own server, with a PASS/FAIL verdict. */
 export async function demoCli<TState extends BaseGameState, TContent>(

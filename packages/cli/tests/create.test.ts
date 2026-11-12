@@ -33,6 +33,14 @@ describe("parseCreateArgs", () => {
     });
   });
 
+  it("parses a slug with --name= like --name", () => {
+    expect(parseCreateArgs(["my-game", "--name=My Game"])).toEqual({
+      ok: true,
+      slug: "my-game",
+      name: "My Game",
+    });
+  });
+
   it("is a usage error with no arguments", () => {
     const result = parseCreateArgs([]);
     expect(result.ok).toBe(false);
@@ -41,6 +49,12 @@ describe("parseCreateArgs", () => {
 
   it("is a usage error when --name has no value", () => {
     expect(parseCreateArgs(["my-game", "--name"]).ok).toBe(false);
+  });
+
+  it("rejects an empty --name= value", () => {
+    const result = parseCreateArgs(["my-game", "--name="]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/--name must not be empty/);
   });
 
   it("rejects an empty or whitespace-only --name", () => {

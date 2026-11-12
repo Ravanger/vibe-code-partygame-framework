@@ -3,6 +3,8 @@ export {
   type BotsArgs,
   DEFAULT_API_PORT,
   DEFAULT_ENDPOINT,
+  type DemoArgs,
+  type DemoArgsLimits,
   type PlayArgs,
   parseBotsArgs,
   parseDemoArgs,

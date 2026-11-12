@@ -19,6 +19,7 @@
     "new": "bun packages/cli/src/cli.ts create",
     "bots": "bun run scripts/game.ts bots",
     "play": "bun run scripts/game.ts play",
+    "demo": "bun run scripts/game.ts demo",
     "launch": "bun run scripts/game.ts launch",
     "launch:dev": "bun run scripts/game.ts launch dev",
     "launch:host": "bun run scripts/game.ts launch host",

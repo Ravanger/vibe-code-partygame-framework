@@ -255,8 +255,8 @@ bun run launch wit-clash --demo   # watch-only room: bots play one game, the bro
 ```bash
 bun run play wit-clash           # host a room; 3 bots join; uses the server on 2567/3001 or starts its own
 bun run play wit-clash --join=ABCD # join a room as a normal player
-bun run demo                     # `demo` script of this package; from the root: bun run --cwd games/wit-clash demo
-                                 # all-bot game, narrated; prints PASS/FAIL (--bots=N bots, 2 to 7, default 3)
+bun run demo                     # `demo` script of this package; from the repo root: bun run demo wit-clash
+                                 # all-bot game, narrated; prints PASS/FAIL (--bots N bots, 2 to 7, default 3)
 ```
 
 You answer and vote by typing; `q` quits (`/q` while writing an answer). `play` takes `--bots=N` (0 to 7), `--name=You`, `--endpoint=ws://host:2567 --api-port=3001`.

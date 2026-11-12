@@ -28,10 +28,12 @@ export interface ArgsLimits {
   usage: string;
 }
 
+/** The parsed `demo` command line. */
 export interface DemoArgs {
   bots: number;
 }
 
+/** Limits and usage text for parsing a game's `demo` arguments. */
 export interface DemoArgsLimits {
   minBots: number;
   maxBots: number;
@@ -93,14 +95,25 @@ export const parsePlayArgs = (argv: string[], limits: ArgsLimits): Parsed<PlayAr
   return { ok: true, value: { name, bots, join, endpoint, apiPort, usesDefaults } };
 };
 
-/** Parses `[--bots=N]` for an all-bot demo command; only the `=` form is accepted. */
+/** Parses `[--bots N]` for an all-bot demo command; both the space and `=` forms are accepted. */
 export const parseDemoArgs = (argv: string[], limits: DemoArgsLimits): Parsed<DemoArgs> => {
   const fail = { ok: false, error: limits.usage } as const;
-  if (argv.length === 0) {
+  const input = read(argv, ["bots"], 0);
+  if (!input) return fail;
+  // parseArgs keeps the last of a repeated flag; the demo command refuses to guess which one.
+  if (argv.filter((arg) => arg === "--bots" || arg.startsWith("--bots=")).length > 1) return fail;
+  const raw = input.values.bots;
+  if (raw === undefined) {
     return { ok: true, value: { bots: Math.min(Math.max(3, limits.minBots), limits.maxBots) } };
   }
-  const bots = Number(/^--bots=(\d+)$/.exec(argv.join(" "))?.[1]);
-  if (argv.length !== 1 || !between(bots, limits.minBots, limits.maxBots)) return fail;
+  const bots = Number(raw);
+  if (
+    raw.trim() === "" ||
+    !Number.isInteger(bots) ||
+    !between(bots, limits.minBots, limits.maxBots)
+  ) {
+    return fail;
+  }
   return { ok: true, value: { bots } };
 };
 

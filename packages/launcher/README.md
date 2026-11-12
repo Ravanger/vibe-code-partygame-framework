@@ -4,7 +4,7 @@ Unified launcher: game server, code-resolution API, browser client (dev/prod), o
 
 | Import | What |
 |---|---|
-| `@partygame/launcher` | `runLauncher(config, argv)`; `Launcher`, `ProcessGroup`, `StaticSite`, `parseLaunchArgs`, `lanUrls`, `openBrowser`; types `LaunchConfig`, `LaunchMode`, `LaunchArgs` (the parsed `launch` command line), `LaunchBots`, `LaunchDemo`, `LaunchPorts`, `LaunchCommands` |
+| `@partygame/launcher` | `runLauncher(config, argv)`; `Launcher`, `ProcessGroup`, `StaticSite`, `parseLaunchArgs`, `lanUrls`, `openBrowser`; `DEFAULT_PORTS` (the default game/API/client ports) and `defaultCommands(ports)` (the child-process commands the launcher runs by default); types `LaunchConfig`, `LaunchMode`, `LaunchArgs` (the parsed `launch` command line), `LaunchBots`, `LaunchDemo`, `LaunchPorts`, `LaunchCommands`, `CommandError` (the rejection of `ProcessGroup.run`, carrying the child's exit code) |
 
 ## Launch a game
 
@@ -26,9 +26,9 @@ await runLauncher(
 
 | Argument | What |
 |---|---|
-| `dev` (default) | game server (2567), API (3001) and Vite with hot reload (5173) |
+| `dev` (default) | game server, API and Vite with hot reload, on the `DEFAULT_PORTS` ports (2567, 3001, 5173) |
 | `host` | the same, plus the LAN addresses guests join on |
-| `prod` | build, then serve `dist/` on 3000 |
+| `prod` | build, then serve `dist/` on the production port (3000) |
 | `--no-browser` | do not open a browser tab |
 | `--bots[=N]` | open a room for you and seat N bots once you have entered your name |
 | `--demo[=N]` | a watch-only room that N bots plus a host bot play alone; the browser opens its TV view. Excludes `--bots` |
@@ -75,7 +75,7 @@ await runLauncher(
 
 ## Tune the config
 
-`LaunchBots` (`bots`) is how a game seats bots beside a human; `LaunchDemo` (`demo`) is how it opens a watch-only all-bot room. The rest is all optional: `ports` (`LaunchPorts`, the TCP ports the services listen on: `game` 2567, `api` 3001, `clientDev` 5173, `production` 3000), `commands` (`LaunchCommands`, the child-process commands: `server`, `dev`, `build`; each a command array), `readyTimeoutMs` (30000), `openBrowser(url)` and `log(line)`.
+`LaunchBots` (`bots`) is how a game seats bots beside a human; `LaunchDemo` (`demo`) is how it opens a watch-only all-bot room. The rest is all optional: `ports` (a partial of `DEFAULT_PORTS`, the TCP ports the services listen on: `game` 2567, `api` 3001, `clientDev` 5173, `production` 3000), `commands` (a partial of `defaultCommands(ports)`: `server`, `dev`, `build`; each a command array — the default `dev` runs Vite with `--strictPort --port <clientDev>`, so the launcher's port wins over the game's Vite config), `readyTimeoutMs` (30000), `openBrowser(url)` and `log(line)`.
 
 ```ts
 { name: "FirstToPress", gameDir, ports: { clientDev: 5200 }, commands: { build: ["bun", "run", "build"] } }

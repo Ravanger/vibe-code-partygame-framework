@@ -4,7 +4,7 @@ import {
   DemoTable,
   type DemoTableOptions,
 } from "@partygame/bots";
-import type { LaunchConfig } from "@partygame/launcher";
+import type { LaunchConfig, LaunchPorts } from "@partygame/launcher";
 import type { BaseGameState } from "@partygame/shared/schema";
 import type { GameDeclaration } from "./types.js";
 
@@ -40,17 +40,19 @@ export function demoTableOptions<TState extends BaseGameState, TContent>(
 /**
  * The `LaunchConfig` a game's `launch.ts` runs. The bot and demo sections are omitted when the
  * declaration resolves no kit (`botKit`, or `demo.kit` for the demo); asking the launcher for
- * `--bots`/`--demo` then fails with "<name> has no bots"/"has no demo".
+ * `--bots`/`--demo` then fails with "<name> has no bots"/"has no demo". `ports` (a partial of the
+ * launcher's `DEFAULT_PORTS`) is forwarded when given.
  */
 export function buildLaunchConfig<TState extends BaseGameState, TContent>(
   pkg: GameDeclaration<TState, TContent>,
-  options: { gameDir: string },
+  options: { gameDir: string; ports?: Partial<LaunchPorts> },
 ): LaunchConfig<TState> {
   const { meta } = pkg;
   const kit = pkg.botKit;
   return {
     name: pkg.displayName ?? meta.roomName,
     gameDir: options.gameDir,
+    ...(options.ports !== undefined ? { ports: options.ports } : {}),
     ...(kit !== undefined ? { bots: { kit, max: meta.maxPlayers - 1 } } : {}),
     ...((pkg.demo?.kit ?? kit) !== undefined
       ? {

@@ -13,6 +13,7 @@ import {
   formatGameList,
   GameManifestSchema,
   isGameCommand,
+  isOneShot,
   parseChoice,
   pickGame,
 } from "./gameEntry.js";
@@ -223,7 +224,7 @@ describe("formatting", () => {
     const list = formatGameList([alpha, beta], (folder, command) =>
       folder === "alpha" ? command !== "bots" : false,
     );
-    expect(list).toBe("alpha: launch, play\nBeta Game (beta): no commands");
+    expect(list).toBe("alpha: launch, play, demo\nBeta Game (beta): no commands");
   });
 
   it("shows icon and description in the choices", () => {
@@ -234,7 +235,7 @@ describe("formatting", () => {
 
   it("shows icon and description in the list", () => {
     expect(formatGameList([manifested], () => true)).toBe(
-      "🧠 WitClash (wit-clash) — A word-prompt party game: launch, play, bots",
+      "🧠 WitClash (wit-clash) — A word-prompt party game: launch, play, bots, demo",
     );
   });
 });
@@ -264,6 +265,7 @@ describe("entryPath", () => {
     expect(entryPath("launch", "alpha")).toBe("games/alpha/launch.ts");
     expect(entryPath("play", "alpha")).toBe("games/alpha/terminal/play.ts");
     expect(entryPath("bots", "alpha")).toBe("games/alpha/bots/cli.ts");
+    expect(entryPath("demo", "alpha")).toBe("games/alpha/terminal/demo.ts");
   });
 });
 
@@ -272,7 +274,16 @@ describe("isGameCommand", () => {
     expect(isGameCommand("launch")).toBe(true);
     expect(isGameCommand("play")).toBe(true);
     expect(isGameCommand("bots")).toBe(true);
-    expect(isGameCommand("demo")).toBe(false);
+    expect(isGameCommand("demo")).toBe(true);
     expect(isGameCommand(undefined)).toBe(false);
+  });
+});
+
+describe("isOneShot", () => {
+  it("marks the commands that exit on their own once finished", () => {
+    expect(isOneShot("play")).toBe(true);
+    expect(isOneShot("demo")).toBe(true);
+    expect(isOneShot("launch")).toBe(false);
+    expect(isOneShot("bots")).toBe(false);
   });
 });

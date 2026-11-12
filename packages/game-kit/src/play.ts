@@ -1,3 +1,4 @@
+import { DEFAULT_PORTS } from "@partygame/launcher";
 import type { BaseGameState } from "@partygame/shared/schema";
 import {
   PlaySession,
@@ -45,7 +46,7 @@ export async function play<TState extends BaseGameState, TContent>(
       games: [hostedGame(pkg, await pkg.load?.(io.env))],
       player: (room, playerId, prompter) =>
         new TerminalPlayer(room, playerId, prompter, terminal()),
-      clientUrl: "http://localhost:5173",
+      clientUrl: `http://localhost:${DEFAULT_PORTS.clientDev}`,
     };
     const stop = () => session?.stop();
     session = new PlaySession(options, io.prompter(stop));

@@ -116,16 +116,18 @@ describe("parseDemoArgs", () => {
     expect(parseDemoArgs([], { ...demo, minBots: 4 })).toEqual({ ok: true, value: { bots: 4 } });
   });
 
-  it("reads --bots=N within the range", () => {
+  it("reads --bots within the range in both forms", () => {
     expect(parseDemoArgs(["--bots=1"], demo)).toEqual({ ok: true, value: { bots: 1 } });
+    expect(parseDemoArgs(["--bots", "4"], demo)).toEqual({ ok: true, value: { bots: 4 } });
     expect(parseDemoArgs(["--bots=5"], demo)).toEqual({ ok: true, value: { bots: 5 } });
   });
 
   it.each([
     ["an empty value", ["--bots="]],
-    ["the space form", ["--bots", "4"]],
     ["an unknown flag", ["--foo"]],
     ["a repeated flag", ["--bots=2", "--bots=3"]],
+    ["extra positionals", ["--bots=2", "extra"]],
+    ["a bare positional", ["4"]],
     ["below the range", ["--bots=0"]],
     ["above the range", ["--bots=6"]],
     ["a non-number", ["--bots=x"]],

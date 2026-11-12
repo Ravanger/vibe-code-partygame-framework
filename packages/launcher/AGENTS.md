@@ -17,7 +17,7 @@
 
 ## Public entry points
 
-- `.`: `runLauncher`, `Launcher`, `ProcessGroup`, `StaticSite`, `parseLaunchArgs`, `lanUrls`, `openBrowser`, types `LaunchConfig`, `LaunchArgs`, `LaunchMode`, `BrowserSpawner`, `LaunchBots`, `LaunchCommands`, `LaunchDemo`, `LaunchPorts`.
+- `.`: `runLauncher`, `Launcher`, `ProcessGroup`, `StaticSite`, `parseLaunchArgs`, `lanUrls`, `openBrowser`, `DEFAULT_PORTS`, `defaultCommands`, types `LaunchConfig`, `LaunchArgs`, `LaunchMode`, `BrowserSpawner`, `LaunchBots`, `LaunchCommands`, `LaunchDemo`, `LaunchPorts`, `CommandError`.
 
 ## Tests
 

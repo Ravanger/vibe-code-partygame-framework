@@ -13,24 +13,30 @@ export type CreateArgs =
 
 const USAGE = 'Usage: partygame create <slug> [--name "Display Name"] [--headless]';
 
-/** Parses `create <slug> [--name "..."] [--headless]`; a usage error otherwise. */
+/** Parses `create <slug> [--name "..." | --name=...] [--headless]`; a usage error otherwise. */
 export function parseCreateArgs(argv: string[]): CreateArgs {
   const [first, ...rest] = argv;
   if (first === undefined) return { ok: false, error: USAGE };
   let name: string | undefined;
   let headless = false;
-  for (let i = 0; i < rest.length; ++i) {
-    const arg = rest[i];
+  const args = rest[Symbol.iterator]();
+  for (const arg of args) {
     if (arg === "--headless") {
       headless = true;
       continue;
     }
-    if (arg !== "--name") return { ok: false, error: `unexpected argument "${arg}"\n${USAGE}` };
-    const value = rest[i + 1];
-    if (value === undefined) return { ok: false, error: USAGE };
+    let value: string | undefined;
+    if (arg === "--name") {
+      const next = args.next().value;
+      if (next === undefined) return { ok: false, error: USAGE };
+      value = next;
+    } else if (arg.startsWith("--name=")) {
+      value = arg.slice("--name=".length);
+    } else {
+      return { ok: false, error: `unexpected argument "${arg}"\n${USAGE}` };
+    }
     name = value.trim();
     if (name.length === 0) return { ok: false, error: `--name must not be empty\n${USAGE}` };
-    ++i;
   }
   const slug = parseSlug(first);
   if (!slug.ok) return { ok: false, error: slug.error };

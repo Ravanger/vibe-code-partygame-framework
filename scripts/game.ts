@@ -3,6 +3,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { fileURLToPath } from "node:url";
+import type { CommandError } from "../packages/launcher/src/ProcessGroup.js";
 import {
   buildArgs,
   discoverGames,
@@ -12,6 +13,7 @@ import {
   formatGameList,
   type Game,
   isGameCommand,
+  isOneShot,
   parseChoice,
   pickGame,
 } from "./gameEntry.js";
@@ -61,7 +63,7 @@ if (command === "list") {
 }
 
 if (!isGameCommand(command)) {
-  console.error("Usage: bun run scripts/game.ts <list|launch|play|bots> [game] [...args]");
+  console.error("Usage: bun run scripts/game.ts <list|launch|play|bots|demo> [game] [...args]");
   process.exit(2);
 }
 
@@ -94,7 +96,17 @@ const group = new ProcessGroup((message) => {
   group.stop();
   process.exit(1);
 });
-group.start(command, [process.execPath, entry, ...rest], root);
+if (isOneShot(command)) {
+  void group
+    .run(command, [process.execPath, entry, ...rest], root)
+    .then(() => process.exit(0))
+    .catch((error: CommandError) => {
+      console.error(error.message);
+      process.exit(error.exitCode ?? 1);
+    });
+} else {
+  group.start(command, [process.execPath, entry, ...rest], root);
+}
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.on(signal, () => {
     group.stop();

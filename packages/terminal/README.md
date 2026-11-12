@@ -37,7 +37,7 @@ Optional: `stageOf(state)`; `narrate(state)` returns lines printed on every stat
 
 ## Wire `terminal/play.ts`
 
-`parsePlayArgs` reads `--bots`, `--name`, `--join`, `--endpoint`, `--api-port`. `parseDemoArgs(argv, { minBots, maxBots, usage })` reads `--bots=N` for an all-bot demo (default 3, clamped into the range; the space form and unknown flags are rejected with `usage`). `PlayArgs` and `BotsArgs` are the parsed command lines; `ArgsLimits` carries the limits and usage text. Entries exit 2 on bad arguments. `PlaySession` (options `PlaySessionOptions`: where the server is, which room to enter, who plays) finds or starts a server, creates or joins a room and seats bots from your `BotKit`; rooms are opened through `GameClient`, a thin wrapper over the default room connector (`defaultConnector`) from `@partygame/bots`.
+`parsePlayArgs` reads `--bots`, `--name`, `--join`, `--endpoint`, `--api-port`. `parseDemoArgs(argv, { minBots, maxBots, usage })` reads `--bots N` (both the space and `=` forms) for an all-bot demo (default 3, clamped into the range; an empty value, a non-integer or out-of-range count, a repeated flag, unknown flags and extra positionals are rejected with `usage`). `PlayArgs`, `BotsArgs` and `DemoArgs` are the parsed command lines; `ArgsLimits` and `DemoArgsLimits` carry the limits and usage text. Entries exit 2 on bad arguments. `PlaySession` (options `PlaySessionOptions`: where the server is, which room to enter, who plays) finds or starts a server, creates or joins a room and seats bots from your `BotKit`; rooms are opened through `GameClient`, a thin wrapper over the default room connector (`defaultConnector`) from `@partygame/bots`.
 
 ```ts
 import { createInterface } from "node:readline/promises";
