@@ -42,7 +42,7 @@ export const gamePackage = defineGamePackage({
 | `isFinished(state)` | true once the game is over; the demo tables and the demo run watch for it |
 | `botKit?` | the game's `BotKit` (`roomName`, `stateClass`, `strategy`); optional — without it `serve` and `launch` keep working, but `botsCli`, `demoCli` and `play` print "This game declares no bots." and exit 1 |
 | `terminal?` | `() => TerminalStrategy`; without it `play` prints "This game has no terminal strategy." and exits 1 |
-| `demo?` | extras beyond the kit: `kit`, `roomOptions`, `hostName`, `bot` (pacing), `narrate(state)`, `problems(state)` and `passMessage` |
+| `demo?` | extras beyond the kit: `kit`, `roomOptions`, `hostName`, `bot` (pacing), `commentator` (a factory created once per run, returning `narrate(state)` lines and optional `problems(state)` checks) and `passMessage` |
 
 ## Entry functions
 
@@ -74,4 +74,5 @@ The injectable process: `env`, `argv`, `exit`, `log`, `error`, `onSignal` and th
 
 - `GameMeta`: room name and player bounds (`roomName: string`, `minPlayers: number`, `maxPlayers: number`).
 - `ServeOptions`: config for `serve()` (`games: HostedGame[]`, `port?: number`, `apiPort?: number`, `textFilter?` — the declaration's filter).
-- `GameDemoOptions`: the declaration's `demo` field (`kit?`, `roomOptions?`, `bot?`, `hostName?`, `narrate?`, `problems?`, `passMessage?`).
+- `GameDemoOptions`: the declaration's `demo` field (`kit?`, `roomOptions?`, `bot?`, `hostName?`, `commentator?`, `passMessage?`).
+- `DemoCommentator`: what a game's `commentator` factory returns — `narrate(state)` lines and optional `problems(state)` checks for one demo run.

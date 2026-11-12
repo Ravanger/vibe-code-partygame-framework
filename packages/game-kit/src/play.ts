@@ -9,6 +9,7 @@ import {
 import { failWith } from "./fail.js";
 import { hostedGame } from "./hostedGame.js";
 import { defaultIo } from "./io.js";
+import { parseOrExit } from "./parseOrExit.js";
 import { startsServer } from "./startsServer.js";
 import type { GameDeclaration, GameKitIo } from "./types.js";
 
@@ -19,12 +20,10 @@ export async function play<TState extends BaseGameState, TContent>(
 ): Promise<void> {
   const meta = pkg.meta;
   const usage = `Usage: bun run play [--bots=0..${meta.maxPlayers - 1}] [--name=You] [--join=ABCD] [--endpoint=ws://host:2567 --api-port=3001]`;
-  const parsed = parsePlayArgs(io.argv, { maxBots: meta.maxPlayers - 1, usage });
-  if (!parsed.ok) {
-    io.error(parsed.error);
-    io.exit(2);
-    return;
-  }
+  const args = parseOrExit(io, () =>
+    parsePlayArgs(io.argv, { maxBots: meta.maxPlayers - 1, usage }),
+  );
+  if (args === undefined) return;
   const terminal = pkg.terminal;
   if (terminal === undefined) {
     io.error("This game has no terminal strategy.");
@@ -40,8 +39,8 @@ export async function play<TState extends BaseGameState, TContent>(
   let session: PlaySession<TState> | undefined;
   try {
     const options: PlaySessionOptions<TState> = {
-      ...parsed.value,
-      startServer: startsServer(parsed.value),
+      ...args,
+      startServer: startsServer(args),
       kit,
       games: [hostedGame(pkg, await pkg.load?.(io.env))],
       player: (room, playerId, prompter) =>

@@ -13,6 +13,14 @@ export interface GameMeta {
   maxPlayers: number;
 }
 
+/** The demo's commentator for one run: the lines it prints and the problems it checks. */
+export interface DemoCommentator<TState extends BaseGameState> {
+  /** Lines to print on each spectator state change. */
+  narrate(state: TState): readonly string[];
+  /** Game-specific problems in the final spectator state, e.g. scores that do not add up. */
+  problems?(state: TState): readonly string[];
+}
+
 /** Demo extras beyond the kit: which table to build and how to pace it. */
 export interface GameDemoOptions<TState extends BaseGameState> {
   /** The kit variant for the demo tables; `botKit` when omitted. */
@@ -23,10 +31,8 @@ export interface GameDemoOptions<TState extends BaseGameState> {
   bot?: BotOptions;
   /** Name of the host bot. */
   hostName?: string;
-  /** Lines to print on each spectator state change (a commentator). */
-  narrate?(state: TState): readonly string[];
-  /** Game-specific problems in the final spectator state, e.g. scores that do not add up. */
-  problems?(state: TState): readonly string[];
+  /** Creates the run's commentator once per demo, so a narrator with state never carries it between runs. */
+  commentator?: () => DemoCommentator<TState>;
   /** The line printed when the demo passes; "PASS: no action was rejected" by default. */
   passMessage?: string;
 }

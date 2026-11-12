@@ -1189,7 +1189,7 @@ Optional strategy members: `narrate(state)` returns lines to print on every stat
 
 The `demo` entry plays one game by itself on its own server (free ports): a host bot, N more bots and a narrating spectator, then prints
 `PASS` or `FAIL`. It is the regression check for a game's bot strategy: the run fails when the game does not finish in the timeout
-(default 180 s), when any bot action is refused, or when `problems(state)` reports something about the final state.
+(default 180 s), when any bot action is refused, or when the commentator's `problems(state)` reports something about the final state.
 
 Declare what the demo needs on the declaration's `demo` field; `terminal/demo.ts` is a stub calling `demoCli(gamePackage)`:
 
@@ -1197,8 +1197,10 @@ Declare what the demo needs on the declaration's `demo` field; `terminal/demo.ts
 // gamePackage.ts — the `demo` field of the declaration
 demo: {
   bot: { thinkMs: [200, 900], reactMs: [100, 500] },   // pacing; kit, roomOptions and hostName also go here
-  narrate: (state) => (state.phase === "Done" ? [`${state.winner} won`] : []),
-  problems: (state) => (state.winner === "" ? ["nobody won"] : []),
+  commentator: () => ({
+    narrate: (state) => (state.phase === "Done" ? [`${state.winner} won`] : []),
+    problems: (state) => (state.winner === "" ? ["nobody won"] : []),
+  }),
 },
 
 // terminal/demo.ts
@@ -1209,8 +1211,9 @@ await demoCli(buttonPackage);   // bun run demo [--bots=1..7]; from the repo roo
 ```
 
 `--bots N` (both the space and `=` forms) sets the bot count (default 3, bounded by `meta`; parsed by `parseDemoArgs`, so an empty value, a non-integer or an out-of-range count prints the usage and exits 2). The field's extras are all optional: `kit` (a demo-specific kit),
-`roomOptions`, `hostName`, `bot` (pacing and outcome logging), `narrate(state)`, `problems(state)` and `passMessage`. Under the hood
-`demoCli` drives a `DemoRun` from `@partygame/terminal`. Example: `games/wit-clash/gamePackage.ts` (the Narrator narrates and checks).
+`roomOptions`, `hostName`, `bot` (pacing and outcome logging), `commentator` (a factory created once per run, returning
+`narrate(state)` lines and optional `problems(state)` checks — a narrator with state stays fresh between runs) and `passMessage`.
+Under the hood `demoCli` drives a `DemoRun` from `@partygame/terminal`. Example: `games/wit-clash/gamePackage.ts` (the Narrator narrates and checks).
 
 ## Launcher
 

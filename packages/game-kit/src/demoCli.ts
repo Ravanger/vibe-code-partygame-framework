@@ -4,6 +4,7 @@ import { failWith } from "./fail.js";
 import { hostedGame } from "./hostedGame.js";
 import { defaultIo } from "./io.js";
 import { demoBotOptions } from "./launchConfig.js";
+import { parseOrExit } from "./parseOrExit.js";
 import type { GameDeclaration, GameKitIo, GameMeta } from "./types.js";
 
 /** The usage line for the `demo` command, bounded by the game's seats; names both entry forms. */
@@ -23,18 +24,17 @@ export async function demoCli<TState extends BaseGameState, TContent>(
     return;
   }
   const meta = pkg.meta;
-  const parsed = parseDemoArgs(io.argv, {
-    minBots: meta.minPlayers - 1,
-    maxBots: meta.maxPlayers - 1,
-    usage: demoUsage(meta),
-  });
-  if (!parsed.ok) {
-    io.error(parsed.error);
-    io.exit(2);
-    return;
-  }
-  const { bots } = parsed.value;
+  const args = parseOrExit(io, () =>
+    parseDemoArgs(io.argv, {
+      minBots: meta.minPlayers - 1,
+      maxBots: meta.maxPlayers - 1,
+      usage: demoUsage(meta),
+    }),
+  );
+  if (args === undefined) return;
+  const { bots } = args;
   try {
+    const { narrate, problems } = demo?.commentator?.() ?? {};
     const passed = await new DemoRun<TState>({
       games: [hostedGame(pkg, await pkg.load?.(io.env))],
       kit,
@@ -43,8 +43,8 @@ export async function demoCli<TState extends BaseGameState, TContent>(
       ...(demo?.hostName !== undefined ? { hostName: demo.hostName } : {}),
       bot: demoBotOptions({ log: io.log }, demo?.bot),
       finished: pkg.isFinished,
-      ...(demo?.narrate !== undefined ? { narrate: demo.narrate } : {}),
-      ...(demo?.problems !== undefined ? { problems: demo.problems } : {}),
+      ...(narrate !== undefined ? { narrate: (state: TState) => narrate(state) } : {}),
+      ...(problems !== undefined ? { problems: (state: TState) => problems(state) } : {}),
       ...(demo?.passMessage !== undefined ? { passMessage: demo.passMessage } : {}),
       out: io.log,
     }).run();

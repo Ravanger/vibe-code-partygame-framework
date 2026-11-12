@@ -4,8 +4,8 @@ import { createBluffGame } from "./src/game.js";
 import { isGameOver } from "./src/isGameOver.js";
 import { contentDir, loadContent } from "./src/loadContent.js";
 import { META } from "./src/meta.js";
-import { PHASE } from "./src/phaseNames.js";
 import { BLUFF_PUBLIC_FIELDS, BluffState } from "./src/state.js";
+import { bluffCommentator } from "./terminal/Narrator.js";
 
 /** The bluff game declared once: content loads from `content/`, the entry files are stubs over this. */
 export const gamePackage = defineGamePackage({
@@ -20,20 +20,6 @@ export const gamePackage = defineGamePackage({
   demo: {
     roomOptions: { rounds: 1 },
     bot: { thinkMs: [400, 900], reactMs: [300, 700] },
-    narrate: (state) => {
-      if (state.phase === PHASE.Writing) return [`Writing — ${state.promptText}`];
-      if (state.phase === PHASE.Voting) return ["Vote on the real answer"];
-      if (state.phase === PHASE.Reveal) {
-        const truth = state.choices.find((choice) => choice.id === state.truthRevealedId);
-        return [`The truth was: ${truth?.text ?? "?"}`];
-      }
-      if (state.phase === PHASE.Results) {
-        const leader = [...state.scoreboard][0];
-        return [
-          leader !== undefined ? `Final — ${leader.name} leads with ${leader.score}` : "Final",
-        ];
-      }
-      return [];
-    },
+    commentator: bluffCommentator,
   },
 });

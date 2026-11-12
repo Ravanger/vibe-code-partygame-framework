@@ -30,8 +30,8 @@ describe("gamePackage", () => {
 
   describe("demo narration", () => {
     const narrate = (state: BluffState): readonly string[] => {
-      if (gamePackage.demo?.narrate === undefined) throw new Error("expected a narrator");
-      return gamePackage.demo.narrate(state);
+      if (gamePackage.demo?.commentator === undefined) throw new Error("expected a commentator");
+      return gamePackage.demo.commentator().narrate(state);
     };
     const at = (phase: string): BluffState => {
       const state = new BluffState();

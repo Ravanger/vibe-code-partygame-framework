@@ -1,6 +1,6 @@
 import { ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH } from "@partygame/shared";
 import { describe, expect, it } from "vitest";
-import { demoCli } from "../src/index.js";
+import { demoCli, type GameDeclaration } from "../src/index.js";
 import { fakeIo } from "./fixtures/fakeIo.js";
 import { TAP_PUBLIC_FIELDS, TAP_ROOM, TapGame, TapState, tapKit } from "./fixtures/tapGame.js";
 
@@ -61,11 +61,13 @@ describe("demoCli", () => {
           roomOptions: {},
           hostName: "Hoster",
           bot: { thinkMs: [0, 20], reactMs: [0, 20] },
-          narrate: (state) => (state.done ? ["done!"] : []),
-          problems: (state) => {
-            for (const player of state.players.values()) names.push(player.name);
-            return [];
-          },
+          commentator: () => ({
+            narrate: (state) => (state.done ? ["done!"] : []),
+            problems: (state) => {
+              for (const player of state.players.values()) names.push(player.name);
+              return [];
+            },
+          }),
           passMessage: "PASS: all tapped",
         },
       },
@@ -77,6 +79,32 @@ describe("demoCli", () => {
     expect(names).toContain("Hoster");
     expect(log.at(-1)).toBe("PASS: all tapped");
   }, 30_000);
+
+  it("creates a fresh commentator per run, so a stateful narrator narrates both demos", async () => {
+    const declaration: GameDeclaration<TapState> = {
+      ...base,
+      botKit: tapKit(),
+      demo: {
+        bot: { thinkMs: [0, 20], reactMs: [0, 20] },
+        commentator: () => {
+          let announcedResults = false;
+          return {
+            narrate: (state) => {
+              if (!state.done || announcedResults) return [];
+              announcedResults = true;
+              return ["results!"];
+            },
+          };
+        },
+      },
+    };
+    const first = fakeIo([]);
+    await demoCli(declaration, first.io);
+    expect(first.log).toContain("results!");
+    const second = fakeIo([]);
+    await demoCli(declaration, second.io);
+    expect(second.log).toContain("results!");
+  }, 60_000);
 
   it("seats the full house at the upper bound and exits 0", async () => {
     const { io, log, exits } = fakeIo(["--bots=5"]);
@@ -106,7 +134,7 @@ describe("demoCli", () => {
         botKit: tapKit(),
         demo: {
           bot: { thinkMs: [0, 20], reactMs: [0, 20] },
-          problems: () => ["taps are off"],
+          commentator: () => ({ narrate: () => [], problems: () => ["taps are off"] }),
         },
       },
       io,

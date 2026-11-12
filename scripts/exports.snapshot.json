@@ -380,6 +380,7 @@
           "default": "./dist/index.js"
         },
         "symbols": {
+          "DemoCommentator": {},
           "GameDeclaration": {},
           "GameDemoOptions": {},
           "GameKitIo": {},
