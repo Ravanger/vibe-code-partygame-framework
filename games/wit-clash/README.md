@@ -205,7 +205,7 @@ Passed when the room is created or changed by the host in the lobby with `SET_OP
 | `voteSeconds` | 20 | 5 to 120 |
 | `revealSeconds` | 5 | 1 to 30 |
 | `filterLevel` | `moderate` | `off`, `moderate` or `strict` |
-| `contentRating` | `any` | `any` or `family`; a `family` room never offers mature categories (see the content README) |
+| `contentRating` | `any` | `any` or `family`; a `family` room never offers mature categories — none of the shipped ones are rated mature, so for now it changes nothing in free play, and daily mode ignores it (see the content README) |
 | `honorVote` | `false` | boolean; the optional funniest-answer vote before the final Results |
 
 ### Daily mode

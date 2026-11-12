@@ -2,7 +2,7 @@
 
 A bluffing party game: each round the room draws a trivia prompt with one hidden true answer. Every player writes a fake answer, the truth and the fakes are shuffled, and everyone votes on which option is real. You score for guessing the truth and for fooling others into picking your fake.
 
-Part of the M6 archetypes milestone: the headless rules spike (#156) plus the browser UI (#157) — player and TV screens for every phase, a demo bot, and `server.ts`/`launch.ts` entries over one `gamePackage` declaration.
+Player and TV screens for every phase, a demo bot, and `server.ts`/`launch.ts` entries over one `gamePackage` declaration.
 
 ## Rules
 

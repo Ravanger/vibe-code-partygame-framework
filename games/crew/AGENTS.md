@@ -2,7 +2,7 @@
 
 ## Responsibility
 
-The asymmetric co-op party game (headless rules spike): private roles and signals per player, rounds of share/withhold choices, a shared win/lose on the crew's signal sum. No UI in this spike.
+The asymmetric co-op party game: private roles and signals per player, rounds of share/withhold choices, a shared win/lose on the crew's signal sum.
 
 ## Never put here
 
@@ -16,7 +16,7 @@ The asymmetric co-op party game (headless rules spike): private roles and signal
 
 ## Public entry points
 
-- No `exports`. Headless spike: no server, launch or UI entries yet.
+- No `exports`. Headless: no server, launch, bot or UI entries.
 
 ## Tests
 

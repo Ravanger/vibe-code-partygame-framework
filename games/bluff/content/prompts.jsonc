@@ -10,14 +10,14 @@
       "truth": "France"
     },
     {
-      "id": "best-selling-novel",
-      "question": "What is the best-selling novel of all time?",
-      "truth": "Don Quixote"
+      "id": "un-languages",
+      "question": "How many official languages does the United Nations have?",
+      "truth": "six"
     },
     {
-      "id": "octopus-hearts",
-      "question": "How many hearts does an octopus have?",
-      "truth": "three"
+      "id": "tree-climber",
+      "question": "Which fish can climb mangrove trees using its fins?",
+      "truth": "the mudskipper"
     },
     {
       "id": "banana-plant",
@@ -35,9 +35,9 @@
       "truth": "about 38 minutes"
     },
     {
-      "id": "never-spoils",
-      "question": "What is the only food that never spoils?",
-      "truth": "honey"
+      "id": "paper-money",
+      "question": "In which country was paper money first used?",
+      "truth": "China"
     },
     {
       "id": "baby-bones",
@@ -45,14 +45,14 @@
       "truth": "about 300"
     },
     {
-      "id": "no-jump",
-      "question": "What is the only mammal that cannot jump?",
-      "truth": "the elephant"
+      "id": "fastest-checkmate",
+      "question": "What is the fastest possible checkmate in chess?",
+      "truth": "two moves (Fool's mate)"
     },
     {
-      "id": "first-youtube",
-      "question": "What was the first video ever uploaded to YouTube?",
-      "truth": "Me at the zoo"
+      "id": "first-best-picture",
+      "question": "What was the first film to win the Academy Award for Best Picture?",
+      "truth": "Wings"
     },
     {
       "id": "bee-eyes",
@@ -70,14 +70,14 @@
       "truth": "Finland"
     },
     {
-      "id": "seeds-outside",
-      "question": "What is the only fruit with its seeds on the outside?",
-      "truth": "the strawberry"
+      "id": "largest-flower",
+      "question": "What plant produces the largest single flower in the world?",
+      "truth": "rafflesia"
     },
     {
-      "id": "first-disney-feature",
-      "question": "What was Disney's first full-length animated feature film?",
-      "truth": "Snow White and the Seven Dwarfs"
+      "id": "shark-bones",
+      "question": "What is a shark's skeleton made of instead of bone?",
+      "truth": "cartilage"
     },
     {
       "id": "blue-blood",
@@ -95,9 +95,9 @@
       "truth": "Russia"
     },
     {
-      "id": "missing-letter",
-      "question": "What is the only letter that appears in no US state name?",
-      "truth": "Q"
+      "id": "alphabetical-word",
+      "question": "Which common English word has its letters in alphabetical order?",
+      "truth": "forty"
     },
     {
       "id": "space-survivor",

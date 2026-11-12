@@ -1,4 +1,4 @@
-import { defineGame } from "@partygame/core";
+import { actionLogMiddleware, defineGame } from "@partygame/core";
 import { META } from "./meta.js";
 import { type RushOptions, RushOptionsSchema } from "./options.js";
 import { PHASE } from "./phaseNames.js";
@@ -16,6 +16,7 @@ export function createRushGame() {
     maxPlayers: META.maxPlayers,
     startPhase: PHASE.Race,
     options: RushOptionsSchema,
+    middleware: [actionLogMiddleware()],
     createPrivateState: () => new RushPrivate(),
     phases: {
       [PHASE.Race]: Race,

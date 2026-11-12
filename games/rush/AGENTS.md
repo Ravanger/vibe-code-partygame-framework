@@ -2,7 +2,7 @@
 
 ## Responsibility
 
-The real-time tap-race party game (headless rules spike): a target bounces around a 10x10 grid on the server tick while players TAP for center-zone hits. No UI in this spike.
+The real-time tap-race party game: a target bounces around a 10x10 grid on the server tick while players TAP for center-zone hits.
 
 ## Never put here
 
@@ -16,7 +16,7 @@ The real-time tap-race party game (headless rules spike): a target bounces aroun
 
 ## Public entry points
 
-- No `exports`. Headless spike: no server, launch or UI entries yet.
+- No `exports`. Headless: no server, launch, bot or UI entries.
 
 ## Tests
 
