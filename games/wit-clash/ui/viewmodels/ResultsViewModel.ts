@@ -1,4 +1,4 @@
-import { type PodiumStep, podiumSteps } from "@partygame/game-ui";
+import { type PodiumStep, podiumSteps, roundLabel } from "@partygame/game-ui";
 import { ACTION } from "../../src/actionNames.js";
 import type { WitClashManager } from "../manager.js";
 import { MatchupRecap, type RevealedMatchup } from "./MatchupRecap.js";
@@ -93,7 +93,7 @@ export class ResultsViewModel {
 
   get roundLabel(): string {
     const state = this.manager.state;
-    return `Round ${state?.roundNumber ?? 0} of ${state?.totalRounds ?? 0}`;
+    return roundLabel(state?.roundNumber ?? 0, state?.totalRounds ?? 0);
   }
 
   get champions(): ScoreRow[] {

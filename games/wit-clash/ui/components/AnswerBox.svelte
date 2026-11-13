@@ -1,4 +1,6 @@
 <script lang="ts">
+import { ANSWER_MAX_LENGTH } from "../../src/actionNames.js";
+
 const {
   value,
   remaining,
@@ -23,7 +25,7 @@ function handleKeydown(e: KeyboardEvent) {
   <textarea
     placeholder="Type your answer..."
     aria-label="Your answer"
-    maxlength="200"
+    maxlength={ANSWER_MAX_LENGTH}
     {value}
     oninput={(e) => oninput(e.currentTarget.value)}
     onkeydown={handleKeydown}

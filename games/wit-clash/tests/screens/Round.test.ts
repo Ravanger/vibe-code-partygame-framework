@@ -2,6 +2,7 @@ import { ErrorCode } from "@partygame/shared";
 import { fireEvent, render, screen, within } from "@testing-library/svelte";
 import { flushSync } from "svelte";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ANSWER_MAX_LENGTH } from "../../src/actionNames.js";
 import App from "../../ui/App.svelte";
 import CategoryVote from "../../ui/screens/CategoryVote.svelte";
 import MatchupReveal from "../../ui/screens/MatchupReveal.svelte";
@@ -95,6 +96,14 @@ describe("Prompting screen", () => {
     c.state.selectedCategory = "b";
     render(Prompting, { manager: c.manager });
     expect(screen.getByText("E Name b")).toBeInTheDocument();
+  });
+
+  it("caps the answer box at the shared answer limit", () => {
+    render(Prompting, { manager: writing().c.manager });
+    expect(screen.getByLabelText("Your answer")).toHaveAttribute(
+      "maxlength",
+      String(ANSWER_MAX_LENGTH),
+    );
   });
 
   it("submits the typed answer and moves to the next prompt", async () => {

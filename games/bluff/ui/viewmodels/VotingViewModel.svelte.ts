@@ -1,4 +1,4 @@
-import { OptionsReader, PhaseClock } from "@partygame/game-ui";
+import { OptionsReader, PhaseClock, roundLabel } from "@partygame/game-ui";
 import { ACTION } from "../../src/actionNames.js";
 import { type BluffOptions, BluffOptionsSchema, DEFAULT_OPTIONS } from "../../src/options.js";
 import type { BluffManager } from "../manager.js";
@@ -24,7 +24,7 @@ export class VotingViewModel {
 
   get roundLabel(): string {
     const state = this.manager.state;
-    return `Round ${state?.roundNumber ?? 0} of ${state?.totalRounds ?? 0}`;
+    return roundLabel(state?.roundNumber ?? 0, state?.totalRounds ?? 0);
   }
 
   /** The options in their shuffled order; authorship is never synced. */

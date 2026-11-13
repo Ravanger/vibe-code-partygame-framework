@@ -48,13 +48,38 @@ describe("WritingViewModel", () => {
     expect(urgent.announcement).toBe("10 seconds remaining");
   });
 
-  it("sends the fake answer", async () => {
+  it("sends the fake answer and resolves true when it is accepted", async () => {
     const c = connectedClient({}, "Writing");
     const vm = new WritingViewModel(c.manager);
-    await vm.submit("Sydney");
+    expect(await vm.submit("Sydney")).toBe(true);
     expect(c.room.requests).toContainEqual({
       type: "ACTION",
       payload: { text: "Sydney", type: "SUBMIT_FAKE" },
     });
+  });
+
+  it("resolves false on a filter refusal, shows its reason and clears it after a success", async () => {
+    const c = connectedClient({}, "Writing");
+    const vm = new WritingViewModel(c.manager);
+    expect(vm.rejectionReason).toBe("");
+    c.room.reply = {
+      ok: false,
+      error: { code: "CONTENT_REJECTED", message: "contains inappropriate language" },
+    };
+    expect(await vm.submit("a rude line")).toBe(false);
+    expect(vm.rejectionReason).toBe("contains inappropriate language");
+
+    c.room.reply = { ok: true };
+    expect(await vm.submit("a kind line")).toBe(true);
+    expect(vm.rejectionReason).toBe("");
+    expect(c.manager.lastServerError).toBeUndefined();
+  });
+
+  it("resolves false on other rejections without a rejection reason", async () => {
+    const c = connectedClient({}, "Writing");
+    const vm = new WritingViewModel(c.manager);
+    c.room.reply = { ok: false, error: { code: "WRONG_PHASE", message: "Too late" } };
+    expect(await vm.submit("late")).toBe(false);
+    expect(vm.rejectionReason).toBe("");
   });
 });

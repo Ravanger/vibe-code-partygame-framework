@@ -1,6 +1,7 @@
 <script lang="ts">
 import { ActionBar, PlayerSticker, Timer } from "@partygame/game-ui/components";
 import { untrack } from "svelte";
+import { ANSWER_MAX_LENGTH } from "../../src/actionNames.js";
 import type { BluffManager } from "../manager.js";
 import { WritingViewModel } from "../viewmodels/WritingViewModel.js";
 
@@ -12,8 +13,8 @@ let text = $state("");
 async function submit(): Promise<void> {
   const value = text.trim();
   if (value === "") return;
-  await vm.submit(value);
-  text = "";
+  const accepted = await vm.submit(value);
+  if (accepted) text = "";
 }
 </script>
 
@@ -37,10 +38,13 @@ async function submit(): Promise<void> {
   {:else if vm.myDone}
     <p class="watching">Your fake is in. Now wait for the others…</p>
   {:else}
+    {#if vm.rejectionReason}
+      <p class="reject-reason" role="alert">{vm.rejectionReason}</p>
+    {/if}
     <ActionBar>
       <textarea
         bind:value={text}
-        maxlength={200}
+        maxlength={ANSWER_MAX_LENGTH}
         rows={2}
         placeholder="Write a fake answer…"
         onkeydown={(e) => {
@@ -102,6 +106,13 @@ async function submit(): Promise<void> {
 textarea {
   width: 100%;
   resize: none;
+}
+
+.reject-reason {
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--fs-3);
+  text-align: center;
 }
 
 .watching {

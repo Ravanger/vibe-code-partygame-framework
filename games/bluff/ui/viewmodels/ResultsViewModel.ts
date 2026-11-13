@@ -1,3 +1,4 @@
+import { type PodiumStep, podiumSteps, rankRows } from "@partygame/game-ui";
 import { ACTION } from "../../src/actionNames.js";
 import type { BluffManager } from "../manager.js";
 
@@ -6,6 +7,8 @@ export interface ScoreRow {
   name: string;
   score: number;
   hasLeft: boolean;
+  rank: number;
+  isMe: boolean;
 }
 
 /** The final scoreboard, the winner line and the host's play-again button. */
@@ -16,16 +19,24 @@ export class ResultsViewModel {
     return this.manager.isHost;
   }
 
-  /** Seated players first, highest score first — as the server wrote it. */
+  /** Seated players first, highest score first, with competition ranks — as the server wrote it. */
   get rows(): ScoreRow[] {
     const state = this.manager.state;
     if (state === undefined) return [];
-    return [...state.scoreboard].map((entry) => ({
-      playerId: entry.playerId,
-      name: entry.name,
-      score: entry.score,
-      hasLeft: entry.hasLeft,
-    }));
+    return rankRows(
+      [...state.scoreboard].map((entry) => ({
+        playerId: entry.playerId,
+        name: entry.name,
+        score: entry.score,
+        hasLeft: entry.hasLeft,
+        isMe: entry.playerId === this.manager.playerId,
+      })),
+    );
+  }
+
+  /** The top three seated rank groups for the shared podium. */
+  get podiumSteps(): PodiumStep<ScoreRow>[] {
+    return podiumSteps(this.rows);
   }
 
   get headline(): string {

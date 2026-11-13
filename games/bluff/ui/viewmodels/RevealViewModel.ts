@@ -1,4 +1,4 @@
-import { OptionsReader, PhaseClock } from "@partygame/game-ui";
+import { OptionsReader, PhaseClock, roundLabel } from "@partygame/game-ui";
 import { type BluffOptions, BluffOptionsSchema, DEFAULT_OPTIONS } from "../../src/options.js";
 import type { BluffManager } from "../manager.js";
 
@@ -29,7 +29,7 @@ export class RevealViewModel {
 
   get roundLabel(): string {
     const state = this.manager.state;
-    return `Round ${state?.roundNumber ?? 0} of ${state?.totalRounds ?? 0}`;
+    return roundLabel(state?.roundNumber ?? 0, state?.totalRounds ?? 0);
   }
 
   get choices(): RevealChoiceRow[] {

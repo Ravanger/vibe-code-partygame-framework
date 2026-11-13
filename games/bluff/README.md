@@ -34,6 +34,8 @@ Roster guards from the core root: `departedIds`, `isBelowMinimum`.
 
 One screen per phase in `ui/screens/` (registered in `ui/screens/index.ts`), one viewmodel each under `ui/viewmodels/`, routed by `createAppRouter` from `@partygame/game-ui`. Every screen also renders with no seat (the TV display): the prompt, the board and the vote count stay visible, inputs disappear. Your own option is marked "yours" only in your private view — authorship never leaves the server until Reveal.
 
+The lobby renders the shared `LobbyScreen` with a `LobbySettingsViewModel` built from `BluffOptionsSchema`: the host tunes every option (including the filter level) and everyone else sees them read-only. Results ranks ties with the shared `rankRows`/`Podium` — tied leaders share rank 1 and are all highlighted, leavers rank below seated players — and the writing screen caps fakes at `ANSWER_MAX_LENGTH`, keeps the draft on a refusal and shows the text filter's `CONTENT_REJECTED` message above the box.
+
 ## Running it
 
 ```sh

@@ -1,4 +1,4 @@
-import { OptionsReader, PhaseClock, TypingReporter } from "@partygame/game-ui";
+import { OptionsReader, PhaseClock, roundLabel, TypingReporter } from "@partygame/game-ui";
 import { ErrorCode } from "@partygame/shared";
 import { ACTION, ANSWER_MAX_LENGTH } from "../../src/actionNames.js";
 import type { SubmitAnswerPayload } from "../../src/actions.js";
@@ -109,7 +109,7 @@ export class PromptingViewModel {
 
   get roundLabel(): string {
     const state = this.manager.state;
-    return `Round ${state?.roundNumber ?? 0} of ${state?.totalRounds ?? 0}`;
+    return roundLabel(state?.roundNumber ?? 0, state?.totalRounds ?? 0);
   }
 
   get secondsLeft(): number {

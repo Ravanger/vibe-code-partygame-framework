@@ -30,6 +30,7 @@ export {
   podiumSteps,
   rankRows,
 } from "./ranking.js";
+export { roundLabel } from "./roundLabel.js";
 export {
   type GestureTarget,
   SoundPolicy,
