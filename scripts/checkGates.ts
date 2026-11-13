@@ -262,7 +262,22 @@ export const TREE_ALLOWLIST: { path: string; pattern: RegExp; reason: string }[]
     reason: "a type test asserting that an invalid handler fails to compile",
   },
   {
+    path: "packages/game-ui/src/components/ExportReplayButton.svelte",
+    pattern: /biome-ignore lint\/correctness\/noUnusedImports: used by the generics attribute/,
+    reason: "Svelte generics= trap (docs/framework/troubleshooting.md)",
+  },
+  {
     path: "packages/game-ui/src/components/GameControls.svelte",
+    pattern: /biome-ignore lint\/correctness\/noUnusedImports: used by the generics attribute/,
+    reason: "Svelte generics= trap (docs/framework/troubleshooting.md)",
+  },
+  {
+    path: "packages/game-ui/src/components/GameShell.svelte",
+    pattern: /biome-ignore lint\/correctness\/noUnusedImports: used by the generics attribute/,
+    reason: "Svelte generics= trap (docs/framework/troubleshooting.md)",
+  },
+  {
+    path: "packages/game-ui/src/components/LobbyScreen.svelte",
     pattern: /biome-ignore lint\/correctness\/noUnusedImports: used by the generics attribute/,
     reason: "Svelte generics= trap (docs/framework/troubleshooting.md)",
   },
@@ -273,6 +288,16 @@ export const TREE_ALLOWLIST: { path: string; pattern: RegExp; reason: string }[]
   },
   {
     path: "packages/game-ui/src/components/Podium.svelte",
+    pattern: /biome-ignore lint\/correctness\/noUnusedImports: used by the generics attribute/,
+    reason: "Svelte generics= trap (docs/framework/troubleshooting.md)",
+  },
+  {
+    path: "packages/game-ui/src/components/ReplayViewer.svelte",
+    pattern: /biome-ignore lint\/correctness\/noUnusedImports: used by the generics attribute/,
+    reason: "Svelte generics= trap (docs/framework/troubleshooting.md)",
+  },
+  {
+    path: "packages/game-ui/src/components/WelcomeScreen.svelte",
     pattern: /biome-ignore lint\/correctness\/noUnusedImports: used by the generics attribute/,
     reason: "Svelte generics= trap (docs/framework/troubleshooting.md)",
   },
