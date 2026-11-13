@@ -43,6 +43,18 @@ cd games/bluff && bun run dev:server   # just the game server, hot-reloading
 
 A watch-only all-bot room comes from the launcher's demo tables (`botKit` in `gamePackage.ts`).
 
+## Play in the terminal
+
+```sh
+bun run play bluff             # host a room; 3 bots join; uses the server on 2567/3001 or starts its own
+bun run play bluff --join=ABCD # join a room as a normal player
+bun run bots bluff ABCD 3      # add 3 bots (1 to 7) to a room you already created
+bun run demo                   # this package's `demo` script; from the repo root: bun run demo bluff
+                               # all-bot game on its own server, narrated (--bots N bots, 2 to 7, default 3)
+```
+
+You answer by typing: a fake at the writing prompt (`/q` quits it), a number for your vote, `q` at any menu.
+
 ## Running the tests
 
 ```sh

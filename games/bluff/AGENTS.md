@@ -11,14 +11,14 @@ The bluffing party game: rules, UI screens, content and entry points, built only
 
 ## May import
 
-- Runtime: `@partygame/bots`, `@partygame/content`, `@partygame/core`, `@partygame/game-client`, `@partygame/game-kit`, `@partygame/game-ui`, `@partygame/shared`
-- Dev: `@partygame/config`
+- Runtime: `@partygame/bots`, `@partygame/content`, `@partygame/core`, `@partygame/game-client`, `@partygame/game-kit`, `@partygame/game-ui`, `@partygame/shared`, `@partygame/terminal`
+- Dev: `@partygame/config`, `@partygame/server`
 
 ## Public entry points
 
-- No `exports`. Entries: `server.ts`, `launch.ts`.
+- No `exports`. Entries: `server.ts`, `launch.ts`, `bots/cli.ts`, `terminal/play.ts`, `terminal/demo.ts`.
 - Content: `content/prompts/*.jsonc` packs, listed in `content/provenance.json`.
 
 ## Tests
 
-`tests/game/` (rules, `Table extends TestTable`), `tests/bots/`, and UI tests under `tests/` (viewmodels and screens through the game-client test client).
+`tests/game/` (rules, `Table extends TestTable`), `tests/bots/`, `tests/terminal/` (the terminal strategy plus a full PlaySession game against an in-process server), and UI tests under `tests/` (viewmodels and screens through the game-client test client).
