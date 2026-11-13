@@ -462,6 +462,10 @@
         },
         "source": true
       },
+      "./base.css": {
+        "target": "./base.css",
+        "symbols": {}
+      },
       "./components": {
         "target": {
           "types": "./src/components/index.ts",

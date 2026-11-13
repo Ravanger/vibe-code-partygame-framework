@@ -189,8 +189,11 @@ describe("shipped template theme", () => {
   const THEME_CONTRACT_TS = fileURLToPath(
     new URL("../../game-ui/src/themeContract.ts", import.meta.url),
   );
+  const GAME_UI_PACKAGE_JSON = fileURLToPath(
+    new URL("../../game-ui/package.json", import.meta.url),
+  );
 
-  it("defines every global class the framework components need, plus --font-hand for .hand", () => {
+  it("defines every global class the framework components still need", () => {
     const block = /export const REQUIRED_GLOBAL_CLASSES = \[([\s\S]*?)\] as const/.exec(
       readFileSync(THEME_CONTRACT_TS, "utf8"),
     );
@@ -209,7 +212,14 @@ describe("shipped template theme", () => {
         new RegExp(`\\.${cls}(?![\\w-])`),
       );
     }
-    // the .hand rule reads var(--font-hand); without it the handwriting font silently falls back
-    expect(css).toMatch(/--font-hand\s*:/);
+  });
+
+  it("imports the shared stylesheets, so the base look needs no game CSS", () => {
+    // the package name comes from game-ui's manifest, not a literal: check:boundaries scans this
+    // file for @partygame/* specifiers and the cli must depend on none of them
+    const { name } = JSON.parse(readFileSync(GAME_UI_PACKAGE_JSON, "utf8")) as { name: string };
+    const css = readFileSync(join(SHIPPED_TEMPLATE, "ui", "app.css"), "utf8");
+    expect(css).toContain(`@import "${name}/theme-contract.css";`);
+    expect(css).toContain(`@import "${name}/base.css";`);
   });
 });

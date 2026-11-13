@@ -23,6 +23,7 @@
       "svelte": "./testing.ts",
       "default": "./testing.ts"
     },
+    "./base.css": "./base.css",
     "./theme-contract.css": "./theme-contract.css"
   },
   "scripts": {

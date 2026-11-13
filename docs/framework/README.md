@@ -1080,10 +1080,10 @@ Write text that mixes literals and values as one template literal, `{`${choice.n
 <ActionBar><button type="button" class="btn">Go</button></ActionBar>
 ```
 
-Theming contract: the package ships `@partygame/game-ui/theme-contract.css`. Import it first in your `app.css` for a working baseline of every variable below (plus `.sr-only`), then override what you want to change. Chrome — the framework components' look (lobby, join overlays, scoreboard/podium, game controls, timer) — is themed through these variables; artwork — your screens and cards — is yours to design.
+Theming contract: the package ships two stylesheets — `@partygame/game-ui/theme-contract.css`, a working baseline of every variable below (plus `.sr-only`), and `@partygame/game-ui/base.css`, the look every framework component needs (cards, tape, chips, stickers, buttons, notices, the hand font class, reduced-motion guards) built on those tokens. Import both first in your `app.css`, then override what you want to change. Chrome — the framework components' look (lobby, join overlays, scoreboard/podium, game controls, timer) — is themed through these variables; artwork — your screens and cards — is yours to design.
 
-- Custom properties: `--ink`, `--ink-soft`, `--white`, `--paper`, `--color-1` to `--color-4`, `--accent`, `--danger`, `--disabled`, `--tape-1` to `--tape-4` (`StatusPanel` sets `--tape` itself), `--fs-1` to `--fs-5`, `--font-display`, `--outline`, `--radius-card`, `--radius-btn`, `--scrap-shadow`, `--podium-block-height-1`, `--podium-block-height-2`, `--podium-block-height-3`, `--scale`, `--timer-size`.
-- Global classes: `card`, `taped`, `sticker`, `hand` (`StatusPanel`); `sr-only` (`Timer`); `chip`, `chip--sky`, `chip--paper` (the `LobbyScreen` badges); `action-bar` (`ActionBar` renders it and styles nothing, so the game styles the bar, e.g. `.action-bar > .btn` and `main.tv .action-bar`).
+- Custom properties: `--ink`, `--ink-soft`, `--white`, `--paper`, `--color-1` to `--color-4`, `--accent`, `--danger`, `--disabled`, `--tape-1` to `--tape-4` (`StatusPanel` sets `--tape` itself), `--fs-1` to `--fs-6`, `--font-display`, `--font-hand`, `--font-body`, `--outline`, `--radius-card`, `--radius-btn`, `--radius-pill`, `--scrap-shadow`, `--podium-block-height-1`, `--podium-block-height-2`, `--podium-block-height-3`, `--scale`, `--timer-size`, `--screen-pad-x`, `--screen-pad-y` (`ActionBar` reads the padding tokens to bleed its sticky bar into the screen).
+- Global classes: `card`, `taped`, `sticker`, `hand`, `chip` and its variants, the `btn` family, `notice`, `sr-only` ship with the stylesheets; the game still defines the app-shell faces `wordmark` and `room-chip`. `ActionBar` styles its own bar (hidden on TV displays).
 
 ## Bots
 

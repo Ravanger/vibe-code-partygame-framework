@@ -9,6 +9,7 @@ const pkgDir = existsSync(join(here, "theme-contract.css"))
   ? here
   : join(here, "packages", "game-ui");
 const contractCss = readFileSync(join(pkgDir, "theme-contract.css"), "utf8");
+const baseCss = readFileSync(join(pkgDir, "base.css"), "utf8");
 const readme = readFileSync(join(pkgDir, "README.md"), "utf8");
 const frameworkReadme = readFileSync(
   join(pkgDir, "..", "..", "docs", "framework", "README.md"),
@@ -57,6 +58,59 @@ describe("theme-contract.css", () => {
 
   it("provides the .sr-only utility", () => {
     expect(contractCss).toMatch(/\.sr-only\s*\{/);
+  });
+});
+
+/** The variables a CSS text reads with `var(--x)` and no fallback, deduplicated. */
+function varReads(css: string): Set<string> {
+  const reads = new Set<string>();
+  for (const match of css
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .matchAll(/var\(\s*(--[a-z0-9-]+)\s*([^)]*)\)/g)) {
+    if (!(match[2] ?? "").includes(",")) reads.add(match[1] as string);
+  }
+  return reads;
+}
+
+/** The custom properties a CSS text declares (the `--x:` lines). */
+function declaredVars(css: string): Set<string> {
+  return new Set([...css.matchAll(/^\s*(--[a-z0-9-]+)\s*:/gm)].map((m) => m[1] as string));
+}
+
+describe("base.css", () => {
+  it("reads only contract variables or ones it declares itself", () => {
+    const self = declaredVars(baseCss);
+    const missing = [...varReads(baseCss)].filter(
+      (name) => !self.has(name) && !(CONTRACT_VARIABLES as readonly string[]).includes(name),
+    );
+    expect(missing).toEqual([]);
+  });
+});
+
+describe("component variables", () => {
+  const componentsDir = join(pkgDir, "src", "components");
+
+  it("every variable a component reads is a contract variable or one the component sets itself", () => {
+    const problems: string[] = [];
+    for (const file of readdirSync(componentsDir)
+      .filter((f) => f.endsWith(".svelte"))
+      .sort()) {
+      const source = readFileSync(join(componentsDir, file), "utf8");
+      const style = (/<style[^>]*>([\s\S]*?)<\/style>/i.exec(source)?.[1] ?? "").replace(
+        /\/\*[\s\S]*?\*\//g,
+        "",
+      );
+      const markup = source.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "");
+      // a component may set a custom property in its style block or with a `style:--x` directive
+      const self = declaredVars(style);
+      for (const match of markup.matchAll(/style:--([a-z0-9-]+)/g)) self.add(`--${match[1]}`);
+      for (const name of varReads(style)) {
+        if (!self.has(name) && !(CONTRACT_VARIABLES as readonly string[]).includes(name)) {
+          problems.push(`${file}: var(${name})`);
+        }
+      }
+    }
+    expect(problems).toEqual([]);
   });
 });
 
@@ -110,18 +164,21 @@ function globalClassTokens(source: string): Set<string> {
 
 describe("REQUIRED_GLOBAL_CLASSES", () => {
   const componentsDir = join(pkgDir, "src", "components");
-  const contractNoComments = contractCss.replace(/\/\*[\s\S]*?\*\//g, "");
-  const contractClasses = new Set(
-    [...contractNoComments.matchAll(/\.([a-zA-Z][\w-]*)/g)].map((m) => m[1] as string),
-  );
+  /** The classes the shared stylesheets (contract and base) ship. */
+  const shippedClasses = new Set<string>();
+  for (const css of [contractCss, baseCss]) {
+    for (const m of css.replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/\.([a-zA-Z][\w-]*)/g)) {
+      shippedClasses.add(m[1] as string);
+    }
+  }
 
-  it("lists exactly the unscoped classes the components render that the contract does not ship", () => {
+  it("lists exactly the unscoped classes the components render that no shared stylesheet ships", () => {
     const derived = new Set<string>();
     for (const file of readdirSync(componentsDir)
       .filter((f) => f.endsWith(".svelte"))
       .sort()) {
       for (const token of globalClassTokens(readFileSync(join(componentsDir, file), "utf8"))) {
-        if (!contractClasses.has(token)) derived.add(token);
+        if (!shippedClasses.has(token)) derived.add(token);
       }
     }
     expect([...derived].sort()).toEqual([...REQUIRED_GLOBAL_CLASSES].sort());

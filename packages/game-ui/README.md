@@ -258,16 +258,17 @@ The table also carries a `clientStrings` field (`Partial<ClientStrings>` from `@
 
 ## Theme
 
-The package ships `theme-contract.css`: a baseline for every contract variable (the `CONTRACT_VARIABLES` list in `src/themeContract.ts`), the `main.tv` base sizes for TV displays and the `.sr-only` utility. Import it first in your game's `app.css`, then override any variable you want to change:
+The package ships two stylesheets. `theme-contract.css` is a baseline for every contract variable (the `CONTRACT_VARIABLES` list in `src/themeContract.ts`), the `main.tv` base sizes for TV displays and the `.sr-only` utility; `base.css` is the look every framework component needs — page baseline, cards, tape, chips, stickers, buttons, notices, the hand font class and the reduced-motion guards — all on those tokens. Import both at the top of your game's `app.css`, then override any variable you want to change:
 
 ```css
 @import "@partygame/game-ui/theme-contract.css";
+@import "@partygame/game-ui/base.css";
 ```
 
-- Custom properties: `--ink`, `--ink-soft`, `--white`, `--paper`, `--color-1` to `--color-4`, `--accent`, `--danger`, `--disabled`, `--tape-1` to `--tape-4`, `--fs-1` to `--fs-5`, `--font-display`, `--outline`, `--radius-card`, `--radius-btn`, `--scrap-shadow`, `--podium-block-height-1`, `--podium-block-height-2`, `--podium-block-height-3`, `--scale`, `--timer-size`.
+- Custom properties: `--ink`, `--ink-soft`, `--white`, `--paper`, `--color-1` to `--color-4`, `--accent`, `--danger`, `--disabled`, `--tape-1` to `--tape-4`, `--fs-1` to `--fs-6`, `--font-display`, `--font-hand`, `--font-body`, `--outline`, `--radius-card`, `--radius-btn`, `--radius-pill`, `--scrap-shadow`, `--podium-block-height-1`, `--podium-block-height-2`, `--podium-block-height-3`, `--scale`, `--timer-size`, `--screen-pad-x`, `--screen-pad-y`.
 - TV displays: the `main.tv` rule sets `--scale: 1.6` (every `calc(var(--fs-*) * var(--scale, 1))` declaration scales with it), lifts `--fs-1` to the 24px minimum and raises the base font size; games may further tune `--podium-block-height-*` in their own `main.tv` rule.
 - Sticker colours: `PlayerSticker` sets `data-color` to a palette index (0–3); the contract maps `[data-color="0"]` to `--color-1` through `[data-color="3"]` to `--color-4`.
-- Global classes: `card`, `taped`, `sticker`, `hand`, `sr-only` (shipped with the contract), `btn` (`btn--ghost`, `btn--danger`); `action-bar` is rendered by `ActionBar`, which styles nothing.
+- Global classes: `card`, `taped`, `sticker`, `hand`, `chip` and its variants, the `btn` family, `notice`, `sr-only` ship with the stylesheets; the game still defines the app-shell faces `wordmark` and `room-chip`. `ActionBar` styles its own bar (hidden on TV displays).
 - Chrome vs artwork: chrome — the framework components' look (lobby, join overlays, scoreboard/podium, game controls, timer) — is themed through these variables; artwork — your screens and cards — is yours to design.
 
 ## Accessibility
