@@ -1,19 +1,28 @@
 <script lang="ts">
-import { ANSWER_MAX_LENGTH } from "../../src/actionNames.js";
+import { getStrings } from "../strings.js";
 
 const {
   value,
+  label,
+  maxLength,
   remaining,
   oninput,
   onsubmit,
+  placeholder = "",
+  rejection = "",
 }: {
   value: string;
+  label: string;
+  maxLength: number;
   remaining: number;
   oninput: (value: string) => void;
   onsubmit: () => void;
+  placeholder?: string;
+  rejection?: string;
 } = $props();
+const strings = getStrings();
 
-function handleKeydown(e: KeyboardEvent) {
+function handleKeydown(e: KeyboardEvent): void {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
     onsubmit();
@@ -21,20 +30,25 @@ function handleKeydown(e: KeyboardEvent) {
 }
 </script>
 
-<div class="answer-box">
+{#if rejection !== ""}
+  <p class="rejection" role="alert">{rejection}</p>
+{/if}
+
+<div class="draft-box">
   <textarea
-    placeholder="Type your answer..."
-    aria-label="Your answer"
-    maxlength={ANSWER_MAX_LENGTH}
+    aria-label={label}
+    enterkeyhint="send"
+    maxlength={maxLength}
+    placeholder={placeholder || undefined}
     {value}
     oninput={(e) => oninput(e.currentTarget.value)}
     onkeydown={handleKeydown}
   ></textarea>
-  <span class="counter chip" class:low={remaining < 20}>{`${remaining} chars left`}</span>
+  <span class="counter chip" class:low={remaining < 20}>{strings.charsLeft(remaining)}</span>
 </div>
 
 <style>
-  .answer-box {
+  .draft-box {
     position: relative;
   }
 
@@ -62,5 +76,12 @@ function handleKeydown(e: KeyboardEvent) {
 
   .counter.low {
     background: var(--color-1);
+  }
+
+  .rejection {
+    margin: 0 0 0.5rem;
+    color: var(--danger);
+    font-size: var(--fs-3);
+    text-align: center;
   }
 </style>

@@ -49,6 +49,7 @@ describe("defaultUiStrings and the table", () => {
     expect(strings.pickedStamp).toBe("VOTED!");
     expect(strings.switchHint).toBe("psst… tap the other one to switch");
     expect(strings.yours).toBe("yours");
+    expect(strings.charsLeft(195)).toBe("195 chars left");
     expect(strings.secondsRemaining(5)).toBe("5 seconds remaining");
     expect(strings.podiumPlace(1)).toBe("1st");
     expect(strings.podiumPlace(2)).toBe("2nd");

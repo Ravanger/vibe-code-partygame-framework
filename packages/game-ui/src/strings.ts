@@ -49,6 +49,8 @@ export interface UiStrings {
   switchHint: string;
   /** The chip next to the player's own item in a ChoiceBoard. */
   yours: string;
+  /** Builds the DraftBox counter text from how many characters are still available. */
+  charsLeft: (n: number) => string;
   /** Builds the Timer announcement for a given number of seconds left. */
   secondsRemaining: (seconds: number) => string;
   /** Builds the PhaseBar label from the seconds until the next phase starts. */
@@ -116,6 +118,7 @@ export const defaultUiStrings: UiStrings = {
   pickedStamp: "VOTED!",
   switchHint: "psst… tap the other one to switch",
   yours: "yours",
+  charsLeft: (n) => `${n} chars left`,
   secondsRemaining: (seconds) => `${seconds} seconds remaining`,
   nextUpIn: (seconds) => `Next up in ${seconds}s`,
   podiumPlace: (tier) => (tier === 1 ? "1st" : tier === 2 ? "2nd" : "3rd"),

@@ -48,13 +48,12 @@ describe("Writing screen", () => {
     await screen.findByDisplayValue("");
   });
 
-  it("caps the textarea at the answer limit", () => {
+  it("gives the textarea an accessible name and caps it at the answer limit", () => {
     const c = connectedClient({}, "Writing");
     render(Writing, { manager: c.manager });
-    expect(screen.getByPlaceholderText("Write a fake answer…")).toHaveAttribute(
-      "maxlength",
-      String(ANSWER_MAX_LENGTH),
-    );
+    const box = screen.getByLabelText("Your answer");
+    expect(box).toHaveAttribute("maxlength", String(ANSWER_MAX_LENGTH));
+    expect(screen.getByPlaceholderText("Write a fake answer…")).toBe(box);
   });
 
   it("keeps the draft and shows the filter's reason after a refusal, then clears on success", async () => {

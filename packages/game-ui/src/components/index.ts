@@ -18,6 +18,16 @@ export {
   default as Confetti,
 } from "./Confetti.svelte";
 export {
+  /**
+   * A multi-line text entry with a character counter and Enter-to-submit: the textarea is named
+   * by `label`, capped at `maxLength` characters, and reports edits through `oninput`; Enter
+   * (not Shift+Enter) calls `onsubmit`. The counter shows the `remaining` characters through
+   * `UiStrings.charsLeft` and turns low under 20; an optional `rejection` renders in a live
+   * alert above the box.
+   */
+  default as DraftBox,
+} from "./DraftBox.svelte";
+export {
   /** A menu button with a popover to leave the game and, for the host, end it after a confirmation. */
   default as GameControls,
 } from "./GameControls.svelte";

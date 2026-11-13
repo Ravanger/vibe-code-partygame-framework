@@ -1,5 +1,5 @@
 <script lang="ts">
-import { ActionBar, PhaseTimer, ProgressStrip, ScreenTitle } from "@partygame/game-ui/components";
+import { ActionBar, DraftBox, PhaseTimer, ProgressStrip, ScreenTitle } from "@partygame/game-ui/components";
 import { untrack } from "svelte";
 import { ANSWER_MAX_LENGTH } from "../../src/actionNames.js";
 import type { BluffManager } from "../manager.js";
@@ -29,22 +29,19 @@ async function submit(): Promise<void> {
   {:else if vm.myDone}
     <p class="watching">Your fake is in. Now wait for the others…</p>
   {:else}
-    {#if vm.rejectionReason}
-      <p class="reject-reason" role="alert">{vm.rejectionReason}</p>
-    {/if}
+    <DraftBox
+      value={text}
+      label="Your answer"
+      maxLength={ANSWER_MAX_LENGTH}
+      remaining={ANSWER_MAX_LENGTH - text.length}
+      oninput={(value) => {
+        text = value;
+      }}
+      onsubmit={() => void submit()}
+      placeholder="Write a fake answer…"
+      rejection={vm.rejectionReason}
+    />
     <ActionBar>
-      <textarea
-        bind:value={text}
-        maxlength={ANSWER_MAX_LENGTH}
-        rows={2}
-        placeholder="Write a fake answer…"
-        onkeydown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            void submit();
-          }
-        }}
-      ></textarea>
       <button
         type="button"
         class="btn btn--primary btn--big"
@@ -60,18 +57,6 @@ async function submit(): Promise<void> {
 <style>
 .writing {
   gap: 1rem;
-}
-
-textarea {
-  width: 100%;
-  resize: none;
-}
-
-.reject-reason {
-  margin: 0;
-  color: var(--danger);
-  font-size: var(--fs-3);
-  text-align: center;
 }
 
 .watching {

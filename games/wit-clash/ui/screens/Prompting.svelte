@@ -1,7 +1,7 @@
 <script lang="ts">
-import { ActionBar, PhaseTimer, ProgressStrip, StatusPanel } from "@partygame/game-ui/components";
+import { ActionBar, DraftBox, PhaseTimer, ProgressStrip, StatusPanel } from "@partygame/game-ui/components";
 import { untrack } from "svelte";
-import AnswerBox from "../components/AnswerBox.svelte";
+import { ANSWER_MAX_LENGTH } from "../../src/actionNames.js";
 import type { WitClashManager } from "../manager.js";
 import { PromptingViewModel } from "../viewmodels/PromptingViewModel.svelte.js";
 
@@ -69,15 +69,14 @@ $effect(() => () => vm.destroy());
     {/key}
     <p class="how hand">Write the funniest answer you can</p>
 
-    {#if vm.rejectionReason}
-      <p class="reject-reason">{vm.rejectionReason}</p>
-    {/if}
-
-    <AnswerBox
+    <DraftBox
       value={vm.draft}
+      label="Your answer"
+      maxLength={ANSWER_MAX_LENGTH}
       remaining={vm.charsRemaining}
       oninput={(value) => vm.setDraft(value)}
       onsubmit={() => vm.submit()}
+      rejection={vm.rejectionReason}
     />
 
     <ActionBar>
@@ -146,13 +145,6 @@ $effect(() => () => vm.destroy());
   .how {
     margin: 0;
     color: var(--ink-soft);
-    font-size: var(--fs-3);
-    text-align: center;
-  }
-
-  .reject-reason {
-    margin: 0;
-    color: var(--danger);
     font-size: var(--fs-3);
     text-align: center;
   }

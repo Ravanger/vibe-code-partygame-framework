@@ -1,7 +1,7 @@
 <script lang="ts">
-import { ActionBar, PhaseTimer, ProgressStrip, ScreenTitle, StatusPanel } from "@partygame/game-ui/components";
+import { ActionBar, DraftBox, PhaseTimer, ProgressStrip, ScreenTitle, StatusPanel } from "@partygame/game-ui/components";
 import { untrack } from "svelte";
-import AnswerBox from "../components/AnswerBox.svelte";
+import { ANSWER_MAX_LENGTH } from "../../src/actionNames.js";
 import type { WitClashManager } from "../manager.js";
 import { TieBreakerViewModel } from "../viewmodels/TieBreakerViewModel.svelte.js";
 
@@ -31,14 +31,14 @@ $effect(() => () => vm.destroy());
 
   {#if vm.isContender}
     <p class="how hand">Write the funniest answer you can</p>
-    {#if vm.rejectionReason}
-      <p class="reject-reason">{vm.rejectionReason}</p>
-    {/if}
-    <AnswerBox
+    <DraftBox
       value={vm.draft}
+      label="Your answer"
+      maxLength={ANSWER_MAX_LENGTH}
       remaining={vm.charsRemaining}
       oninput={(value) => vm.setDraft(value)}
       onsubmit={() => vm.submit()}
+      rejection={vm.rejectionReason}
     />
     <ActionBar>
       <button type="button" class="btn btn--primary btn--big" disabled={!vm.canSubmit} onclick={() => vm.submit()}>
@@ -84,10 +84,4 @@ $effect(() => () => vm.destroy());
     text-align: center;
   }
 
-  .reject-reason {
-    margin: 0;
-    color: var(--danger);
-    font-size: var(--fs-3);
-    text-align: center;
-  }
 </style>
