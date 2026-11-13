@@ -31,3 +31,27 @@ export const CONTRACT_VARIABLES = [
   "--scale",
   "--timer-size",
 ] as const;
+
+/**
+ * The global classes framework components render without styling them themselves, and that
+ * `theme-contract.css` does not ship: a game's stylesheet must define every one of them so the
+ * components render as designed. All are required except `action-bar`, which only games that
+ * render `ActionBar` need. tests/themeContract.test.ts derives this list from the components'
+ * markup; the CLI template test asserts the scaffolded app.css defines it.
+ */
+export const REQUIRED_GLOBAL_CLASSES = [
+  "action-bar",
+  "btn",
+  "btn--big",
+  "btn--danger",
+  "btn--ghost",
+  "btn--primary",
+  "btn--secondary",
+  "card",
+  "hand",
+  "room-chip",
+  "stack",
+  "sticker",
+  "taped",
+  "wordmark",
+] as const;

@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -179,5 +179,37 @@ describe("renderTemplate", () => {
     await expect(
       renderTemplate({ templateDir: join(TEMPLATE, "run.sh"), outDir: dest, names: NAMES }),
     ).rejects.toThrow(/template directory/);
+  });
+});
+
+describe("shipped template theme", () => {
+  // check:boundaries keeps the cli free of @partygame/* imports, so the required-class list is
+  // read from game-ui's source instead of imported; packages/game-ui/tests/themeContract.test.ts
+  // keeps that list in sync with the components' markup.
+  const THEME_CONTRACT_TS = fileURLToPath(
+    new URL("../../game-ui/src/themeContract.ts", import.meta.url),
+  );
+
+  it("defines every global class the framework components need, plus --font-hand for .hand", () => {
+    const block = /export const REQUIRED_GLOBAL_CLASSES = \[([\s\S]*?)\] as const/.exec(
+      readFileSync(THEME_CONTRACT_TS, "utf8"),
+    );
+    expect(
+      block,
+      "REQUIRED_GLOBAL_CLASSES is missing from game-ui's themeContract.ts",
+    ).not.toBeNull();
+    const required = (block?.[1] ?? "").match(/"([a-z][a-z0-9-]*)"/g) ?? [];
+    expect(required).not.toEqual([]);
+    const css = readFileSync(join(SHIPPED_TEMPLATE, "ui", "app.css"), "utf8").replace(
+      /\/\*[\s\S]*?\*\//g,
+      "",
+    );
+    for (const cls of required.map((quoted) => quoted.slice(1, -1))) {
+      expect(css, `the template app.css has no rule for .${cls}`).toMatch(
+        new RegExp(`\\.${cls}(?![\\w-])`),
+      );
+    }
+    // the .hand rule reads var(--font-hand); without it the handwriting font silently falls back
+    expect(css).toMatch(/--font-hand\s*:/);
   });
 });

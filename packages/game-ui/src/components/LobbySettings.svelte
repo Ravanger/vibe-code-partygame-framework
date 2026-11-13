@@ -12,7 +12,7 @@ const strings = getStrings();
 const idPrefix = nextId("lobby-settings");
 </script>
 
-<details class="settings card" open={vm.startsOpen}>
+<details class="card" open={vm.startsOpen}>
   <summary class="summary-with-marker">{strings.gameSettings}</summary>
   {#if vm.canEdit}
     <ul class="settings-list">

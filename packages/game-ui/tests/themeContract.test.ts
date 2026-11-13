@@ -1,7 +1,7 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { CONTRACT_VARIABLES } from "../src/themeContract.js";
+import { CONTRACT_VARIABLES, REQUIRED_GLOBAL_CLASSES } from "../src/themeContract.js";
 
 /** The suite runs with cwd either at the repo root (workspace) or in packages/game-ui. */
 const here = process.cwd();
@@ -81,5 +81,49 @@ describe("README contract lists", () => {
     expect(readmeVariables(customPropertiesLine(frameworkReadme))).toEqual(
       [...CONTRACT_VARIABLES].sort(),
     );
+  });
+});
+
+/** The class tokens a component renders in its markup — static `class` attributes, template-literal
+ *  classes without interpolation and `class:` directives — minus the ones it styles in its own
+ *  `<style>` block (scoped rules only reach the component's own elements). */
+function globalClassTokens(source: string): Set<string> {
+  const style = (/<style[^>]*>([\s\S]*?)<\/style>/i.exec(source)?.[1] ?? "").replace(
+    /\/\*[\s\S]*?\*\//g,
+    "",
+  );
+  const markup = source.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "");
+  const tokens = new Set<string>();
+  for (const match of markup.matchAll(/\bclass\s*=\s*(?:"([^"]*)"|`([^`]*)`)/g)) {
+    for (const token of (match[1] ?? match[2] ?? "").split(/\s+/)) {
+      if (token !== "" && !token.includes("${")) tokens.add(token);
+    }
+  }
+  for (const match of markup.matchAll(/\bclass:([a-zA-Z][\w-]*)\s*=/g)) {
+    tokens.add(match[1] as string);
+  }
+  for (const match of style.matchAll(/\.([a-zA-Z][\w-]*)/g)) {
+    tokens.delete(match[1] as string);
+  }
+  return tokens;
+}
+
+describe("REQUIRED_GLOBAL_CLASSES", () => {
+  const componentsDir = join(pkgDir, "src", "components");
+  const contractNoComments = contractCss.replace(/\/\*[\s\S]*?\*\//g, "");
+  const contractClasses = new Set(
+    [...contractNoComments.matchAll(/\.([a-zA-Z][\w-]*)/g)].map((m) => m[1] as string),
+  );
+
+  it("lists exactly the unscoped classes the components render that the contract does not ship", () => {
+    const derived = new Set<string>();
+    for (const file of readdirSync(componentsDir)
+      .filter((f) => f.endsWith(".svelte"))
+      .sort()) {
+      for (const token of globalClassTokens(readFileSync(join(componentsDir, file), "utf8"))) {
+        if (!contractClasses.has(token)) derived.add(token);
+      }
+    }
+    expect([...derived].sort()).toEqual([...REQUIRED_GLOBAL_CLASSES].sort());
   });
 });

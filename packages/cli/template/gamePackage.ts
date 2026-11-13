@@ -33,15 +33,17 @@ export const gamePackage = defineGamePackage({
       let announcedResults = false;
       return {
         narrate: (state) => {
-          if (state.phase === PHASE.Waving) return [`Waves — ${board(state)}`];
-          if (state.phase === PHASE.Results && !announcedResults) {
-            announcedResults = true;
-            const winner = state.winnerName;
-            return [
-              winner === "" ? "Nobody waved." : `${winner} wins with ${state.winnerWaves} waves!`,
-            ];
+          if (state.phase !== PHASE.Results) {
+            // leaving Results starts a new game (or the lobby), so the last announcement is stale
+            announcedResults = false;
+            return state.phase === PHASE.Waving ? [`Waves — ${board(state)}`] : [];
           }
-          return [];
+          if (announcedResults) return [];
+          announcedResults = true;
+          const winner = state.winnerName;
+          return [
+            winner === "" ? "Nobody waved." : `${winner} wins with ${state.winnerWaves} waves!`,
+          ];
         },
         problems: (state) => {
           if (state.winnerName === "") return ["no winner was crowned"];
