@@ -1,5 +1,12 @@
 export { AppRouter, createAppRouter, type Route, type RouterScreen } from "./AppRouter.js";
 export { GameControlsViewModel } from "./GameControlsViewModel.svelte.js";
+export {
+  type HowToPlayStep,
+  type HowToPlayStorage,
+  type HowToPlayTimer,
+  HowToPlayViewModel,
+  type HowToPlayViewModelOptions,
+} from "./HowToPlayViewModel.svelte.js";
 export { JoinNextRoundViewModel } from "./JoinNextRoundViewModel.js";
 export {
   type LobbySettingsConfig,

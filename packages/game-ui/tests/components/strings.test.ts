@@ -56,6 +56,11 @@ describe("defaultUiStrings and the table", () => {
     expect(strings.podiumPlace(3)).toBe("3rd");
     expect(strings.codeCopied).toBe("Copied!");
     expect(strings.codeCopyFailed).toBe("Copy failed, read the code out");
+    expect(strings.howToPlay).toBe("How to play");
+    expect(strings.closeSheet).toBe("Close");
+    expect(strings.previousStep).toBe("Back");
+    expect(strings.nextStep).toBe("Next");
+    expect(strings.stepLabel(2, 3)).toBe("Step 2 of 3");
   });
 
   it("lets setStrings and getStrings work outside a component", () => {

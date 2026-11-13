@@ -53,6 +53,22 @@ export {
 } from "./GameShell.svelte";
 export {
   /**
+   * The how-to-play sheet over a game's `steps` (`{ title, body, illustration?, example? }`). A
+   * seated player gets a dialog — auto-opened once per browser (the seen flag under
+   * `${storagePrefix}.howToPlaySeen`), focus-trapped, with the background inert, closed by
+   * Escape or the close button, and focus returned to the opener; a seatless viewer gets an
+   * auto-advancing carousel that never takes focus or blocks the lobby and stops for good on
+   * user input. Navigation is next/back plus a dot row; renders nothing without steps.
+   * @experimental How-to-play API; may change before 1.0.
+   */
+  default as HowToPlay,
+} from "./HowToPlay.svelte";
+export {
+  /** The "How to play" button that opens the sheet through a shared `HowToPlayViewModel`. @experimental How-to-play API; may change before 1.0. */
+  default as HowToPlayButton,
+} from "./HowToPlayButton.svelte";
+export {
+  /**
    * The whole lobby screen: notice, name card (first while unnamed), room code with copy button
    * and QR code for the host and spectators, the waiting panel for named guests, the player list
    * with badges and kick confirmation, an optional `settings` form, an optional `extra` snippet

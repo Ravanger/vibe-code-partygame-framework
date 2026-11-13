@@ -9,11 +9,13 @@ const {
   title,
   tagline,
   hero,
+  howToPlay,
 }: {
   vm: WelcomeViewModel<TState>;
   title: string;
   tagline: string;
   hero?: Snippet;
+  howToPlay?: Snippet;
 } = $props();
 
 $effect(() => {
@@ -59,6 +61,10 @@ $effect(() => {
   </div>
 
   <button type="button" class="btn btn--ghost" disabled={vm.busy || !vm.codeIsValid} onclick={() => vm.watch()}>Watch on a TV</button>
+
+  {#if howToPlay !== undefined}
+    {@render howToPlay()}
+  {/if}
 </div>
 
 <style>

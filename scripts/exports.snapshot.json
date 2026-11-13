@@ -415,6 +415,21 @@
           "AppRouter": {},
           "GameControlsViewModel": {},
           "GestureTarget": {},
+          "HowToPlayStep": {
+            "experimental": true
+          },
+          "HowToPlayStorage": {
+            "experimental": true
+          },
+          "HowToPlayTimer": {
+            "experimental": true
+          },
+          "HowToPlayViewModel": {
+            "experimental": true
+          },
+          "HowToPlayViewModelOptions": {
+            "experimental": true
+          },
           "JoinNextRoundViewModel": {},
           "LobbyPlayer": {},
           "LobbySettingsConfig": {},
@@ -484,6 +499,12 @@
           "ExportReplayButton": {},
           "GameControls": {},
           "GameShell": {},
+          "HowToPlay": {
+            "experimental": true
+          },
+          "HowToPlayButton": {
+            "experimental": true
+          },
           "LobbyScreen": {},
           "LobbySettings": {},
           "NameInput": {},

@@ -635,7 +635,7 @@ number. Both live in `packages/shared/src/errors.ts`, the single source for the 
 
 The protocol does not change: errors keep their `ErrorCode` and English `message`, and the text is decided on the client. `GameConnectionManager` takes an optional `strings` table (`Partial<ClientStrings>`, defaults in `defaultClientStrings`, both from `@partygame/game-client`) that replaces every client-owned message — the room-code validation text, the client-side codes `NOT_CONNECTED`, `INVALID_ACTION`, `BAD_REPLY`, `CONNECTION_LOST`, `ROOM_NOT_FOUND`, and the two state-sync rejection messages (`syncDisconnected`, `syncTimedOut`). In addition, `strings.errors[code]` overrides the text of any code that lands in `lastServerError`; the server's own `message` is used only as a fallback when the table has no entry for the code.
 
-The generic `@partygame/game-ui` components read their labels from one more table, `defaultUiStrings`, set with `setStrings(partial)` at the app root (GameControls menu and dialog, LobbySettings summary, NameInput, Podium, QrCode, the SoundToggle label, the StatusPanel and ProgressStrip done mark, the ProgressStrip typing label, the ChoiceBoard stamp, switch hint and own-item chip, the DraftBox counter through its `charsLeft(n)` function entry, and the `PhaseClock` announcement through its `secondsRemaining(n)` function entry). The table carries a `clientStrings` field: pass the same object to both the manager's `strings` option and `setStrings`, and one table localises both layers. Server error text resolves as `clientStrings.errors[code] ?? message`, so codes you do not translate keep the server's own message.
+The generic `@partygame/game-ui` components read their labels from one more table, `defaultUiStrings`, set with `setStrings(partial)` at the app root (GameControls menu and dialog, LobbySettings summary, NameInput, Podium, QrCode, the SoundToggle label, the StatusPanel and ProgressStrip done mark, the ProgressStrip typing label, the ChoiceBoard stamp, switch hint and own-item chip, the DraftBox counter through its `charsLeft(n)` function entry, the `PhaseClock` announcement through its `secondsRemaining(n)` function entry, and the HowToPlay sheet (heading, close, back/next, and the step dots through its `stepLabel(current, total)` function entry). The table carries a `clientStrings` field: pass the same object to both the manager's `strings` option and `setStrings`, and one table localises both layers. Server error text resolves as `clientStrings.errors[code] ?? message`, so codes you do not translate keep the server's own message.
 
 On the server side, every message the core runtime owns (the lobby built-ins' refusals, the failure notice in `state.notice`, the stopped-runtime error, the text-filter rejection, and the dispatch pipeline's refusal log messages) comes from `defaultCoreStrings` (`@partygame/core`). Pass a partial table as the definition's `strings` field — it lives on the game definition, so replays and tests see it; `defineGame` fills in the defaults:
 
@@ -967,6 +967,7 @@ vitest `setupFiles`: it shims the storages and makes the SDK use `ws` under jsdo
 |---|---|
 | `NameField` | A text draft that sends `setName` after a pause in typing (`new NameField(manager, debounceMs = 250)`). |
 | `GameControlsViewModel` | Leave and host-only end-game menu, visible in every phase except the lobby. |
+| `HowToPlayViewModel` | `(@experimental)` The how-to-play sheet: open state, step index (next/back/goTo wrap within `stepCount()`), once-per-browser auto-open (the seen flag under `${storagePrefix}.howToPlaySeen`, a throwing storage degrades to once per page load) and the seatless carousel timer (`new HowToPlayViewModel(manager, { storage, storagePrefix, intervalMs? = 8000, timer? }, stepCount?)`). |
 | `WelcomeViewModel` | The join screen: host, join by room code, watch as a TV, and auto-join from a `?code=` or `?tv=` link (`new WelcomeViewModel(manager, urlCode?, urlTvCode?)`). |
 | `LobbySettingsViewModel` | The host's options form, generated from the game's options schema (`OptionFields` builds the fields). |
 | `OptionsReader` | The published options, parsed once per state change: `new OptionsReader(manager, schema, defaults?)` exposes reactive `current`, falling back to `defaults` or the schema's `.default()`s. |
@@ -1055,7 +1056,7 @@ Write text that mixes literals and values as one template literal, `{`${choice.n
 | Component | Props |
 |---|---|
 | `GameShell` | `router: AppRouter<TState, TScreens>`, `controls: GameControlsViewModel<TState>`, `headingSelector?: string`; snippets `wordmark`, `welcome`, `joinNextRound`, `phase(phase)` |
-| `WelcomeScreen` | `vm: WelcomeViewModel<TState>`, `title: string`, `tagline: string`, `hero?: Snippet` (replaces the wordmark and tagline); owns the `autoJoinIfRequested()` effect for share links |
+| `WelcomeScreen` | `vm: WelcomeViewModel<TState>`, `title: string`, `tagline: string`, `hero?: Snippet` (replaces the wordmark and tagline), `howToPlay?: Snippet` (rendered at the bottom of the screen); owns the `autoJoinIfRequested()` effect for share links |
 | `LobbyScreen` | `vm: WaitingRoomViewModel<TState>`, `settings?: LobbySettingsViewModel<TState>` (rendered below the players), `extra?: Snippet` (rendered below the settings); every label from the `UiStrings` table, chips styled by the game |
 | `StatusPanel` | `title: string`, `detail?: string`, `tone: "wait" \| "done" \| "info"` |
 | `Timer` | `seconds: number`, `fraction: number` (0 to 1; from `PhaseClock.fraction`), `announcement?: string` (polite live region text) |
@@ -1072,9 +1073,27 @@ Write text that mixes literals and values as one template literal, `{`${choice.n
 | `NameInput` | `field: NameField`, `focus?: boolean` |
 | `SoundToggle` | `policy: SoundPolicy`, `on?: string`, `off?: string` (labels, default "Sound on"/"Sound off"); a native `type="button"` with `aria-pressed` |
 | `LobbySettings` | `vm: LobbySettingsViewModel<TState>` |
-| `GameControls` | `vm: GameControlsViewModel<TState>` |
+| `GameControls` | `vm: GameControlsViewModel<TState>`, `howToPlay?: Snippet` (rendered inside the controls bar) |
+| `HowToPlay` | `(@experimental)` `vm: HowToPlayViewModel`, `steps: readonly { title, body, illustration?: Snippet, example?: Snippet }[]`; a dialog for seated players (auto-opened once per browser, focus-trapped, background inert, Escape or the close button) and an auto-advancing carousel for seatless viewers that stops for good on user input; renders nothing without steps |
+| `HowToPlayButton` | `(@experimental)` `vm: HowToPlayViewModel` — the "How to play" button that opens the sheet |
 
 `LobbySettings` and `GameControls` render a viewmodel the game builds and passes in (`untrack(() => new GameControlsViewModel(manager, isGameOver))`).
+
+### How to play
+
+The how-to-play sheet is one `HowToPlayViewModel` per game plus two components. The game owns the content — an array of steps, each `{ title, body }` that must read without its optional `illustration` and `example` snippets — and the package owns the chrome: a focus-trapped dialog with a dot row and next/back for seated players (auto-opened once per browser, the seen flag under `${storagePrefix}.howToPlaySeen`, closed by Escape or the close button, focus returned to the opener, the background inert while open), and an auto-advancing carousel for seatless viewers that never takes focus or blocks the lobby and stops for good on user input. The step cross-fade runs only under `prefers-reduced-motion: no-preference`.
+
+```svelte
+<script lang="ts">
+  import { HowToPlayViewModel } from "@partygame/game-ui";
+  import { HowToPlay, HowToPlayButton } from "@partygame/game-ui/components";
+
+  const howTo = untrack(() => new HowToPlayViewModel(manager, { storage: localStorage, storagePrefix }, () => STEPS.length));
+</script>
+
+<HowToPlay vm={howTo} steps={STEPS} />
+<HowToPlayButton vm={howTo} /> <!-- or pass it as the howToPlay snippet of GameControls / WelcomeScreen -->
+```
 
 ```svelte
 <script lang="ts">

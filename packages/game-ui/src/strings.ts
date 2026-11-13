@@ -89,6 +89,16 @@ export interface UiStrings {
   startGame: (ready: number, min: number) => string;
   /** Builds the lobby hint shown to a host below the minimum. */
   needAtLeast: (min: number) => string;
+  /** The HowToPlayButton label and the how-to-play sheet's heading. */
+  howToPlay: string;
+  /** The how-to-play sheet's close button. */
+  closeSheet: string;
+  /** The how-to-play sheet's back button. */
+  previousStep: string;
+  /** The how-to-play sheet's next button. */
+  nextStep: string;
+  /** Builds the accessible name of a how-to-play step dot from its position and the total number of steps. */
+  stepLabel: (current: number, total: number) => string;
   /**
    * The client-side table from `@partygame/game-client`; pass the same object to the manager's
    * `strings` option so one table covers both layers.
@@ -138,6 +148,11 @@ export const defaultUiStrings: UiStrings = {
   kickConfirm: "Remove?",
   startGame: (ready, min) => `Start Game (${ready}/${min})`,
   needAtLeast: (min) => `Need at least ${min} players to start`,
+  howToPlay: "How to play",
+  closeSheet: "Close",
+  previousStep: "Back",
+  nextStep: "Next",
+  stepLabel: (current, total) => `Step ${current} of ${total}`,
   clientStrings: {},
 };
 

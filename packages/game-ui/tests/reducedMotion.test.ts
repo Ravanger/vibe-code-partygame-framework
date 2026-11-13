@@ -7,6 +7,7 @@ import {
   ActionBar,
   ChoiceBoard,
   GameControls,
+  HowToPlay,
   LobbySettings,
   NameInput,
   PhaseBar,
@@ -18,6 +19,7 @@ import {
   Timer,
 } from "../src/components/index.js";
 import { GameControlsViewModel } from "../src/GameControlsViewModel.svelte.js";
+import { HowToPlayViewModel } from "../src/HowToPlayViewModel.svelte.js";
 import { type PodiumRow, podiumSteps, rankRows } from "../src/index.js";
 import { LobbySettingsViewModel } from "../src/LobbySettingsViewModel.svelte.js";
 import { NameField } from "../src/NameField.svelte.js";
@@ -143,6 +145,21 @@ describe("reduced motion", () => {
           }),
       ],
       [
+        "HowToPlay",
+        () =>
+          render(HowToPlay, {
+            vm: new HowToPlayViewModel(
+              connectedClient({ stateClass: BaseGameState }).manager,
+              { storage: { getItem: () => null, setItem: () => {} }, storagePrefix: "test-game" },
+              () => 2,
+            ),
+            steps: [
+              { title: "One", body: "First." },
+              { title: "Two", body: "Second." },
+            ],
+          }),
+      ],
+      [
         "LobbySettings",
         () => {
           const c = connectedClient({ stateClass: BaseGameState, seat: { role: "host" } });
@@ -219,6 +236,7 @@ describe("reduced motion", () => {
       "Podium",
       "ProgressStrip",
       "ChoiceBoard",
+      "HowToPlay",
     ]) {
       expect(css[name] ?? "").toMatch(/animation|transition/);
     }

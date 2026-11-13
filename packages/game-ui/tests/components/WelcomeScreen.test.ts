@@ -5,6 +5,7 @@ import { userEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WelcomeViewModel } from "../../src/WelcomeViewModel.svelte.js";
 import WelcomeScreenHeroProvider from "../fixtures/WelcomeScreenHeroProvider.svelte";
+import WelcomeScreenHowToProvider from "../fixtures/WelcomeScreenHowToProvider.svelte";
 import WelcomeScreenProvider from "../fixtures/WelcomeScreenProvider.svelte";
 
 const client = () => connectedClient({ stateClass: BaseGameState });
@@ -96,5 +97,16 @@ describe("WelcomeScreen", () => {
     expect(screen.getByRole("button", { name: "Host Game" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Join" })).toBeDisabled();
     expect(screen.getByRole("button", { name: /watch on a tv/i })).toBeDisabled();
+  });
+
+  it("renders an optional howToPlay slot, and nothing without it", () => {
+    const plain = render(WelcomeScreenProvider, { vm: new WelcomeViewModel(client().manager) });
+    expect(screen.queryByRole("button", { name: "How to play" })).not.toBeInTheDocument();
+    plain.unmount();
+
+    render(WelcomeScreenHowToProvider, { vm: new WelcomeViewModel(client().manager) });
+    const welcome = document.querySelector<HTMLElement>(".welcome");
+    expect(welcome).not.toBeNull();
+    expect(welcome?.contains(screen.getByRole("button", { name: "How to play" }))).toBe(true);
   });
 });
