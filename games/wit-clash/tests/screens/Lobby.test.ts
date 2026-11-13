@@ -2,9 +2,8 @@ import { CLIENT_MESSAGES } from "@partygame/shared";
 import { fireEvent, render, screen } from "@testing-library/svelte";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import JoinNextRound from "../../ui/screens/JoinNextRound.svelte";
-import WaitingRoom from "../../ui/screens/WaitingRoom.svelte";
 import Welcome from "../../ui/screens/Welcome.svelte";
-import { addSeat, connectedClient, scoreRow, stubFetch } from "../helpers/client.js";
+import { connectedClient, scoreRow, stubFetch } from "../helpers/client.js";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -12,25 +11,6 @@ afterEach(() => {
   vi.unstubAllGlobals();
   window.history.replaceState({}, "", "/");
 });
-
-/** The cssText of the first style rule whose selector matches `re`. */
-function ruleCss(re: RegExp): string {
-  for (const sheet of document.styleSheets) {
-    let rules: CSSRuleList;
-    try {
-      rules = sheet.cssRules;
-    } catch {
-      continue;
-    }
-    for (const rule of rules) {
-      if (rule instanceof CSSStyleRule && re.test(rule.selectorText)) return rule.cssText;
-    }
-  }
-  throw new Error(`no style rule matching ${re}`);
-}
-
-/** The scale-aware fs-1 declaration every TV text uses under main.tv. */
-const SCALED_FS_1 = /font-size:\s*calc\(var\(--fs-1\) \* var\(--scale,\s*1\)\)/;
 
 describe("Welcome screen", () => {
   it("hosts a game", async () => {
@@ -79,112 +59,6 @@ describe("Welcome screen", () => {
     render(Welcome, { manager });
     expect(await screen.findByRole("alert")).toHaveTextContent(CLIENT_MESSAGES.ROOM_NOT_FOUND);
     expect(network.urls).toEqual([expect.stringContaining("code=QRST")]);
-  });
-});
-
-describe("Waiting room", () => {
-  function lobby(role: "host" | "player", others = 2) {
-    const c = connectedClient({ role, name: "Me" });
-    c.state.canStart = others + 1 >= c.state.minPlayers;
-    for (let i = 0; i < others; ++i) addSeat(c.state, `friend-${i}-1234`, { name: `Friend ${i}` });
-    return c;
-  }
-
-  it("shows the players and the round count for a named player", () => {
-    const { manager } = lobby("player");
-    render(WaitingRoom, { manager });
-    expect(screen.getByText("Friend 0")).toBeInTheDocument();
-    expect(screen.getByText("(You)")).toBeInTheDocument();
-    expect(screen.getByText("Total rounds")).toBeInTheDocument();
-    expect(screen.getByText(/waiting for the host/i)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /start game/i })).not.toBeInTheDocument();
-  });
-
-  it("marks the host, the disconnected and the unnamed", () => {
-    const c = connectedClient({ role: "host" });
-    addSeat(c.state, "away-1234", { name: "Away", isConnected: false });
-    addSeat(c.state, "new-12345", { name: "", isReady: false });
-    render(WaitingRoom, { manager: c.manager });
-    expect(screen.getByText("Host")).toBeInTheDocument();
-    expect(screen.getByText("(Disconnected)")).toBeInTheDocument();
-    expect(screen.getByText("Choosing a name...")).toBeInTheDocument();
-  });
-
-  it("lets the host start once enough players are ready", async () => {
-    const short = lobby("host", 1);
-    const { unmount } = render(WaitingRoom, { manager: short.manager });
-    expect(screen.getByRole("button", { name: /start game/i })).toBeDisabled();
-    expect(screen.getByText(/at least 3 players/i)).toBeInTheDocument();
-    unmount();
-
-    const full = lobby("host", 2);
-    render(WaitingRoom, { manager: full.manager });
-    await fireEvent.click(screen.getByRole("button", { name: /start game/i }));
-    expect(full.room.requests).toEqual([{ type: "ACTION", payload: { type: "START_GAME" } }]);
-  });
-
-  it("lets the host pick the filter level", async () => {
-    const c = lobby("host");
-    render(WaitingRoom, { manager: c.manager });
-    expect(screen.getByRole("button", { name: "moderate" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    await fireEvent.click(screen.getByRole("button", { name: "strict" }));
-    expect(c.room.requests).toEqual([
-      { type: "ACTION", payload: { filterLevel: "strict", type: "SET_OPTIONS" } },
-    ]);
-  });
-
-  it("sends the name after typing pauses", async () => {
-    vi.useFakeTimers();
-    const c = lobby("player");
-    render(WaitingRoom, { manager: c.manager });
-    const input = screen.getByLabelText("Your name");
-    expect(input).toHaveValue("Me");
-    await fireEvent.input(input, { target: { value: "Maya" } });
-    vi.advanceTimersByTime(300);
-    expect(c.room.sent).toEqual([{ type: "SET_NAME", payload: "Maya" }]);
-  });
-
-  it("shows why the game ended and lets anyone leave", async () => {
-    const c = lobby("player");
-    c.state.notice = "The host ended the game.";
-    const leave = vi.spyOn(c.manager, "leave").mockResolvedValue();
-    render(WaitingRoom, { manager: c.manager });
-    expect(screen.getByRole("status")).toHaveTextContent("The host ended the game.");
-    await fireEvent.click(screen.getByRole("button", { name: "Leave game" }));
-    expect(leave).toHaveBeenCalledOnce();
-  });
-
-  it("shows no notice when nothing ended the game", () => {
-    render(WaitingRoom, { manager: lobby("player").manager });
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
-  });
-
-  it("scales the TV leave button with the font scale", () => {
-    render(WaitingRoom, { manager: lobby("player").manager });
-    expect(ruleCss(/main\.tv .*\.leave\b/)).toMatch(SCALED_FS_1);
-  });
-
-  it("copies the room code and announces the success in a live region", async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal("navigator", { clipboard: { writeText } });
-    render(WaitingRoom, { manager: lobby("host").manager });
-    await fireEvent.click(screen.getByRole("button", { name: "Copy" }));
-    expect(writeText).toHaveBeenCalledWith("ABCD");
-    const status = screen.getByText("Copied!");
-    expect(status.closest("[aria-live='polite']")).not.toBeNull();
-  });
-
-  it("tells the player to read the code out when the clipboard fails", async () => {
-    vi.stubGlobal("navigator", {
-      clipboard: { writeText: vi.fn().mockRejectedValue(new Error("denied")) },
-    });
-    render(WaitingRoom, { manager: lobby("host").manager });
-    await fireEvent.click(screen.getByRole("button", { name: "Copy" }));
-    const status = screen.getByText("Copy failed, read the code out");
-    expect(status.closest("[aria-live='polite']")).not.toBeNull();
   });
 });
 

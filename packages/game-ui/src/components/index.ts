@@ -19,6 +19,16 @@ export {
   default as GameShell,
 } from "./GameShell.svelte";
 export {
+  /**
+   * The whole lobby screen: notice, name card (first while unnamed), room code with copy button
+   * and QR code for the host and spectators, the waiting panel for named guests, the player list
+   * with badges and kick confirmation, an optional `settings` form, an optional `extra` snippet
+   * rendered below it, leave and — for the host — the start button. Every label comes from the
+   * `UiStrings` table; the chips (`chip`, `chip--sky`, `chip--paper`) are styled by the game.
+   */
+  default as LobbyScreen,
+} from "./LobbyScreen.svelte";
+export {
   /** The lobby's collapsible options form: editable fields for the host, read-only values for everyone else. */
   default as LobbySettings,
 } from "./LobbySettings.svelte";

@@ -49,6 +49,34 @@ export interface UiStrings {
   codeCopied: string;
   /** The waiting room's copy status when the clipboard is denied or unavailable. */
   codeCopyFailed: string;
+  /** The lobby's room-code caption. */
+  roomCodeLabel: string;
+  /** The lobby's copy button. */
+  copyCode: string;
+  /** The lobby line under the QR code, before the share link. */
+  shareInstructions: string;
+  /** The lobby waiting panel's title for a named guest. */
+  waitingForHost: string;
+  /** Builds the lobby players heading from the ready count and the player limits. */
+  playersHeading: (ready: number, min: number, max: number) => string;
+  /** Builds the lobby line counting how many spectators watch on a TV. */
+  watchingOnTv: (count: number) => string;
+  /** The lobby name shown for a seat without a name yet. */
+  choosingName: string;
+  /** The badge next to the player's own lobby row. */
+  youBadge: string;
+  /** The badge next to the host's lobby row. */
+  hostBadge: string;
+  /** The badge next to a disconnected seat's lobby row. */
+  disconnectedBadge: string;
+  /** Builds the aria-label of a lobby row's remove button from the seat's name, or "player" when it has none. */
+  removePlayer: (name: string) => string;
+  /** The lobby kick confirmation question. */
+  kickConfirm: string;
+  /** Builds the host's start button label from the ready count and the minimum. */
+  startGame: (ready: number, min: number) => string;
+  /** Builds the lobby hint shown to a host below the minimum. */
+  needAtLeast: (min: number) => string;
   /**
    * The client-side table from `@partygame/game-client`; pass the same object to the manager's
    * `strings` option so one table covers both layers.
@@ -78,6 +106,20 @@ export const defaultUiStrings: UiStrings = {
   podiumPlace: (tier) => (tier === 1 ? "1st" : tier === 2 ? "2nd" : "3rd"),
   codeCopied: "Copied!",
   codeCopyFailed: "Copy failed, read the code out",
+  roomCodeLabel: "Room Code",
+  copyCode: "Copy",
+  shareInstructions: "Scan to join, or open",
+  waitingForHost: "Waiting for the host to start the game...",
+  playersHeading: (ready, min, max) => `Players (${ready} ready, ${min} to ${max} needed)`,
+  watchingOnTv: (count) => `${count} watching on a TV`,
+  choosingName: "Choosing a name...",
+  youBadge: "(You)",
+  hostBadge: "Host",
+  disconnectedBadge: "(Disconnected)",
+  removePlayer: (name) => `Remove ${name}`,
+  kickConfirm: "Remove?",
+  startGame: (ready, min) => `Start Game (${ready}/${min})`,
+  needAtLeast: (min) => `Need at least ${min} players to start`,
   clientStrings: {},
 };
 

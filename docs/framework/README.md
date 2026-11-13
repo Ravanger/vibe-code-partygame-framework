@@ -1045,6 +1045,7 @@ Write text that mixes literals and values as one template literal, `{`${choice.n
 |---|---|
 | `GameShell` | `router: AppRouter<TState, TScreens>`, `controls: GameControlsViewModel<TState>`, `headingSelector?: string`; snippets `wordmark`, `welcome`, `joinNextRound`, `phase(phase)` |
 | `WelcomeScreen` | `vm: WelcomeViewModel<TState>`, `title: string`, `tagline: string`, `hero?: Snippet` (replaces the wordmark and tagline); owns the `autoJoinIfRequested()` effect for share links |
+| `LobbyScreen` | `vm: WaitingRoomViewModel<TState>`, `settings?: LobbySettingsViewModel<TState>` (rendered below the players), `extra?: Snippet` (rendered below the settings); every label from the `UiStrings` table, chips styled by the game |
 | `StatusPanel` | `title: string`, `detail?: string`, `tone: "wait" \| "done" \| "info"` |
 | `Timer` | `seconds: number`, `total: number`, `announcement?: string` (polite live region text) |
 | `PlayerSticker` | `name: string`, `playerId: string`, `size?: number` (default 44), `ghost?: boolean` |
@@ -1071,7 +1072,7 @@ Write text that mixes literals and values as one template literal, `{`${choice.n
 Theming contract: the package ships `@partygame/game-ui/theme-contract.css`. Import it first in your `app.css` for a working baseline of every variable below (plus `.sr-only`), then override what you want to change. Chrome — the framework components' look (lobby, join overlays, scoreboard/podium, game controls, timer) — is themed through these variables; artwork — your screens and cards — is yours to design.
 
 - Custom properties: `--ink`, `--ink-soft`, `--white`, `--paper`, `--color-1` to `--color-4`, `--accent`, `--danger`, `--disabled`, `--tape-1` to `--tape-4` (`StatusPanel` sets `--tape` itself), `--fs-1` to `--fs-5`, `--font-display`, `--outline`, `--radius-card`, `--radius-btn`, `--scrap-shadow`, `--podium-block-height-1`, `--podium-block-height-2`, `--podium-block-height-3`, `--scale`, `--timer-size`.
-- Global classes: `card`, `taped`, `sticker`, `hand` (`StatusPanel`); `sr-only` (`Timer`); `action-bar` (`ActionBar` renders it and styles nothing, so the game styles the bar, e.g. `.action-bar > .btn` and `main.tv .action-bar`).
+- Global classes: `card`, `taped`, `sticker`, `hand` (`StatusPanel`); `sr-only` (`Timer`); `chip`, `chip--sky`, `chip--paper` (the `LobbyScreen` badges); `action-bar` (`ActionBar` renders it and styles nothing, so the game styles the bar, e.g. `.action-bar > .btn` and `main.tv .action-bar`).
 
 ## Bots
 

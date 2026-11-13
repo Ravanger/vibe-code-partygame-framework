@@ -203,7 +203,7 @@ const sound = new SoundPolicy({ storage: localStorage, storagePrefix: "my-game",
 
 ## Components
 
-Props (all render in plain markup, e.g. `<Timer seconds={12} total={30} />`): `LobbySettings` and `GameControls` take `vm`; `NameInput` takes `field` (`vm.nameField`) and `focus?`; `PlayerSticker` takes `name`, `playerId`, `size?`, `ghost?`; `QrCode` takes `text`; `SoundToggle` takes `policy` (a `SoundPolicy`); `StatusPanel` takes `title`, `detail?`, `tone` (`"wait"`, `"done"`, `"info"`); `Timer` takes `seconds`, `total`, `announcement?`.
+Props (all render in plain markup, e.g. `<Timer seconds={12} total={30} />`): `LobbyScreen` takes `vm` (`WaitingRoomViewModel`) and optionally `settings` (`LobbySettingsViewModel`, rendered below the players) and an `extra` snippet; it renders notice, name card (first while unnamed), room code with copy button and QR for host and spectators, the waiting panel for named guests, the player list with badges and kick confirmation, leave and — for the host — the start button; the chips (`chip`, `chip--sky`, `chip--paper`) are styled by the game. `LobbySettings` and `GameControls` take `vm`; `NameInput` takes `field` (`vm.nameField`) and `focus?`; `PlayerSticker` takes `name`, `playerId`, `size?`, `ghost?`; `QrCode` takes `text`; `SoundToggle` takes `policy` (a `SoundPolicy`); `StatusPanel` takes `title`, `detail?`, `tone` (`"wait"`, `"done"`, `"info"`); `Timer` takes `seconds`, `total`, `announcement?`.
 
 ## Podium and ranking
 
@@ -225,7 +225,7 @@ Props (all render in plain markup, e.g. `<Timer seconds={12} total={30} />`): `L
 
 ## Localisation
 
-Every label the generic components render (the GameControls menu and dialog, the LobbySettings summary, NameInput, Podium — places through its `podiumPlace(tier)` function entry —, QrCode, the SoundToggle label, the StatusPanel done sticker, the waiting room's copy status (`codeCopied`, `codeCopyFailed`) and the `PhaseClock` announcement through its `secondsRemaining(n)` function entry) comes from `defaultUiStrings`. Call `setStrings(partial)` once at the app root to replace any of them; unspecified keys keep the English default.
+Every label the generic components render (the GameControls menu and dialog, the LobbyScreen — room code, badges, kick confirmation and start button, several through function entries such as `playersHeading(ready, min, max)` and `startGame(ready, min)` —, the LobbySettings summary, NameInput, Podium — places through its `podiumPlace(tier)` function entry —, QrCode, the SoundToggle label, the StatusPanel done sticker, the waiting room's copy status (`codeCopied`, `codeCopyFailed`) and the `PhaseClock` announcement through its `secondsRemaining(n)` function entry) comes from `defaultUiStrings`. Call `setStrings(partial)` once at the app root to replace any of them; unspecified keys keep the English default.
 
 ```svelte
 <script lang="ts">

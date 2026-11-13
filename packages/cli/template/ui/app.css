@@ -121,6 +121,10 @@ h3 {
   background: var(--white);
 }
 
+.chip--sky {
+  background: var(--color-4);
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
