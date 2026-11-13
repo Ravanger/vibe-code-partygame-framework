@@ -8,7 +8,7 @@ import type { WitClashManager } from "../manager.js";
 export interface VoteChoice {
   id: string;
   text: string;
-  isMine: boolean;
+  picked: boolean;
 }
 
 /** Voting on the active matchup. Who wrote what, and the counts, stay hidden until the reveal. */
@@ -50,11 +50,11 @@ export class MatchupVoteViewModel {
   }
 
   get choices(): VoteChoice[] {
-    const picked = this.mine?.matchupVote;
+    const myVote = this.mine?.matchupVote;
     return [...(this.matchup?.answers ?? [])].map((a) => ({
       id: a.id,
       text: a.text,
-      isMine: a.id === picked,
+      picked: a.id === myVote,
     }));
   }
 

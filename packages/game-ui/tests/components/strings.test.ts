@@ -45,6 +45,10 @@ describe("defaultUiStrings and the table", () => {
     expect(strings.qrCode).toBe("QR code that opens the join link");
     expect(strings.sound).toBe("Sound");
     expect(strings.done).toBe("Done");
+    expect(strings.typing).toBe("typing…");
+    expect(strings.pickedStamp).toBe("VOTED!");
+    expect(strings.switchHint).toBe("psst… tap the other one to switch");
+    expect(strings.yours).toBe("yours");
     expect(strings.secondsRemaining(5)).toBe("5 seconds remaining");
     expect(strings.podiumPlace(1)).toBe("1st");
     expect(strings.podiumPlace(2)).toBe("2nd");

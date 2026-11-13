@@ -28,8 +28,24 @@ describe("WritingViewModel", () => {
     expect(vm.prompt).toBe("What is the capital of Australia?");
     expect(vm.roundLabel).toBe("Round 2 of 3");
     expect(vm.rows).toEqual([
-      { id: c.me.id, name: "Me", done: false, isMe: true },
-      { id: "ann-12345", name: "Ann", done: true, isMe: false },
+      {
+        playerId: c.me.id,
+        name: "Me",
+        answered: 0,
+        expected: 1,
+        done: false,
+        typing: false,
+        isMe: true,
+      },
+      {
+        playerId: "ann-12345",
+        name: "Ann",
+        answered: 1,
+        expected: 1,
+        done: true,
+        typing: false,
+        isMe: false,
+      },
     ]);
     expect(vm.myDone).toBe(false);
   });

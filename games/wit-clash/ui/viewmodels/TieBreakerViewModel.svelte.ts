@@ -11,7 +11,7 @@ import { MatchupRecap, type RevealedMatchup } from "./MatchupRecap.js";
 export interface TieBreakerChoice {
   id: string;
   text: string;
-  isMine: boolean;
+  picked: boolean;
 }
 
 /** The single draft key of the tie-breaker answer. */
@@ -103,11 +103,11 @@ export class TieBreakerViewModel {
   }
 
   get choices(): TieBreakerChoice[] {
-    const picked = this.mine?.matchupVote;
+    const myVote = this.mine?.matchupVote;
     return [...(this.matchup?.answers ?? [])].map((a) => ({
       id: a.id,
       text: a.text,
-      isMine: a.id === picked,
+      picked: a.id === myVote,
     }));
   }
 

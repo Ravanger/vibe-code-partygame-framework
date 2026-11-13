@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { podiumSteps, rankRows } from "../src/ranking.js";
+import { leaders, podiumSteps, rankRows } from "../src/ranking.js";
 
 const row = (name: string, score: number, hasLeft = false) => ({ name, score, hasLeft });
 
@@ -24,6 +24,26 @@ describe("rankRows", () => {
       ["b", 2],
       ["c", 2],
     ]);
+  });
+});
+
+describe("leaders", () => {
+  it("is empty without rows", () => {
+    expect(leaders([])).toEqual([]);
+  });
+
+  it("is empty when the top score is 0", () => {
+    expect(leaders(rankRows([row("a", 0), row("b", 0)]))).toEqual([]);
+  });
+
+  it("keeps every seated row at rank 1, in display order", () => {
+    const rows = rankRows([row("a", 9), row("b", 9), row("c", 5), row("d", 1)]);
+    expect(leaders(rows).map((r) => r.name)).toEqual(["a", "b"]);
+  });
+
+  it("drops leavers even when they hold the top score", () => {
+    const rows = rankRows([row("a", 10, true), row("b", 8)]);
+    expect(leaders(rows)).toEqual([]);
   });
 });
 

@@ -1,9 +1,7 @@
 <script lang="ts">
-import { ActionBar, PhaseTimer, StatusPanel } from "@partygame/game-ui/components";
+import { ActionBar, PhaseTimer, ProgressStrip, ScreenTitle, StatusPanel } from "@partygame/game-ui/components";
 import { untrack } from "svelte";
 import AnswerBox from "../components/AnswerBox.svelte";
-import ProgressBadges from "../components/ProgressBadges.svelte";
-import ScreenTitle from "../components/ScreenTitle.svelte";
 import type { WitClashManager } from "../manager.js";
 import { TieBreakerViewModel } from "../viewmodels/TieBreakerViewModel.svelte.js";
 
@@ -29,7 +27,7 @@ $effect(() => () => vm.destroy());
     <h2>{vm.promptText}</h2>
   </div>
 
-  <ProgressBadges rows={vm.progress.rows} />
+  <ProgressStrip rows={vm.progress.rows} label="Answer progress" />
 
   {#if vm.isContender}
     <p class="how hand">Write the funniest answer you can</p>

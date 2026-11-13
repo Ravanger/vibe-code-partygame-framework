@@ -125,7 +125,7 @@ describe("a round through the real client SDK and view models", () => {
       await waitUntil(everyoneOn(all, "MatchupReveal"), "reveal screens");
       const reveal = new MatchupRevealViewModel(host);
       expect(reveal.matchup?.answers.every((a) => a.authorName.startsWith("Player"))).toBe(true);
-      expect(voter.choices[0]?.isMine).toBe(true);
+      expect(voter.choices[0]?.picked).toBe(true);
       ++revealed;
       await waitUntil(
         () => screens(all).every((s) => s === "MatchupVoting" || s === "Results"),

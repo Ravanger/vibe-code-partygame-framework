@@ -1,8 +1,7 @@
 <script lang="ts">
-import { PhaseBar, StatusPanel } from "@partygame/game-ui/components";
+import { PhaseBar, ScreenTitle, StatusPanel } from "@partygame/game-ui/components";
 import { untrack } from "svelte";
 import MatchupCard from "../components/MatchupCard.svelte";
-import ScreenTitle from "../components/ScreenTitle.svelte";
 import type { WitClashManager } from "../manager.js";
 import { TieBreakerViewModel } from "../viewmodels/TieBreakerViewModel.svelte.js";
 

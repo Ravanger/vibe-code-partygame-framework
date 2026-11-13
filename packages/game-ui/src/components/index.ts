@@ -3,6 +3,17 @@ export {
   default as ActionBar,
 } from "./ActionBar.svelte";
 export {
+  /**
+   * Tappable choices in a grid. The player's current pick is rendered pressed (`aria-pressed`)
+   * with the `UiStrings.pickedStamp` stamp; the player's own item (`own`) is never votable and
+   * carries the `UiStrings.yours` chip; every choice is disabled while `canVote` is false. An
+   * optional `versus` label renders a divider between the first two choices, an optional
+   * per-choice `label` a badge letter, and a switch hint (`UiStrings.switchHint`) appears while
+   * a pick can still be changed.
+   */
+  default as ChoiceBoard,
+} from "./ChoiceBoard.svelte";
+export {
   /** Falling confetti: `count` deterministic pieces across the top of the screen, coloured by theme variables; animated only under `prefers-reduced-motion: no-preference`. */
   default as Confetti,
 } from "./Confetti.svelte";
@@ -57,9 +68,21 @@ export {
   default as Podium,
 } from "./Podium.svelte";
 export {
+  /**
+   * A strip of player stickers showing who has handed everything in (`UiStrings.done` mark),
+   * who is working right now (`UiStrings.typing`) and each row's answered count; the list is
+   * named by `label`. Renders nothing for an empty `rows`.
+   */
+  default as ProgressStrip,
+} from "./ProgressStrip.svelte";
+export {
   /** An SVG QR code encoding `text`. */
   default as QrCode,
 } from "./QrCode.svelte";
+export {
+  /** A screen heading: a focusable `h1` with a wavy underline and an optional hand-written `hint`. */
+  default as ScreenTitle,
+} from "./ScreenTitle.svelte";
 export {
   /** A button that toggles a `SoundPolicy` between its `on` and `off` labels. */
   default as SoundToggle,

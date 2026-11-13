@@ -1,15 +1,8 @@
-import { OptionsReader, PhaseClock, roundLabel } from "@partygame/game-ui";
+import { OptionsReader, PhaseClock, type ProgressRow, roundLabel } from "@partygame/game-ui";
 import { ErrorCode } from "@partygame/shared";
 import { ACTION } from "../../src/actionNames.js";
 import { type BluffOptions, BluffOptionsSchema, DEFAULT_OPTIONS } from "../../src/options.js";
 import type { BluffManager } from "../manager.js";
-
-export interface WriterRow {
-  id: string;
-  name: string;
-  done: boolean;
-  isMe: boolean;
-}
 
 /** The prompt, who has written, the server's clock and the submit action. */
 export class WritingViewModel {
@@ -29,16 +22,22 @@ export class WritingViewModel {
     return roundLabel(state?.roundNumber ?? 0, state?.totalRounds ?? 0);
   }
 
-  /** One row per seated player, in seat order. */
-  get rows(): WriterRow[] {
+  /** One row per seated player, in seat order, for the writers strip. */
+  get rows(): ProgressRow[] {
     const state = this.manager.state;
     if (state === undefined) return [];
-    return [...state.players.values()].map((seat) => ({
-      id: seat.id,
-      name: seat.name,
-      done: state.progress.get(seat.id) === true,
-      isMe: seat.id === this.manager.playerId,
-    }));
+    return [...state.players.values()].map((seat) => {
+      const done = state.progress.get(seat.id) === true;
+      return {
+        playerId: seat.id,
+        name: seat.name,
+        answered: done ? 1 : 0,
+        expected: 1,
+        done,
+        typing: false,
+        isMe: seat.id === this.manager.playerId,
+      };
+    });
   }
 
   get myDone(): boolean {

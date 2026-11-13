@@ -1,4 +1,4 @@
-import { type PodiumStep, podiumSteps, roundLabel } from "@partygame/game-ui";
+import { leaders, type PodiumStep, podiumSteps, roundLabel } from "@partygame/game-ui";
 import { ACTION } from "../../src/actionNames.js";
 import type { WitClashManager } from "../manager.js";
 import { MatchupRecap, type RevealedMatchup } from "./MatchupRecap.js";
@@ -97,9 +97,7 @@ export class ResultsViewModel {
   }
 
   get champions(): ScoreRow[] {
-    return this.isFinalRound
-      ? this.scoreboard.rows.filter((row) => row.rank === 1 && !row.hasLeft)
-      : [];
+    return this.isFinalRound ? leaders(this.scoreboard.rows) : [];
   }
 
   get championLine(): string {

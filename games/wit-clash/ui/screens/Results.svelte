@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Spotlight } from "@partygame/game-ui";
+import { plural, Spotlight } from "@partygame/game-ui";
 import { ActionBar, Confetti, PlayerSticker, Podium, StatusPanel } from "@partygame/game-ui/components";
 import { untrack } from "svelte";
 import MatchupCard from "../components/MatchupCard.svelte";
@@ -58,7 +58,7 @@ $effect(() => () => spotlight.destroy());
             <blockquote class="best-text">{best.text}</blockquote>
             <div class="best-meta">
               <span class="best-author">{`by ${best.authorName}${best.isMine ? " (you)" : ""}`}</span>
-              <span class="chip">{`${best.votes} vote${best.votes !== 1 ? "s" : ""}`}</span>
+              <span class="chip">{`${best.votes} ${plural(best.votes, "vote")}`}</span>
             </div>
           </figure>
         {/each}
@@ -93,7 +93,7 @@ $effect(() => () => spotlight.destroy());
               <blockquote class="highlight-text">{answer.text}</blockquote>
               <div class="highlight-meta">
                 <span class="highlight-author">{`by ${answer.authorName}`}</span>
-                <span class="chip">{`${answer.votes} vote${answer.votes !== 1 ? "s" : ""}`}</span>
+                <span class="chip">{`${answer.votes} ${plural(answer.votes, "vote")}`}</span>
               </div>
             {/each}
           </div>

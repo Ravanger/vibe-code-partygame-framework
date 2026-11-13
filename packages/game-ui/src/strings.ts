@@ -39,8 +39,16 @@ export interface UiStrings {
   qrCode: string;
   /** The SoundToggle button label; its state is conveyed by `aria-pressed`, so the label stays constant. */
   sound: string;
-  /** The StatusPanel done sticker. */
+  /** The done sticker of StatusPanel and the ProgressStrip done mark. */
   done: string;
+  /** The ProgressStrip typing label under a player who is working right now. */
+  typing: string;
+  /** The stamp on the picked choice in ChoiceBoard. */
+  pickedStamp: string;
+  /** The hint under a ChoiceBoard whose pick can still be switched. */
+  switchHint: string;
+  /** The chip next to the player's own item in a ChoiceBoard. */
+  yours: string;
   /** Builds the Timer announcement for a given number of seconds left. */
   secondsRemaining: (seconds: number) => string;
   /** Builds the PhaseBar label from the seconds until the next phase starts. */
@@ -104,6 +112,10 @@ export const defaultUiStrings: UiStrings = {
   qrCode: "QR code that opens the join link",
   sound: "Sound",
   done: "Done",
+  typing: "typing…",
+  pickedStamp: "VOTED!",
+  switchHint: "psst… tap the other one to switch",
+  yours: "yours",
   secondsRemaining: (seconds) => `${seconds} seconds remaining`,
   nextUpIn: (seconds) => `Next up in ${seconds}s`,
   podiumPlace: (tier) => (tier === 1 ? "1st" : tier === 2 ? "2nd" : "3rd"),

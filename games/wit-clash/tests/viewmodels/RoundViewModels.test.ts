@@ -301,8 +301,8 @@ describe("MatchupVoteViewModel", () => {
     expect(vm.matchupNumber).toBe(2);
     expect(vm.totalMatchups).toBe(2);
     expect(vm.choices).toEqual([
-      { id: "a1", text: "Mango", isMine: false },
-      { id: "a2", text: "Kiwi", isMine: false },
+      { id: "a1", text: "Mango", picked: false },
+      { id: "a2", text: "Kiwi", picked: false },
     ]);
     expect(vm.votesCast).toBe(1);
     expect(vm.votesExpected).toBe(3);
@@ -313,7 +313,7 @@ describe("MatchupVoteViewModel", () => {
 
   it("highlights only my own vote", () => {
     const { vm } = voting({ canVote: true, isOwnMatchup: false, matchupVote: "a2" });
-    expect(vm.choices.map((c) => c.isMine)).toEqual([false, true]);
+    expect(vm.choices.map((c) => c.picked)).toEqual([false, true]);
   });
 
   it("casts a vote when allowed", async () => {

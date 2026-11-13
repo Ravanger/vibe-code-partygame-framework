@@ -91,6 +91,21 @@ describe("ResultsViewModel", () => {
     expect(vm.podiumSteps.map((step) => step.players.map((p) => p.name))).toEqual([["Ann"]]);
   });
 
+  it("ignores a leaver tied with the top seated score", () => {
+    const c = connectedClient({}, "Results");
+    addScore(c, "ann-12345", "Ann", 5);
+    c.state.scoreboard.push(
+      Object.assign(new ScoreEntry(), {
+        playerId: "ben-12345",
+        name: "Ben",
+        score: 5,
+        hasLeft: true,
+      }),
+    );
+    const vm = new ResultsViewModel(c.manager);
+    expect(vm.headline).toBe("Ann wins with 5 points!");
+  });
+
   it("calls a tie and scores of zero correctly", () => {
     const c = connectedClient({}, "Results");
     addScore(c, "ann-12345", "Ann", 4);

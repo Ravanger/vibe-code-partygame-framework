@@ -1,42 +1,59 @@
 <script lang="ts">
+import { getStrings } from "../strings.js";
+
 interface Choice {
   id: string;
   text: string;
-  isMine: boolean;
+  picked?: boolean;
+  own?: boolean;
+  label?: string;
 }
 
 const {
   choices,
   canVote,
   onvote,
-}: { choices: Choice[]; canVote: boolean; onvote: (id: string) => void } = $props();
+  versus = "",
+}: {
+  choices: Choice[];
+  canVote: boolean;
+  onvote: (id: string) => void;
+  versus?: string;
+} = $props();
+const strings = getStrings();
 
-const hasVoted = $derived(choices.some((choice) => choice.isMine));
+const hasPicked = $derived(choices.some((choice) => choice.picked));
 </script>
 
 <div class="board">
   {#each choices as choice, index (choice.id)}
-    {#if index === 1}
-      <span class="vs" aria-hidden="true">VS</span>
+    {#if versus !== "" && index === 1}
+      <span class="vs" aria-hidden="true">{versus}</span>
     {/if}
     <button
       type="button"
       class="answer card"
-      class:picked={choice.isMine}
-      disabled={!canVote}
-      aria-pressed={choice.isMine}
+      class:picked={choice.picked}
+      disabled={!canVote || choice.own}
+      aria-pressed={choice.picked ?? false}
       onclick={() => onvote(choice.id)}
     >
-      {#if choice.isMine}
-        <span class="sticker stamp" aria-hidden="true">VOTED!</span>
+      {#if choice.label !== undefined}
+        <span class="badge">{choice.label}</span>
+      {/if}
+      {#if choice.picked}
+        <span class="sticker stamp" aria-hidden="true">{strings.pickedStamp}</span>
       {/if}
       <span class="words">{choice.text}</span>
+      {#if choice.own}
+        <span class="chip">{strings.yours}</span>
+      {/if}
     </button>
   {/each}
 </div>
 
-{#if canVote && hasVoted}
-  <p class="switch-hint hand" role="status">psst… tap the other one to switch</p>
+{#if canVote && hasPicked}
+  <p class="switch-hint hand" role="status">{strings.switchHint}</p>
 {/if}
 
 <style>
@@ -47,6 +64,7 @@ const hasVoted = $derived(choices.some((choice) => choice.isMine));
   }
 
   .answer {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -78,6 +96,22 @@ const hasVoted = $derived(choices.some((choice) => choice.isMine));
     overflow-wrap: anywhere;
   }
 
+  .badge {
+    position: absolute;
+    top: -0.8rem;
+    left: -0.4rem;
+    display: grid;
+    place-items: center;
+    width: calc(1.6rem * var(--scale, 1));
+    height: calc(1.6rem * var(--scale, 1));
+    border: var(--outline);
+    border-radius: 50%;
+    background: var(--color-3);
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-size: var(--fs-2);
+  }
+
   .stamp {
     position: absolute;
     top: -1.1rem;
@@ -91,7 +125,7 @@ const hasVoted = $derived(choices.some((choice) => choice.isMine));
     margin: -0.9rem 0;
     padding: 0.1rem 0.85rem;
     border: var(--outline);
-    border-radius: var(--radius-pill);
+    border-radius: 999px;
     background: var(--color-1);
     color: var(--ink);
     box-shadow: 2px 3px 0 var(--ink);

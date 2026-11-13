@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/svelte";
+import { fireEvent, render, screen, within } from "@testing-library/svelte";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ANSWER_MAX_LENGTH } from "../../src/actionNames.js";
 import Writing from "../../ui/screens/Writing.svelte";
@@ -22,12 +22,14 @@ describe("Writing screen", () => {
       screen.getByRole("heading", { name: "What is the capital of Australia?" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Round 2 of 3")).toBeInTheDocument();
-    const rows = screen.getAllByRole("listitem");
-    expect(rows).toHaveLength(2);
-    expect(rows[0]).toHaveTextContent("Me");
-    expect(rows[0]).not.toHaveTextContent("wrote it");
-    expect(rows[1]).toHaveTextContent("Ann");
-    expect(rows[1]).toHaveTextContent("wrote it");
+    const writers = screen.getByLabelText("Writers");
+    expect(within(writers).getAllByRole("listitem")).toHaveLength(2);
+    const me = screen.getByRole("listitem", { name: /me/i });
+    expect(me).toHaveTextContent("0/1");
+    expect(within(me).queryByRole("img")).not.toBeInTheDocument();
+    const ann = screen.getByRole("listitem", { name: /ann/i });
+    expect(ann).toHaveTextContent("1/1");
+    expect(within(ann).getByRole("img", { name: "Done" })).toBeInTheDocument();
   });
 
   it("submits a fake on click and clears the box", async () => {

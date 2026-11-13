@@ -5,12 +5,14 @@ import { createRawSnippet } from "svelte";
 import { describe, expect, it } from "vitest";
 import {
   ActionBar,
+  ChoiceBoard,
   GameControls,
   LobbySettings,
   NameInput,
   PhaseBar,
   PlayerSticker,
   Podium,
+  ProgressStrip,
   QrCode,
   StatusPanel,
   Timer,
@@ -120,6 +122,18 @@ describe("reduced motion", () => {
           }),
       ],
       [
+        "ChoiceBoard",
+        () =>
+          render(ChoiceBoard, {
+            choices: [
+              { id: "a", text: "Alpha" },
+              { id: "b", text: "Beta", picked: true },
+            ],
+            canVote: true,
+            onvote: () => {},
+          }),
+      ],
+      [
         "GameControls",
         () =>
           render(GameControls, {
@@ -159,6 +173,33 @@ describe("reduced motion", () => {
       ],
       ["PlayerSticker", () => render(PlayerSticker, { name: "maya", playerId: "p-1" })],
       ["Podium", () => render(Podium, { steps: podiumSteps(rankRows(rows)) })],
+      [
+        "ProgressStrip",
+        () =>
+          render(ProgressStrip, {
+            rows: [
+              {
+                playerId: "a",
+                name: "Ann",
+                answered: 1,
+                expected: 2,
+                done: false,
+                typing: true,
+                isMe: false,
+              },
+              {
+                playerId: "b",
+                name: "Bo",
+                answered: 2,
+                expected: 2,
+                done: true,
+                typing: false,
+                isMe: true,
+              },
+            ],
+            label: "Answer progress",
+          }),
+      ],
       ["QrCode", () => render(QrCode, { text: "http://localhost/?code=ABCD" })],
       ["StatusPanel", () => render(StatusPanel, { title: "Hold on", tone: "wait" })],
       ["Timer", () => render(Timer, { seconds: 10, fraction: 0.5 })],
@@ -170,7 +211,15 @@ describe("reduced motion", () => {
     );
     expect(findings).toEqual([]);
     // the harness must have actually captured the styles of the components that animate
-    for (const name of ["Timer", "PhaseBar", "StatusPanel", "LobbySettings", "Podium"]) {
+    for (const name of [
+      "Timer",
+      "PhaseBar",
+      "StatusPanel",
+      "LobbySettings",
+      "Podium",
+      "ProgressStrip",
+      "ChoiceBoard",
+    ]) {
       expect(css[name] ?? "").toMatch(/animation|transition/);
     }
   });

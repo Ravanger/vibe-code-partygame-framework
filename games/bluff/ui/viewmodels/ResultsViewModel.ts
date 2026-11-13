@@ -1,4 +1,4 @@
-import { type PodiumStep, podiumSteps, rankRows } from "@partygame/game-ui";
+import { leaders, type PodiumStep, podiumSteps, rankRows } from "@partygame/game-ui";
 import { ACTION } from "../../src/actionNames.js";
 import type { BluffManager } from "../manager.js";
 
@@ -40,11 +40,10 @@ export class ResultsViewModel {
   }
 
   get headline(): string {
-    const rows = this.rows;
-    const [leader] = rows;
-    if (leader === undefined || leader.score <= 0) return "Nobody scored.";
-    const tied = rows.filter((row) => row.score === leader.score).length > 1;
-    if (tied) return "It's a tie!";
+    const champs = leaders(this.rows);
+    const [leader] = champs;
+    if (leader === undefined) return "Nobody scored.";
+    if (champs.length > 1) return "It's a tie!";
     return `${leader.name} wins with ${leader.score} points!`;
   }
 

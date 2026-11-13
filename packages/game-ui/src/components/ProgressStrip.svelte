@@ -1,18 +1,20 @@
 <script lang="ts">
-import { PlayerSticker } from "@partygame/game-ui/components";
-import type { ProgressRow } from "../viewmodels/AnswerProgress.js";
+import type { ProgressRow } from "../progressRow.js";
+import { getStrings } from "../strings.js";
+import PlayerSticker from "./PlayerSticker.svelte";
 
-const { rows }: { rows: ProgressRow[] } = $props();
+const { rows, label }: { rows: ProgressRow[]; label: string } = $props();
+const strings = getStrings();
 </script>
 
 {#if rows.length > 0}
-  <ul class="strip" aria-label="Answer progress">
+  <ul class="strip" aria-label={label}>
     {#each rows as row (row.playerId)}
-      <li class="friend" class:done={row.done} class:is-me={row.isMe} class:idle={!row.done && !row.typing} title={row.name}>
+      <li class="friend" class:is-me={row.isMe} class:idle={!row.done && !row.typing} title={row.name}>
         <span class="face">
           <PlayerSticker name={row.name} playerId={row.playerId} size={46} />
           {#if row.done}
-            <span class="mark mark-done" role="img" aria-label="Done">&#10003;</span>
+            <span class="mark" role="img" aria-label={strings.done}>&#10003;</span>
           {:else if row.typing}
             <svg class="mark mark-typing" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M3 21l1.5-5L16 4.5 19.5 8 8 19.5z" />
@@ -23,7 +25,7 @@ const { rows }: { rows: ProgressRow[] } = $props();
         <span class="who">{row.name}</span>
         <span class="count">{`${row.answered}/${row.expected}`}</span>
         {#if row.typing}
-          <span class="typing hand">typing…</span>
+          <span class="typing hand">{strings.typing}</span>
         {/if}
       </li>
     {/each}

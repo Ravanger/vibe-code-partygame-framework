@@ -35,8 +35,8 @@ describe("VotingViewModel", () => {
     expect(vm.prompt).toBe("What is the capital of Australia?");
     expect(vm.roundLabel).toBe("Round 1 of 3");
     expect(vm.choices).toEqual([
-      { id: "o1", text: "Canberra", isMine: false },
-      { id: "o2", text: "Sydney", isMine: true },
+      { id: "o1", text: "Canberra", own: false, picked: false },
+      { id: "o2", text: "Sydney", own: true, picked: false },
     ]);
     expect(vm.votesCast).toBe(1);
     expect(vm.votesExpected).toBe(4);

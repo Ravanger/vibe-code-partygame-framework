@@ -1,7 +1,6 @@
 <script lang="ts">
-import { PhaseTimer, StatusPanel } from "@partygame/game-ui/components";
+import { ChoiceBoard, PhaseTimer, StatusPanel } from "@partygame/game-ui/components";
 import { untrack } from "svelte";
-import VoteBoard from "../components/VoteBoard.svelte";
 import type { WitClashManager } from "../manager.js";
 import { MatchupVoteViewModel } from "../viewmodels/MatchupVoteViewModel.js";
 
@@ -35,7 +34,7 @@ const vm = untrack(() => new MatchupVoteViewModel(manager));
       <p class="how hand">Tap the funnier answer</p>
     {/if}
 
-    <VoteBoard choices={vm.choices} canVote={vm.canVote} onvote={(id) => vm.vote(id)} />
+    <ChoiceBoard choices={vm.choices} canVote={vm.canVote} onvote={(id) => vm.vote(id)} versus="VS" />
 
     <p class="turnout"><span class="chip chip--paper">{`${vm.votesCast} of ${vm.votesExpected} voted`}</span></p>
   {/if}

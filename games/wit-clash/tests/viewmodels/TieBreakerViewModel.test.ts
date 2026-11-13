@@ -170,8 +170,8 @@ describe("TieBreakerViewModel voting", () => {
   it("lists the answers with my vote marked", () => {
     const { vm } = voting({ canVote: true, matchupVote: "a2" });
     expect(vm.choices).toEqual([
-      { id: "a1", text: "Pigeon", isMine: false },
-      { id: "a2", text: "Heron", isMine: true },
+      { id: "a1", text: "Pigeon", picked: false },
+      { id: "a2", text: "Heron", picked: true },
     ]);
     expect(vm.canVote).toBe(true);
     expect(vm.votesCast).toBe(1);

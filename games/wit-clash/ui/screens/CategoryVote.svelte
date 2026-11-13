@@ -1,7 +1,7 @@
 <script lang="ts">
-import { PhaseTimer } from "@partygame/game-ui/components";
+import { plural } from "@partygame/game-ui";
+import { PhaseTimer, ScreenTitle } from "@partygame/game-ui/components";
 import { untrack } from "svelte";
-import ScreenTitle from "../components/ScreenTitle.svelte";
 import type { WitClashManager } from "../manager.js";
 import { CategoryVoteViewModel } from "../viewmodels/CategoryVoteViewModel.js";
 
@@ -39,7 +39,7 @@ const vm = untrack(() => new CategoryVoteViewModel(manager));
               <i></i>
             {/each}
           </span>
-          <span class="count">{`${option.votes} vote${option.votes !== 1 ? "s" : ""}`}</span>
+          <span class="count">{`${option.votes} ${plural(option.votes, "vote")}`}</span>
         </span>
       </button>
     {/each}
