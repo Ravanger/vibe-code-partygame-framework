@@ -483,11 +483,13 @@ describe("scanTree", () => {
     expect(paths).toEqual([
       "packages/content/tests/content.test.ts",
       "packages/core/tests/runtime/types.test.ts",
+      "packages/game-ui/src/components/ExportReplayButton.svelte",
       "packages/game-ui/src/components/GameControls.svelte",
       "packages/game-ui/src/components/GameShell.svelte",
       "packages/game-ui/src/components/LobbyScreen.svelte",
       "packages/game-ui/src/components/LobbySettings.svelte",
       "packages/game-ui/src/components/Podium.svelte",
+      "packages/game-ui/src/components/ReplayViewer.svelte",
       "packages/game-ui/src/components/WelcomeScreen.svelte",
       "packages/server/src/bun.ts",
     ]);

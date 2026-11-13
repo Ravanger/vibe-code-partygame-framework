@@ -451,7 +451,7 @@ describe("Results screen", () => {
       TestURL.revokeObjectURL.mockReset();
     });
 
-    it("lets the host download the bundle as JSON", async () => {
+    it("lets the host download the bundle as JSON through the shared button", async () => {
       const c = results("host", true);
       c.room.reply = { bundleVersion: 1, name: "WitClash", snapshots: [] };
       const anchors = clickedAnchors();
@@ -464,18 +464,6 @@ describe("Results screen", () => {
       expect(JSON.parse(await blob.text())).toMatchObject({ name: "WitClash" });
       expect(anchors).toHaveLength(1);
       expect(anchors[0]?.download).toBe("witclash-replay.json");
-      expect(TestURL.revokeObjectURL).toHaveBeenCalledWith("blob:test");
-    });
-
-    it("downloads under a generic name when the bundle has no game name", async () => {
-      const c = results("host", true);
-      c.room.reply = { bundleVersion: 1, snapshots: [] };
-      const anchors = clickedAnchors();
-      vi.stubGlobal("URL", TestURL);
-      render(Results, { manager: c.manager });
-      await fireEvent.click(screen.getByRole("button", { name: "Export replay" }));
-      expect(anchors).toHaveLength(1);
-      expect(anchors[0]?.download).toBe("replay-replay.json");
     });
 
     it("offers the export on the mid-round bar too", () => {

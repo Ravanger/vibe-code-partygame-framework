@@ -1,6 +1,13 @@
 <script lang="ts">
 import { plural, Spotlight } from "@partygame/game-ui";
-import { ActionBar, Confetti, PlayerSticker, Podium, StatusPanel } from "@partygame/game-ui/components";
+import {
+  ActionBar,
+  Confetti,
+  ExportReplayButton,
+  PlayerSticker,
+  Podium,
+  StatusPanel,
+} from "@partygame/game-ui/components";
 import { untrack } from "svelte";
 import MatchupCard from "../components/MatchupCard.svelte";
 import Scoreboard from "../components/Scoreboard.svelte";
@@ -117,18 +124,14 @@ $effect(() => () => spotlight.destroy());
     {/if}
   </div>
 
-  {#snippet exportButton()}
-    <button type="button" class="btn" onclick={() => vm.exportReplay()}>Export replay</button>
-  {/snippet}
-
   {#if vm.showNextRound}
     <ActionBar>
-      {@render exportButton()}
+      <ExportReplayButton manager={manager} />
       <button type="button" class="btn btn--primary btn--big" onclick={() => vm.nextRound()}>Next Round</button>
     </ActionBar>
   {:else if vm.showPlayAgain}
     <ActionBar>
-      {@render exportButton()}
+      <ExportReplayButton manager={manager} />
       <button type="button" class="btn btn--primary btn--big" onclick={() => vm.playAgain()}>Play Again</button>
     </ActionBar>
   {/if}

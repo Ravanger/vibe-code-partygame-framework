@@ -6,8 +6,8 @@ Ships Svelte source; consumers need the Svelte plugin — Vite with `@sveltejs/v
 
 | Import | What |
 |---|---|
-| `@partygame/game-ui` | `createAppRouter`, `AppRouter`, `WelcomeViewModel`, `WaitingRoomViewModel`, `LobbySettingsViewModel`, `OptionsReader`, `PhaseClock`, `TypingReporter`, `GameControlsViewModel`, `JoinNextRoundViewModel`, `NameField`, `ReplayViewModel`, `snapshotManager`, `SoundPolicy`, `Spotlight`, `TextDraft`; `OptionFields`, `qrCode`, `playerSticker`, `rankRows`, `leaders`, `podiumSteps`, `roundLabel`, `plural`; `setStrings`, `defaultUiStrings`, `UiStrings`; types `RouterScreen`, `LobbySettingsConfig`, `SoundPolicyOptions`, `StickerShape`, `TextDraftConfig`, `ProgressRow` |
-| `@partygame/game-ui/components` | Svelte 5 source: `GameShell`, `WelcomeScreen`, `StatusPanel`, `Timer`, `PhaseTimer`, `PhaseBar`, `PlayerSticker`, `QrCode`, `ActionBar`, `NameInput`, `SoundToggle`, `LobbySettings`, `GameControls`, `Podium`, `Confetti`, `ScreenTitle`, `ProgressStrip`, `ChoiceBoard` |
+| `@partygame/game-ui` | `createAppRouter`, `AppRouter`, `WelcomeViewModel`, `WaitingRoomViewModel`, `LobbySettingsViewModel`, `OptionsReader`, `PhaseClock`, `TypingReporter`, `GameControlsViewModel`, `JoinNextRoundViewModel`, `NameField`, `ReplayViewModel`, `snapshotManager`, `replayManager`, `SoundPolicy`, `Spotlight`, `TextDraft`; `OptionFields`, `qrCode`, `playerSticker`, `rankRows`, `leaders`, `podiumSteps`, `roundLabel`, `plural`, `downloadReplay`, `mountReplayIfRequested`; `setStrings`, `defaultUiStrings`, `UiStrings`; types `RouterScreen`, `LobbySettingsConfig`, `SoundPolicyOptions`, `StickerShape`, `TextDraftConfig`, `ProgressRow`, `ReplayManager` |
+| `@partygame/game-ui/components` | Svelte 5 source: `GameShell`, `WelcomeScreen`, `StatusPanel`, `Timer`, `PhaseTimer`, `PhaseBar`, `PlayerSticker`, `QrCode`, `ActionBar`, `NameInput`, `SoundToggle`, `LobbySettings`, `GameControls`, `Podium`, `Confetti`, `ScreenTitle`, `ProgressStrip`, `ChoiceBoard`, `ExportReplayButton`, `ReplayViewer` |
 | `@partygame/game-ui/testing` | Test-only CSS audits for a game's `ui/` directory: `auditContrast({ uiDir, minChecked, pairs? })` (WCAG AA over same-rule colour/background pairs plus explicit cross-rule pairs; fails on a colour variable defined nowhere and throws when fewer than `minChecked` pairs were checked), `auditReducedMotion({ uiDir, minGuarded, allow? })` (every transition/animation/`scroll-behavior: smooth` inside a no-preference block, no Svelte motion directives outside the allow list; throws below `minGuarded`) and the walkers `cssFiles`, `rules`, `stripComments` |
 
 Viewmodels are typed on `GameConnectionManager<TState>` and read its state reactively. Import through the `svelte` export condition (Vite with the Svelte plugin). Build one in a component with `untrack(() => new Vm(manager))`.
@@ -219,6 +219,30 @@ const sound = new SoundPolicy({ storage: localStorage, storagePrefix: "my-game",
   <button type="button" onclick={() => vm.next()}>Next</button>
 {/if}
 ```
+
+`replayManager(viewModel, stateClass)` extends the snapshot manager with the other members screens read while mounting in replay mode: `me()` is always `undefined`, `leave()` is a no-op, and `countdown()` is rebuilt from the snapshot's own `phaseEndsAt`/`serverNow` fields (the recorded phase is over, so it reads 0 almost immediately). A screen may read only these members; where a screen demands the game's manager type, cast the result at the use site.
+
+The viewer itself ships as components: `ReplayViewer` (from `@partygame/game-ui/components`) takes `screens` (a phase-name-to-`{ component }` record — the same shape as the game's `PHASE_SCREENS`), the game's synced `stateClass` and a `title` for the header wordmark (whose face is themed by the game's global `header .wordmark` rule). Each screen receives the `replayManager` adapter in place of the game's manager (the viewer narrows the screen's prop to it with an unchecked cast, so a screen may only read what `ReplayManager` provides); screens typed for the full manager pass through unchanged. It provides a file picker, previous/next/play controls and a scrubber over the bundle's snapshots; an invalid bundle shows its error, and a snapshot whose phase is missing from `screens` falls back to a message. `mountReplayIfRequested(ReplayViewer, target, props)` mounts it only when the URL carries a `?replay` parameter and returns whether it mounted, so a game's entry point never inlines the query check:
+
+```ts
+// ui/main.ts
+import { mountReplayIfRequested } from "@partygame/game-ui";
+import { ReplayViewer } from "@partygame/game-ui/components";
+import { PHASE_SCREENS } from "./screens/index.js";
+import { MyState } from "../src/state.js";
+
+if (
+  !mountReplayIfRequested(ReplayViewer, target, {
+    screens: PHASE_SCREENS,
+    stateClass: MyState,
+    title: "MyGame replay",
+  })
+) {
+  mount(App, { target, props: { manager } });
+}
+```
+
+`ExportReplayButton` (from `@partygame/game-ui/components`) is the host's Results-screen button: it sends the host-only `EXPORT_REPLAY` request through `manager.exportReplay()` and downloads the answer as `<name>-replay.json` — the bundle's game name lower-cased, or `replay` when it has none; a refusal downloads nothing. `downloadReplay(response, doc?)` is the download itself (the document is injectable for tests).
 
 ## Components
 

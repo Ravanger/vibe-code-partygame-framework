@@ -445,9 +445,15 @@ missing or malformed snapshots set its `error` and leave no snapshots) and steps
 `state` is a fresh `stateClass` instance filled from the current snapshot (via `syncedStateFromJson`, the
 inverse of `syncedJsonOf`, from `@partygame/shared/schema`), and `isSpectator` is always true — so a game's
 existing screens render a replay read-only. Snapshots hold synced state only: no private or per-client data,
-and player ids are the live ones (no `p1..pN` remapping). A game wires its own viewer on top (WitClash ships
-one at the `?replay` URL parameter — see its README); screens that read manager members beyond `state` and
-`isSpectator` while mounting (for example a countdown or the seat) need those supplied by the game's adapter.
+and player ids are the live ones (no `p1..pN` remapping). `replayManager(viewModel, stateClass)` extends the
+snapshot manager with the other members screens read while mounting in replay mode — `me()` is empty,
+`leave()` is a no-op and `countdown()` is rebuilt from the snapshot's own clock fields; a screen may read only
+those, and where a screen demands the game's manager type the adapter is cast at the use site. The framework
+ships the viewer itself: `ReplayViewer` (from `@partygame/game-ui/components`) takes the game's
+`PHASE_SCREENS`-shaped table, its synced state class and a title; `mountReplayIfRequested(ReplayViewer,
+target, props)` mounts it only when the URL carries a `?replay` parameter (WitClash wires exactly this in its
+entry point — see its README); and `ExportReplayButton`/`downloadReplay` give the host an "Export replay"
+button that downloads the bundle as `<name>-replay.json`.
 
 **Limitations in v1.** Mid-game roster changes are not replayed: `replayLog` throws naming the first such
 entry. Lobby-phase roster changes are skipped — the table is already seated — except the one that

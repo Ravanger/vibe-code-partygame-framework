@@ -502,4 +502,52 @@ describe("ResultsViewModel", () => {
       [],
     ]);
   });
+
+  describe("exportReplay", () => {
+    class TestURL extends URL {
+      static createObjectURL = vi.fn((_blob: unknown) => "blob:test");
+      static revokeObjectURL = vi.fn((_url: string) => {});
+    }
+
+    function clickedAnchors(): HTMLAnchorElement[] {
+      const anchors: HTMLAnchorElement[] = [];
+      vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+        this: HTMLAnchorElement,
+      ) {
+        anchors.push(this);
+      });
+      return anchors;
+    }
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+      vi.unstubAllGlobals();
+      TestURL.createObjectURL.mockReset();
+      TestURL.revokeObjectURL.mockReset();
+    });
+
+    it("sends the host-only request and downloads the answer as JSON", async () => {
+      const anchors = clickedAnchors();
+      vi.stubGlobal("URL", TestURL);
+      const { c, vm } = results("host", true);
+      c.room.reply = { bundleVersion: 1, name: "WitClash", snapshots: [] };
+      await vm.exportReplay();
+      expect(c.room.requests).toEqual([{ type: "EXPORT_REPLAY", payload: undefined }]);
+      expect(TestURL.createObjectURL).toHaveBeenCalledOnce();
+      const blob = TestURL.createObjectURL.mock.calls[0]?.[0] as Blob;
+      expect(JSON.parse(await blob.text())).toMatchObject({ name: "WitClash" });
+      expect(anchors).toHaveLength(1);
+      expect(anchors[0]?.download).toBe("witclash-replay.json");
+    });
+
+    it("sends nothing when the server refuses", async () => {
+      const anchors = clickedAnchors();
+      vi.stubGlobal("URL", TestURL);
+      const { c, vm } = results("player", true);
+      c.room.reply = { ok: false, error: { code: "UNAUTHORIZED", message: "no" } };
+      await vm.exportReplay();
+      expect(TestURL.createObjectURL).not.toHaveBeenCalled();
+      expect(anchors).toHaveLength(0);
+    });
+  });
 });

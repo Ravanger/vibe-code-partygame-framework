@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   type ReplayTimer,
   ReplayViewModel,
+  replayManager,
   snapshotManager,
 } from "../src/ReplayViewModel.svelte.js";
 
@@ -223,5 +224,44 @@ describe("snapshotManager", () => {
     expect(manager.state).toBeInstanceOf(BaseGameState);
     expect(manager.state.phase).toBe("Lobby");
     expect(manager.state.players.size).toBe(0);
+  });
+});
+
+describe("replayManager", () => {
+  const twoSnapshots = [
+    {
+      seq: 1,
+      phase: "Vote",
+      state: { phase: "Play", serverNow: 1_000_000, phaseEndsAt: 1_060_000 },
+    },
+    {
+      seq: 5,
+      phase: "Reveal",
+      state: { phase: "Done", serverNow: 1_000_000, phaseEndsAt: 1_060_000 },
+    },
+  ];
+
+  it("is a spectator with no seat and a quiet leave", async () => {
+    const vm = new ReplayViewModel(bundle(twoSnapshots));
+    const manager = replayManager(vm, BaseGameState);
+    expect(manager.isSpectator).toBe(true);
+    expect(manager.me()).toBeUndefined();
+    await expect(manager.leave()).resolves.toBeUndefined();
+  });
+
+  it("fills state from the current snapshot", () => {
+    const vm = new ReplayViewModel(bundle(twoSnapshots));
+    const manager = replayManager(vm, BaseGameState);
+    expect(manager.state).toBeInstanceOf(BaseGameState);
+    expect(manager.state.phase).toBe("Play");
+    vm.next();
+    expect(manager.state.phase).toBe("Done");
+  });
+
+  it("rebuilds the countdown from the snapshot's clock fields", () => {
+    vi.setSystemTime(1_000_000);
+    const vm = new ReplayViewModel(bundle(twoSnapshots));
+    const countdown = replayManager(vm, BaseGameState).countdown();
+    expect(countdown.secondsLeft).toBe(60);
   });
 });

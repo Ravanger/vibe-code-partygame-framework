@@ -18,10 +18,12 @@ export {
 export type { ProgressRow } from "./progressRow.js";
 export { type QrCode, qrCode } from "./qr.js";
 export {
+  type ReplayManager,
   type ReplaySnapshot,
   type ReplayTimer,
   ReplayViewModel,
   type ReplayViewModelOptions,
+  replayManager,
   type SnapshotManager,
   snapshotManager,
 } from "./ReplayViewModel.svelte.js";
@@ -32,6 +34,7 @@ export {
   podiumSteps,
   rankRows,
 } from "./ranking.js";
+export { downloadReplay, mountReplayIfRequested } from "./replayDownload.js";
 export { roundLabel } from "./roundLabel.js";
 export {
   type GestureTarget,

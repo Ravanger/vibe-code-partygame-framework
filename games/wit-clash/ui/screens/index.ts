@@ -68,7 +68,3 @@ export const PHASE_SCREENS = {
   },
   [PHASE.Results]: { component: Results, waitingLabel: "The scoreboard is up", banner: "SCORES!" },
 } satisfies Record<KnownPhase, PhaseScreen>;
-
-export function isKnownPhase(phase: string): phase is KnownPhase {
-  return Object.hasOwn(PHASE_SCREENS, phase);
-}

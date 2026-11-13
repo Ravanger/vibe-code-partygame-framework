@@ -28,6 +28,14 @@ export {
   default as DraftBox,
 } from "./DraftBox.svelte";
 export {
+  /**
+   * The host's "Export replay" button: sends the host-only `EXPORT_REPLAY` request through
+   * `manager.exportReplay()` and downloads the answer as `<name>-replay.json` (the bundle's game
+   * name lower-cased, or `replay` when it has none); a refusal downloads nothing.
+   */
+  default as ExportReplayButton,
+} from "./ExportReplayButton.svelte";
+export {
   /** A menu button with a popover to leave the game and, for the host, end it after a confirmation. */
   default as GameControls,
 } from "./GameControls.svelte";
@@ -89,6 +97,18 @@ export {
   /** An SVG QR code encoding `text`. */
   default as QrCode,
 } from "./QrCode.svelte";
+export {
+  /**
+   * The offline replay viewer: a file picker for a bundle exported by the host, then the game's
+   * own screens rendered read-only over its snapshots with previous/next/play controls and a
+   * scrubber. Takes `screens` (a phase-name-to-`{ component }` record, the same shape as the
+   * game's `PHASE_SCREENS`), the game's synced `stateClass` and a `title` for the header wordmark
+   * (themed by the game's `header .wordmark` rule). A snapshot whose phase is missing from
+   * `screens` falls back to a message; an invalid bundle shows its error. Mount it through
+   * `mountReplayIfRequested` so only a `?replay` URL opens it.
+   */
+  default as ReplayViewer,
+} from "./ReplayViewer.svelte";
 export {
   /** A screen heading: a focusable `h1` with a wavy underline and an optional hand-written `hint`. */
   default as ScreenTitle,
