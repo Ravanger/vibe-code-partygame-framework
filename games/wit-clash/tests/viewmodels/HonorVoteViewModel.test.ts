@@ -36,9 +36,9 @@ describe("HonorVoteViewModel", () => {
     ]);
     expect(vm.canVote).toBe(false);
     expect([vm.votesCast, vm.votesExpected]).toEqual([1, 3]);
-    expect(vm.secondsLeft).toBe(20);
-    expect(vm.totalSeconds).toBe(20);
-    expect(vm.announcement).toBe("");
+    expect(vm.clock.secondsLeft).toBe(20);
+    expect(vm.clock.totalSeconds).toBe(20);
+    expect(vm.clock.announcement).toBe("");
   });
 
   it("highlights only my own pick", () => {

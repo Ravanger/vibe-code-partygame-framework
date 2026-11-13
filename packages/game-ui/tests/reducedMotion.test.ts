@@ -8,6 +8,7 @@ import {
   GameControls,
   LobbySettings,
   NameInput,
+  PhaseBar,
   PlayerSticker,
   Podium,
   QrCode,
@@ -18,6 +19,7 @@ import { GameControlsViewModel } from "../src/GameControlsViewModel.svelte.js";
 import { type PodiumRow, podiumSteps, rankRows } from "../src/index.js";
 import { LobbySettingsViewModel } from "../src/LobbySettingsViewModel.svelte.js";
 import { NameField } from "../src/NameField.svelte.js";
+import { PhaseClock } from "../src/PhaseClock.js";
 import { TEST_DEFAULTS, TestOptionsSchema } from "./fixtures/optionsSchema.js";
 
 /** The CSS Svelte dev injects when the component type mounts for the first time in this file. */
@@ -146,11 +148,20 @@ describe("reduced motion", () => {
             field: new NameField(connectedClient({ stateClass: BaseGameState }).manager),
           }),
       ],
+      [
+        "PhaseBar",
+        () => {
+          const c = connectedClient({ stateClass: BaseGameState });
+          c.state.serverNow = 1_000_000;
+          c.state.phaseEndsAt = 1_000_000 + 30_000;
+          return render(PhaseBar, { clock: new PhaseClock(c.manager, () => 90) });
+        },
+      ],
       ["PlayerSticker", () => render(PlayerSticker, { name: "maya", playerId: "p-1" })],
       ["Podium", () => render(Podium, { steps: podiumSteps(rankRows(rows)) })],
       ["QrCode", () => render(QrCode, { text: "http://localhost/?code=ABCD" })],
       ["StatusPanel", () => render(StatusPanel, { title: "Hold on", tone: "wait" })],
-      ["Timer", () => render(Timer, { seconds: 10, total: 30 })],
+      ["Timer", () => render(Timer, { seconds: 10, fraction: 0.5 })],
     ];
     const css: Record<string, string> = {};
     for (const [name, mount] of mounts) css[name] = cssOf(mount);
@@ -159,7 +170,7 @@ describe("reduced motion", () => {
     );
     expect(findings).toEqual([]);
     // the harness must have actually captured the styles of the components that animate
-    for (const name of ["Timer", "StatusPanel", "LobbySettings", "Podium"]) {
+    for (const name of ["Timer", "PhaseBar", "StatusPanel", "LobbySettings", "Podium"]) {
       expect(css[name] ?? "").toMatch(/animation|transition/);
     }
   });

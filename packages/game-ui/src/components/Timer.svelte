@@ -3,14 +3,13 @@ import { isUrgent } from "@partygame/game-client";
 
 const {
   seconds,
-  total,
+  fraction,
   announcement = "",
-}: { seconds: number; total: number; announcement?: string } = $props();
+}: { seconds: number; fraction: number; announcement?: string } = $props();
 
 const STICK_START = 6;
 const STICK_LENGTH = 92;
 
-const fraction = $derived(total > 0 ? Math.min(1, Math.max(0, seconds / total)) : 0);
 const tip = $derived(STICK_START + STICK_LENGTH * fraction);
 </script>
 

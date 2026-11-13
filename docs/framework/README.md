@@ -1052,7 +1052,9 @@ Write text that mixes literals and values as one template literal, `{`${choice.n
 | `WelcomeScreen` | `vm: WelcomeViewModel<TState>`, `title: string`, `tagline: string`, `hero?: Snippet` (replaces the wordmark and tagline); owns the `autoJoinIfRequested()` effect for share links |
 | `LobbyScreen` | `vm: WaitingRoomViewModel<TState>`, `settings?: LobbySettingsViewModel<TState>` (rendered below the players), `extra?: Snippet` (rendered below the settings); every label from the `UiStrings` table, chips styled by the game |
 | `StatusPanel` | `title: string`, `detail?: string`, `tone: "wait" \| "done" \| "info"` |
-| `Timer` | `seconds: number`, `total: number`, `announcement?: string` (polite live region text) |
+| `Timer` | `seconds: number`, `fraction: number` (0 to 1; from `PhaseClock.fraction`), `announcement?: string` (polite live region text) |
+| `PhaseTimer` | `clock: PhaseClock` — renders the `Timer` from the clock's seconds, fraction and announcement |
+| `PhaseBar` | `clock: PhaseClock` — a "next up in Ns" label (from `UiStrings.nextUpIn`) over a draining track |
 | `PlayerSticker` | `name: string`, `playerId: string`, `size?: number` (default 44), `ghost?: boolean` |
 | `Podium` | `steps: PodiumStep<TRow>[]` (from `podiumSteps`), `extra?: Snippet<[TRow]>` (rendered per occupant, e.g. a chip) |
 | `QrCode` | `text: string` |
@@ -1069,7 +1071,7 @@ Write text that mixes literals and values as one template literal, `{`${choice.n
   import { ActionBar, StatusPanel, Timer } from "@partygame/game-ui/components";
 </script>
 
-<Timer seconds={12} total={30} />
+<Timer seconds={12} fraction={0.4} />
 <StatusPanel title="Waiting for players" tone="wait" />
 <ActionBar><button type="button" class="btn">Go</button></ActionBar>
 ```

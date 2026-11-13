@@ -11,7 +11,7 @@ export interface CategoryChoice {
 }
 
 export class CategoryVoteViewModel {
-  private readonly clock: PhaseClock;
+  readonly clock: PhaseClock;
 
   constructor(private readonly manager: WitClashManager) {
     const options = new OptionsReader<WitClashOptions>(
@@ -50,18 +50,6 @@ export class CategoryVoteViewModel {
   get roundLabel(): string {
     const state = this.manager.state;
     return roundLabel(state?.roundNumber ?? 0, state?.totalRounds ?? 0);
-  }
-
-  get secondsLeft(): number {
-    return this.clock.secondsLeft;
-  }
-
-  get announcement(): string {
-    return this.clock.announcement;
-  }
-
-  get totalSeconds(): number {
-    return this.clock.totalSeconds;
   }
 
   async vote(categoryId: string): Promise<void> {

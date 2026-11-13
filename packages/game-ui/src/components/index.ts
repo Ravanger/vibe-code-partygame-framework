@@ -41,6 +41,14 @@ export {
   default as NameInput,
 } from "./NameInput.svelte";
 export {
+  /** A "next up in Ns" label over a draining track, both driven by a `PhaseClock`; the label comes from `UiStrings.nextUpIn`. */
+  default as PhaseBar,
+} from "./PhaseBar.svelte";
+export {
+  /** The phase's burning-fuse countdown: renders the `Timer` from a `PhaseClock`'s seconds, fraction and announcement. */
+  default as PhaseTimer,
+} from "./PhaseTimer.svelte";
+export {
   /** A player's sticker: a shape and color derived from `playerId` with the name's first letter, or a question mark when `ghost`. */
   default as PlayerSticker,
 } from "./PlayerSticker.svelte";

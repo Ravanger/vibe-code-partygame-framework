@@ -11,9 +11,9 @@ describe("WritingViewModel", () => {
     expect(vm.roundLabel).toBe("Round 0 of 0");
     expect(vm.rows).toEqual([]);
     expect(vm.myDone).toBe(false);
-    expect(vm.secondsLeft).toBe(0);
-    expect(vm.totalSeconds).toBe(45);
-    expect(vm.announcement).toBe("");
+    expect(vm.clock.secondsLeft).toBe(0);
+    expect(vm.clock.totalSeconds).toBe(45);
+    expect(vm.clock.announcement).toBe("");
   });
 
   it("reads the prompt, the round and who has written", () => {
@@ -39,13 +39,13 @@ describe("WritingViewModel", () => {
     c.state.serverNow = 1_000_000_000;
     c.state.phaseEndsAt = c.state.serverNow + 12_000;
     const vm = new WritingViewModel(c.manager);
-    expect(vm.secondsLeft).toBe(12);
-    expect(vm.announcement).toBe("");
+    expect(vm.clock.secondsLeft).toBe(12);
+    expect(vm.clock.announcement).toBe("");
 
     c.state.phaseEndsAt = c.state.serverNow + 10_000;
     const urgent = new WritingViewModel(c.manager);
-    expect(urgent.secondsLeft).toBe(10);
-    expect(urgent.announcement).toBe("10 seconds remaining");
+    expect(urgent.clock.secondsLeft).toBe(10);
+    expect(urgent.clock.announcement).toBe("10 seconds remaining");
   });
 
   it("sends the fake answer and resolves true when it is accepted", async () => {

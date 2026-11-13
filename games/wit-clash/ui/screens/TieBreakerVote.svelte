@@ -1,5 +1,5 @@
 <script lang="ts">
-import { StatusPanel, Timer } from "@partygame/game-ui/components";
+import { PhaseTimer, StatusPanel } from "@partygame/game-ui/components";
 import { untrack } from "svelte";
 import ScreenTitle from "../components/ScreenTitle.svelte";
 import VoteBoard from "../components/VoteBoard.svelte";
@@ -16,7 +16,7 @@ $effect(() => () => vm.destroy());
 <div class="tie-breaker">
   <div class="top">
     <ScreenTitle title="Tie-breaker!" />
-    <Timer seconds={vm.secondsLeft} total={vm.totalSeconds} announcement={vm.announcement} />
+    <PhaseTimer clock={vm.clock} />
   </div>
 
   <div class="question card taped">

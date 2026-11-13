@@ -36,4 +36,10 @@ export class PhaseClock {
   get totalSeconds(): number {
     return this.readTotalSeconds();
   }
+
+  /** The share of the phase still running, from 0 to 1; 0 when the phase has no length. */
+  get fraction(): number {
+    const total = this.totalSeconds;
+    return total > 0 ? Math.min(1, Math.max(0, this.secondsLeft / total)) : 0;
+  }
 }

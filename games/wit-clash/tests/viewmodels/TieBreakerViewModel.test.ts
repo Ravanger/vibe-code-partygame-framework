@@ -39,8 +39,8 @@ describe("TieBreakerViewModel clock", () => {
       const c = connectedClient({}, phase);
       c.state.options = JSON.stringify({ promptSeconds: 40, voteSeconds: 25, revealSeconds: 6 });
       const vm = new TieBreakerViewModel(c.manager);
-      expect(vm.totalSeconds).toBe(seconds);
-      expect(vm.announcement).toBe("");
+      expect(vm.clock.totalSeconds).toBe(seconds);
+      expect(vm.clock.announcement).toBe("");
       vm.destroy();
     }
   });
@@ -60,7 +60,7 @@ describe("TieBreakerViewModel answering", () => {
     expect(vm.promptText).toBe("Name a bird");
     expect(vm.contenderNames).toEqual(["Me", "Zed"]);
     expect(vm.isContender).toBe(true);
-    expect(vm.secondsLeft).toBe(30);
+    expect(vm.clock.secondsLeft).toBe(30);
     c.state.tieBreakerContenders.push("ghost");
     expect(vm.contenderNames).toEqual(["Me", "Zed", ""]);
     vm.destroy();

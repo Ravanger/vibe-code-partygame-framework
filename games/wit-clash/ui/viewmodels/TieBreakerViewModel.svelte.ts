@@ -20,7 +20,7 @@ const DRAFT_KEY = "tie-breaker";
 /** The final tie-breaker: contenders answer, everyone else votes, then the result is shown. */
 export class TieBreakerViewModel {
   private readonly drafts: TextDraft;
-  private readonly clock: PhaseClock;
+  readonly clock: PhaseClock;
   private readonly recap: MatchupRecap;
   private readonly typing: TypingReporter;
   private readonly options: OptionsReader<WitClashOptions>;
@@ -127,18 +127,6 @@ export class TieBreakerViewModel {
     const matchup = this.matchup;
     if (!matchup?.isRevealed) return undefined;
     return this.recap.describe(matchup);
-  }
-
-  get secondsLeft(): number {
-    return this.clock.secondsLeft;
-  }
-
-  get announcement(): string {
-    return this.clock.announcement;
-  }
-
-  get totalSeconds(): number {
-    return this.clock.totalSeconds;
   }
 
   setDraft(value: string): void {

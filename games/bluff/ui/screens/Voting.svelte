@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Timer } from "@partygame/game-ui/components";
+import { PhaseTimer } from "@partygame/game-ui/components";
 import { untrack } from "svelte";
 import type { BluffManager } from "../manager.js";
 import { VotingViewModel } from "../viewmodels/VotingViewModel.svelte.js";
@@ -12,7 +12,7 @@ const vm = untrack(() => new VotingViewModel(manager));
 <div class="voting stack">
   <p class="round">{vm.roundLabel}</p>
   <h1 class="prompt">{vm.prompt || "…"}</h1>
-  <Timer seconds={vm.secondsLeft} total={vm.totalSeconds} announcement={vm.announcement} />
+  <PhaseTimer clock={vm.clock} />
 
   {#if manager.isSpectator}
     <p class="watching">Watch the votes land.</p>

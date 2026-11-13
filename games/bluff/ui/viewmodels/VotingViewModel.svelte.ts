@@ -11,7 +11,7 @@ export interface ChoiceRow {
 
 /** The shuffled options, the private "this one is yours" mark and the vote action. */
 export class VotingViewModel {
-  private readonly clock: PhaseClock;
+  readonly clock: PhaseClock;
 
   constructor(private readonly manager: BluffManager) {
     const options = new OptionsReader<BluffOptions>(manager, BluffOptionsSchema, DEFAULT_OPTIONS);
@@ -50,18 +50,6 @@ export class VotingViewModel {
 
   get votesExpected(): number {
     return this.manager.state?.votesExpected ?? 0;
-  }
-
-  get secondsLeft(): number {
-    return this.clock.secondsLeft;
-  }
-
-  get totalSeconds(): number {
-    return this.clock.totalSeconds;
-  }
-
-  get announcement(): string {
-    return this.clock.announcement;
   }
 
   /** Casts this client's vote; the synced private state reports it through {@link voted}. */

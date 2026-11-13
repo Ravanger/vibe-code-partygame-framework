@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Timer } from "@partygame/game-ui/components";
+import { PhaseTimer } from "@partygame/game-ui/components";
 import { untrack } from "svelte";
 import ScreenTitle from "../components/ScreenTitle.svelte";
 import type { WitClashManager } from "../manager.js";
@@ -13,7 +13,7 @@ const vm = untrack(() => new CategoryVoteViewModel(manager));
 <div class="category-vote">
   <div class="top">
     <span class="chip chip--paper">{vm.roundLabel}</span>
-    <Timer seconds={vm.secondsLeft} total={vm.totalSeconds} announcement={vm.announcement} />
+    <PhaseTimer clock={vm.clock} />
   </div>
 
   <ScreenTitle title="Pick a category" hint="Tap the one you want to write about. Most votes wins." />

@@ -1,5 +1,5 @@
 <script lang="ts">
-import { StatusPanel, Timer } from "@partygame/game-ui/components";
+import { PhaseTimer, StatusPanel } from "@partygame/game-ui/components";
 import { untrack } from "svelte";
 import VoteBoard from "../components/VoteBoard.svelte";
 import type { WitClashManager } from "../manager.js";
@@ -16,7 +16,7 @@ const vm = untrack(() => new MatchupVoteViewModel(manager));
   {:else}
     <div class="top">
       <span class="chip chip--paper">{`Matchup ${vm.matchupNumber} of ${vm.totalMatchups}`}</span>
-      <Timer seconds={vm.secondsLeft} total={vm.totalSeconds} announcement={vm.announcement} />
+      <PhaseTimer clock={vm.clock} />
     </div>
 
     <div class="question card taped">

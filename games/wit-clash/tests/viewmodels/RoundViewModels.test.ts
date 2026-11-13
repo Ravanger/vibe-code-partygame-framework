@@ -57,12 +57,12 @@ describe("CategoryVoteViewModel", () => {
 
   it("counts down and announces only at 30, 10 and 5 seconds", () => {
     const { c, vm } = voting();
-    expect(vm.secondsLeft).toBe(30);
-    expect(vm.totalSeconds).toBe(60);
-    expect(vm.announcement).toBe("30 seconds remaining");
+    expect(vm.clock.secondsLeft).toBe(30);
+    expect(vm.clock.totalSeconds).toBe(60);
+    expect(vm.clock.announcement).toBe("30 seconds remaining");
     c.state.phaseEndsAt = 1_000_000 + 7000;
     c.patch();
-    expect(vm.announcement).toBe("");
+    expect(vm.clock.announcement).toBe("");
   });
 
   it("votes through the action protocol", async () => {
@@ -105,8 +105,8 @@ describe("PromptingViewModel", () => {
     expect(vm.prompts.map((p) => p.promptText)).toEqual(["First prompt", "Second prompt"]);
     expect(vm.current?.matchupId).toBe("m1");
     expect(vm.roundLabel).toBe("Round 1 of 3");
-    expect(vm.secondsLeft).toBe(90);
-    expect(vm.totalSeconds).toBe(90);
+    expect(vm.clock.secondsLeft).toBe(90);
+    expect(vm.clock.totalSeconds).toBe(90);
     expect(vm.answersIn).toBe(1);
     expect(vm.answersExpected).toBe(4);
     vm.destroy();
@@ -257,10 +257,10 @@ describe("PromptingViewModel", () => {
 
   it("announces the countdown at 30, 10 and 5 seconds", () => {
     const { c, vm } = writing();
-    expect(vm.announcement).toBe("");
+    expect(vm.clock.announcement).toBe("");
     countdownTo(c, 10);
     c.patch();
-    expect(vm.announcement).toBe("10 seconds remaining");
+    expect(vm.clock.announcement).toBe("10 seconds remaining");
     vm.destroy();
   });
 
@@ -306,9 +306,9 @@ describe("MatchupVoteViewModel", () => {
     ]);
     expect(vm.votesCast).toBe(1);
     expect(vm.votesExpected).toBe(3);
-    expect(vm.secondsLeft).toBe(20);
-    expect(vm.totalSeconds).toBe(20);
-    expect(vm.announcement).toBe("");
+    expect(vm.clock.secondsLeft).toBe(20);
+    expect(vm.clock.totalSeconds).toBe(20);
+    expect(vm.clock.announcement).toBe("");
   });
 
   it("highlights only my own vote", () => {
@@ -411,8 +411,8 @@ describe("MatchupRevealViewModel and Results recap", () => {
     });
     expect(vm.matchupNumber).toBe(1);
     expect(vm.totalMatchups).toBe(2);
-    expect(vm.secondsLeft).toBe(5);
-    expect(vm.totalSeconds).toBe(5);
+    expect(vm.clock.secondsLeft).toBe(5);
+    expect(vm.clock.totalSeconds).toBe(5);
   });
 
   it("remembers who I voted for", () => {

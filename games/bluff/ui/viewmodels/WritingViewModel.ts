@@ -13,7 +13,7 @@ export interface WriterRow {
 
 /** The prompt, who has written, the server's clock and the submit action. */
 export class WritingViewModel {
-  private readonly clock: PhaseClock;
+  readonly clock: PhaseClock;
 
   constructor(private readonly manager: BluffManager) {
     const options = new OptionsReader<BluffOptions>(manager, BluffOptionsSchema, DEFAULT_OPTIONS);
@@ -43,18 +43,6 @@ export class WritingViewModel {
 
   get myDone(): boolean {
     return this.manager.state?.progress.get(this.manager.playerId) === true;
-  }
-
-  get secondsLeft(): number {
-    return this.clock.secondsLeft;
-  }
-
-  get totalSeconds(): number {
-    return this.clock.totalSeconds;
-  }
-
-  get announcement(): string {
-    return this.clock.announcement;
   }
 
   /** The text filter's refusal for the last rejected fake; empty when there is none to show. */

@@ -7,7 +7,7 @@ Ships Svelte source; consumers need the Svelte plugin — Vite with `@sveltejs/v
 | Import | What |
 |---|---|
 | `@partygame/game-ui` | `createAppRouter`, `AppRouter`, `WelcomeViewModel`, `WaitingRoomViewModel`, `LobbySettingsViewModel`, `OptionsReader`, `PhaseClock`, `TypingReporter`, `GameControlsViewModel`, `JoinNextRoundViewModel`, `NameField`, `ReplayViewModel`, `snapshotManager`, `SoundPolicy`, `Spotlight`, `TextDraft`; `OptionFields`, `qrCode`, `playerSticker`, `rankRows`, `podiumSteps`, `roundLabel`; `setStrings`, `defaultUiStrings`, `UiStrings`; types `RouterScreen`, `LobbySettingsConfig`, `SoundPolicyOptions`, `StickerShape`, `TextDraftConfig` |
-| `@partygame/game-ui/components` | Svelte 5 source: `GameShell`, `WelcomeScreen`, `StatusPanel`, `Timer`, `PlayerSticker`, `QrCode`, `ActionBar`, `NameInput`, `SoundToggle`, `LobbySettings`, `GameControls`, `Podium`, `Confetti` |
+| `@partygame/game-ui/components` | Svelte 5 source: `GameShell`, `WelcomeScreen`, `StatusPanel`, `Timer`, `PhaseTimer`, `PhaseBar`, `PlayerSticker`, `QrCode`, `ActionBar`, `NameInput`, `SoundToggle`, `LobbySettings`, `GameControls`, `Podium`, `Confetti` |
 | `@partygame/game-ui/testing` | Test-only CSS audits for a game's `ui/` directory: `auditContrast({ uiDir, minChecked, pairs? })` (WCAG AA over same-rule colour/background pairs plus explicit cross-rule pairs; fails on a colour variable defined nowhere and throws when fewer than `minChecked` pairs were checked), `auditReducedMotion({ uiDir, minGuarded, allow? })` (every transition/animation/`scroll-behavior: smooth` inside a no-preference block, no Svelte motion directives outside the allow list; throws below `minGuarded`) and the walkers `cssFiles`, `rules`, `stripComments` |
 
 Viewmodels are typed on `GameConnectionManager<TState>` and read its state reactively. Import through the `svelte` export condition (Vite with the Svelte plugin). Build one in a component with `untrack(() => new Vm(manager))`.
@@ -141,7 +141,7 @@ Any viewmodel that needs the published options reads them through `OptionsReader
 
 ## Phase clock and typing
 
-`PhaseClock(manager, totalSeconds, announceAt?)` wraps `manager.countdown()`: `secondsLeft`, `isUrgent` (the last ten seconds), `announcement` ("N seconds remaining" at 30/10/5 by default) and your `totalSeconds` getter — e.g. `() => options.current.promptSeconds` from an `OptionsReader`.
+`PhaseClock(manager, totalSeconds, announceAt?)` wraps `manager.countdown()`: `secondsLeft`, `isUrgent` (the last ten seconds), `announcement` ("N seconds remaining" at 30/10/5 by default), `fraction` (the share of the phase still running, 0 to 1) and your `totalSeconds` getter — e.g. `() => options.current.promptSeconds` from an `OptionsReader`.
 
 `roundLabel(round, total)` is the shared "Round 2 of 3" label for round-based screens; pass it the state's `roundNumber` and `totalRounds` (zeros before the first round).
 
@@ -222,7 +222,7 @@ const sound = new SoundPolicy({ storage: localStorage, storagePrefix: "my-game",
 
 ## Components
 
-Props (all render in plain markup, e.g. `<Timer seconds={12} total={30} />`): `LobbyScreen` takes `vm` (`WaitingRoomViewModel`) and optionally `settings` (`LobbySettingsViewModel`, rendered below the players) and an `extra` snippet; it renders notice, name card (first while unnamed), room code with copy button and QR for host and spectators, the waiting panel for named guests, the player list with badges and kick confirmation, leave and — for the host — the start button; the chips (`chip`, `chip--sky`, `chip--paper`) are styled by the game. `LobbySettings` and `GameControls` take `vm`; `NameInput` takes `field` (`vm.nameField`) and `focus?`; `PlayerSticker` takes `name`, `playerId`, `size?`, `ghost?`; `QrCode` takes `text`; `SoundToggle` takes `policy` (a `SoundPolicy`); `StatusPanel` takes `title`, `detail?`, `tone` (`"wait"`, `"done"`, `"info"`); `Timer` takes `seconds`, `total`, `announcement?`.
+Props (all render in plain markup, e.g. `<Timer seconds={12} total={30} />`): `LobbyScreen` takes `vm` (`WaitingRoomViewModel`) and optionally `settings` (`LobbySettingsViewModel`, rendered below the players) and an `extra` snippet; it renders notice, name card (first while unnamed), room code with copy button and QR for host and spectators, the waiting panel for named guests, the player list with badges and kick confirmation, leave and — for the host — the start button; the chips (`chip`, `chip--sky`, `chip--paper`) are styled by the game. `LobbySettings` and `GameControls` take `vm`; `NameInput` takes `field` (`vm.nameField`) and `focus?`; `PlayerSticker` takes `name`, `playerId`, `size?`, `ghost?`; `QrCode` takes `text`; `SoundToggle` takes `policy` (a `SoundPolicy`); `StatusPanel` takes `title`, `detail?`, `tone` (`"wait"`, `"done"`, `"info"`); `Timer` takes `seconds`, `fraction` (0 to 1, from `PhaseClock.fraction`) and `announcement?`; `PhaseTimer` and `PhaseBar` take a `clock` (`PhaseClock`) — `PhaseTimer` renders the `Timer` from the clock's seconds, fraction and announcement, and `PhaseBar` renders a "next up in Ns" label over a draining track.
 
 ## Podium and ranking
 
@@ -244,7 +244,7 @@ Props (all render in plain markup, e.g. `<Timer seconds={12} total={30} />`): `L
 
 ## Localisation
 
-Every label the generic components render (the GameControls menu and dialog, the LobbyScreen — room code, badges, kick confirmation and start button, several through function entries such as `playersHeading(ready, min, max)` and `startGame(ready, min)` —, the LobbySettings summary, NameInput, Podium — places through its `podiumPlace(tier)` function entry —, QrCode, the SoundToggle label, the StatusPanel done sticker, the waiting room's copy status (`codeCopied`, `codeCopyFailed`) and the `PhaseClock` announcement through its `secondsRemaining(n)` function entry) comes from `defaultUiStrings`. Call `setStrings(partial)` once at the app root to replace any of them; unspecified keys keep the English default.
+Every label the generic components render (the GameControls menu and dialog, the LobbyScreen — room code, badges, kick confirmation and start button, several through function entries such as `playersHeading(ready, min, max)` and `startGame(ready, min)` —, the LobbySettings summary, NameInput, Podium — places through its `podiumPlace(tier)` function entry —, QrCode, the SoundToggle label, the StatusPanel done sticker, the waiting room's copy status (`codeCopied`, `codeCopyFailed`), the `PhaseClock` announcement through its `secondsRemaining(n)` function entry and the PhaseBar label through its `nextUpIn(n)` function entry) comes from `defaultUiStrings`. Call `setStrings(partial)` once at the app root to replace any of them; unspecified keys keep the English default.
 
 ```svelte
 <script lang="ts">

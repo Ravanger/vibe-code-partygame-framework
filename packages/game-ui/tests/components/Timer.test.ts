@@ -11,44 +11,42 @@ describe("Timer", () => {
     return Number(container.querySelector(".stick")?.getAttribute("x2"));
   }
 
-  it("shows the seconds and burns the stick down in proportion", async () => {
-    const full = render(Timer, { seconds: 30, total: 30 });
+  it("shows the seconds and burns the stick down in proportion to the fraction", async () => {
+    const full = render(Timer, { seconds: 30, fraction: 1 });
     expect(screen.getByText("30")).toBeInTheDocument();
     expect(tip(full.container)).toBeCloseTo(START + LENGTH);
-    const half = render(Timer, { seconds: 15, total: 30 });
+    const half = render(Timer, { seconds: 15, fraction: 0.5 });
     expect(tip(half.container)).toBeCloseTo(START + LENGTH / 2);
     await expectNoViolations(full.container, "Timer");
   });
 
-  it("stays on the stick, and is burnt out without a total", async () => {
-    const over = render(Timer, { seconds: 50, total: 30 });
-    expect(tip(over.container)).toBeCloseTo(START + LENGTH);
-    const under = render(Timer, { seconds: -2, total: 30 });
-    expect(tip(under.container)).toBeCloseTo(START);
-    const none = render(Timer, { seconds: 5, total: 0 });
+  it("is fully lit at a full fraction, and burnt out at zero", async () => {
+    const full = render(Timer, { seconds: 5, fraction: 1 });
+    expect(tip(full.container)).toBeCloseTo(START + LENGTH);
+    const none = render(Timer, { seconds: 0, fraction: 0 });
     expect(tip(none.container)).toBeCloseTo(START);
-    await expectNoViolations(over.container, "Timer");
+    await expectNoViolations(full.container, "Timer");
   });
 
   it("turns urgent at ten seconds, but not at zero", async () => {
-    const calm = render(Timer, { seconds: 11, total: 30 });
+    const calm = render(Timer, { seconds: 11, fraction: 0.5 });
     expect(calm.container.querySelector(".sparkler")).not.toHaveClass("urgent");
-    const urgent = render(Timer, { seconds: 10, total: 30 });
+    const urgent = render(Timer, { seconds: 10, fraction: 0.5 });
     expect(urgent.container.querySelector(".sparkler")).toHaveClass("urgent");
-    const zero = render(Timer, { seconds: 0, total: 30 });
+    const zero = render(Timer, { seconds: 0, fraction: 0 });
     expect(zero.container.querySelector(".sparkler")).not.toHaveClass("urgent");
     await expectNoViolations(urgent.container, "Timer");
   });
 
   it("hides the number from screen readers; the live region announces it", async () => {
-    const { container } = render(Timer, { seconds: 10, total: 30, announcement: "10 left" });
+    const { container } = render(Timer, { seconds: 10, fraction: 0.5, announcement: "10 left" });
     expect(container.querySelector(".number")).toHaveAttribute("aria-hidden", "true");
     expect(screen.getByText("10 left")).toHaveClass("sr-only");
     await expectNoViolations(container, "Timer");
   });
 
   it("does not animate the stick with the dead x2 property", () => {
-    render(Timer, { seconds: 10, total: 30 });
+    render(Timer, { seconds: 10, fraction: 0.5 });
     const styleRules = (rules: CSSRuleList): CSSStyleRule[] => {
       const out: CSSStyleRule[] = [];
       for (const rule of rules) {
@@ -70,7 +68,7 @@ describe("Timer", () => {
   it("announces politely", async () => {
     const { container } = render(Timer, {
       seconds: 10,
-      total: 30,
+      fraction: 0.5,
       announcement: "10 seconds remaining",
     });
     const live = container.querySelector("[aria-live='polite']");
@@ -80,7 +78,7 @@ describe("Timer", () => {
   });
 
   it("announces nothing by default", async () => {
-    const { container } = render(Timer, { seconds: 10, total: 30 });
+    const { container } = render(Timer, { seconds: 10, fraction: 0.5 });
     expect(container.querySelector("[aria-live='polite']")?.textContent).toBe("");
     await expectNoViolations(container, "Timer");
   });

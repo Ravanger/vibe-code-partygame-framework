@@ -20,7 +20,7 @@ export interface RoundResultRow {
 
 /** The revealed options with their authors and votes, plus who scored this round. */
 export class RevealViewModel {
-  private readonly clock: PhaseClock;
+  readonly clock: PhaseClock;
 
   constructor(private readonly manager: BluffManager) {
     const options = new OptionsReader<BluffOptions>(manager, BluffOptionsSchema, DEFAULT_OPTIONS);
@@ -54,13 +54,5 @@ export class RevealViewModel {
       fooledCount: entry.fooledCount,
       guessedTruth: entry.guessedTruth,
     }));
-  }
-
-  get secondsLeft(): number {
-    return this.clock.secondsLeft;
-  }
-
-  get totalSeconds(): number {
-    return this.clock.totalSeconds;
   }
 }

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { StatusPanel, Timer } from "@partygame/game-ui/components";
+  import { PhaseTimer, StatusPanel } from "@partygame/game-ui/components";
   import { untrack } from "svelte";
   import type { WitClashManager } from "../manager.js";
   import { HonorVoteViewModel } from "../viewmodels/HonorVoteViewModel.js";
@@ -15,7 +15,7 @@
   {:else}
     <div class="top">
       <span class="chip chip--paper">Honor vote</span>
-      <Timer seconds={vm.secondsLeft} total={vm.totalSeconds} announcement={vm.announcement} />
+      <PhaseTimer clock={vm.clock} />
     </div>
 
     <div class="question card taped">

@@ -11,8 +11,8 @@ describe("RevealViewModel", () => {
     expect(vm.roundLabel).toBe("Round 0 of 0");
     expect(vm.choices).toEqual([]);
     expect(vm.results).toEqual([]);
-    expect(vm.secondsLeft).toBe(0);
-    expect(vm.totalSeconds).toBe(15);
+    expect(vm.clock.secondsLeft).toBe(0);
+    expect(vm.clock.totalSeconds).toBe(15);
   });
 
   it("shows every choice with its author, votes and the truth mark", () => {

@@ -13,7 +13,7 @@ export interface VoteChoice {
 
 /** Voting on the active matchup. Who wrote what, and the counts, stay hidden until the reveal. */
 export class MatchupVoteViewModel {
-  private readonly clock: PhaseClock;
+  readonly clock: PhaseClock;
 
   constructor(private readonly manager: WitClashManager) {
     const options = new OptionsReader<WitClashOptions>(
@@ -76,18 +76,6 @@ export class MatchupVoteViewModel {
 
   get votesExpected(): number {
     return this.manager.state?.votesExpected ?? 0;
-  }
-
-  get secondsLeft(): number {
-    return this.clock.secondsLeft;
-  }
-
-  get announcement(): string {
-    return this.clock.announcement;
-  }
-
-  get totalSeconds(): number {
-    return this.clock.totalSeconds;
   }
 
   async vote(answerId: string): Promise<void> {

@@ -21,7 +21,7 @@ export class PromptingViewModel {
   currentIndex = $state(0);
   private editing = $state(false);
   private readonly drafts: TextDraft;
-  private readonly clock: PhaseClock;
+  readonly clock: PhaseClock;
   private readonly typing: TypingReporter;
   private readonly options: OptionsReader<WitClashOptions>;
   readonly progress: AnswerProgress;
@@ -119,18 +119,6 @@ export class PromptingViewModel {
   get roundLabel(): string {
     const state = this.manager.state;
     return roundLabel(state?.roundNumber ?? 0, state?.totalRounds ?? 0);
-  }
-
-  get secondsLeft(): number {
-    return this.clock.secondsLeft;
-  }
-
-  get announcement(): string {
-    return this.clock.announcement;
-  }
-
-  get totalSeconds(): number {
-    return this.clock.totalSeconds;
   }
 
   setDraft(value: string): void {

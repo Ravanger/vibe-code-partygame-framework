@@ -273,7 +273,7 @@ App.svelte          screen router, error toast, "reconnecting" indicator, Leave 
 ReplayApp.svelte    offline replay viewer: opens an exported bundle file and steps through it with the phase screens
 screens/            one component per screen: Welcome, WaitingRoom, JoinNextRound, CategoryVote, Prompting,
                     MatchupVote, MatchupReveal, HonorVote, TieBreakerPrompting, TieBreakerVote, TieBreakerReveal, Results
-components/         WitClash-only pieces: MatchupCard, Scoreboard, ProgressBadges, VoteBoard, AnswerBox, NextUpBar, ScreenTitle
+components/         WitClash-only pieces: MatchupCard, Scoreboard, ProgressBadges, VoteBoard, AnswerBox, ScreenTitle
 viewmodels/         one viewmodel per game screen (the name field, welcome, waiting room, lobby settings come from `@partygame/game-ui`), plus Scoreboard (ranks via `rankRows`), MatchupRecap, AnswerProgress and TypingReporter helpers
 ```
 

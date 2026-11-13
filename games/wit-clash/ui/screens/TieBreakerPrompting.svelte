@@ -1,5 +1,5 @@
 <script lang="ts">
-import { ActionBar, StatusPanel, Timer } from "@partygame/game-ui/components";
+import { ActionBar, PhaseTimer, StatusPanel } from "@partygame/game-ui/components";
 import { untrack } from "svelte";
 import AnswerBox from "../components/AnswerBox.svelte";
 import ProgressBadges from "../components/ProgressBadges.svelte";
@@ -20,7 +20,7 @@ $effect(() => () => vm.destroy());
     {#if vm.moderationLine}
       <span class="chip">{vm.moderationLine}</span>
     {/if}
-    <Timer seconds={vm.secondsLeft} total={vm.totalSeconds} announcement={vm.announcement} />
+    <PhaseTimer clock={vm.clock} />
   </div>
 
   <ScreenTitle title="Tie-breaker!" />

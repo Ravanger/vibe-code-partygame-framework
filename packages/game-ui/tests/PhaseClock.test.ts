@@ -36,6 +36,17 @@ describe("PhaseClock", () => {
     expect(at5.announcement).toBe("5 seconds remaining");
   });
 
+  it("reports the remaining fraction of the phase, clamped to 0..1", () => {
+    expect(clock(30, 30).fraction).toBe(1);
+    expect(clock(15, 30).fraction).toBe(0.5);
+    expect(clock(45, 30).fraction).toBe(1);
+    expect(clock(0, 30).fraction).toBe(0);
+  });
+
+  it("has a zero fraction when the phase has no total", () => {
+    expect(clock(30, 0).fraction).toBe(0);
+  });
+
   it("reads the phase length from the supplied getter on every read", () => {
     let total = 90;
     const c = connectedClient({ stateClass: BaseGameState });

@@ -1,18 +1,21 @@
 <script lang="ts">
-const { seconds, total }: { seconds: number; total: number } = $props();
+import type { PhaseClock } from "../PhaseClock.js";
+import { getStrings } from "../strings.js";
 
-const fraction = $derived(total > 0 ? Math.min(1, Math.max(0, seconds / total)) : 0);
+const strings = getStrings();
+
+const { clock }: { clock: PhaseClock } = $props();
 </script>
 
-<div class="next-up">
-  <p class="label hand">{`Next up in ${seconds}s`}</p>
+<div class="phase-bar">
+  <p class="label hand">{strings.nextUpIn(clock.secondsLeft)}</p>
   <div class="track" aria-hidden="true">
-    <div class="drain" style:width={`${fraction * 100}%`}></div>
+    <div class="drain" style:width={`${clock.fraction * 100}%`}></div>
   </div>
 </div>
 
 <style>
-  .next-up {
+  .phase-bar {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
@@ -29,7 +32,7 @@ const fraction = $derived(total > 0 ? Math.min(1, Math.max(0, seconds / total)) 
   .track {
     height: 12px;
     border: 2px solid var(--ink);
-    border-radius: var(--radius-pill);
+    border-radius: 999px;
     background: var(--white);
     overflow: hidden;
   }

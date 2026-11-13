@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Timer } from "@partygame/game-ui/components";
+import { PhaseTimer } from "@partygame/game-ui/components";
 import { untrack } from "svelte";
 import type { BluffManager } from "../manager.js";
 import { RevealViewModel } from "../viewmodels/RevealViewModel.js";
@@ -11,7 +11,7 @@ const vm = untrack(() => new RevealViewModel(manager));
 
 <div class="reveal stack">
   <p class="round">{vm.roundLabel}</p>
-  <Timer seconds={vm.secondsLeft} total={vm.totalSeconds} />
+  <PhaseTimer clock={vm.clock} />
 
   <ul class="choices">
     {#each vm.choices as choice (choice.id)}
