@@ -7,6 +7,18 @@ export {
   default as GameControls,
 } from "./GameControls.svelte";
 export {
+  /**
+   * The shared app shell: header (wordmark snippet, room code, `GameControls`), reconnecting
+   * status, error toast, routed screen and phase banner. On a screen change it moves focus to
+   * the first heading matching `headingSelector` (default `.screen h1, .screen h2`) inside the
+   * screen — skipping the initial mount and a form field that just mounted — sets
+   * `tabindex="-1"` on a heading that lacks one, and falls back to the `.screen` container when
+   * no heading matches. The focused heading and the polite live region are both announced by
+   * design: the heading names the screen, the banner announces the phase moment.
+   */
+  default as GameShell,
+} from "./GameShell.svelte";
+export {
   /** The lobby's collapsible options form: editable fields for the host, read-only values for everyone else. */
   default as LobbySettings,
 } from "./LobbySettings.svelte";
@@ -38,3 +50,13 @@ export {
   /** A burning-fuse countdown showing `seconds` left of `total`, urgent in the last ten seconds, with an `announcement` for screen readers. */
   default as Timer,
 } from "./Timer.svelte";
+export {
+  /**
+   * The entry screen: a wordmark title and tagline (or a `hero` snippet replacing them), host
+   * button, a join-by-code input and a watch-on-a-TV button, plus a dismissible local error.
+   * Triggers `vm.autoJoinIfRequested()` once on mount so share links (`?code=`) and TV links
+   * (`?tv=`) connect without a click. The wordmark face (font, tape) is themed by the game's
+   * global `.screen .wordmark` rule.
+   */
+  default as WelcomeScreen,
+} from "./WelcomeScreen.svelte";

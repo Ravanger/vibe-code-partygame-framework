@@ -6,8 +6,8 @@ Ships Svelte source; consumers need the Svelte plugin — Vite with `@sveltejs/v
 
 | Import | What |
 |---|---|
-| `@partygame/game-ui` | `createAppRouter`, `AppRouter`, `WelcomeViewModel`, `WaitingRoomViewModel`, `LobbySettingsViewModel`, `OptionsReader`, `PhaseClock`, `TypingReporter`, `GameControlsViewModel`, `NameField`, `ReplayViewModel`, `snapshotManager`, `SoundPolicy`; `OptionFields`, `qrCode`, `playerSticker`, `rankRows`, `podiumSteps`; `setStrings`, `defaultUiStrings`, `UiStrings`; types `RouterScreen`, `LobbySettingsConfig`, `SoundPolicyOptions`, `StickerShape` |
-| `@partygame/game-ui/components` | Svelte 5 source: `StatusPanel`, `Timer`, `PlayerSticker`, `QrCode`, `ActionBar`, `NameInput`, `SoundToggle`, `LobbySettings`, `GameControls`, `Podium` |
+| `@partygame/game-ui` | `createAppRouter`, `AppRouter`, `WelcomeViewModel`, `WaitingRoomViewModel`, `LobbySettingsViewModel`, `OptionsReader`, `PhaseClock`, `TypingReporter`, `GameControlsViewModel`, `JoinNextRoundViewModel`, `NameField`, `ReplayViewModel`, `snapshotManager`, `SoundPolicy`; `OptionFields`, `qrCode`, `playerSticker`, `rankRows`, `podiumSteps`; `setStrings`, `defaultUiStrings`, `UiStrings`; types `RouterScreen`, `LobbySettingsConfig`, `SoundPolicyOptions`, `StickerShape` |
+| `@partygame/game-ui/components` | Svelte 5 source: `GameShell`, `WelcomeScreen`, `StatusPanel`, `Timer`, `PlayerSticker`, `QrCode`, `ActionBar`, `NameInput`, `SoundToggle`, `LobbySettings`, `GameControls`, `Podium` |
 
 Viewmodels are typed on `GameConnectionManager<TState>` and read its state reactively. Import through the `svelte` export condition (Vite with the Svelte plugin). Build one in a component with `untrack(() => new Vm(manager))`.
 
@@ -43,6 +43,56 @@ Viewmodels are typed on `GameConnectionManager<TState>` and read its state react
 ```
 
 A `RouterScreen` is one entry of that table: `component` and an optional `banner`. The router also exposes `banner`, `phase`, `isSpectator`, `isReconnecting`, `roomCode`, `error`, `dismissError()`.
+
+## App shell
+
+`GameShell` (from `@partygame/game-ui/components`) is the chrome every screen sits in: the header (wordmark, room code, `GameControls`), a reconnecting bar that dims and `inert`s the game view, a dismissible error toast, the routed screen inside `.screen`, and the phase banner. Pass your router and controls, and give it one snippet per route kind — `welcome`, `joinNextRound`, `phase(phase)` (the phase name, for indexing your own screen table) and `wordmark`:
+
+```svelte
+<script lang="ts">
+  import { GameControlsViewModel, createAppRouter } from "@partygame/game-ui";
+  import { GameShell } from "@partygame/game-ui/components";
+  import { untrack } from "svelte";
+  import JoinNextRound from "./screens/JoinNextRound.svelte";
+  import { PHASE_SCREENS } from "./screens/index.js";
+  import Welcome from "./screens/Welcome.svelte";
+
+  const { manager }: { manager: GameConnectionManager<ButtonState> } = $props();
+  const router = untrack(() => createAppRouter(manager, PHASE_SCREENS));
+  const controls = untrack(() => new GameControlsViewModel(manager, isGameOver));
+</script>
+
+<GameShell router={router} controls={controls}>
+  {#snippet wordmark()}MyGame{/snippet}
+  {#snippet welcome()}<Welcome {manager} />{/snippet}
+  {#snippet joinNextRound()}<JoinNextRound {manager} />{/snippet}
+  {#snippet phase(phase)}
+    {@const Screen = PHASE_SCREENS[phase].component}
+    <Screen {manager} />
+  {/snippet}
+</GameShell>
+```
+
+On every screen change (never on the initial mount) it moves focus to the first heading matching `headingSelector` (default `.screen h1, .screen h2`) inside the new screen — unless a form field that just mounted already took its own focus — sets `tabindex="-1"` on a heading that lacks one, and falls back to focusing the `.screen` container when no heading matches. The focused heading and the polite live region are both announced by design: the heading names the screen, the banner announces the phase moment.
+
+The shell renders structure; it carries no game look. Its stable class names — `header`, `.wordmark`, `.room-chip`, `.reconnecting`, `.game-view`, `.screen`, `.phase-banner` — are styled by global rules in your `app.css` (a component's scoped `<style>` cannot reach the snippet content you pass it). Keep those rules in ascending specificity order, e.g. `.screen .wordmark` before `main.tv header .wordmark`.
+
+`WelcomeScreen` is the entry screen: a wordmark `title` and `tagline` (or a `hero` snippet replacing both), the host button, a join-by-code input, a watch-on-a-TV button and a dismissible local error. It owns the `$effect(() => { void vm.autoJoinIfRequested(); })`, so share links (`?code=`) and TV links (`?tv=`) connect without a click:
+
+```svelte
+<script lang="ts">
+  import { readUrlCode, readUrlTvCode } from "@partygame/game-client";
+  import { WelcomeViewModel } from "@partygame/game-ui";
+  import { WelcomeScreen } from "@partygame/game-ui/components";
+  import { untrack } from "svelte";
+
+  const vm = untrack(() => new WelcomeViewModel(manager, readUrlCode(), readUrlTvCode()));
+</script>
+
+<WelcomeScreen vm={vm} title="MyGame" tagline="One line about the game." />
+```
+
+The wordmark face (font, tape) is themed by your global `.screen .wordmark` rule.
 
 ## Welcome and waiting room
 
@@ -85,6 +135,8 @@ export class LobbySettingsViewModel extends Base<ButtonState> {
 Any viewmodel that needs the published options reads them through `OptionsReader`: `new OptionsReader(manager, schema, defaults?)` parses `state.options` once per change and exposes `current` (reactive), falling back to `defaults` or the schema's own `.default()`s when nothing valid is published.
 
 `GameControlsViewModel(manager, isGameOver?)` is leave plus a host-only end-game menu outside the lobby; subclass it with `super(manager, (state) => state.phase === "Done")`. Members: `isVisible` (connected and outside the lobby), `canEndGame` (host, controls visible, game not over), `toggleMenu()`/`closeMenu()` (both drop a pending end confirmation), `askEnd()`, `confirmEnd()` (closes the menu and sends `END_GAME`; no-op unless `canEndGame`) and `cancelEnd()`.
+
+`JoinNextRoundViewModel(manager, screens)` is the base for the screen a late joiner sees while waiting for their first round or game: `needsName` (the seat has no confirmed name yet), `heading`, `hint`, `phaseLabel` (the current phase's screen `waitingLabel`, or the raw phase name when it has none) and `nameField`; call `destroy()` on teardown. Subclass it with `super(manager, PHASE_SCREENS)` to add game-specific content (a scoreboard, a round label) and override `heading`/`hint`.
 
 ## Phase clock and typing
 
@@ -187,13 +239,14 @@ The table also carries a `clientStrings` field (`Partial<ClientStrings>` from `@
 
 ## Theme
 
-The package ships `theme-contract.css`: a baseline for every contract variable (the `CONTRACT_VARIABLES` list in `src/themeContract.ts`) plus the `.sr-only` utility. Import it first in your game's `app.css`, then override any variable you want to change:
+The package ships `theme-contract.css`: a baseline for every contract variable (the `CONTRACT_VARIABLES` list in `src/themeContract.ts`), the `main.tv` base sizes for TV displays and the `.sr-only` utility. Import it first in your game's `app.css`, then override any variable you want to change:
 
 ```css
 @import "@partygame/game-ui/theme-contract.css";
 ```
 
 - Custom properties: `--ink`, `--ink-soft`, `--white`, `--paper`, `--color-1` to `--color-4`, `--accent`, `--danger`, `--disabled`, `--tape-1` to `--tape-4`, `--fs-1` to `--fs-5`, `--font-display`, `--outline`, `--radius-card`, `--radius-btn`, `--scrap-shadow`, `--podium-block-height-1`, `--podium-block-height-2`, `--podium-block-height-3`, `--scale`, `--timer-size`.
+- TV displays: the `main.tv` rule sets `--scale: 1.6` (every `calc(var(--fs-*) * var(--scale, 1))` declaration scales with it), lifts `--fs-1` to the 24px minimum and raises the base font size; games may further tune `--podium-block-height-*` in their own `main.tv` rule.
 - Sticker colours: `PlayerSticker` sets `data-color` to a palette index (0–3); the contract maps `[data-color="0"]` to `--color-1` through `[data-color="3"]` to `--color-4`.
 - Global classes: `card`, `taped`, `sticker`, `hand`, `sr-only` (shipped with the contract), `btn` (`btn--ghost`, `btn--danger`); `action-bar` is rendered by `ActionBar`, which styles nothing.
 - Chrome vs artwork: chrome — the framework components' look (lobby, join overlays, scoreboard/podium, game controls, timer) — is themed through these variables; artwork — your screens and cards — is yours to design.

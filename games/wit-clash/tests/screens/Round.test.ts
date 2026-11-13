@@ -501,23 +501,6 @@ describe("Results screen", () => {
 });
 
 describe("Focus on screen change", () => {
-  it("does not move focus on the initial mount, leaving a name input alone", () => {
-    const c = connectedClient({ isReady: false });
-    render(App, { manager: c.manager });
-    expect(screen.getByLabelText(/your name/i)).toHaveFocus();
-  });
-
-  it("moves focus to the new screen's heading when the phase changes", () => {
-    const c = connectedClient({ role: "host" });
-    render(App, { manager: c.manager });
-    c.state.phase = "CategorySelection";
-    c.state.categoryOptions.push(option("a"), option("b"));
-    addMine(c.state, c.manager.playerId);
-    c.patch();
-    flushSync();
-    expect(screen.getByRole("heading", { name: /pick a category/i })).toHaveFocus();
-  });
-
   it("moves focus to the reveal heading once the matchup is revealed", () => {
     const c = connectedClient({}, "MatchupVoting");
     render(App, { manager: c.manager });
@@ -551,16 +534,5 @@ describe("Focus on screen change", () => {
     c.patch();
     flushSync();
     expect(screen.getByRole("heading", { name: /revealing/i })).toHaveFocus();
-  });
-
-  it("keeps focus on the name input when a screen mounts one", () => {
-    const c = connectedClient({}, "Prompting");
-    addMine(c.state, c.manager.playerId);
-    render(App, { manager: c.manager });
-    c.me.isActive = false;
-    c.me.isReady = false;
-    c.patch();
-    flushSync();
-    expect(screen.getByLabelText(/your name/i)).toHaveFocus();
   });
 });

@@ -325,6 +325,7 @@
           "default": "./src/index.ts"
         },
         "symbols": {
+          "ClientEnv": {},
           "ClientStrings": {},
           "ConnectionStatus": {},
           "Countdown": {},
@@ -338,9 +339,12 @@
           "PhaseFeedbackEvent": {},
           "RoomLike": {},
           "UrgentFeedbackEvent": {},
+          "clientConfig": {},
           "defaultClientStrings": {},
           "isUrgent": {},
           "readCodeParam": {},
+          "readUrlCode": {},
+          "readUrlTvCode": {},
           "resolveEndpoints": {}
         },
         "source": true
@@ -409,6 +413,7 @@
           "AppRouter": {},
           "GameControlsViewModel": {},
           "GestureTarget": {},
+          "JoinNextRoundViewModel": {},
           "LobbyPlayer": {},
           "LobbySettingsConfig": {},
           "LobbySettingsViewModel": {},
@@ -457,6 +462,7 @@
         "symbols": {
           "ActionBar": {},
           "GameControls": {},
+          "GameShell": {},
           "LobbySettings": {},
           "NameInput": {},
           "PlayerSticker": {},
@@ -464,7 +470,8 @@
           "QrCode": {},
           "SoundToggle": {},
           "StatusPanel": {},
-          "Timer": {}
+          "Timer": {},
+          "WelcomeScreen": {}
         },
         "source": true
       },

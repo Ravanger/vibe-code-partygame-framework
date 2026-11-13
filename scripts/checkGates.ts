@@ -267,12 +267,22 @@ export const TREE_ALLOWLIST: { path: string; pattern: RegExp; reason: string }[]
     reason: "Svelte generics= trap (docs/framework/troubleshooting.md)",
   },
   {
+    path: "packages/game-ui/src/components/GameShell.svelte",
+    pattern: /biome-ignore lint\/correctness\/noUnusedImports: used by the generics attribute/,
+    reason: "Svelte generics= trap (docs/framework/troubleshooting.md)",
+  },
+  {
     path: "packages/game-ui/src/components/LobbySettings.svelte",
     pattern: /biome-ignore lint\/correctness\/noUnusedImports: used by the generics attribute/,
     reason: "Svelte generics= trap (docs/framework/troubleshooting.md)",
   },
   {
     path: "packages/game-ui/src/components/Podium.svelte",
+    pattern: /biome-ignore lint\/correctness\/noUnusedImports: used by the generics attribute/,
+    reason: "Svelte generics= trap (docs/framework/troubleshooting.md)",
+  },
+  {
+    path: "packages/game-ui/src/components/WelcomeScreen.svelte",
     pattern: /biome-ignore lint\/correctness\/noUnusedImports: used by the generics attribute/,
     reason: "Svelte generics= trap (docs/framework/troubleshooting.md)",
   },

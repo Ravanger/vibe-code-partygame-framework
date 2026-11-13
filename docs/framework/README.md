@@ -997,33 +997,41 @@ export class LobbySettingsViewModel extends LobbySettingsBase<ButtonState> {
 
 `createAppRouter(manager, screens)` is the app shell's router. `screens` maps each phase name to your component and an optional `banner` (shown for a moment when the room enters the phase). `router.screen` is a `Route`: `welcome` (not connected), `connecting` (a phase missing from the table), `join-next-round` (a seat marked inactive outside the lobby) or `phase`. A client with no seat (the TV) passes through to the phase screen; `reconnecting` keeps the current screen. Also exposed: `screenKey`, `banner`, `phase`, `isSpectator`, `isReconnecting`, `roomCode`, `error` and `dismissError()`.
 
+The router drives `GameShell` (from `@partygame/game-ui/components`), the chrome every screen sits in: header (wordmark, room code, `GameControls`), a reconnecting bar that dims and `inert`s the game view, a dismissible error toast, the routed screen inside `.screen`, and the phase banner. It takes one snippet per route kind — `welcome`, `joinNextRound`, `phase(phase)` (the phase name, for indexing your own table) and `wordmark`:
+
 ```svelte
 <script lang="ts">
   import { LOBBY_PHASE } from "@partygame/shared";
-  import { createAppRouter } from "@partygame/game-ui";
+  import { GameControlsViewModel, createAppRouter } from "@partygame/game-ui";
+  import { GameShell } from "@partygame/game-ui/components";
+  import { untrack } from "svelte";
+  import JoinNextRound from "./JoinNextRound.svelte";
   import Lobby from "./Lobby.svelte";
   import Round from "./Round.svelte";
   import Welcome from "./Welcome.svelte";
-  import { manager } from "./manager.js";
+  import { manager, isGameOver } from "./manager.js";
 
   const SCREENS = {
-    [LOBBY_PHASE]: { component: Lobby, banner: "" },
-    Round: { component: Round, banner: "GO!" },
-  } satisfies Record<string, { component: unknown; banner?: string }>;
+    [LOBBY_PHASE]: { component: Lobby, waitingLabel: "Waiting in the lobby", banner: "" },
+    Round: { component: Round, waitingLabel: "Playing a round", banner: "GO!" },
+  } satisfies Record<string, { component: unknown; waitingLabel: string; banner?: string }>;
 
-  const router = createAppRouter(manager, SCREENS);
-  const route = $derived(router.screen);
+  const router = untrack(() => createAppRouter(manager, SCREENS));
+  const controls = untrack(() => new GameControlsViewModel(manager, isGameOver));
 </script>
 
-{#if route.kind === "phase"}
-  {@const Screen = SCREENS[route.phase].component}
-  <Screen {manager} />
-{:else if route.kind === "welcome"}
-  <Welcome {manager} />
-{:else}
-  <p>Connecting...</p>
-{/if}
+<GameShell router={router} controls={controls}>
+  {#snippet wordmark()}MyGame{/snippet}
+  {#snippet welcome()}<Welcome {manager} />{/snippet}
+  {#snippet joinNextRound()}<JoinNextRound {manager} />{/snippet}
+  {#snippet phase(phase)}
+    {@const Screen = SCREENS[phase].component}
+    <Screen {manager} />
+  {/snippet}
+</GameShell>
 ```
+
+On every screen change (never on the initial mount) the shell moves focus to the first heading matching `headingSelector` (default `.screen h1, .screen h2`) inside the new screen — unless a form field that just mounted already took its own focus — and falls back to the `.screen` container. The shell renders structure only; style its stable class names (`header .wordmark`, `.room-chip`, `.phase-banner span`, `.screen .wordmark`) with global rules in `app.css`, in ascending specificity order (a component's scoped `<style>` cannot reach your snippet content).
 
 To change a rule, subclass it and override a member, for example `banner`: `class AppViewModel extends AppRouter<ButtonState, typeof SCREENS> { override get banner() { ... } }` (`manager` and `screens` are `protected`).
 
@@ -1035,6 +1043,8 @@ Write text that mixes literals and values as one template literal, `{`${choice.n
 
 | Component | Props |
 |---|---|
+| `GameShell` | `router: AppRouter<TState, TScreens>`, `controls: GameControlsViewModel<TState>`, `headingSelector?: string`; snippets `wordmark`, `welcome`, `joinNextRound`, `phase(phase)` |
+| `WelcomeScreen` | `vm: WelcomeViewModel<TState>`, `title: string`, `tagline: string`, `hero?: Snippet` (replaces the wordmark and tagline); owns the `autoJoinIfRequested()` effect for share links |
 | `StatusPanel` | `title: string`, `detail?: string`, `tone: "wait" \| "done" \| "info"` |
 | `Timer` | `seconds: number`, `total: number`, `announcement?: string` (polite live region text) |
 | `PlayerSticker` | `name: string`, `playerId: string`, `size?: number` (default 44), `ghost?: boolean` |
@@ -1336,7 +1346,7 @@ export { svelteConfig as default } from "@partygame/config/svelte";
 | `@partygame/server/probe` | `ServerProbe` (`isGameServer(port, apiPort, host?)` — `host` defaults to `localhost` and is used for both the TCP check and the code-API fetch; `canConnect(port)`, `answers(url)`), `freePort()`, `closeHttpServer(server)` (resolves when the server already stopped): port probing without Colyseus |
 | `@partygame/content` | `loadJsoncDir(dir, schema, { idOf, label, onInvalid?, maxFiles?, maxFileBytes? })`: a folder of commented JSON files (symlinks ignored), validated; bad files throw by default (`onInvalid: "skip"` warns and skips), caps at 256 files / 1 MiB per file; `loadJsoncFile(file, schema, { label, maxFileBytes? })`: one such file with the same messages — a game's single-file content loader; `stripJsonComments` |
 | `@partygame/content/filter` | `createTextFilter()`: a `TextFilter` over the English obscenity dataset — `check(text, "off" \| "moderate" \| "strict")` returns `{ ok: true }` or `{ ok: false, reason }`; moderate blocks slurs and profanity, strict adds mild terms; the reason is a fixed per-level string that never names the matched word |
-| `@partygame/game-client` | `resolveEndpoints(overrides, pageHost)`, `readCodeParam(search, "code" \| "tv")` |
+| `@partygame/game-client` | `clientConfig(env?)`: a `main.ts`-ready `resolveEndpoints()` from the `VITE_*` keys of `env` (type `ClientEnv`) plus `readUrlCode(search?)` / `readUrlTvCode(search?)`; lower-level `resolveEndpoints(overrides, pageHost)`, `readCodeParam(search, "code" \| "tv")` |
 | `@partygame/game-client/test-setup` | vitest `setupFiles` entry for jsdom: storage shims, SDK on `ws` (repo-internal, raw `.ts`) |
 | `@partygame/game-kit` | types: `GameMeta` (`roomName`, `minPlayers`, `maxPlayers`), `ServeOptions` (`games`, `port?`, `apiPort?`), `GameDemoOptions` (the declaration's `demo` field, see All-bot demo run) |
 

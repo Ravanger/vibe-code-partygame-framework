@@ -18,6 +18,9 @@ const frameworkReadme = readFileSync(
 /** The body of the contract's :root block; empty when the file has none. */
 const rootBlock = /:root\s*\{([\s\S]*?)\}/.exec(contractCss)?.[1] ?? "";
 
+/** The declaration block of the contract's `main.tv` rule; empty when the file has none. */
+const mainTvBlock = /main\.tv\s*{([^}]*)}/.exec(contractCss)?.[1] ?? "";
+
 /** The backticked variables on a README's custom-properties line, expanding "`--x-1` to `--x-4`"
  * ranges; parenthetical notes (e.g. the framework README's `--tape` aside) are dropped first. */
 function readmeVariables(line: string): string[] {
@@ -54,6 +57,18 @@ describe("theme-contract.css", () => {
 
   it("provides the .sr-only utility", () => {
     expect(contractCss).toMatch(/\.sr-only\s*\{/);
+  });
+});
+
+describe("TV typography contract (main.tv)", () => {
+  it("keeps the --fs-1 override at the 24px minimum under main.tv", () => {
+    // fs-1 text on a TV screen renders as calc(var(--fs-1) * var(--scale, 1)) with --scale: 1.6,
+    // so the single-point override must lift 0.875rem x 1.6 = 22.4px to at least 24px (0.9375rem x 1.6)
+    expect(mainTvBlock).toMatch(/--fs-1:\s*0\.9375rem/);
+  });
+
+  it("keeps the TV scale factor at 1.6", () => {
+    expect(mainTvBlock).toMatch(/--scale:\s*1\.6/);
   });
 });
 

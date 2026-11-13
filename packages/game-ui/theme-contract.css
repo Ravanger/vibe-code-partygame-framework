@@ -1,6 +1,7 @@
 /* The @partygame/game-ui theme contract: a baseline for every custom property the
-   framework components read, plus the .sr-only utility. Import it first in your
-   app.css, then override any variable you want to change. */
+   framework components read, the main.tv base sizes for TV displays and the .sr-only
+   utility. Import it first in your app.css, then override any variable you want to
+   change. */
 :root {
   --ink: #2b2235;
   --ink-soft: #5a4f66;
@@ -32,6 +33,15 @@
   --podium-block-height-3: calc(78px * var(--scale, 1));
   --scale: 1;
   --timer-size: 96px;
+}
+
+/* TV displays are watched from a distance: scale every calc(var(--fs-*) * var(--scale, 1))
+   declaration and lift --fs-1 so it stays at the 24px minimum. Games may further tune
+   --podium-block-height-* for their podium screens. */
+main.tv {
+  --scale: 1.6;
+  --fs-1: 0.9375rem;
+  font-size: 1.6rem;
 }
 
 /* PlayerSticker sets data-color to a palette index; these map it to the theme colours. */

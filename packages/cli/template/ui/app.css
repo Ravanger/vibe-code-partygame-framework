@@ -10,6 +10,7 @@
   --scrap-shadow: 3px 4px 0 rgb(43 34 53 / 0.25);
   --font-display: "Trebuchet MS", "Arial Rounded MT Bold", system-ui, sans-serif;
   --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-hand: "Segoe Print", "Comic Sans MS", cursive;
   --fs-1: 0.8rem;
   --fs-4: 1.6rem;
   --fs-5: 2.2rem;
@@ -114,6 +115,10 @@ h3 {
   font-size: calc(var(--fs-3) * var(--scale, 1));
 }
 
+.btn--secondary {
+  background: var(--color-2);
+}
+
 .btn--danger {
   background: var(--danger);
   color: var(--white);
@@ -157,9 +162,73 @@ h3 {
 }
 
 main.tv {
-  --scale: 1.6;
-  font-size: 1.6rem;
+  /* the theme contract scales TV text; the podium blocks get viewport-relative heights instead */
   --podium-block-height-1: 17dvh;
   --podium-block-height-2: 12dvh;
   --podium-block-height-3: 8dvh;
+}
+
+/* App shell faces: GameShell renders the structure, these give it this game's look. */
+header .wordmark {
+  padding: 0 0.7rem;
+  border: var(--outline);
+  border-radius: var(--radius-card);
+  background: var(--color-1);
+  color: var(--white);
+  box-shadow: var(--scrap-shadow);
+  font-family: var(--font-display);
+  font-size: var(--fs-4);
+  letter-spacing: 0.05em;
+  line-height: 1.6;
+  text-transform: uppercase;
+  transform: rotate(-2deg);
+}
+
+.screen .wordmark {
+  display: inline-block;
+  margin: 0 auto;
+  padding: 0.2rem 1.5rem;
+  border: var(--outline);
+  border-radius: var(--radius-card);
+  background: var(--color-1);
+  color: var(--white);
+  box-shadow: var(--scrap-shadow);
+  font-size: var(--fs-5);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transform: rotate(-2deg);
+}
+
+main.tv header .wordmark {
+  font-size: var(--fs-5);
+}
+
+.room-chip {
+  padding: 0.1rem 0.7rem;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--white);
+  color: var(--ink);
+  font-family: var(--font-display);
+  letter-spacing: 3px;
+}
+
+main.tv .room-chip {
+  font-size: var(--fs-6);
+  letter-spacing: 8px;
+}
+
+.phase-banner span {
+  position: relative;
+  padding: 0.4rem 2.5rem;
+  border: var(--outline);
+  border-radius: var(--radius-card);
+  background: var(--white);
+  color: var(--ink);
+  box-shadow: var(--scrap-shadow);
+  font-family: var(--font-display);
+  font-size: calc(var(--fs-6) * var(--scale, 1));
+  letter-spacing: 0.04em;
+  text-align: center;
+  transform: rotate(-2deg);
 }

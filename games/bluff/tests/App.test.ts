@@ -104,14 +104,16 @@ describe("App", () => {
 
   it("dims the game while reconnecting and restores it", () => {
     const c = connectedClient({ role: "host" }, "Writing");
-    render(App, { manager: c.manager });
+    const { container } = render(App, { manager: c.manager });
     c.room.dropConnection();
     flushSync();
     expect(screen.getByRole("status")).toHaveTextContent(/reconnecting/i);
+    expect(container.querySelector<HTMLElement>(".game-view")?.inert).toBe(true);
 
     c.room.reconnected();
     flushSync();
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(container.querySelector<HTMLElement>(".game-view")?.inert).toBe(false);
   });
 
   it("renders a TV display for a seatless client", () => {

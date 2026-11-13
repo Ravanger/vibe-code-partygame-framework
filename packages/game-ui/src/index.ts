@@ -1,5 +1,6 @@
 export { AppRouter, createAppRouter, type Route, type RouterScreen } from "./AppRouter.js";
 export { GameControlsViewModel } from "./GameControlsViewModel.svelte.js";
+export { JoinNextRoundViewModel } from "./JoinNextRoundViewModel.js";
 export {
   type LobbySettingsConfig,
   LobbySettingsViewModel,

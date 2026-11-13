@@ -6,7 +6,7 @@ Ships source (`.ts`/`.svelte.ts`); consumers need the Svelte plugin — Vite wit
 
 | Import | What |
 |---|---|
-| `@partygame/game-client` | `GameConnectionManager<TState>`: connect, sync, send actions; `Countdown`, `isUrgent(secondsLeft)`, `FeedbackBus`, `resolveEndpoints`, `readCodeParam`; `ClientStrings`, `defaultClientStrings` for the manager's `strings` option; types `GameConnectionOptions` (server endpoints, room name and storage namespace), `ConnectionStatus`, `FeedbackEvent` (any bus event, discriminated by `type`) |
+| `@partygame/game-client` | `GameConnectionManager<TState>`: connect, sync, send actions; `Countdown`, `isUrgent(secondsLeft)`, `FeedbackBus`, `clientConfig(env?)`, `resolveEndpoints`, `readCodeParam`, `readUrlCode(search?)`, `readUrlTvCode(search?)`; `ClientStrings`, `defaultClientStrings` for the manager's `strings` option; types `GameConnectionOptions` (server endpoints, room name and storage namespace), `ConnectionStatus`, `FeedbackEvent` (any bus event, discriminated by `type`), `ClientEnv` (the `VITE_*` build-env keys) |
 | `@partygame/game-client/testing` | `StubRoom`, `connectedClient`, `fakeFetch` for UI tests without a server |
 | `@partygame/game-client/test-setup` | jsdom setup (shims storage, fixes WebSocket for the SDK) |
 
@@ -15,20 +15,24 @@ Ships source (`.ts`/`.svelte.ts`); consumers need the Svelte plugin — Vite wit
 One manager per app. `storagePrefix` namespaces the browser storage; `rootSchema` is your state class (import it from a browser-safe `state.ts`).
 
 ```ts
-import { GameConnectionManager, resolveEndpoints } from "@partygame/game-client";
+import { GameConnectionManager, clientConfig } from "@partygame/game-client";
 
-const { endpoint, apiPort } = resolveEndpoints({}, window.location.hostname); // host:2567 and API 3001
+const { resolveEndpoints } = clientConfig(import.meta.env);
+const { endpoint, apiPort, apiBase } = resolveEndpoints(); // page host:2567 and API 3001, or the VITE_* overrides
 export const manager = new GameConnectionManager<ButtonState>({
   endpoint,
   roomName: "button",        // as registered on the server
   apiPort,
+  ...(apiBase === undefined ? {} : { apiBase }),
   storagePrefix: "button",
   rootSchema: ButtonState,
 });
 void manager.resume();       // page load: stored token, then stored room code
 ```
 
-`resolveEndpoints(overrides, pageHost, pageProtocol?)` takes string overrides `{ host?, gamePort?, apiPort?, endpoint?, apiBase? }` (for example from `VITE_*` env vars) and an optional page protocol (`window.location.protocol`, default `"http:"`), so a phone on `http://192.168.1.50:5173` talks to `192.168.1.50:2567` — and an HTTPS page gets `https://…` instead of a mixed-content `http://…`. An `endpoint` override is returned verbatim (for example `wss://your-origin/game` behind a reverse proxy); an `apiBase` override is returned verbatim, and the manager prefers it over `apiPort`: it calls `<apiBase>/api/resolve-code` with no port appended. See [HOSTING.md](../../docs/HOSTING.md#behind-https-and-a-reverse-proxy).
+`clientConfig(env = {})` is the client half of a game's `main.ts`: it returns a `resolveEndpoints()` that reads the `VITE_*` overrides of `env` (the `ClientEnv` keys `VITE_SERVER_HOST`, `VITE_GAME_PORT`, `VITE_API_PORT`, `VITE_SERVER_ENDPOINT`, `VITE_API_BASE`; other env keys are ignored) against the page's own host and protocol, plus `readUrlCode(search?)` and `readUrlTvCode(search?)` for share links. Pass `import.meta.env`; its typing stays at the call site.
+
+The lower-level `resolveEndpoints(overrides, pageHost, pageProtocol?)` takes string overrides `{ host?, gamePort?, apiPort?, endpoint?, apiBase? }` and an optional page protocol (`window.location.protocol`, default `"http:"`), so a phone on `http://192.168.1.50:5173` talks to `192.168.1.50:2567` — and an HTTPS page gets `https://…` instead of a mixed-content `http://…`. An `endpoint` override is returned verbatim (for example `wss://your-origin/game` behind a reverse proxy); an `apiBase` override is returned verbatim, and the manager prefers it over `apiPort`: it calls `<apiBase>/api/resolve-code` with no port appended. See [HOSTING.md](../../docs/HOSTING.md#behind-https-and-a-reverse-proxy).
 
 Every client-owned message is replaceable through the `strings` option: pass a partial `ClientStrings` table (defaults in `defaultClientStrings`) — the room-code validation text, the `NOT_CONNECTED`, `INVALID_ACTION`, `BAD_REPLY`, `CONNECTION_LOST`, `ROOM_NOT_FOUND` errors, and the two state-sync rejection messages (`syncDisconnected`, `syncTimedOut`). `strings.errors[code]` overrides the text of any code that lands in `lastServerError`; the server's own `message` is used only as a fallback when the table has no entry for the code.
 
@@ -46,11 +50,13 @@ await manager.leave();                   // forgets the room
 `join` options (`JoinOptions`): `name`, `spectator`, and `joinData` (string/number/boolean values; at most 8 keys, keys up to 32 characters, strings up to 256). `joinData` is sent once per join and never stored or logged by the manager.
 
 ```ts
-import { readCodeParam } from "@partygame/game-client";
+import { readUrlCode, readUrlTvCode } from "@partygame/game-client";
 
-readCodeParam(window.location.search, "code"); // "ABCD" from ?code=abcd, else undefined
-readCodeParam(window.location.search, "tv");
+readUrlCode(); // "ABCD" from ?code=abcd, else undefined
+readUrlTvCode(); // "ABCD" from ?tv=abcd for a TV display, else undefined
 ```
+
+The lower-level `readCodeParam(search, param)` reads any query param and validates it as a room code.
 
 ## Read state reactively
 
