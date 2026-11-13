@@ -1,4 +1,4 @@
-import { mulberry32 } from "@partygame/core";
+import { mulberry32 } from "./utils.js";
 
 /** The UTC date of an epoch-ms timestamp, as `YYYY-MM-DD`. */
 export function utcDay(nowMs: number): string {
@@ -18,8 +18,8 @@ function fnv1a(text: string): number {
 /**
  * The deterministic content RNG for one UTC date and salt: the FNV-1a hash of `${day}:${salt}`
  * seeds `mulberry32`, so every server on the same date draws the same sequence, whatever its room
- * seed. Daily mode uses it for the category order (salt `"categories"`) and per-round prompt
- * dealing (salt the round number).
+ * seed. A game with a daily mode uses it for per-day orderings (one salt) and per-round dealing
+ * (the round number as salt).
  */
 export function dailyRng(day: string, salt: string | number): () => number {
   return mulberry32(fnv1a(`${day}:${salt}`));

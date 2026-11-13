@@ -3,6 +3,10 @@ export {
   default as ActionBar,
 } from "./ActionBar.svelte";
 export {
+  /** Falling confetti: `count` deterministic pieces across the top of the screen, coloured by theme variables; animated only under `prefers-reduced-motion: no-preference`. */
+  default as Confetti,
+} from "./Confetti.svelte";
+export {
   /** A menu button with a popover to leave the game and, for the host, end it after a confirmation. */
   default as GameControls,
 } from "./GameControls.svelte";

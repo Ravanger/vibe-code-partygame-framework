@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ANSWER_MAX_LENGTH } from "../../src/actionNames.js";
 import { CategoryVoteViewModel } from "../../ui/viewmodels/CategoryVoteViewModel.js";
 import { MatchupRevealViewModel } from "../../ui/viewmodels/MatchupRevealViewModel.js";
 import { MatchupVoteViewModel } from "../../ui/viewmodels/MatchupVoteViewModel.js";
@@ -269,6 +270,7 @@ describe("PromptingViewModel", () => {
     expect(vm.prompts).toEqual([]);
     expect(vm.allSubmitted).toBe(false);
     expect(vm.isSittingOut).toBe(true);
+    expect([vm.draft, vm.charsRemaining, vm.canSubmit]).toEqual(["", ANSWER_MAX_LENGTH, false]);
     expect(vm.categoryLabel).toBe("");
     c.manager.dispose();
     expect([vm.answersIn, vm.answersExpected, vm.roundLabel]).toEqual([0, 0, "Round 0 of 0"]);

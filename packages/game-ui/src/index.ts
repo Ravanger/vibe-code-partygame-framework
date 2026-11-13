@@ -37,11 +37,13 @@ export {
   type SoundPolicyOptions,
   type SoundStorage,
 } from "./SoundPolicy.svelte.js";
+export { Spotlight } from "./Spotlight.svelte.js";
 export {
   defaultUiStrings,
   setStrings,
   type UiStrings,
 } from "./strings.js";
+export { TextDraft, type TextDraftConfig } from "./TextDraft.svelte.js";
 export { TypingReporter } from "./TypingReporter.js";
 export { type LobbyPlayer, WaitingRoomViewModel } from "./WaitingRoomViewModel.svelte.js";
 export { WelcomeViewModel } from "./WelcomeViewModel.svelte.js";

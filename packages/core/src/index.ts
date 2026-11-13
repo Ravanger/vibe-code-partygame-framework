@@ -12,6 +12,7 @@ export {
 } from "./actionLog.js";
 export { EmptyPayloadSchema, playAgainAction } from "./actions.js";
 export { AudienceScopes } from "./audienceScopes.js";
+export { dailyRng, utcDay } from "./dailySeed.js";
 export {
   getPhaseTimings,
   type LoggingMiddlewareOptions,

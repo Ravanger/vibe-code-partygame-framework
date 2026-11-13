@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dailyRng, utcDay } from "../../src/dailySeed.js";
+import { dailyRng, utcDay } from "../src/dailySeed.js";
 
 describe("utcDay", () => {
   it("is the UTC date of a timestamp", () => {
@@ -14,19 +14,19 @@ describe("utcDay", () => {
 
 describe("dailyRng", () => {
   it("is identical for the same day and salt", () => {
-    const a = dailyRng("2026-10-15", "categories");
-    const b = dailyRng("2026-10-15", "categories");
+    const a = dailyRng("2026-10-15", "order");
+    const b = dailyRng("2026-10-15", "order");
     expect([a(), a(), a()]).toEqual([b(), b(), b()]);
   });
 
   it("differs for another day", () => {
-    const a = dailyRng("2026-10-15", "categories");
-    const b = dailyRng("2026-10-16", "categories");
+    const a = dailyRng("2026-10-15", "order");
+    const b = dailyRng("2026-10-16", "order");
     expect([a(), a(), a()]).not.toEqual([b(), b(), b()]);
   });
 
   it("differs for another salt, including numeric salts", () => {
-    const a = dailyRng("2026-10-15", "categories");
+    const a = dailyRng("2026-10-15", "order");
     expect([a(), a(), a()]).not.toEqual(
       (() => {
         const b = dailyRng("2026-10-15", 1);

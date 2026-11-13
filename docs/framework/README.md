@@ -329,6 +329,11 @@ positionally to `p1..pN`, so every recorded sender re-dispatches against the mat
   so published ids do not reveal the stream. `ReplayHost`, `FakeHost`/`TestTable` accept a `Seed` or a
   number (expanded by `seedFromNumber`); an unseeded host is `seedFromNumber(0)`, so even unseeded test
   rooms are replayable by seed (and their ids from `ctx.newId()` stay unique).
+- **Daily content.** A mode in which every room on the same day deals the same orderings draws from
+  `dailyRng(day, salt)` instead of the room RNG: the FNV-1a hash of `${day}:${salt}` seeds `mulberry32`,
+  so all servers (and replays) draw the identical sequence per day and salt, without consuming the room's
+  stream. `utcDay(ctx.now())` yields the UTC date as `YYYY-MM-DD`; record it in `ctx.priv` once per game
+  and use a distinct salt per use (e.g. one for orderings, the round number for dealing).
 - **Clock.** Replay scripts the fake clock: it advances to each entry's `t` before applying the entry, and
   logged timeouts are authoritative — when replay enters a timed phase, its timer is made to expire at the
   time recorded in the log. A live room's phase timers run on Colyseus's tick-quantized clock (a ~17 ms

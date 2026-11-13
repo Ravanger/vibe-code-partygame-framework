@@ -6,8 +6,9 @@ Ships Svelte source; consumers need the Svelte plugin — Vite with `@sveltejs/v
 
 | Import | What |
 |---|---|
-| `@partygame/game-ui` | `createAppRouter`, `AppRouter`, `WelcomeViewModel`, `WaitingRoomViewModel`, `LobbySettingsViewModel`, `OptionsReader`, `PhaseClock`, `TypingReporter`, `GameControlsViewModel`, `JoinNextRoundViewModel`, `NameField`, `ReplayViewModel`, `snapshotManager`, `SoundPolicy`; `OptionFields`, `qrCode`, `playerSticker`, `rankRows`, `podiumSteps`, `roundLabel`; `setStrings`, `defaultUiStrings`, `UiStrings`; types `RouterScreen`, `LobbySettingsConfig`, `SoundPolicyOptions`, `StickerShape` |
-| `@partygame/game-ui/components` | Svelte 5 source: `GameShell`, `WelcomeScreen`, `StatusPanel`, `Timer`, `PlayerSticker`, `QrCode`, `ActionBar`, `NameInput`, `SoundToggle`, `LobbySettings`, `GameControls`, `Podium` |
+| `@partygame/game-ui` | `createAppRouter`, `AppRouter`, `WelcomeViewModel`, `WaitingRoomViewModel`, `LobbySettingsViewModel`, `OptionsReader`, `PhaseClock`, `TypingReporter`, `GameControlsViewModel`, `JoinNextRoundViewModel`, `NameField`, `ReplayViewModel`, `snapshotManager`, `SoundPolicy`, `Spotlight`, `TextDraft`; `OptionFields`, `qrCode`, `playerSticker`, `rankRows`, `podiumSteps`, `roundLabel`; `setStrings`, `defaultUiStrings`, `UiStrings`; types `RouterScreen`, `LobbySettingsConfig`, `SoundPolicyOptions`, `StickerShape`, `TextDraftConfig` |
+| `@partygame/game-ui/components` | Svelte 5 source: `GameShell`, `WelcomeScreen`, `StatusPanel`, `Timer`, `PlayerSticker`, `QrCode`, `ActionBar`, `NameInput`, `SoundToggle`, `LobbySettings`, `GameControls`, `Podium`, `Confetti` |
+| `@partygame/game-ui/testing` | Test-only CSS audits for a game's `ui/` directory: `auditContrast({ uiDir, minChecked, pairs? })` (WCAG AA over same-rule colour/background pairs plus explicit cross-rule pairs; fails on a colour variable defined nowhere and throws when fewer than `minChecked` pairs were checked), `auditReducedMotion({ uiDir, minGuarded, allow? })` (every transition/animation/`scroll-behavior: smooth` inside a no-preference block, no Svelte motion directives outside the allow list; throws below `minGuarded`) and the walkers `cssFiles`, `rules`, `stripComments` |
 
 Viewmodels are typed on `GameConnectionManager<TState>` and read its state reactively. Import through the `svelte` export condition (Vite with the Svelte plugin). Build one in a component with `untrack(() => new Vm(manager))`.
 
@@ -146,6 +147,22 @@ Any viewmodel that needs the published options reads them through `OptionsReader
 
 `TypingReporter(send, idleMs = 2500)` calls `send(true)` on the first keystroke and `send(false)` after `idleMs` of quiet or on `stop()` — one message per change. Call `keystroke()` per key and `stop()` on submit or teardown.
 
+## Spotlight and confetti
+
+`Spotlight(count, periodMs = 8000)` cycles a reactive `current` index through `count()` panels every `periodMs`, wrapping around; while `count() <= 1` it stays at zero (`isActive` is false). Call `destroy()` when the screen unmounts. Use it to alternate what a results screen shows (e.g. podium vs best answers for spectators):
+
+```ts
+const spotlight = new Spotlight(() => (isSpectator && bestAnswers.length > 0 ? 2 : 1));
+// show panel one while spotlight.current === 1 and spotlight.isActive
+$effect(() => () => spotlight.destroy());
+```
+
+`Confetti` (from `@partygame/game-ui/components`) rains `count` deterministic pieces from the top of the screen, coloured by the theme palette (`--color-1` to `--color-4`, `--accent`); the pieces are hidden and the fall animation runs only under `prefers-reduced-motion: no-preference`. Render it inside an `{#if}` so it exists only while celebrating.
+
+## Text draft
+
+`TextDraft(manager, config)` holds the shared rules of a free-text answer field: one draft per key (`draft(key)`, `setDraft(key, value)`), `charsRemaining(key)` and `canSubmit(key)` (non-blank and within `config.maxLength`), `rejectionReason` (the server's message for a `CONTENT_REJECTED` error, else "") and `moderationLine` — host only, hidden while the filter level is "off", e.g. "3 answers rejected, level moderate" (`config.noun` is the singular noun, pluralised by appending "s"). `config.filterLevel()` and `config.rejectedCount()` are getters into your state, so the class stays game-agnostic; a screen with one field uses one key, a screen with several fields uses one key per field.
+
 ## Sound
 
 `SoundPolicy({ storage, storagePrefix, target })` (`SoundPolicyOptions`: where the toggle persists and where the first gesture is heard) is the room's sound gate: off by default, one persisted toggle, and nothing plays before the first tap (browsers block audio until a user gesture, and players on a shared TV may not want it). `enabled` (persisted under `${storagePrefix}.sound`; a throwing or empty storage — private windows — degrades to off), `unlocked` (a pointerdown or keydown on `target` has happened) and `canPlay` (both) are reactive getters; `toggle()` flips `enabled`; `dispose()` removes the gesture listeners when the owning screen unmounts. Construct it once with the page's globals, using the same prefix you pass to `GameConnectionManager`:
@@ -255,9 +272,25 @@ The package ships `theme-contract.css`: a baseline for every contract variable (
 
 ## Accessibility
 
-Every component is checked by axe in the jsdom tests via `expectNoViolations(container, "Component")` from `tests/support/a11y.ts`; zero violations is the gate. `color-contrast` is disabled there because jsdom cannot compute it — contrast stays a game-level test (#57). Interactive components are also driven with `userEvent` for tab order and Escape handling, and `tests/reducedMotion.test.ts` fails on any `transition`/`animation` declaration outside an `@media (prefers-reduced-motion: no-preference)` block.
+Every component is checked by axe in the jsdom tests via `expectNoViolations(container, "Component")` from `tests/support/a11y.ts`; zero violations is the gate. `color-contrast` is disabled there because jsdom cannot compute it — contrast stays a game-level test (the `auditContrast` below). Interactive components are also driven with `userEvent` for tab order and Escape handling, and `tests/reducedMotion.test.ts` fails on any `transition`/`animation` declaration outside an `@media (prefers-reduced-motion: no-preference)` block.
 
 A violation that cannot be fixed yet goes into `tests/support/a11yAllowList.ts`: one entry per rule and component, each with a comment explaining why it is acceptable and the issue that tracks the fix.
+
+## Testing (CSS audits)
+
+`@partygame/game-ui/testing` audits a game's `ui/` directory from its test suite — every game with a `ui/` runs both:
+
+```ts
+import { auditContrast, auditReducedMotion } from "@partygame/game-ui/testing";
+
+const report = auditContrast({ uiDir: UI_DIR, minChecked: 17 });
+expect(report.unresolved).toEqual([]);
+expect(report.failures).toEqual([]);
+```
+
+- `auditContrast({ uiDir, minChecked, pairs? })` checks WCAG AA for every same-rule `color`/`background` pair (4.5:1, or 3:1 when the font size statically resolves to at least 24px — 18.66px bold); a pair that only reaches the large-text ratio with an unresolvable size fails. Tokens come from the theme contract plus every `:root` block under `uiDir`. A `color` or `background` naming a custom property defined nowhere lands in `report.unresolved` (file, selector and variable); a variable assigned in some rule — e.g. a per-card `--tape` — is not "nowhere". `pairs` adds cross-rule checks by selector (`{ color: ".fg", background: ".bg" }`, first resolvable match wins). It throws when fewer than `minChecked` same-rule pairs were checked, so the audit cannot pass vacuously.
+- `auditReducedMotion({ uiDir, minGuarded, allow? })` fails on any `transition*`/`animation*` declaration (a value of exactly `none` is exempt) or `scroll-behavior: smooth` outside a `prefers-reduced-motion: no-preference` block, and on `.svelte` files using `transition:`, `in:`, `out:` or `animate:` directives unless the file is in `allow`. It throws below `minGuarded` guarded declarations.
+- The walkers `cssFiles(uiDir)` (every `.css`/`.svelte` style block, comments stripped), `rules(css)` (top-level rules with their media conditions) and `stripComments(css)` are exported for tests that need the raw walk.
 
 Depends on: `@partygame/client-utils`, `@partygame/game-client`, `@partygame/shared`, `svelte`, `uqr`, `zod`
 

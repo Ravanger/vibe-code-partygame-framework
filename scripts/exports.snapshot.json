@@ -199,6 +199,7 @@
           "actionLogMiddleware": {},
           "awardPoints": {},
           "composeLeaderboard": {},
+          "dailyRng": {},
           "defaultCoreStrings": {},
           "defineGame": {},
           "departedIds": {},
@@ -224,6 +225,7 @@
           "shuffle": {},
           "textFilterMiddleware": {},
           "timingMiddleware": {},
+          "utcDay": {},
           "weightedSample": {}
         }
       },
@@ -436,7 +438,10 @@
           "SoundPolicy": {},
           "SoundPolicyOptions": {},
           "SoundStorage": {},
+          "Spotlight": {},
           "StickerShape": {},
+          "TextDraft": {},
+          "TextDraftConfig": {},
           "TypingReporter": {},
           "UiStrings": {},
           "WaitingRoomViewModel": {},
@@ -462,6 +467,7 @@
         },
         "symbols": {
           "ActionBar": {},
+          "Confetti": {},
           "GameControls": {},
           "GameShell": {},
           "LobbyScreen": {},
@@ -476,6 +482,26 @@
           "WelcomeScreen": {}
         },
         "source": true
+      },
+      "./testing": {
+        "target": {
+          "types": "./testing.ts",
+          "svelte": "./testing.ts",
+          "default": "./testing.ts"
+        },
+        "symbols": {
+          "AuditContrastOptions": {},
+          "ContrastPair": {},
+          "ContrastReport": {},
+          "CssRule": {},
+          "ReducedMotionOptions": {},
+          "ReducedMotionReport": {},
+          "auditContrast": {},
+          "auditReducedMotion": {},
+          "cssFiles": {},
+          "rules": {},
+          "stripComments": {}
+        }
       },
       "./theme-contract.css": {
         "target": "./theme-contract.css",

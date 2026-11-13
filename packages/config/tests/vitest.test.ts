@@ -132,6 +132,7 @@ const EXPECTED_SOURCE_ALIASES: Record<string, string> = {
   "@partygame/game-kit": "game-kit/src/index.ts",
   "@partygame/game-ui": "game-ui/src/index.ts",
   "@partygame/game-ui/components": "game-ui/src/components/index.ts",
+  "@partygame/game-ui/testing": "game-ui/testing.ts",
   "@partygame/launcher": "launcher/src/index.ts",
   "@partygame/server": "server/src/index.ts",
   "@partygame/server/bun": "server/src/bun.ts",
@@ -180,7 +181,9 @@ describe("source aliases (stale-dist trap)", () => {
     // SSR-transformed ones from node projects (the provider merges per-project maps by source
     // location), leaving phantom uncovered statements. UI tests resolve those subpaths to dist;
     // the owning project's own tests cover the source. Adding a subpath whose source graph
-    // value-imports a node: builtin means adding it here and to JSDOM_DIST_ONLY in src/vitest.ts.
+    // value-imports a node: builtin means adding it here and to JSDOM_DIST_ONLY in src/vitest.ts,
+    // unless no node project imports it and the package has no dist build (game-ui/testing), in
+    // which case it stays aliased to source.
     expect(aliasesOf(uiTestConfig(base))).toEqual(expectedAliases(JSDOM_DIST_ONLY));
   });
 

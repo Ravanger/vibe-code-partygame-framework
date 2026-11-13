@@ -1,6 +1,12 @@
-import { departedIds, endIfBelowMinimum, ensureMine, required, shuffle } from "@partygame/core";
+import {
+  dailyRng,
+  departedIds,
+  endIfBelowMinimum,
+  ensureMine,
+  required,
+  shuffle,
+} from "@partygame/core";
 import { drawPool, entriesFor } from "@partygame/core/kits";
-import { dailyRng } from "../dailySeed.js";
 import { classifyMatchup } from "../drafts.js";
 import { buildMatchups } from "../matchups.js";
 import { META } from "../meta.js";

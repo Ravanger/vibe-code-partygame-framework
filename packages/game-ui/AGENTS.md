@@ -20,6 +20,7 @@ Generic Svelte 5 viewmodels and components for the screens every game has (welco
 
 - `.`: viewmodels, `AppRouter`/`createAppRouter`, `rankRows`, `podiumSteps`.
 - `./components`: StatusPanel, Timer, PlayerSticker, Podium, QrCode, ActionBar, ...
+- `./testing`: Node-only CSS audits for game test suites (`cssFiles`, `rules`, `stripComments`, `auditContrast`, `auditReducedMotion`); like `game-client`'s, it lives at the package root, not in `src/`.
 - `./theme-contract.css`: baseline values for every contract variable, the `main.tv` base sizes for TV displays, plus `.sr-only`; games import it first in `app.css` and override.
 
 ## Tests

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Spotlight } from "../../ui/viewmodels/Spotlight.svelte.js";
+import { Spotlight } from "../src/index.js";
 
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());

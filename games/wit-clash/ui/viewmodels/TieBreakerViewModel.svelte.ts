@@ -1,5 +1,4 @@
-import { OptionsReader, PhaseClock, TypingReporter } from "@partygame/game-ui";
-import { ErrorCode } from "@partygame/shared";
+import { OptionsReader, PhaseClock, TextDraft, TypingReporter } from "@partygame/game-ui";
 import { ACTION, ANSWER_MAX_LENGTH } from "../../src/actionNames.js";
 import type { CastVotePayload, SubmitAnswerPayload } from "../../src/actions.js";
 import { DEFAULT_OPTIONS, type WitClashOptions, WitClashOptionsSchema } from "../../src/options.js";
@@ -15,9 +14,12 @@ export interface TieBreakerChoice {
   isMine: boolean;
 }
 
+/** The single draft key of the tie-breaker answer. */
+const DRAFT_KEY = "tie-breaker";
+
 /** The final tie-breaker: contenders answer, everyone else votes, then the result is shown. */
 export class TieBreakerViewModel {
-  private draftText = $state("");
+  private readonly drafts: TextDraft;
   private readonly clock: PhaseClock;
   private readonly recap: MatchupRecap;
   private readonly typing: TypingReporter;
@@ -30,6 +32,12 @@ export class TieBreakerViewModel {
       WitClashOptionsSchema,
       DEFAULT_OPTIONS,
     );
+    this.drafts = new TextDraft(manager, {
+      maxLength: ANSWER_MAX_LENGTH,
+      filterLevel: () => this.options.current.filterLevel,
+      rejectedCount: () => manager.state?.rejectedTexts,
+      noun: "answer",
+    });
     this.clock = new PhaseClock(manager, () => this.options.current[this.durationOption()]);
     this.recap = new MatchupRecap(manager);
     this.typing = new TypingReporter((typing) => {
@@ -71,15 +79,15 @@ export class TieBreakerViewModel {
   }
 
   get draft(): string {
-    return this.draftText;
+    return this.drafts.draft(DRAFT_KEY);
   }
 
   get charsRemaining(): number {
-    return ANSWER_MAX_LENGTH - this.draftText.length;
+    return this.drafts.charsRemaining(DRAFT_KEY);
   }
 
   get canSubmit(): boolean {
-    return this.draftText.trim().length > 0 && this.draftText.length <= ANSWER_MAX_LENGTH;
+    return this.drafts.canSubmit(DRAFT_KEY);
   }
 
   get hasSubmitted(): boolean {
@@ -87,17 +95,11 @@ export class TieBreakerViewModel {
   }
 
   get rejectionReason(): string {
-    const error = this.manager.lastServerError;
-    return error?.code === ErrorCode.CONTENT_REJECTED ? error.message : "";
+    return this.drafts.rejectionReason;
   }
 
   get moderationLine(): string {
-    const state = this.manager.state;
-    if (!state || !this.manager.isHost) return "";
-    const level = this.options.current.filterLevel;
-    if (level === "off") return "";
-    const count = state.rejectedTexts;
-    return `${count} ${count === 1 ? "answer" : "answers"} rejected, level ${level}`;
+    return this.drafts.moderationLine;
   }
 
   get choices(): TieBreakerChoice[] {
@@ -140,7 +142,7 @@ export class TieBreakerViewModel {
   }
 
   setDraft(value: string): void {
-    this.draftText = value;
+    this.drafts.setDraft(DRAFT_KEY, value);
     this.typing.keystroke();
   }
 
@@ -148,7 +150,7 @@ export class TieBreakerViewModel {
     const matchup = this.matchup;
     if (!this.canSubmit || !matchup) return;
     this.typing.stop();
-    const payload: SubmitAnswerPayload = { matchupId: matchup.id, answer: this.draftText.trim() };
+    const payload: SubmitAnswerPayload = { matchupId: matchup.id, answer: this.draft.trim() };
     const result = await this.manager.sendAction(ACTION.SUBMIT_ANSWER, payload);
     if (result.ok) this.manager.dismissError();
   }

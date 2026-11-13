@@ -8,12 +8,12 @@
   --white: #ffffff;
   --ink: #2b2235;
   --ink-soft: #5a4f66;
-  --color-1: #ff5fa2;
+  --color-1: #f04f9a;
   --color-2: #ffd23f;
   --color-3: #3ddc97;
   --color-4: #4cc9f0;
   --accent: #7b5cff;
-  --danger: #e5383b;
+  --danger: #d93036;
   --disabled: #ddd3c2;
   --fill: #fff8ea;
   --spark: #ff9ecb;
@@ -112,9 +112,6 @@ h3 {
   font-size: calc(var(--fs-2) * var(--scale, 1));
   letter-spacing: 0.02em;
   cursor: pointer;
-  transition:
-    transform 0.08s,
-    box-shadow 0.08s;
 }
 
 .btn:active:not(:disabled) {
@@ -244,4 +241,12 @@ main.tv .room-chip {
   letter-spacing: 0.04em;
   text-align: center;
   transform: rotate(-2deg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .btn {
+    transition:
+      transform 0.08s,
+      box-shadow 0.08s;
+  }
 }
