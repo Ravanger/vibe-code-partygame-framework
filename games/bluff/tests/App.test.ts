@@ -43,6 +43,26 @@ describe("App", () => {
     expect(screen.getByText(/connecting to game server/i)).toBeInTheDocument();
   });
 
+  it("moves focus to the reveal heading when the phase changes to Reveal", () => {
+    const c = connectedClient({ role: "host" });
+    addSeat(c.state, "ann-12345");
+    c.state.canStart = true;
+    render(App, { manager: c.manager });
+
+    c.state.phase = "Writing";
+    c.patch();
+    flushSync();
+
+    c.state.phase = "Reveal";
+    c.state.roundNumber = 1;
+    c.state.totalRounds = 3;
+    c.patch();
+    flushSync();
+
+    const heading = screen.getByRole("heading", { name: "Round 1 of 3" });
+    expect(document.activeElement).toBe(heading);
+  });
+
   it("shows a waiting screen to a late joiner", () => {
     const c = connectedClient({ isActive: false }, "Writing");
     render(App, { manager: c.manager });

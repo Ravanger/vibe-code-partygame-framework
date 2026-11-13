@@ -11,7 +11,7 @@ const vm = untrack(() => new RevealViewModel(manager));
 </script>
 
 <div class="reveal stack">
-  <p class="round">{vm.roundLabel}</p>
+  <h2 class="round" tabindex="-1">{vm.roundLabel}</h2>
   <PhaseTimer clock={vm.clock} />
 
   <ul class="choices">
@@ -44,6 +44,7 @@ const vm = untrack(() => new RevealViewModel(manager));
 
 .round {
   margin: 0;
+  font-size: inherit;
   opacity: 0.7;
 }
 
