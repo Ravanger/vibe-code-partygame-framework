@@ -6,8 +6,17 @@ import { BluffState } from "../src/state.js";
 
 type Turn = BotTurn<BluffState>;
 
-/** The fakes a bot writes; plausibility is not the point, showing up is. */
-const FAKES = ["The moon", "42", "A sandwich", "Tuesday", "Absolutely not"];
+/** The fakes a bot writes: one per seat, rotated by round, so no two seats collide. */
+const FAKES = [
+  "The moon",
+  "42",
+  "A sandwich",
+  "Tuesday",
+  "Absolutely not",
+  "A purple ladder",
+  "The sound of rain",
+  "My neighbour's cat",
+];
 
 /** The bluff game's bot brain: writes a fake, then votes for something that is not its own. */
 export class BluffBot implements BotStrategy<BluffState> {
@@ -16,7 +25,7 @@ export class BluffBot implements BotStrategy<BluffState> {
     if (state.phase === PHASE.Writing && !state.progress.get(turn.playerId)) {
       turn.once("fake", () =>
         turn.later("think", () =>
-          turn.act(ACTION.SUBMIT_FAKE, { text: turn.pick(FAKES) ?? "No idea" }, "fakes"),
+          turn.act(ACTION.SUBMIT_FAKE, { text: this.fakeFor(state, turn.playerId) }, "fakes"),
         ),
       );
     }
@@ -31,6 +40,12 @@ export class BluffBot implements BotStrategy<BluffState> {
         }),
       );
     }
+  }
+
+  /** The fake a seat writes: its slot in the pool by seat and round, so no two seats collide. */
+  private fakeFor(state: BluffState, playerId: string): string {
+    const seat = [...state.players.keys()].indexOf(playerId);
+    return (seat >= 0 ? FAKES[(state.roundNumber + seat) % FAKES.length] : undefined) ?? "No idea";
   }
 }
 

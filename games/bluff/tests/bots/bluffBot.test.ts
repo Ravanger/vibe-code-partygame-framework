@@ -1,4 +1,5 @@
 import { type BotOptions, BotPlayer, type BotRoom } from "@partygame/bots";
+import { PlayerSchema } from "@partygame/shared/schema";
 import { describe, expect, it } from "vitest";
 import { BluffBot, bluffBot, bluffKit } from "../../bots/bluffBot.js";
 import { ACTION } from "../../src/actionNames.js";
@@ -87,8 +88,9 @@ describe("bluffBot", () => {
     expect(room.sent).toEqual([]);
   });
 
-  it("writes a fake once after a think delay", () => {
+  it("writes its seat's fake once after a think delay", () => {
     const { room, clock } = setup({ thinkMs: [100, 300] });
+    room.state.players.set(ME, new PlayerSchema());
     enter(room, PHASE.Writing);
     expect(room.sent).toEqual([]);
     expect(clock.queue.map((entry) => entry.ms)).toEqual([100]);
@@ -102,12 +104,34 @@ describe("bluffBot", () => {
     expect(clock.queue).toHaveLength(0);
   });
 
-  it("falls back to a plain fake when the pick lands past the list", () => {
-    const { room, clock } = setup({ thinkMs: [100, 300], rng: () => 1 });
+  it("falls back to a plain fake when it is not in the roster", () => {
+    const { room, clock } = setup({ thinkMs: [100, 300] });
     enter(room, PHASE.Writing);
     clock.flush();
     expect(room.sent).toEqual([
       { type: "ACTION", payload: { text: "No idea", type: ACTION.SUBMIT_FAKE } },
+    ]);
+  });
+
+  it("writes the fake of its seat in the roster", () => {
+    const { room, clock } = setup({ thinkMs: [100, 300] });
+    room.state.players.set("other-000001", new PlayerSchema());
+    room.state.players.set(ME, new PlayerSchema());
+    enter(room, PHASE.Writing);
+    clock.flush();
+    expect(room.sent).toEqual([
+      { type: "ACTION", payload: { text: "42", type: ACTION.SUBMIT_FAKE } },
+    ]);
+  });
+
+  it("rotates its seat's fake by round", () => {
+    const { room, clock } = setup({ thinkMs: [100, 300] });
+    room.state.players.set(ME, new PlayerSchema());
+    room.state.roundNumber = 2;
+    enter(room, PHASE.Writing);
+    clock.flush();
+    expect(room.sent).toEqual([
+      { type: "ACTION", payload: { text: "A sandwich", type: ACTION.SUBMIT_FAKE } },
     ]);
   });
 

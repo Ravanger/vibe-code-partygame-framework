@@ -43,9 +43,7 @@ const options = async (): Promise<PlaySessionOptions<BluffState>> => ({
     },
   ],
   player: (room, playerId, io) => new TerminalPlayer(room, playerId, io, bluffTerminal()),
-  // The shortest phases the option schema allows keep the whole game under a minute even when
-  // two bots draw the same fake and one of them is refused without retrying, which lets Writing
-  // run out its clock.
+  // The shortest phases the option schema allows keep the whole game under a minute.
   roomOptions: { rounds: 1, writingSeconds: 10, votingSeconds: 5, revealSeconds: 2 },
   bot: { thinkMs: [0, 30], reactMs: [0, 30] },
 });
