@@ -1062,7 +1062,7 @@ Write text that mixes literals and values as one template literal, `{`${choice.n
 | `GameShell` | `router: AppRouter<TState, TScreens>`, `controls: GameControlsViewModel<TState>`, `headingSelector?: string`; snippets `wordmark`, `welcome`, `joinNextRound`, `phase(phase)` |
 | `WelcomeScreen` | `vm: WelcomeViewModel<TState>`, `title: string`, `tagline: string`, `hero?: Snippet` (replaces the wordmark and tagline), `howToPlay?: Snippet` (rendered at the bottom of the screen); owns the `autoJoinIfRequested()` effect for share links |
 | `LobbyScreen` | `vm: WaitingRoomViewModel<TState>`, `settings?: LobbySettingsViewModel<TState>` (rendered below the players), `extra?: Snippet` (rendered below the settings); every label from the `UiStrings` table, chips styled by the game |
-| `StatusPanel` | `title: string`, `detail?: string`, `tone: "wait" \| "done" \| "info"` |
+| `StatusPanel` | `title: string`, `detail?: string`, `tone: "wait" \| "done" \| "info"`, `heading?: boolean` (renders the title as a focusable `h2` for screen-change focus) |
 | `Timer` | `seconds: number`, `fraction: number` (0 to 1; from `PhaseClock.fraction`), `announcement?: string` (polite live region text) |
 | `PhaseTimer` | `clock: PhaseClock` — renders the `Timer` from the clock's seconds, fraction and announcement |
 | `PhaseBar` | `clock: PhaseClock` — a "next up in Ns" label (from `UiStrings.nextUpIn`) over a draining track |
