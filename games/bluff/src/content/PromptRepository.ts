@@ -39,7 +39,7 @@ export function promptsFromArray(prompts: Prompt[]): PromptRepository {
 export async function loadPrompts(dir: string): Promise<PromptRepository> {
   const packs = await loadJsoncDirWithFiles(dir, PromptPackSchema, {
     idOf: (pack) => pack.id,
-    label: "Prompt",
+    label: "Pack",
   });
   const seenIn = new Map<string, string>();
   for (const pack of packs) {

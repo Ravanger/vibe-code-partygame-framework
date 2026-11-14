@@ -76,7 +76,7 @@ describe("loadPrompts", () => {
       ["a.jsonc", packText("same", [prompt("a1")])],
       ["b.jsonc", packText("same", [prompt("b1")])],
     );
-    await expect(loadPrompts(dir)).rejects.toThrow('Duplicate Prompt id "same" in b.jsonc');
+    await expect(loadPrompts(dir)).rejects.toThrow('Duplicate Pack id "same" in b.jsonc');
   });
 
   it("rejects an empty prompt list", async () => {
@@ -90,7 +90,7 @@ describe("loadPrompts", () => {
   });
 
   it("rejects a missing directory", async () => {
-    await expect(loadPrompts(join(dir, "nope"))).rejects.toThrow("Prompt directory not found");
+    await expect(loadPrompts(join(dir, "nope"))).rejects.toThrow("Pack directory not found");
   });
 });
 
