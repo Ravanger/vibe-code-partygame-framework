@@ -211,7 +211,7 @@ Locally the pre-commit hook runs the same check on staged files. To commit an in
 
 ## Knip configuration hints on headless games
 
-`bun run check:unused` matches every game against one `games/*` workspace block in `knip.json`, which lists the entry and project patterns of a full game (`server.ts`, `launch.ts`, `bots/cli.ts`, `terminal/*.ts`, `ui/**`, `bots/**`, `**/*.svelte`). A game that lacks some of those files prints one line per pattern that matches nothing, under "Configuration hints":
+`bun run check:unused` matches every game against one `games/*` workspace block in `knip.json`, which lists the entry and project patterns of a full game (`server.ts`, `launch.ts`, `bots/cli.ts`, `terminal/*.ts`, `ui/**`, `bots/**`, `terminal/**`, `**/*.svelte`). A game that lacks some of those files prints one line per pattern that matches nothing, under "Configuration hints":
 
 ```text
 Refine entry pattern (no matches)

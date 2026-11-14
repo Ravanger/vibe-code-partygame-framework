@@ -126,6 +126,7 @@ The handler receives an `AudienceActionContext`: like `ActionContext` without `p
 single method, `once(scope)`. It returns `true` the first time that key uses that scope and `false` afterwards — count one vote per
 audience member per option without any per-member state (write the counts into synced state as plain counters). The host clears
 every scope when the phase changes (`RuntimeHost.audienceOnce`, cleared in `notifyTransition`), so a new round accepts fresh votes.
+The host-side implementation is the exported `AudienceScopes` class (from `@partygame/core`): `once(audienceKey, scope)` and `clear()`, shared by `FakeHost`, `ReplayHost` and the server room.
 
 Refusals mirror the player path: a seated player who sends an audience action gets `NOT_ALLOWED`; an audience key that sends
 anything but an audience action gets `UNAUTHORIZED`. Payload validation, middleware and the failure policy are identical to
@@ -383,8 +384,9 @@ when a logged transition or enter contradicts what the replayed runtime actually
 its own consequence run, so a tampered log throws naming the mismatch.
 
 `ActionLogSchema` (from `@partygame/core`) is the zod schema behind that validation: strict objects over
-the exact log shape. It is also the gate for untrusted logs — replay bundles and spectators (#19) parse
-with it before anything else runs. `ReplayHost` (from `@partygame/core/replay`) is the host `replayLog`
+the exact log shape, with `ACTION_LOG_ENTRY_KINDS` as the single list of entry kinds behind the schema's
+`kind` enum and the replay walk. It is also the gate for untrusted logs — replay bundles and spectators (#19)
+parse with it before anything else runs. `ReplayHost` (from `@partygame/core/replay`) is the host `replayLog`
 drives: a minimal `RuntimeHost` with a manual clock (`advance(ms)`), seats and the given seed, and no
 recording or assertion helpers — client traffic is dropped. Build one directly to drive a `GameRuntime`
 over a log yourself.
@@ -834,7 +836,7 @@ handed to the server. A state class with no own fields beyond `BaseGameState` ne
 
 ### Testing a game
 ```ts
-import { bootTestServer, waitUntil, collectMessages, seatPlayers, stateOf } from "@partygame/server/testing";
+import { bootTestServer, waitUntil, collectMessages, seatPlayers, stateOf, waitForOwnEntry } from "@partygame/server/testing";
 
 const t = await bootTestServer({ games });            // free port, default transport, short reconnect window
 const room = await t.createRoom("button");            // server-side Room: inspect room.state
@@ -856,6 +858,7 @@ bob.errors;                                            // every well-formed ERRO
 ```
 `joinPlayer(t, room, n, stateClass)` joins one player without a name; `TestPlayer.setName(name?)` readies it.
 Every join sends a seat secret: `t.seatSecretFor(playerId)` returns the stable per-player-id value, so a test reconnect presents the same one.
+`waitForOwnEntry(state, playerId, pick)` polls until the client's decoded state holds exactly one `.view()` entry keyed by `playerId`, and fails with a label when another player's entry shows up (an isolation violation).
 A runnable example is the fixture in `packages/server/tests/fixtures/buzzer.ts`.
 
 ## Client SDK
@@ -1021,7 +1024,8 @@ The router drives `GameShell` (from `@partygame/game-ui/components`), the chrome
   import Lobby from "./Lobby.svelte";
   import Round from "./Round.svelte";
   import Welcome from "./Welcome.svelte";
-  import { manager, isGameOver } from "./manager.js";
+  import { manager } from "./manager.js";
+  import { isGameOver } from "../src/isGameOver.js";
 
   const SCREENS = {
     [LOBBY_PHASE]: { component: Lobby, waitingLabel: "Waiting in the lobby", banner: "" },
