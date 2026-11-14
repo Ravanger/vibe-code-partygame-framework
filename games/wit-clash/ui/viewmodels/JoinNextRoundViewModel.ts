@@ -1,4 +1,4 @@
-import { JoinNextRoundViewModel as BaseJoinNextRound } from "@partygame/game-ui";
+import { JoinNextRoundViewModel as BaseJoinNextRound, roundLabel } from "@partygame/game-ui";
 import type { WitClashState } from "../../src/state.js";
 import type { WitClashManager } from "../manager.js";
 import { PHASE_SCREENS } from "../screens/index.js";
@@ -31,6 +31,6 @@ export class JoinNextRoundViewModel extends BaseJoinNextRound<WitClashState, typ
   /** The current round, e.g. "Round 2 of 3"; empty before the first round. */
   get roundLabel(): string {
     const state = this.manager.state;
-    return state?.roundNumber ? `Round ${state.roundNumber} of ${state.totalRounds}` : "";
+    return state?.roundNumber ? roundLabel(state.roundNumber, state.totalRounds) : "";
   }
 }
