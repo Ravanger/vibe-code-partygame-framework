@@ -41,9 +41,13 @@ describe("leaders", () => {
     expect(leaders(rows).map((r) => r.name)).toEqual(["a", "b"]);
   });
 
-  it("drops leavers even when they hold the top score", () => {
+  it("returns the top seated group when a leaver holds the top score", () => {
     const rows = rankRows([row("a", 10, true), row("b", 8)]);
-    expect(leaders(rows)).toEqual([]);
+    expect(leaders(rows).map((r) => r.name)).toEqual(["b"]);
+  });
+
+  it("is empty when every row is a leaver", () => {
+    expect(leaders(rankRows([row("a", 10, true), row("b", 8, true)]))).toEqual([]);
   });
 });
 
