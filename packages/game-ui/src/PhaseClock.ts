@@ -37,11 +37,9 @@ export class PhaseClock {
     return this.readTotalSeconds();
   }
 
-  /**
-   * No-op kept for compatibility.
-   * @deprecated The countdown now starts and stops with its readers; this no longer does anything.
-   */
-  destroy(): void {
-    this.countdown.destroy();
+  /** The share of the phase still running, from 0 to 1; 0 when the phase has no length. */
+  get fraction(): number {
+    const total = this.totalSeconds;
+    return total > 0 ? Math.min(1, Math.max(0, this.secondsLeft / total)) : 0;
   }
 }

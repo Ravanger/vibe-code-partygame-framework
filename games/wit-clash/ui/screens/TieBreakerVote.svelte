@@ -1,8 +1,6 @@
 <script lang="ts">
-import { StatusPanel, Timer } from "@partygame/game-ui/components";
+import { ChoiceBoard, PhaseTimer, ScreenTitle, StatusPanel } from "@partygame/game-ui/components";
 import { untrack } from "svelte";
-import ScreenTitle from "../components/ScreenTitle.svelte";
-import VoteBoard from "../components/VoteBoard.svelte";
 import type { WitClashManager } from "../manager.js";
 import { TieBreakerViewModel } from "../viewmodels/TieBreakerViewModel.svelte.js";
 
@@ -16,7 +14,7 @@ $effect(() => () => vm.destroy());
 <div class="tie-breaker">
   <div class="top">
     <ScreenTitle title="Tie-breaker!" />
-    <Timer seconds={vm.secondsLeft} total={vm.totalSeconds} announcement={vm.announcement} />
+    <PhaseTimer clock={vm.clock} />
   </div>
 
   <div class="question card taped">
@@ -29,7 +27,7 @@ $effect(() => () => vm.destroy());
     <StatusPanel tone="wait" title="Sit tight while the others vote." />
   {/if}
 
-  <VoteBoard choices={vm.choices} canVote={vm.canVote} onvote={(id) => vm.vote(id)} />
+  <ChoiceBoard choices={vm.choices} canVote={vm.canVote} onvote={(id) => vm.vote(id)} versus="VS" />
 
   <p class="turnout"><span class="chip chip--paper">{`${vm.votesCast} of ${vm.votesExpected} voted`}</span></p>
 </div>

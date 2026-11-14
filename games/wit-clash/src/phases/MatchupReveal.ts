@@ -1,8 +1,9 @@
-import { awardPoints, required } from "@partygame/core";
+import { awardPoints, endIfBelowMinimum, required } from "@partygame/core";
 import { tallyVotes } from "@partygame/core/kits";
+import { META } from "../meta.js";
 import { PHASE } from "../phaseNames.js";
 import type { WitClashContext, WitClashPhase } from "../private.js";
-import { Round } from "../round.js";
+import { Round, TOO_FEW_PLAYERS_NOTICE } from "../round.js";
 import { settleMatchup } from "../scoring.js";
 import { TieBreakerFlow } from "../tieBreakerFlow.js";
 
@@ -16,7 +17,7 @@ const reveal = (ctx: WitClashContext): void => {
     answer.votes = tally.get(answer.id) ?? 0;
     answer.authorId = round.authorOf(answer.id);
   }
-  round.remember();
+  priv.roster.remember(ctx);
   matchup.isRevealed = true;
   state.votesCast = [...tally.values()].reduce((n, v) => n + v, 0);
   const awards = settleMatchup(
@@ -34,7 +35,7 @@ const reveal = (ctx: WitClashContext): void => {
     priv.roundAwards.push(award);
   }
   for (const answer of matchup.answers) {
-    answer.authorName = required(priv.names[answer.authorId], "author name");
+    answer.authorName = priv.roster.nameOf(ctx, answer.authorId);
     answer.isWinner = awards.some((a) => a.playerId === answer.authorId && a.isWinner);
   }
   matchup.isClash = awards.some((a) => a.isClash);
@@ -61,7 +62,7 @@ export const MatchupReveal: WitClashPhase = {
   duration: (ctx) => ctx.options.revealSeconds * 1000,
   onEnter: reveal,
   onRosterChange: (ctx) => {
-    new Round(ctx).endIfTooFewPlayers();
+    endIfBelowMinimum(ctx, META.minPlayers, TOO_FEW_PLAYERS_NOTICE);
   },
   onTimeout: (ctx) => {
     const { activeMatchupIndex, matchups } = ctx.state;

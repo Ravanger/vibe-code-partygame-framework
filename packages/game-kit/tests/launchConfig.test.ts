@@ -1,6 +1,7 @@
 import { DemoTable } from "@partygame/bots";
 import { describe, expect, it } from "vitest";
 import { buildLaunchConfig, demoTableOptions } from "../src/index.js";
+import { demoBotOptions } from "../src/launchConfig.js";
 import { TAP_ROOM, TapGame, TapState, tapKit } from "./fixtures/tapGame.js";
 
 const isFinished = (state: TapState): boolean => state.done;
@@ -31,6 +32,19 @@ describe("buildLaunchConfig", () => {
     expect(config.demo?.max).toBe(5);
   });
 
+  it("forwards the ports option to the launcher config", () => {
+    const config = buildLaunchConfig(
+      { ...base, botKit: tapKit() },
+      { gameDir: "/game", ports: { clientDev: 4000 } },
+    );
+    expect(config.ports).toEqual({ clientDev: 4000 });
+  });
+
+  it("omits ports when none are given", () => {
+    const config = buildLaunchConfig({ ...base, botKit: tapKit() }, { gameDir: "/game" });
+    expect(config.ports).toBeUndefined();
+  });
+
   it("keeps the declaration's botKit for --bots even when the demo overrides the kit", () => {
     const kit = tapKit();
     const config = buildLaunchConfig(
@@ -44,6 +58,18 @@ describe("buildLaunchConfig", () => {
     const config = buildLaunchConfig({ ...base, botKit: tapKit() }, { gameDir: "/game" });
     const table = config.demo?.create({ endpoint: "ws://127.0.0.1:1", apiPort: 2, bots: 2 });
     expect(table).toBeInstanceOf(DemoTable);
+  });
+
+  it("omits the bot and demo sections when no kit is declared", () => {
+    const config = buildLaunchConfig(base, { gameDir: "/game" });
+    expect(config.bots).toBeUndefined();
+    expect(config.demo).toBeUndefined();
+  });
+
+  it("keeps only the demo section when a demo kit stands in for a missing botKit", () => {
+    const config = buildLaunchConfig({ ...base, demo: { kit: tapKit() } }, { gameDir: "/game" });
+    expect(config.bots).toBeUndefined();
+    expect(config.demo?.min).toBe(1);
   });
 });
 
@@ -102,5 +128,24 @@ describe("demoTableOptions", () => {
       { endpoint: "ws://x", apiPort: 1, bots: 1 },
     );
     expect(options.bot).toBeUndefined();
+  });
+
+  it("throws when no kit resolves", () => {
+    expect(() => demoTableOptions(base, { endpoint: "ws://x", apiPort: 1, bots: 2 })).toThrowError(
+      /no bot kit/,
+    );
+  });
+
+  it("resolves demo bot options identically in demoCli and the launcher", () => {
+    const log = (line: string) => line;
+    const declared = { thinkMs: [1, 2] as const, reactMs: [3, 4] as const };
+    // The expression demoCli passes to DemoRun (log is the lowest default) must equal what the
+    // launcher resolves for the same inputs, its connection carrying only the log.
+    expect(demoBotOptions({ log }, declared)).toEqual(
+      demoTableOptions(
+        { ...base, botKit: tapKit(), demo: { bot: declared } },
+        { endpoint: "ws://x", apiPort: 1, bots: 1, bot: { log } },
+      ).bot,
+    );
   });
 });

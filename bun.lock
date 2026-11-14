@@ -33,10 +33,12 @@
         "@partygame/game-kit": "workspace:*",
         "@partygame/game-ui": "workspace:*",
         "@partygame/shared": "workspace:*",
+        "@partygame/terminal": "workspace:*",
         "zod": "^4.6.5",
       },
       "devDependencies": {
         "@partygame/config": "workspace:*",
+        "@partygame/server": "workspace:*",
         "@sveltejs/vite-plugin-svelte": "^7.3.1",
         "@testing-library/jest-dom": "^6.10.0",
         "@testing-library/svelte": "^5.4.2",

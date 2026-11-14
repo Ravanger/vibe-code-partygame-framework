@@ -1,5 +1,5 @@
 <script lang="ts">
-import { ActionBar, PlayerSticker } from "@partygame/game-ui/components";
+import { ActionBar, PlayerSticker, Podium } from "@partygame/game-ui/components";
 import { untrack } from "svelte";
 import type { BluffManager } from "../manager.js";
 import { ResultsViewModel } from "../viewmodels/ResultsViewModel.js";
@@ -12,10 +12,12 @@ const vm = untrack(() => new ResultsViewModel(manager));
 <div class="results stack">
   <h1>{vm.headline}</h1>
 
-  <ul class="board">
-    {#each vm.rows as row, i (row.playerId)}
-      <li class="card" class:winner={i === 0 && row.score > 0} class:left={row.hasLeft}>
-        <span class="rank">{`#${i + 1}`}</span>
+  <Podium steps={vm.podiumSteps} />
+
+  <ul class="board" aria-label="Standings">
+    {#each vm.rows as row (row.playerId)}
+      <li class="card" class:winner={row.rank === 1 && row.score > 0} class:left={row.hasLeft}>
+        <span class="rank">{`#${row.rank}`}</span>
         <PlayerSticker name={row.name} playerId={row.playerId} size={36} />
         <span class="name">{`${row.name}${row.hasLeft ? " (left)" : ""}`}</span>
         <span class="score">{row.score}</span>

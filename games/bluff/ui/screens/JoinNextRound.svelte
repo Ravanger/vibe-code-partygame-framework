@@ -1,12 +1,13 @@
 <script lang="ts">
+import { JoinNextRoundViewModel } from "@partygame/game-ui";
 import { NameInput, StatusPanel } from "@partygame/game-ui/components";
 import { untrack } from "svelte";
 import type { BluffManager } from "../manager.js";
-import { JoinNextRoundViewModel } from "../viewmodels/JoinNextRoundViewModel.js";
+import { PHASE_SCREENS } from "./index.js";
 
 const { manager }: { manager: BluffManager } = $props();
 
-const vm = untrack(() => new JoinNextRoundViewModel(manager));
+const vm = untrack(() => new JoinNextRoundViewModel(manager, PHASE_SCREENS));
 
 $effect(() => () => vm.destroy());
 </script>

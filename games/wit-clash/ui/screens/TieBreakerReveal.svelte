@@ -1,9 +1,7 @@
 <script lang="ts">
-import { StatusPanel } from "@partygame/game-ui/components";
+import { PhaseBar, ScreenTitle, StatusPanel } from "@partygame/game-ui/components";
 import { untrack } from "svelte";
 import MatchupCard from "../components/MatchupCard.svelte";
-import NextUpBar from "../components/NextUpBar.svelte";
-import ScreenTitle from "../components/ScreenTitle.svelte";
 import type { WitClashManager } from "../manager.js";
 import { TieBreakerViewModel } from "../viewmodels/TieBreakerViewModel.svelte.js";
 
@@ -18,7 +16,7 @@ $effect(() => () => vm.destroy());
   <ScreenTitle title="Tie-breaker!" />
   {#if vm.revealed}
     <MatchupCard matchup={vm.revealed} myVoteId={vm.myVoteId} flip />
-    <NextUpBar seconds={vm.secondsLeft} total={vm.totalSeconds} />
+    <PhaseBar clock={vm.clock} />
   {:else}
     <StatusPanel tone="wait" title="Revealing..." />
   {/if}

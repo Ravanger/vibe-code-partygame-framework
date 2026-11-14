@@ -1,4 +1,5 @@
-import { defineGame } from "@partygame/core";
+import { createTextFilter } from "@partygame/content/filter";
+import { actionLogMiddleware, defineGame, textFilterMiddleware } from "@partygame/core";
 import type { PromptRepository } from "./content/PromptRepository.js";
 import { META } from "./meta.js";
 import { type BluffOptions, BluffOptionsSchema } from "./options.js";
@@ -24,6 +25,16 @@ export function createBluffGame({ prompts }: BluffConfig) {
     maxPlayers: META.maxPlayers,
     startPhase: PHASE.Writing,
     options: BluffOptionsSchema,
+    filterLevel: (options) => options.filterLevel,
+    middleware: [
+      actionLogMiddleware(),
+      textFilterMiddleware(createTextFilter(), {
+        onRejected: (ctx) => {
+          const state = ctx.state as BluffState;
+          ++state.rejectedTexts;
+        },
+      }),
+    ],
     createPrivateState: () => new BluffPrivate(prompts),
     phases: {
       [PHASE.Writing]: Writing,
@@ -31,6 +42,9 @@ export function createBluffGame({ prompts }: BluffConfig) {
       [PHASE.Reveal]: Reveal,
       [PHASE.Results]: Results,
     },
-    onReturnToLobby: (ctx) => new Round(ctx).clearGame(),
+    onReturnToLobby: (ctx) => {
+      new Round(ctx).clearGame();
+      ctx.state.rejectedTexts = 0;
+    },
   });
 }

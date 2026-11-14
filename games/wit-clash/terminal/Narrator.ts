@@ -2,8 +2,7 @@ import { LOBBY_PHASE } from "@partygame/shared";
 import { PHASE } from "../src/phaseNames.js";
 import { CLASH_BONUS, POINTS_PER_VOTE, WINNER_BONUS } from "../src/scoring.js";
 import type { Matchup, WitClashState } from "../src/state.js";
-
-const TIE_BREAKER_BONUS = 1;
+import { TIE_BREAKER_BONUS } from "../src/tieBreaker.js";
 
 /** Turns successive room states into the lines a spectator would read, each line once. */
 export class Narrator {

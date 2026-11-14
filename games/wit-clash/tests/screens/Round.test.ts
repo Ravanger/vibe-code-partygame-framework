@@ -2,6 +2,7 @@ import { ErrorCode } from "@partygame/shared";
 import { fireEvent, render, screen, within } from "@testing-library/svelte";
 import { flushSync } from "svelte";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ANSWER_MAX_LENGTH } from "../../src/actionNames.js";
 import App from "../../ui/App.svelte";
 import CategoryVote from "../../ui/screens/CategoryVote.svelte";
 import MatchupReveal from "../../ui/screens/MatchupReveal.svelte";
@@ -95,6 +96,14 @@ describe("Prompting screen", () => {
     c.state.selectedCategory = "b";
     render(Prompting, { manager: c.manager });
     expect(screen.getByText("E Name b")).toBeInTheDocument();
+  });
+
+  it("caps the answer box at the shared answer limit", () => {
+    render(Prompting, { manager: writing().c.manager });
+    expect(screen.getByLabelText("Your answer")).toHaveAttribute(
+      "maxlength",
+      String(ANSWER_MAX_LENGTH),
+    );
   });
 
   it("submits the typed answer and moves to the next prompt", async () => {
@@ -348,7 +357,7 @@ describe("Matchup reveal screen", () => {
 
   it("waits until the matchup is revealed", () => {
     render(MatchupReveal, { manager: connectedClient({}, "MatchupReveal").manager });
-    expect(screen.getByText("Revealing...")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Revealing..." })).toBeInTheDocument();
   });
 });
 
@@ -442,7 +451,7 @@ describe("Results screen", () => {
       TestURL.revokeObjectURL.mockReset();
     });
 
-    it("lets the host download the bundle as JSON", async () => {
+    it("lets the host download the bundle as JSON through the shared button", async () => {
       const c = results("host", true);
       c.room.reply = { bundleVersion: 1, name: "WitClash", snapshots: [] };
       const anchors = clickedAnchors();
@@ -455,18 +464,6 @@ describe("Results screen", () => {
       expect(JSON.parse(await blob.text())).toMatchObject({ name: "WitClash" });
       expect(anchors).toHaveLength(1);
       expect(anchors[0]?.download).toBe("witclash-replay.json");
-      expect(TestURL.revokeObjectURL).toHaveBeenCalledWith("blob:test");
-    });
-
-    it("downloads under a generic name when the bundle has no game name", async () => {
-      const c = results("host", true);
-      c.room.reply = { bundleVersion: 1, snapshots: [] };
-      const anchors = clickedAnchors();
-      vi.stubGlobal("URL", TestURL);
-      render(Results, { manager: c.manager });
-      await fireEvent.click(screen.getByRole("button", { name: "Export replay" }));
-      expect(anchors).toHaveLength(1);
-      expect(anchors[0]?.download).toBe("replay-replay.json");
     });
 
     it("offers the export on the mid-round bar too", () => {
@@ -501,31 +498,38 @@ describe("Results screen", () => {
 });
 
 describe("Focus on screen change", () => {
-  it("does not move focus on the initial mount, leaving a name input alone", () => {
-    const c = connectedClient({ isReady: false });
+  it("moves focus to the reveal heading once the matchup is revealed", () => {
+    const c = connectedClient({}, "MatchupVoting");
     render(App, { manager: c.manager });
-    expect(screen.getByLabelText(/your name/i)).toHaveFocus();
-  });
-
-  it("moves focus to the new screen's heading when the phase changes", () => {
-    const c = connectedClient({ role: "host" });
-    render(App, { manager: c.manager });
-    c.state.phase = "CategorySelection";
-    c.state.categoryOptions.push(option("a"), option("b"));
-    addMine(c.state, c.manager.playerId);
+    c.state.phase = "MatchupReveal";
+    c.state.matchups.push(
+      matchup(
+        "m1",
+        "Name a fruit",
+        [
+          answer("a1", "Mango", {
+            votes: 2,
+            authorId: "zed-12345",
+            authorName: "Zed",
+            isWinner: true,
+          }),
+        ],
+        { isRevealed: true },
+      ),
+      matchup("m2", "Name a drink", []),
+    );
+    c.state.activeMatchupIndex = 0;
     c.patch();
     flushSync();
-    expect(screen.getByRole("heading", { name: /pick a category/i })).toHaveFocus();
+    expect(screen.getByRole("heading", { name: /matchup 1 of 2/i })).toHaveFocus();
   });
 
-  it("keeps focus on the name input when a screen mounts one", () => {
-    const c = connectedClient({}, "Prompting");
-    addMine(c.state, c.manager.playerId);
+  it("moves focus to a heading while waiting for the reveal", () => {
+    const c = connectedClient({}, "MatchupVoting");
     render(App, { manager: c.manager });
-    c.me.isActive = false;
-    c.me.isReady = false;
+    c.state.phase = "MatchupReveal";
     c.patch();
     flushSync();
-    expect(screen.getByLabelText(/your name/i)).toHaveFocus();
+    expect(screen.getByRole("heading", { name: /revealing/i })).toHaveFocus();
   });
 });

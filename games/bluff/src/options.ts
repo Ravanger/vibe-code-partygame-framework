@@ -6,6 +6,7 @@ export const BluffOptionsSchema = z.object({
   writingSeconds: z.number().int().min(10).max(300).default(45),
   votingSeconds: z.number().int().min(5).max(120).default(30),
   revealSeconds: z.number().int().min(1).max(60).default(15),
+  filterLevel: z.enum(["off", "moderate", "strict"]).default("moderate"),
 });
 
 export type BluffOptions = z.output<typeof BluffOptionsSchema>;

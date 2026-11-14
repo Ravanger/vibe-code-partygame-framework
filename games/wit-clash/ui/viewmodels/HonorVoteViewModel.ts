@@ -13,7 +13,7 @@ export interface HonorChoice {
 
 /** The optional honor vote: the table picks the funniest of the game's best answers. */
 export class HonorVoteViewModel {
-  private readonly clock: PhaseClock;
+  readonly clock: PhaseClock;
 
   constructor(private readonly manager: WitClashManager) {
     const options = new OptionsReader<WitClashOptions>(
@@ -64,25 +64,9 @@ export class HonorVoteViewModel {
     return this.manager.state?.votesExpected ?? 0;
   }
 
-  get secondsLeft(): number {
-    return this.clock.secondsLeft;
-  }
-
-  get announcement(): string {
-    return this.clock.announcement;
-  }
-
-  get totalSeconds(): number {
-    return this.clock.totalSeconds;
-  }
-
   async vote(authorId: string): Promise<void> {
     if (!this.canVote) return;
     const payload: VoteHonorPayload = { authorId };
     await this.manager.sendAction(ACTION.VOTE_HONOR, payload);
-  }
-
-  destroy(): void {
-    this.clock.destroy();
   }
 }

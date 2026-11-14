@@ -14,7 +14,6 @@ describe("Countdown", () => {
       () => 1_000_000,
     );
     expect(countdown.secondsLeft).toBe(60);
-    countdown.destroy();
   });
 
   // The other tests freeze the clock, so they can't catch a mismatch between the two
@@ -30,7 +29,6 @@ describe("Countdown", () => {
       },
     );
     expect(countdown.secondsLeft).toBe(60);
-    countdown.destroy();
   });
 
   it("runs its interval only while an effect reads it", async () => {
@@ -76,7 +74,6 @@ describe("Countdown", () => {
       () => 0,
     );
     expect(countdown.secondsLeft).toBe(0);
-    countdown.destroy();
   });
 
   it("corrects for a skewed client clock", () => {
@@ -86,7 +83,6 @@ describe("Countdown", () => {
       () => 2_000_000,
     );
     expect(countdown.secondsLeft).toBe(30);
-    countdown.destroy();
   });
 
   it("flags the last ten seconds as urgent", () => {
@@ -96,7 +92,6 @@ describe("Countdown", () => {
       () => 1_000_000_000,
     );
     expect(countdown.isUrgent).toBe(true);
-    countdown.destroy();
   });
 
   it("is not urgent when more than 10 seconds remain", () => {
@@ -106,16 +101,6 @@ describe("Countdown", () => {
       () => 1_000_000_000,
     );
     expect(countdown.isUrgent).toBe(false);
-    countdown.destroy();
-  });
-
-  it("clears its interval on destroy", () => {
-    const countdown = new Countdown(
-      () => 0,
-      () => 0,
-    );
-    countdown.destroy();
-    expect(vi.getTimerCount()).toBe(0);
   });
 
   it("is expired when serverNow >= phaseEndsAt", () => {
@@ -125,7 +110,6 @@ describe("Countdown", () => {
       () => 1_000_000,
     );
     expect(countdown.isExpired).toBe(true);
-    countdown.destroy();
   });
 
   it("re-anchors to a newer server time seen on a tick", () => {

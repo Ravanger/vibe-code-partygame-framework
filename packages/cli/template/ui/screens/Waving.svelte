@@ -12,9 +12,9 @@ const vm = untrack(() => new WavingViewModel(manager));
 <div class="waving">
   <h1>Wave!</h1>
   <ul class="board">
-    {#each vm.rows as row, i (row.id)}
-      <li class="row" class:leader={i === 0 && row.waves > 0} class:me={row.isMe}>
-        <span class="rank">{`#${i + 1}`}</span>
+    {#each vm.rows as row (row.id)}
+      <li class="row" class:leader={row.rank === 1 && row.waves > 0} class:me={row.isMe}>
+        <span class="rank">{`#${row.rank}`}</span>
         <PlayerSticker name={row.name} playerId={row.id} size={36} />
         <span class="name">{row.name}</span>
         <span class="count">{`${row.waves}`}</span>

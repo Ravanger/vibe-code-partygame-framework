@@ -3,6 +3,7 @@ import { type Client, type Delayed, logger, Room, ServerError } from "@colyseus/
 import { type Schema, StateView } from "@colyseus/schema";
 import type { FilterLevel, TextFilter } from "@partygame/content/filter";
 import {
+  AudienceScopes,
   evaluateJoin,
   type GameDefinition,
   GameRuntime,
@@ -41,7 +42,6 @@ import { PlayerSchema, syncedJsonOf } from "@partygame/shared/schema";
 import type { ZodError } from "zod";
 import type { RateLimiter, ResolvedRateLimits, TokenBucket } from "../RateLimiter.js";
 import type { RoomCodeService } from "../services/RoomCodeService.js";
-import { AudienceScopes } from "./AudienceScopes.js";
 
 const FRAMEWORK_KEYS = ["playerId", "name", "spectator", "seatSecret", "seats", "protocolVersion"];
 const SPECTATOR_ERROR: ProtocolError = {
@@ -532,18 +532,27 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
     return this.config.rateLimiter.take(`${this.roomId}:${playerId}:${messageType}`, bucket);
   }
 
-  private act(playerId: string, raw: unknown): ActionResult {
+  /** Dispatches one action and maps a runtime rejection or thrown failure to the client-facing answer; `label` keeps the log line distinguishable. */
+  private runAction(
+    raw: unknown,
+    label: string,
+    dispatch: () => ProtocolError | undefined,
+  ): ActionResult {
     try {
-      const error = this.runtime.dispatch(playerId, raw);
+      const error = dispatch();
       return error ? this.rejected(raw, error) : { ok: true };
     } catch (error) {
-      logger.error("[GameRoom] action failed", error);
+      logger.error(`[GameRoom] ${label} failed`, error);
       this.logLine("warn", "action.rejected", {
         code: ErrorCode.INTERNAL,
         action: this.actionTypeOf(raw),
       });
       return ACTION_FAILED;
     }
+  }
+
+  private act(playerId: string, raw: unknown): ActionResult {
+    return this.runAction(raw, "action", () => this.runtime.dispatch(playerId, raw));
   }
 
   /**
@@ -565,17 +574,9 @@ export class GameRoom extends Room<{ state: BaseGameState }> {
       client.send(ServerMessage.ERROR, SPECTATOR_ERROR);
       return { ok: false, error: SPECTATOR_ERROR };
     }
-    try {
-      const error = this.runtime.dispatchAudience(playerId, raw);
-      return error ? this.rejected(raw, error) : { ok: true };
-    } catch (error) {
-      logger.error("[GameRoom] audience action failed", error);
-      this.logLine("warn", "action.rejected", {
-        code: ErrorCode.INTERNAL,
-        action: this.actionTypeOf(raw),
-      });
-      return ACTION_FAILED;
-    }
+    return this.runAction(raw, "audience action", () =>
+      this.runtime.dispatchAudience(playerId, raw),
+    );
   }
 
   /** Host-only `EXPORT_REPLAY`: the room's replay bundle, or a fixed refusal. */

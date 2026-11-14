@@ -75,6 +75,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
+      # scripts/ imports package sources by relative path; their @partygame/* imports resolve through dist, so build first
+      - run: bun run build
       - run: bun run typecheck:scripts
       - run: bun run typecheck
 

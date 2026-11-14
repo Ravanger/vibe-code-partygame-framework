@@ -14,6 +14,14 @@ const pkg = defineGamePackage({
   botKit: tapKit(),
 });
 
+const noBots = defineGamePackage({
+  meta: { roomName: TAP_ROOM, minPlayers: 2, maxPlayers: 6 },
+  definition: () => TapGame,
+  stateClass: TapState,
+  publicFields: TAP_PUBLIC_FIELDS,
+  isFinished: (state) => state.done,
+});
+
 let handle: NodeServerHandle;
 beforeAll(async () => {
   handle = await startNodeServer({
@@ -61,6 +69,14 @@ describe("botsCli", () => {
     await vi.waitFor(() => expect(exits).toEqual([0]), { timeout: 5000 });
     await host.leave(true);
   }, 30_000);
+
+  it("refuses a game that declares no bots and exits 1", async () => {
+    const { io, log, err, exits } = fakeIo([]);
+    await botsCli(noBots, io);
+    expect(log).toEqual([]);
+    expect(err).toEqual(["This game declares no bots."]);
+    expect(exits).toEqual([1]);
+  });
 
   it("prints the usage and exits 2 on bad arguments", async () => {
     const { io, log, err, exits } = fakeIo([]);

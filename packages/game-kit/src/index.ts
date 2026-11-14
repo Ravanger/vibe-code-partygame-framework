@@ -7,6 +7,7 @@ export { buildLaunchConfig, demoTableOptions } from "./launchConfig.js";
 export { play } from "./play.js";
 export { serve } from "./serve.js";
 export type {
+  DemoCommentator,
   GameDeclaration,
   GameDemoOptions,
   GameKitIo,

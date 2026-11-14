@@ -1,9 +1,16 @@
 import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { loadJsoncDir, loadJsoncDirWithFiles, stripJsonComments } from "../src/index.js";
+import {
+  contentDirFrom,
+  loadJsoncDir,
+  loadJsoncDirWithFiles,
+  loadJsoncFile,
+  stripJsonComments,
+} from "../src/index.js";
 
 describe("stripJsonComments", () => {
   it("removes line comments", () => {
@@ -87,14 +94,14 @@ describe("loadJsoncDir", () => {
   it("throws on a file that is not JSON by default, naming the file", async () => {
     const dir = await dirWith({ "broken.json": "{" });
     await expect(loadJsoncDir(dir, Item, byId)).rejects.toThrow(
-      "[Item] Invalid JSON in broken.json",
+      `[Item] Invalid JSON in ${join(dir, "broken.json")}`,
     );
   });
 
   it("throws on a schema failure by default, naming the file and the entry path", async () => {
     const dir = await dirWith({ "bad.json": '{ "id": "x" }' });
     await expect(loadJsoncDir(dir, Item, byId)).rejects.toThrow(
-      "[Item] bad.json failed validation",
+      `[Item] ${join(dir, "bad.json")} failed validation`,
     );
     // prettifyError names the failing entry ("→ at n").
     await expect(loadJsoncDir(dir, Item, byId)).rejects.toThrow("at n");
@@ -176,5 +183,55 @@ describe("loadJsoncDirWithFiles", () => {
     await expect(loadJsoncDirWithFiles(dir, Item, byId)).rejects.toThrow(
       'Duplicate Item id "x" in b.json',
     );
+  });
+});
+
+describe("loadJsoncFile", () => {
+  it("returns the validated value, comments allowed", async () => {
+    const dir = await dirWith({ "a.jsonc": '// a comment\n{ "id": "a", "n": 1 }' });
+    expect(await loadJsoncFile(join(dir, "a.jsonc"), Item, byId)).toEqual({ id: "a", n: 1 });
+  });
+
+  it("throws on a missing file, naming the file", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "jsonc-"));
+    await expect(loadJsoncFile(join(dir, "nope.json"), Item, byId)).rejects.toThrow(
+      `[Item] File not found: ${join(dir, "nope.json")}`,
+    );
+  });
+
+  it("throws on invalid JSON like the directory loader", async () => {
+    const dir = await dirWith({ "broken.json": "{" });
+    await expect(loadJsoncFile(join(dir, "broken.json"), Item, byId)).rejects.toThrow(
+      `[Item] Invalid JSON in ${join(dir, "broken.json")}`,
+    );
+  });
+
+  it("throws on a schema failure like the directory loader", async () => {
+    const dir = await dirWith({ "bad.json": '{ "id": "x" }' });
+    await expect(loadJsoncFile(join(dir, "bad.json"), Item, byId)).rejects.toThrow(
+      `[Item] ${join(dir, "bad.json")} failed validation`,
+    );
+  });
+
+  it("throws on a file above maxFileBytes like the directory loader", async () => {
+    const dir = await dirWith({ "big.json": '{ "id": "a", "n": 1 }' });
+    await expect(
+      loadJsoncFile(join(dir, "big.json"), Item, { ...byId, maxFileBytes: 5 }),
+    ).rejects.toThrow(`[Item] ${join(dir, "big.json")} is larger than the maximum of 5 bytes`);
+  });
+});
+
+describe("contentDirFrom", () => {
+  it("returns the override when set", () => {
+    expect(contentDirFrom("/somewhere", "file:///game/server.ts", "./content")).toBe("/somewhere");
+  });
+
+  it("resolves the folder next to the entry file when unset", () => {
+    const entry = pathToFileURL(join(tmpdir(), "game", "server.ts")).href;
+    expect(contentDirFrom(undefined, entry, "./content")).toBe(join(tmpdir(), "game", "content"));
+  });
+
+  it("treats an empty-string override as set, keeping ?? semantics", () => {
+    expect(contentDirFrom("", "file:///game/server.ts", "./content")).toBe("");
   });
 });

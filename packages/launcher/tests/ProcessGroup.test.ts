@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { waitFor } from "@partygame/client-utils";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { exitReason, killProcessGroup, taskkill } from "../src/kill.js";
-import { ProcessGroup, type ProcessGroupOptions } from "../src/ProcessGroup.js";
+import { type CommandError, ProcessGroup, type ProcessGroupOptions } from "../src/ProcessGroup.js";
 
 const PID_AND_IDLE =
   "require('fs').writeFileSync(process.argv[1], String(process.pid)); setInterval(() => {}, 1000)";
@@ -134,10 +134,18 @@ describe("ProcessGroup", () => {
     await expect(group().run("ok", [process.execPath, "-e", "0"], dir)).resolves.toBeUndefined();
   });
 
-  it("rejects a command that fails", async () => {
-    await expect(group().run("build", [process.execPath, "-e", EXIT_3], dir)).rejects.toThrow(
-      "build failed (exit code 3)",
+  it("rejects a command that fails, carrying its exit code", async () => {
+    await expect(group().run("build", [process.execPath, "-e", EXIT_3], dir)).rejects.toMatchObject(
+      { message: "build failed (code 3)", exitCode: 3 },
     );
+  });
+
+  it("rejects without an exit code when the command dies by signal", async () => {
+    const failure = (await group()
+      .run("killed", [process.execPath, "-e", "process.kill(process.pid, 'SIGTERM')"], dir)
+      .catch((error: unknown) => error)) as CommandError;
+    expect(failure.message).toBe("killed failed (signal SIGTERM)");
+    expect(failure.exitCode).toBeUndefined();
   });
 
   it("rejects a command that cannot start like a service that cannot start", async () => {

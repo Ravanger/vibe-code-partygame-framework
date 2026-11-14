@@ -53,6 +53,7 @@ export const BluffState = BaseGameState.extend(
     progress: t.map("boolean"),
     results: t.array(RevealEntry),
     scoreboard: t.array(ScoreEntry),
+    rejectedTexts: t.number().default(0),
     mine: t.map(PlayerPrivate).view(),
   },
   "BluffState",
@@ -71,4 +72,5 @@ export const BLUFF_PUBLIC_FIELDS = [
   "progress",
   "results",
   "scoreboard",
+  "rejectedTexts",
 ] as const;

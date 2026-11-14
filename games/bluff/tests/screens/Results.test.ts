@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/svelte";
+import { fireEvent, render, screen, within } from "@testing-library/svelte";
 import { describe, expect, it } from "vitest";
 import { ScoreEntry } from "../../src/state.js";
 import Results from "../../ui/screens/Results.svelte";
@@ -14,6 +14,8 @@ const addScore = (
 };
 
 describe("Results screen", () => {
+  const board = () => within(screen.getByRole("list", { name: "Standings" }));
+
   it("ranks the scoreboard and names the winner", () => {
     const c = connectedClient({}, "Results");
     addScore(c, "ann-12345", "Ann", 5);
@@ -21,27 +23,80 @@ describe("Results screen", () => {
     render(Results, { manager: c.manager });
 
     expect(screen.getByRole("heading", { name: "Ann wins with 5 points!" })).toBeInTheDocument();
-    const rows = screen.getAllByRole("listitem");
+    const rows = board().getAllByRole("listitem");
     expect(rows[0]).toHaveTextContent("#1");
     expect(rows[0]).toHaveTextContent("Ann");
     expect(rows[0]).toHaveTextContent("5");
+    expect(rows[1]).toHaveTextContent("#2");
     expect(rows[1]).toHaveTextContent("Me");
     expect(rows[1]).toHaveTextContent("3");
   });
 
-  it("calls a tie when the top is shared", () => {
+  it("calls a tie when the top is shared, shares rank one and highlights them all", () => {
     const c = connectedClient({}, "Results");
     addScore(c, "ann-12345", "Ann", 4);
     addScore(c, c.me.id, "Me", 4);
     render(Results, { manager: c.manager });
     expect(screen.getByRole("heading", { name: "It's a tie!" })).toBeInTheDocument();
+    const rows = board().getAllByRole("listitem");
+    expect(rows[0]).toHaveTextContent("#1");
+    expect(rows[1]).toHaveTextContent("#1");
+    expect(rows[0]).toHaveClass("winner");
+    expect(rows[1]).toHaveClass("winner");
   });
 
-  it("says nobody scored when all scores are zero", () => {
+  it("skips a rank after a tie", () => {
+    const c = connectedClient({}, "Results");
+    addScore(c, "ann-12345", "Ann", 5);
+    addScore(c, "ben-12345", "Ben", 5);
+    addScore(c, c.me.id, "Me", 3);
+    render(Results, { manager: c.manager });
+    const rows = board().getAllByRole("listitem");
+    expect(rows[0]).toHaveTextContent("#1");
+    expect(rows[1]).toHaveTextContent("#1");
+    expect(rows[2]).toHaveTextContent("#3");
+    expect(rows[2]).not.toHaveClass("winner");
+  });
+
+  it("ranks leavers after seated players and does not highlight them", () => {
+    const c = connectedClient({}, "Results");
+    addScore(c, "ann-12345", "Ann", 5);
+    addScore(c, c.me.id, "Me", 4);
+    c.state.scoreboard.push(
+      Object.assign(new ScoreEntry(), {
+        playerId: "ben-12345",
+        name: "Ben",
+        score: 9,
+        hasLeft: true,
+      }),
+    );
+    render(Results, { manager: c.manager });
+    const rows = board().getAllByRole("listitem");
+    expect(rows[0]).toHaveClass("winner");
+    expect(rows[2]).toHaveTextContent("#3");
+    expect(rows[2]).toHaveTextContent("Ben (left)");
+    expect(rows[2]).not.toHaveClass("winner");
+  });
+
+  it("says nobody scored when all scores are zero, with no winner highlight", () => {
     const c = connectedClient({}, "Results");
     addScore(c, "ann-12345", "Ann", 0);
+    addScore(c, c.me.id, "Me", 0);
     render(Results, { manager: c.manager });
     expect(screen.getByRole("heading", { name: "Nobody scored." })).toBeInTheDocument();
+    for (const row of board().getAllByRole("listitem")) expect(row).not.toHaveClass("winner");
+  });
+
+  it("shows the shared podium for the top three", () => {
+    const c = connectedClient({}, "Results");
+    addScore(c, "ann-12345", "Ann", 5);
+    addScore(c, "ben-12345", "Ben", 3);
+    addScore(c, c.me.id, "Me", 1);
+    render(Results, { manager: c.manager });
+    const podium = screen.getByRole("list", { name: "Podium" });
+    expect(within(podium).getByText("Ann")).toBeInTheDocument();
+    expect(within(podium).getByText("Ben")).toBeInTheDocument();
+    expect(within(podium).getByText("Me")).toBeInTheDocument();
   });
 
   it("marks leavers and keeps them on the board", () => {

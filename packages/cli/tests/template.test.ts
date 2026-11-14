@@ -1,4 +1,5 @@
-import { mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { existsSync, readFileSync } from "node:fs";
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -54,6 +55,26 @@ describe("renderTemplate", () => {
     const dest = await freshDir("cli-out-");
     await renderTemplate({ templateDir: src, outDir: dest, names: NAMES });
     expect(await readFile(join(dest, "myGameBot.txt"), "utf8")).toBe("bot for my-game\n");
+  });
+
+  it("skips excluded paths and renames the rest", async () => {
+    const src = await freshDir("cli-tmpl-");
+    await writeFile(join(src, "keep.txt"), "__slug__\n");
+    await writeFile(join(src, "drop.txt"), "gone\n");
+    await mkdir(join(src, "ui"));
+    await writeFile(join(src, "ui/app.svelte"), "<p>__slug__</p>\n");
+    const dest = await freshDir("cli-out-");
+    await renderTemplate({
+      templateDir: src,
+      outDir: dest,
+      names: NAMES,
+      exclude: ["drop.txt", "ui/"],
+      rename: { "keep.txt": "renamed.txt" },
+    });
+    expect(await readFile(join(dest, "renamed.txt"), "utf8")).toBe("my-game\n");
+    for (const gone of ["keep.txt", "drop.txt", "ui"]) {
+      expect(existsSync(join(dest, gone)), gone).toBe(false);
+    }
   });
 
   it("treats substituted values as data: a display name containing token text stays literal", async () => {
@@ -158,5 +179,47 @@ describe("renderTemplate", () => {
     await expect(
       renderTemplate({ templateDir: join(TEMPLATE, "run.sh"), outDir: dest, names: NAMES }),
     ).rejects.toThrow(/template directory/);
+  });
+});
+
+describe("shipped template theme", () => {
+  // check:boundaries keeps the cli free of @partygame/* imports, so the required-class list is
+  // read from game-ui's source instead of imported; packages/game-ui/tests/themeContract.test.ts
+  // keeps that list in sync with the components' markup.
+  const THEME_CONTRACT_TS = fileURLToPath(
+    new URL("../../game-ui/src/themeContract.ts", import.meta.url),
+  );
+  const GAME_UI_PACKAGE_JSON = fileURLToPath(
+    new URL("../../game-ui/package.json", import.meta.url),
+  );
+
+  it("defines every global class the framework components still need", () => {
+    const block = /export const REQUIRED_GLOBAL_CLASSES = \[([\s\S]*?)\] as const/.exec(
+      readFileSync(THEME_CONTRACT_TS, "utf8"),
+    );
+    expect(
+      block,
+      "REQUIRED_GLOBAL_CLASSES is missing from game-ui's themeContract.ts",
+    ).not.toBeNull();
+    const required = (block?.[1] ?? "").match(/"([a-z][a-z0-9-]*)"/g) ?? [];
+    expect(required).not.toEqual([]);
+    const css = readFileSync(join(SHIPPED_TEMPLATE, "ui", "app.css"), "utf8").replace(
+      /\/\*[\s\S]*?\*\//g,
+      "",
+    );
+    for (const cls of required.map((quoted) => quoted.slice(1, -1))) {
+      expect(css, `the template app.css has no rule for .${cls}`).toMatch(
+        new RegExp(`\\.${cls}(?![\\w-])`),
+      );
+    }
+  });
+
+  it("imports the shared stylesheets, so the base look needs no game CSS", () => {
+    // the package name comes from game-ui's manifest, not a literal: check:boundaries scans this
+    // file for @partygame/* specifiers and the cli must depend on none of them
+    const { name } = JSON.parse(readFileSync(GAME_UI_PACKAGE_JSON, "utf8")) as { name: string };
+    const css = readFileSync(join(SHIPPED_TEMPLATE, "ui", "app.css"), "utf8");
+    expect(css).toContain(`@import "${name}/theme-contract.css";`);
+    expect(css).toContain(`@import "${name}/base.css";`);
   });
 });

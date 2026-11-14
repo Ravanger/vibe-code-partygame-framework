@@ -18,8 +18,12 @@ describe("Waving screen", () => {
     const rows = screen.getAllByRole("listitem");
     expect(rows).toHaveLength(3);
     expect(rows[0]).toHaveTextContent("Ann");
+    expect(rows[0]).toHaveTextContent("#1");
     expect(rows[1]).toHaveTextContent("Ben");
     expect(rows[2]).toHaveTextContent("Me");
+    // Ben and Me are tied, so they share the rank.
+    expect(rows[1]).toHaveTextContent("#2");
+    expect(rows[2]).toHaveTextContent("#2");
   });
 
   it("waves on click and shows the running total", async () => {

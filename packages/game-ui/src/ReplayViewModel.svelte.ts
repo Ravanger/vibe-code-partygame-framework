@@ -1,4 +1,9 @@
-import { type BaseGameState, syncedStateFromJson } from "@partygame/shared/schema";
+import { Countdown } from "@partygame/game-client";
+import {
+  type BaseGameState,
+  type PlayerSchema,
+  syncedStateFromJson,
+} from "@partygame/shared/schema";
 
 /** One recorded phase boundary of a replay bundle: the synced state when `phase` ended. */
 export interface ReplaySnapshot {
@@ -205,5 +210,51 @@ export function snapshotManager<TState extends BaseGameState>(
       if (current === null) return new stateClass();
       return syncedStateFromJson(stateClass, current);
     },
+  };
+}
+
+/**
+ * The read-only manager the phase screens get in replay mode: the snapshot's synced state plus the
+ * members they touch while mounting that a static recording has no meaning for. `countdown()` is
+ * rebuilt from the snapshot's own clock fields (the recorded phase is over, so it counts down from
+ * at most 1s and reads 0 almost immediately), and there is no seat, so `me()` is empty and leaving
+ * is a no-op. A screen may read only these members; cast the result to the game's manager type at
+ * the use site where screens demand it.
+ */
+export interface ReplayManager<TState extends BaseGameState> {
+  /** Always true: a replay viewer never owns a seat. */
+  readonly isSpectator: true;
+  /** A fresh state instance filled from the viewmodel's current snapshot (empty when none). */
+  readonly state: TState;
+  /** The viewer's seat — there is none, so always `undefined`. */
+  me(): PlayerSchema | undefined;
+  /** A countdown rebuilt from the snapshot's `phaseEndsAt` and `serverNow` fields. */
+  countdown(): Countdown;
+  /** Leaving is a no-op: there is no connection to leave. */
+  leave(): Promise<void>;
+}
+
+/**
+ * Adapts a {@link ReplayViewModel} to the members a game's screens read from a connection manager
+ * while rendering a snapshot — {@link snapshotManager} plus seat, countdown and leave (see
+ * {@link ReplayManager}). Cast the result to the game's manager type at the use site.
+ */
+export function replayManager<TState extends BaseGameState>(
+  viewModel: ReplayViewModel,
+  stateClass: new () => TState,
+): ReplayManager<TState> {
+  const base = snapshotManager(viewModel, stateClass);
+  return {
+    isSpectator: true,
+    get state(): TState {
+      return base.state;
+    },
+    me: (): PlayerSchema | undefined => undefined,
+    countdown: () =>
+      new Countdown(
+        () => base.state.phaseEndsAt,
+        () => base.state.serverNow,
+      ),
+    leave: async (): Promise<void> => {},
   };
 }

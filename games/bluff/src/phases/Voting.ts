@@ -1,8 +1,10 @@
+import { endIfBelowMinimum, ensureMine } from "@partygame/core";
 import { ErrorCode } from "@partygame/shared";
 import { ACTION, CastVoteSchema, defineAction } from "../actions.js";
+import { META } from "../meta.js";
 import { PHASE } from "../phaseNames.js";
 import type { BluffPhase } from "../private.js";
-import { Round } from "../round.js";
+import { newPlayerPrivate, Round, TOO_FEW_PLAYERS_NOTICE } from "../round.js";
 
 export const Voting: BluffPhase = {
   duration: (ctx) => ctx.options.votingSeconds * 1000,
@@ -21,8 +23,8 @@ export const Voting: BluffPhase = {
   onRosterChange: (ctx) => {
     const round = new Round(ctx);
     round.pruneDeparted();
-    round.remember();
-    if (round.endIfTooFewPlayers()) return;
+    ctx.priv.roster.remember(ctx);
+    if (endIfBelowMinimum(ctx, META.minPlayers, TOO_FEW_PLAYERS_NOTICE)) return;
     round.syncVoting();
     if (round.votingComplete()) ctx.transition(PHASE.Reveal);
   },
@@ -46,7 +48,7 @@ export const Voting: BluffPhase = {
         }
         ctx.priv.votes.set(ctx.playerId, optionId);
         const round = new Round(ctx);
-        round.mineOf(ctx.playerId).myVote = optionId;
+        ensureMine(ctx, ctx.state.mine, ctx.playerId, newPlayerPrivate).myVote = optionId;
         round.syncVoting();
         if (round.votingComplete()) ctx.transition(PHASE.Reveal);
       },

@@ -8,6 +8,12 @@ export interface ProcessGroupOptions {
   killGroup?: (pid: number) => void;
 }
 
+/** The rejection of {@link ProcessGroup.run}. */
+export interface CommandError extends Error {
+  /** The child's exit code; absent when it was killed by a signal or failed to start. */
+  exitCode?: number | undefined;
+}
+
 /** Child processes of one launch: services that must stay up, commands that must finish, and one way to stop them all. */
 export class ProcessGroup {
   private readonly children = new Set<ChildProcess>();
@@ -38,15 +44,20 @@ export class ProcessGroup {
     });
   }
 
-  /** Runs a command; resolves when it exits with 0. */
+  /** Runs a command; resolves when it exits with 0, otherwise rejects with a {@link CommandError} carrying the child's exit code. */
   run(label: string, command: string[], cwd: string): Promise<void> {
     return new Promise((done, reject) => {
       const child = this.spawnChild(label, command, cwd, {});
-      child.on("error", (error) => reject(new Error(`${label} failed to start: ${error.message}`)));
-      child.on("exit", (code) => {
+      child.on("error", (error) => {
+        const failure: CommandError = new Error(`${label} failed to start: ${error.message}`);
+        reject(failure);
+      });
+      child.on("exit", (code, signal) => {
         this.children.delete(child);
-        if (code === 0) done();
-        else reject(new Error(`${label} failed (exit code ${code})`));
+        if (code === 0) return done();
+        const failure: CommandError = new Error(`${label} failed (${exitReason(code, signal)})`);
+        if (code !== null) failure.exitCode = code;
+        reject(failure);
       });
     });
   }

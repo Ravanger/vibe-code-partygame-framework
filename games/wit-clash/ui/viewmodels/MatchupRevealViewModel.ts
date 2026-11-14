@@ -4,7 +4,7 @@ import type { WitClashManager } from "../manager.js";
 import { MatchupRecap, type RevealedMatchup } from "./MatchupRecap.js";
 
 export class MatchupRevealViewModel {
-  private readonly clock: PhaseClock;
+  readonly clock: PhaseClock;
   private readonly recap: MatchupRecap;
 
   constructor(private readonly manager: WitClashManager) {
@@ -29,19 +29,7 @@ export class MatchupRevealViewModel {
     return this.manager.state?.matchups.length ?? 0;
   }
 
-  get secondsLeft(): number {
-    return this.clock.secondsLeft;
-  }
-
-  get totalSeconds(): number {
-    return this.clock.totalSeconds;
-  }
-
   get myVoteId(): string {
     return this.manager.state?.mine.get(this.manager.playerId)?.matchupVote ?? "";
-  }
-
-  destroy(): void {
-    this.clock.destroy();
   }
 }

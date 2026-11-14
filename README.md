@@ -7,9 +7,9 @@ TypeScript framework for multi-device party games. Four reference games under `g
 | Game | What it is | Players |
 |---|---|---|
 | [WitClash](games/wit-clash/README.md) | The full reference game: rules, browser UI, bots, terminal client and content | 3-8 |
-| [Bluff](games/bluff/README.md) | Playable with a browser UI, bot kit and demo tables (no terminal client yet) | 3-8 |
-| [Crew](games/crew/README.md) | Headless rules spike: an asymmetric co-op guess-the-sum game | 3-5 |
-| [Rush](games/rush/README.md) | Headless rules spike: a tap race driven by the server tick | 2-8 |
+| [Bluff](games/bluff/README.md) | Playable with a browser UI, bot kit, demo tables and a terminal client | 3-8 |
+| [Crew](games/crew/README.md) | Headless rules only: an asymmetric co-op guess-the-sum game | 3-5 |
+| [Rush](games/rush/README.md) | Headless rules only: a tap race driven by the server tick | 2-8 |
 
 ## Run
 

@@ -1,4 +1,4 @@
-import { departedIds, isBelowMinimum, required } from "@partygame/core";
+import { ensureMine, pruneMine, required, resetMine } from "@partygame/core";
 import { countVoted } from "@partygame/core/kits";
 import { pickBestAnswers } from "./bestAnswers.js";
 import { eligibleVoterIds, seatedActiveIds } from "./eligibility.js";
@@ -18,44 +18,23 @@ import {
 
 export const PLACEHOLDER_TEXT = "(no answer)";
 
+/** The lobby notice when a departure drops the room below its minimum. */
+export const TOO_FEW_PLAYERS_NOTICE = `Fewer than ${META.minPlayers} players were left, so the game ended.`;
+
+/** A fresh private entry for a player; the create callback every `ensureMine` call site shares. */
+export const newPlayerPrivate = (): PlayerPrivate => new PlayerPrivate();
+
 /** Writes the shared rules' results into the synced state. One per hook call; holds no state of its own. */
 export class Round {
   constructor(private readonly ctx: WitClashContext) {}
 
-  remember(): void {
-    for (const player of this.ctx.players()) {
-      if (player.name) this.ctx.priv.names[player.id] = player.name;
-      if (player.isActive && player.isReady) this.ctx.priv.participants.add(player.id);
-    }
-  }
-
-  mineOf(playerId: string): PlayerPrivate {
-    const existing = this.ctx.state.mine.get(playerId);
-    if (existing) return existing;
-    const created = new PlayerPrivate();
-    this.ctx.state.mine.set(playerId, created);
-    this.ctx.showTo(playerId, created);
-    return created;
-  }
-
-  resetMine(): void {
-    for (const [playerId, entry] of this.ctx.state.mine) this.ctx.hideFrom(playerId, entry);
-    this.ctx.state.mine.clear();
-  }
-
   pruneDeparted(): void {
     const { state } = this.ctx;
-    const departed = new Set(
-      departedIds(
-        [...state.mine.keys(), ...state.progress.keys(), ...state.typing.keys()],
-        this.ctx,
-      ),
-    );
-    for (const [playerId, entry] of [...state.mine]) {
-      if (!departed.has(playerId)) continue;
-      this.ctx.hideFrom(playerId, entry);
-      state.mine.delete(playerId);
-    }
+    const departed = pruneMine(this.ctx, state.mine, [
+      ...state.mine.keys(),
+      ...state.progress.keys(),
+      ...state.typing.keys(),
+    ]);
     for (const playerId of departed) {
       state.progress.delete(playerId);
       state.typing.delete(playerId);
@@ -144,7 +123,7 @@ export class Round {
     const active = new Set(this.ctx.activePlayers().map((p) => p.id));
     for (const player of this.ctx.players()) {
       if (!active.has(player.id) && !state.mine.has(player.id)) continue;
-      const mine = this.mineOf(player.id);
+      const mine = ensureMine(this.ctx, state.mine, player.id, newPlayerPrivate);
       mine.canVote = eligible.includes(player.id);
       mine.isOwnMatchup = authors.has(player.id);
     }
@@ -154,7 +133,7 @@ export class Round {
 
   writeScoreboard(): void {
     const { state, priv } = this.ctx;
-    this.remember();
+    priv.roster.remember(this.ctx);
     const seated = this.ctx.players();
     const rows = composeScoreboard({
       scores: priv.scores,
@@ -162,24 +141,17 @@ export class Round {
       tieBreakerWinnerId: priv.tieBreakerWinnerId,
       activeIds: seated.filter((p) => p.isActive && p.isReady).map((p) => p.id),
       seatedNames: new Map(seated.map((p) => [p.id, p.name])),
-      rememberedNames: priv.names,
-      participantIds: [...priv.participants],
+      rememberedNames: priv.roster.rememberedNames,
+      participantIds: priv.roster.participantIds,
     });
     state.scoreboard.clear();
     for (const row of rows) state.scoreboard.push(Object.assign(new ScoreEntry(), row));
   }
 
-  endIfTooFewPlayers(): boolean {
-    if (!isBelowMinimum(this.ctx, META.minPlayers)) return false;
-    this.ctx.state.notice = `Fewer than ${META.minPlayers} players were left, so the game ended.`;
-    this.ctx.returnToLobby();
-    return true;
-  }
-
   clearRound(): void {
     const { state, priv } = this.ctx;
     priv.clearRound();
-    this.resetMine();
+    resetMine(this.ctx, state.mine);
     state.selectedCategory = "";
     state.categoryOptions.clear();
     state.matchups.clear();

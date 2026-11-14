@@ -7,11 +7,19 @@ import { jsonLineLogger } from "./logger.js";
 import {
   RateLimiter,
   type RateLimits,
-  type ResolvedRateLimits,
+  resolveRateLimits,
   type TokenBucket,
 } from "./RateLimiter.js";
 import { GameRoom, type GameRoomConfig } from "./rooms/GameRoom.js";
 import { RoomCodeService } from "./services/RoomCodeService.js";
+
+export {
+  DEFAULT_ACTION_BUCKET,
+  DEFAULT_EXPORT_REPLAY_BUCKET,
+  DEFAULT_RESOLVE_CODE_BUCKET,
+  DEFAULT_SET_NAME_BUCKET,
+  resolveRateLimits,
+} from "./RateLimiter.js";
 
 /** One game the server hosts under `roomName`. */
 export interface HostedGame {
@@ -88,27 +96,8 @@ export const DEFAULT_MAX_ROOMS = 100;
 export const DEFAULT_AUDIENCE_SLOTS = 32;
 /** Default largest accepted WebSocket frame (bytes); the transports' own default, now made explicit. */
 export const DEFAULT_MAX_PAYLOAD_BYTES = 4096;
-/** Default action limit per player: 10/s, burst 20. */
-export const DEFAULT_ACTION_BUCKET: TokenBucket = { rate: 10, burst: 20 };
-/** Default SET_NAME limit per player: 2/s, burst 2. */
-export const DEFAULT_SET_NAME_BUCKET: TokenBucket = { rate: 2, burst: 2 };
-/** Default `/api/resolve-code` limit per remote address: 1/s, burst 10. */
-export const DEFAULT_RESOLVE_CODE_BUCKET: TokenBucket = { rate: 1, burst: 10 };
-/** Default EXPORT_REPLAY limit per host seat: one per 5 s, burst 1. */
-export const DEFAULT_EXPORT_REPLAY_BUCKET: TokenBucket = { rate: 0.2, burst: 1 };
 /** Default most phase transitions a room keeps as replay snapshots; no normal party reaches it. */
 export const DEFAULT_MAX_REPLAY_TRANSITIONS = 5_000;
-
-/** Resolve `rateLimits` against the defaults, which leave a normal party unaffected. */
-export function resolveRateLimits(options?: RateLimits): ResolvedRateLimits {
-  return {
-    action: options?.action ?? DEFAULT_ACTION_BUCKET,
-    setName: options?.setName ?? DEFAULT_SET_NAME_BUCKET,
-    resolveCode: options?.resolveCode ?? DEFAULT_RESOLVE_CODE_BUCKET,
-    exportReplay: options?.exportReplay ?? DEFAULT_EXPORT_REPLAY_BUCKET,
-    mode: options?.mode ?? "enforce",
-  };
-}
 
 /**
  * Reports one observed (not enforced) limit hit. With a `logger` it writes the structured line

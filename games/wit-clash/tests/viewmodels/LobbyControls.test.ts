@@ -1,5 +1,6 @@
+import { GameControlsViewModel } from "@partygame/game-ui";
 import { describe, expect, it } from "vitest";
-import { GameControlsViewModel } from "../../ui/viewmodels/GameControlsViewModel.svelte.js";
+import { isGameOver } from "../../src/isGameOver.js";
 import { LobbySettingsViewModel } from "../../ui/viewmodels/LobbySettingsViewModel.svelte.js";
 import { connectedClient } from "../helpers/client.js";
 
@@ -56,7 +57,7 @@ describe("LobbySettingsViewModel", () => {
 describe("GameControlsViewModel game over rule", () => {
   it("is over only on the final results, and then the host cannot end it", () => {
     const c = connectedClient({ role: "host" }, "Results");
-    const vm = new GameControlsViewModel(c.manager);
+    const vm = new GameControlsViewModel(c.manager, isGameOver);
     expect(vm.isGameOver).toBe(false);
     expect(vm.canEndGame).toBe(true);
     c.state.isFinalRound = true;

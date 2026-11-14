@@ -1,4 +1,4 @@
-import { type BotKit, type BotOptions, type BotPlayer, joinBots } from "@partygame/bots";
+import { type BotKit, type BotOptions, type BotPlayer, joinKitBots } from "@partygame/bots";
 import { joinUrl, tvUrl } from "@partygame/client-utils";
 import type { HostedGame } from "@partygame/server";
 import { type NodeServerHandle, startNodeServer } from "@partygame/server/node";
@@ -114,9 +114,8 @@ export class PlaySession<TState extends BaseGameState> {
 
   private async seatBots(code: string): Promise<BotPlayer<TState>[]> {
     const { endpoint, apiPort, bots, kit, bot } = this.options;
-    const seated = await joinBots({
-      stateClass: kit.stateClass,
-      strategy: kit.strategy,
+    const seated = await joinKitBots({
+      kit,
       code,
       count: bots,
       endpoint,

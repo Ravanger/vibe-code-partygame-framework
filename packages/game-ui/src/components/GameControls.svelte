@@ -2,11 +2,12 @@
 import type { GameControlsViewModel } from "@partygame/game-ui";
 // biome-ignore lint/correctness/noUnusedImports: used by the generics attribute
 import type { BaseGameState } from "@partygame/shared/schema";
+import type { Snippet } from "svelte";
 import { tick } from "svelte";
 import { getStrings } from "../strings.js";
 import { nextId } from "./uniqueId.js";
 
-const { vm }: { vm: GameControlsViewModel<TState> } = $props();
+const { vm, howToPlay }: { vm: GameControlsViewModel<TState>; howToPlay?: Snippet } = $props();
 const strings = getStrings();
 
 let root = $state<HTMLElement>();
@@ -65,6 +66,9 @@ async function onCancelEnd(): Promise<void> {
 
 {#if vm.isVisible}
   <div class="game-controls" bind:this={root}>
+    {#if howToPlay !== undefined}
+      <span class="how-to-play-slot">{@render howToPlay()}</span>
+    {/if}
     {#if vm.isSpectator}
       <button type="button" class="btn btn--ghost leave-small" onclick={() => vm.leave()}>
         {strings.leaveGame}
@@ -115,6 +119,12 @@ async function onCancelEnd(): Promise<void> {
 <style>
   .game-controls {
     position: relative;
+  }
+
+  .how-to-play-slot {
+    display: inline-flex;
+    margin-right: 8px;
+    vertical-align: middle;
   }
 
   .menu-btn {

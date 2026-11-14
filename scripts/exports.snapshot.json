@@ -25,8 +25,11 @@
           "DemoTable": {},
           "DemoTableOptions": {},
           "JoinBotsOptions": {},
+          "JoinKitBotsOptions": {},
           "SeatBotsOptions": {},
+          "defaultConnector": {},
           "joinBots": {},
+          "joinKitBots": {},
           "outcomeOf": {}
         }
       }
@@ -113,8 +116,11 @@
         "symbols": {
           "ContentFile": {},
           "LoadJsoncDirOptions": {},
+          "LoadJsoncFileOptions": {},
+          "contentDirFrom": {},
           "loadJsoncDir": {},
           "loadJsoncDirWithFiles": {},
+          "loadJsoncFile": {},
           "stripJsonComments": {}
         }
       },
@@ -139,6 +145,7 @@
           "default": "./dist/index.js"
         },
         "symbols": {
+          "ACTION_LOG_ENTRY_KINDS": {},
           "ActionContext": {},
           "ActionDefinition": {},
           "ActionLog": {},
@@ -149,11 +156,13 @@
           "AudienceActionContext": {},
           "AudienceActionDefinition": {},
           "AudienceScope": {},
+          "AudienceScopes": {},
           "CanJoinInput": {},
           "CanJoinResult": {},
           "ContextLogger": {},
           "CoreStrings": {},
           "DuplicateActionLogMiddlewareError": {},
+          "EmptyPayloadSchema": {},
           "GameContext": {},
           "GameDefinition": {},
           "GameDefinitionError": {},
@@ -180,6 +189,7 @@
           "PlayerInfo": {},
           "PlayerRole": {},
           "RejectOptions": {},
+          "RosterLedger": {},
           "RosterSeat": {},
           "RuntimeHost": {},
           "Seed": {},
@@ -189,9 +199,12 @@
           "actionLogMiddleware": {},
           "awardPoints": {},
           "composeLeaderboard": {},
+          "dailyRng": {},
           "defaultCoreStrings": {},
           "defineGame": {},
           "departedIds": {},
+          "endIfBelowMinimum": {},
+          "ensureMine": {},
           "evaluateJoin": {},
           "getActionLog": {},
           "getPhaseTimings": {},
@@ -201,14 +214,19 @@
           "mulberry32": {},
           "newId": {},
           "noopLogger": {},
+          "playAgainAction": {},
+          "pruneMine": {},
           "randomSeed": {},
           "required": {},
+          "resetMine": {},
           "seatedCount": {},
           "seedFromNumber": {},
           "sfc32": {},
           "shuffle": {},
           "textFilterMiddleware": {},
-          "timingMiddleware": {}
+          "timingMiddleware": {},
+          "utcDay": {},
+          "weightedSample": {}
         }
       },
       "./awards": {
@@ -309,6 +327,7 @@
           "default": "./src/index.ts"
         },
         "symbols": {
+          "ClientEnv": {},
           "ClientStrings": {},
           "ConnectionStatus": {},
           "Countdown": {},
@@ -322,9 +341,12 @@
           "PhaseFeedbackEvent": {},
           "RoomLike": {},
           "UrgentFeedbackEvent": {},
+          "clientConfig": {},
           "defaultClientStrings": {},
           "isUrgent": {},
           "readCodeParam": {},
+          "readUrlCode": {},
+          "readUrlTvCode": {},
           "resolveEndpoints": {}
         },
         "source": true
@@ -364,6 +386,7 @@
           "default": "./dist/index.js"
         },
         "symbols": {
+          "DemoCommentator": {},
           "GameDeclaration": {},
           "GameDemoOptions": {},
           "GameKitIo": {},
@@ -392,6 +415,22 @@
           "AppRouter": {},
           "GameControlsViewModel": {},
           "GestureTarget": {},
+          "HowToPlayStep": {
+            "experimental": true
+          },
+          "HowToPlayStorage": {
+            "experimental": true
+          },
+          "HowToPlayTimer": {
+            "experimental": true
+          },
+          "HowToPlayViewModel": {
+            "experimental": true
+          },
+          "HowToPlayViewModelOptions": {
+            "experimental": true
+          },
+          "JoinNextRoundViewModel": {},
           "LobbyPlayer": {},
           "LobbySettingsConfig": {},
           "LobbySettingsViewModel": {},
@@ -402,7 +441,9 @@
           "PhaseClock": {},
           "PodiumRow": {},
           "PodiumStep": {},
+          "ProgressRow": {},
           "QrCode": {},
+          "ReplayManager": {},
           "ReplaySnapshot": {},
           "ReplayTimer": {},
           "ReplayViewModel": {},
@@ -414,22 +455,35 @@
           "SoundPolicy": {},
           "SoundPolicyOptions": {},
           "SoundStorage": {},
+          "Spotlight": {},
           "StickerShape": {},
+          "TextDraft": {},
+          "TextDraftConfig": {},
           "TypingReporter": {},
           "UiStrings": {},
           "WaitingRoomViewModel": {},
           "WelcomeViewModel": {},
           "createAppRouter": {},
           "defaultUiStrings": {},
+          "downloadReplay": {},
+          "leaders": {},
+          "mountReplayIfRequested": {},
           "playerSticker": {},
+          "plural": {},
           "podiumSteps": {},
           "qrCode": {},
           "rankRows": {},
+          "replayManager": {},
+          "roundLabel": {},
           "setStrings": {},
           "snapshotManager": {},
           "stickerLetter": {}
         },
         "source": true
+      },
+      "./base.css": {
+        "target": "./base.css",
+        "symbols": {}
       },
       "./components": {
         "target": {
@@ -439,17 +493,55 @@
         },
         "symbols": {
           "ActionBar": {},
+          "ChoiceBoard": {},
+          "Confetti": {},
+          "DraftBox": {},
+          "ExportReplayButton": {},
           "GameControls": {},
+          "GameShell": {},
+          "HowToPlay": {
+            "experimental": true
+          },
+          "HowToPlayButton": {
+            "experimental": true
+          },
+          "LobbyScreen": {},
           "LobbySettings": {},
           "NameInput": {},
+          "PhaseBar": {},
+          "PhaseTimer": {},
           "PlayerSticker": {},
           "Podium": {},
+          "ProgressStrip": {},
           "QrCode": {},
+          "ReplayViewer": {},
+          "ScreenTitle": {},
           "SoundToggle": {},
           "StatusPanel": {},
-          "Timer": {}
+          "Timer": {},
+          "WelcomeScreen": {}
         },
         "source": true
+      },
+      "./testing": {
+        "target": {
+          "types": "./testing.ts",
+          "svelte": "./testing.ts",
+          "default": "./testing.ts"
+        },
+        "symbols": {
+          "AuditContrastOptions": {},
+          "ContrastPair": {},
+          "ContrastReport": {},
+          "CssRule": {},
+          "ReducedMotionOptions": {},
+          "ReducedMotionReport": {},
+          "auditContrast": {},
+          "auditReducedMotion": {},
+          "cssFiles": {},
+          "rules": {},
+          "stripComments": {}
+        }
       },
       "./theme-contract.css": {
         "target": "./theme-contract.css",
@@ -464,6 +556,8 @@
         },
         "symbols": {
           "BrowserSpawner": {},
+          "CommandError": {},
+          "DEFAULT_PORTS": {},
           "LaunchArgs": {},
           "LaunchBots": {},
           "LaunchCommands": {},
@@ -474,6 +568,7 @@
           "Launcher": {},
           "ProcessGroup": {},
           "StaticSite": {},
+          "defaultCommands": {},
           "lanUrls": {},
           "openBrowser": {},
           "parseLaunchArgs": {},
@@ -565,6 +660,7 @@
           "seatPlayers": {},
           "stateOf": {},
           "testPlayerId": {},
+          "waitForOwnEntry": {},
           "waitUntil": {}
         }
       }
@@ -638,11 +734,14 @@
         },
         "symbols": {
           "ArgsLimits": {},
+          "BadBotsArgsError": {},
           "BotsArgs": {},
           "BotsCommandHandle": {},
           "BotsCommandOptions": {},
           "DEFAULT_API_PORT": {},
           "DEFAULT_ENDPOINT": {},
+          "DemoArgs": {},
+          "DemoArgsLimits": {},
           "DemoRun": {},
           "DemoRunOptions": {},
           "GameClient": {},

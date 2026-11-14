@@ -59,8 +59,7 @@ export function writeAwards(ctx: WitClashContext): void {
   const log = required(getActionLog(ctx.priv), "action log");
   const state = ctx.state;
   state.awards.clear();
-  // Every award winner authored an answer, and the reveal already required their name to be remembered.
-  const nameOf = (playerId: string): string => required(ctx.priv.names[playerId], "winner name");
+  const nameOf = (playerId: string): string => ctx.priv.roster.nameOf(ctx, playerId);
   const ceremony: Array<{ def: AwardDefinition; detail: (score: number) => string }> = [
     { def: fastestAnswer, detail: formatMs },
     { def: mostVotesReceived(ctx.priv), detail: votesDetail },

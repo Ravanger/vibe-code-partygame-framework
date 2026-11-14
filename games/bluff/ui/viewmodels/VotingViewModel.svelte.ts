@@ -1,4 +1,4 @@
-import { OptionsReader, PhaseClock } from "@partygame/game-ui";
+import { OptionsReader, PhaseClock, roundLabel } from "@partygame/game-ui";
 import { ACTION } from "../../src/actionNames.js";
 import { type BluffOptions, BluffOptionsSchema, DEFAULT_OPTIONS } from "../../src/options.js";
 import type { BluffManager } from "../manager.js";
@@ -6,12 +6,13 @@ import type { BluffManager } from "../manager.js";
 export interface ChoiceRow {
   id: string;
   text: string;
-  isMine: boolean;
+  own: boolean;
+  picked: boolean;
 }
 
 /** The shuffled options, the private "this one is yours" mark and the vote action. */
 export class VotingViewModel {
-  private readonly clock: PhaseClock;
+  readonly clock: PhaseClock;
 
   constructor(private readonly manager: BluffManager) {
     const options = new OptionsReader<BluffOptions>(manager, BluffOptionsSchema, DEFAULT_OPTIONS);
@@ -24,18 +25,19 @@ export class VotingViewModel {
 
   get roundLabel(): string {
     const state = this.manager.state;
-    return `Round ${state?.roundNumber ?? 0} of ${state?.totalRounds ?? 0}`;
+    return roundLabel(state?.roundNumber ?? 0, state?.totalRounds ?? 0);
   }
 
-  /** The options in their shuffled order; authorship is never synced. */
+  /** The options in their shuffled order, with the private marks for the board. */
   get choices(): ChoiceRow[] {
     const state = this.manager.state;
     if (state === undefined) return [];
-    const mineId = state.mine.get(this.manager.playerId)?.myOptionId ?? "";
+    const mine = state.mine.get(this.manager.playerId);
     return [...state.choices].map((choice) => ({
       id: choice.id,
       text: choice.text,
-      isMine: choice.id === mineId,
+      own: choice.id === (mine?.myOptionId ?? ""),
+      picked: choice.id === (mine?.myVote ?? ""),
     }));
   }
 
@@ -50,18 +52,6 @@ export class VotingViewModel {
 
   get votesExpected(): number {
     return this.manager.state?.votesExpected ?? 0;
-  }
-
-  get secondsLeft(): number {
-    return this.clock.secondsLeft;
-  }
-
-  get totalSeconds(): number {
-    return this.clock.totalSeconds;
-  }
-
-  get announcement(): string {
-    return this.clock.announcement;
   }
 
   /** Casts this client's vote; the synced private state reports it through {@link voted}. */

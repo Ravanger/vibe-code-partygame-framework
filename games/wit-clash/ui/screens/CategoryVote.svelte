@@ -1,21 +1,19 @@
 <script lang="ts">
-import { Timer } from "@partygame/game-ui/components";
+import { plural } from "@partygame/game-ui";
+import { PhaseTimer, ScreenTitle } from "@partygame/game-ui/components";
 import { untrack } from "svelte";
-import ScreenTitle from "../components/ScreenTitle.svelte";
 import type { WitClashManager } from "../manager.js";
 import { CategoryVoteViewModel } from "../viewmodels/CategoryVoteViewModel.js";
 
 const { manager }: { manager: WitClashManager } = $props();
 
 const vm = untrack(() => new CategoryVoteViewModel(manager));
-
-$effect(() => () => vm.destroy());
 </script>
 
 <div class="category-vote">
   <div class="top">
     <span class="chip chip--paper">{vm.roundLabel}</span>
-    <Timer seconds={vm.secondsLeft} total={vm.totalSeconds} announcement={vm.announcement} />
+    <PhaseTimer clock={vm.clock} />
   </div>
 
   <ScreenTitle title="Pick a category" hint="Tap the one you want to write about. Most votes wins." />
@@ -41,7 +39,7 @@ $effect(() => () => vm.destroy());
               <i></i>
             {/each}
           </span>
-          <span class="count">{`${option.votes} vote${option.votes !== 1 ? "s" : ""}`}</span>
+          <span class="count">{`${option.votes} ${plural(option.votes, "vote")}`}</span>
         </span>
       </button>
     {/each}

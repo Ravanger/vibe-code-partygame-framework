@@ -11,6 +11,14 @@ export function rankRows<T extends { score: number; hasLeft: boolean }>(
   });
 }
 
+/** The seated rows sharing the best seated score; empty when nobody is seated or the best seated score is 0. */
+export function leaders<T extends { score: number; hasLeft: boolean }>(rows: readonly T[]): T[] {
+  const seated = rows.filter((row) => !row.hasLeft);
+  const [first] = seated;
+  if (first === undefined || first.score <= 0) return [];
+  return seated.filter((row) => row.score === first.score);
+}
+
 /** One podium step: the players sharing a rank, with their tier (1-3) and display label. */
 export interface PodiumStep<T> {
   rank: number;

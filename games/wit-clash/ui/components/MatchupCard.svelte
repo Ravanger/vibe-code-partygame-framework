@@ -1,4 +1,5 @@
 <script lang="ts">
+import { plural } from "@partygame/game-ui";
 import { PlayerSticker } from "@partygame/game-ui/components";
 import type { RevealedMatchup } from "../viewmodels/MatchupRecap.js";
 
@@ -43,7 +44,7 @@ const {
           <PlayerSticker name={answer.authorName} playerId={answer.authorId} size={34} />
           <span class="by">{`by ${answer.authorName}${answer.isMine ? " (you)" : ""}`}</span>
           {#if !matchup.isForfeit}
-            <span class="chip chip--paper">{`${answer.votes} vote${answer.votes !== 1 ? "s" : ""}`}</span>
+            <span class="chip chip--paper">{`${answer.votes} ${plural(answer.votes, "vote")}`}</span>
           {/if}
           {#if answer.isWinner}
             <span class="trophy" role="img" aria-label="Winner">&#127942;</span>

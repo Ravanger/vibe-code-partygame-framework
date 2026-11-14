@@ -1,5 +1,6 @@
 <script lang="ts">
-import { Timer } from "@partygame/game-ui/components";
+import { plural } from "@partygame/game-ui";
+import { PhaseTimer } from "@partygame/game-ui/components";
 import { untrack } from "svelte";
 import type { BluffManager } from "../manager.js";
 import { RevealViewModel } from "../viewmodels/RevealViewModel.js";
@@ -10,14 +11,14 @@ const vm = untrack(() => new RevealViewModel(manager));
 </script>
 
 <div class="reveal stack">
-  <p class="round">{vm.roundLabel}</p>
-  <Timer seconds={vm.secondsLeft} total={vm.totalSeconds} />
+  <h2 class="round" tabindex="-1">{vm.roundLabel}</h2>
+  <PhaseTimer clock={vm.clock} />
 
   <ul class="choices">
     {#each vm.choices as choice (choice.id)}
       <li class="card" class:truth={choice.isTruth}>
         <span class="text">{choice.text}</span>
-        <span class="meta">{`${choice.authorName} · ${choice.votes} vote${choice.votes === 1 ? "" : "s"}`}</span>
+        <span class="meta">{`${choice.authorName} · ${choice.votes} ${plural(choice.votes, "vote")}`}</span>
         {#if choice.isTruth}<span class="chip chip--paper">the truth</span>{/if}
       </li>
     {/each}
@@ -43,6 +44,7 @@ const vm = untrack(() => new RevealViewModel(manager));
 
 .round {
   margin: 0;
+  font-size: inherit;
   opacity: 0.7;
 }
 

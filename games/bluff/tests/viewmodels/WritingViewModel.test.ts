@@ -11,9 +11,9 @@ describe("WritingViewModel", () => {
     expect(vm.roundLabel).toBe("Round 0 of 0");
     expect(vm.rows).toEqual([]);
     expect(vm.myDone).toBe(false);
-    expect(vm.secondsLeft).toBe(0);
-    expect(vm.totalSeconds).toBe(45);
-    expect(vm.announcement).toBe("");
+    expect(vm.clock.secondsLeft).toBe(0);
+    expect(vm.clock.totalSeconds).toBe(45);
+    expect(vm.clock.announcement).toBe("");
   });
 
   it("reads the prompt, the round and who has written", () => {
@@ -28,8 +28,24 @@ describe("WritingViewModel", () => {
     expect(vm.prompt).toBe("What is the capital of Australia?");
     expect(vm.roundLabel).toBe("Round 2 of 3");
     expect(vm.rows).toEqual([
-      { id: c.me.id, name: "Me", done: false, isMe: true },
-      { id: "ann-12345", name: "Ann", done: true, isMe: false },
+      {
+        playerId: c.me.id,
+        name: "Me",
+        answered: 0,
+        expected: 1,
+        done: false,
+        typing: false,
+        isMe: true,
+      },
+      {
+        playerId: "ann-12345",
+        name: "Ann",
+        answered: 1,
+        expected: 1,
+        done: true,
+        typing: false,
+        isMe: false,
+      },
     ]);
     expect(vm.myDone).toBe(false);
   });
@@ -39,22 +55,47 @@ describe("WritingViewModel", () => {
     c.state.serverNow = 1_000_000_000;
     c.state.phaseEndsAt = c.state.serverNow + 12_000;
     const vm = new WritingViewModel(c.manager);
-    expect(vm.secondsLeft).toBe(12);
-    expect(vm.announcement).toBe("");
+    expect(vm.clock.secondsLeft).toBe(12);
+    expect(vm.clock.announcement).toBe("");
 
     c.state.phaseEndsAt = c.state.serverNow + 10_000;
     const urgent = new WritingViewModel(c.manager);
-    expect(urgent.secondsLeft).toBe(10);
-    expect(urgent.announcement).toBe("10 seconds remaining");
+    expect(urgent.clock.secondsLeft).toBe(10);
+    expect(urgent.clock.announcement).toBe("10 seconds remaining");
   });
 
-  it("sends the fake answer", async () => {
+  it("sends the fake answer and resolves true when it is accepted", async () => {
     const c = connectedClient({}, "Writing");
     const vm = new WritingViewModel(c.manager);
-    await vm.submit("Sydney");
+    expect(await vm.submit("Sydney")).toBe(true);
     expect(c.room.requests).toContainEqual({
       type: "ACTION",
       payload: { text: "Sydney", type: "SUBMIT_FAKE" },
     });
+  });
+
+  it("resolves false on a filter refusal, shows its reason and clears it after a success", async () => {
+    const c = connectedClient({}, "Writing");
+    const vm = new WritingViewModel(c.manager);
+    expect(vm.rejectionReason).toBe("");
+    c.room.reply = {
+      ok: false,
+      error: { code: "CONTENT_REJECTED", message: "contains inappropriate language" },
+    };
+    expect(await vm.submit("a rude line")).toBe(false);
+    expect(vm.rejectionReason).toBe("contains inappropriate language");
+
+    c.room.reply = { ok: true };
+    expect(await vm.submit("a kind line")).toBe(true);
+    expect(vm.rejectionReason).toBe("");
+    expect(c.manager.lastServerError).toBeUndefined();
+  });
+
+  it("resolves false on other rejections without a rejection reason", async () => {
+    const c = connectedClient({}, "Writing");
+    const vm = new WritingViewModel(c.manager);
+    c.room.reply = { ok: false, error: { code: "WRONG_PHASE", message: "Too late" } };
+    expect(await vm.submit("late")).toBe(false);
+    expect(vm.rejectionReason).toBe("");
   });
 });

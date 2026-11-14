@@ -36,17 +36,15 @@ describe("HonorVoteViewModel", () => {
     ]);
     expect(vm.canVote).toBe(false);
     expect([vm.votesCast, vm.votesExpected]).toEqual([1, 3]);
-    expect(vm.secondsLeft).toBe(20);
-    expect(vm.totalSeconds).toBe(20);
-    expect(vm.announcement).toBe("");
-    vm.destroy();
+    expect(vm.clock.secondsLeft).toBe(20);
+    expect(vm.clock.totalSeconds).toBe(20);
+    expect(vm.clock.announcement).toBe("");
   });
 
   it("highlights only my own pick", () => {
     const { vm } = honor({ canVote: true, honorVote: "p1" });
     expect(vm.canVote).toBe(true);
     expect(vm.choices.map((choice) => choice.isMine)).toEqual([true, false]);
-    vm.destroy();
   });
 
   it("casts a vote when allowed", async () => {
@@ -55,20 +53,17 @@ describe("HonorVoteViewModel", () => {
     expect(c.room.requests).toEqual([
       { type: "ACTION", payload: { authorId: "p2", type: "VOTE_HONOR" } },
     ]);
-    vm.destroy();
   });
 
   it("does not cast a vote for the sole candidate", async () => {
     const { c, vm } = honor({ canVote: false });
     await vm.vote("p1");
     expect(c.room.requests).toEqual([]);
-    vm.destroy();
   });
 
   it("is empty without a room", () => {
     const { c, vm } = honor({ canVote: true });
     c.manager.dispose();
     expect([vm.choices, vm.canVote, vm.votesCast, vm.votesExpected]).toEqual([[], false, 0, 0]);
-    vm.destroy();
   });
 });

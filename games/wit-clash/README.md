@@ -205,7 +205,7 @@ Passed when the room is created or changed by the host in the lobby with `SET_OP
 | `voteSeconds` | 20 | 5 to 120 |
 | `revealSeconds` | 5 | 1 to 30 |
 | `filterLevel` | `moderate` | `off`, `moderate` or `strict` |
-| `contentRating` | `any` | `any` or `family`; a `family` room never offers mature categories (see the content README) |
+| `contentRating` | `any` | `any` or `family`; a `family` room never offers mature categories — none of the shipped ones are rated mature, so for now it changes nothing in free play, and daily mode ignores it (see the content README) |
 | `honorVote` | `false` | boolean; the optional funniest-answer vote before the final Results |
 
 ### Daily mode
@@ -255,8 +255,8 @@ bun run launch wit-clash --demo   # watch-only room: bots play one game, the bro
 ```bash
 bun run play wit-clash           # host a room; 3 bots join; uses the server on 2567/3001 or starts its own
 bun run play wit-clash --join=ABCD # join a room as a normal player
-bun run demo                     # `demo` script of this package; from the root: bun run --cwd games/wit-clash demo
-                                 # all-bot game, narrated; prints PASS/FAIL (--bots=N bots, 2 to 7, default 3)
+bun run demo                     # `demo` script of this package; from the repo root: bun run demo wit-clash
+                                 # all-bot game, narrated; prints PASS/FAIL (--bots N bots, 2 to 7, default 3)
 ```
 
 You answer and vote by typing; `q` quits (`/q` while writing an answer). `play` takes `--bots=N` (0 to 7), `--name=You`, `--endpoint=ws://host:2567 --api-port=3001`.
@@ -266,14 +266,14 @@ You answer and vote by typing; `q` quits (`/q` while writing an answer). `play` 
 
 ```
 main.ts             builds the GameConnectionManager<WitClashState> (storagePrefix "witclash"), resumes, mounts App;
-                    `?replay` in the URL instead mounts ReplayApp with no manager (no server connection)
+                    `?replay` in the URL instead mounts the shared `ReplayViewer` through
+                    `mountReplayIfRequested` with no manager (no server connection)
 config.ts           server endpoints from the page's host (VITE_SERVER_HOST, VITE_GAME_PORT, VITE_API_PORT) and the `?code=` share link
 manager.ts          the WitClashManager type
 App.svelte          screen router, error toast, "reconnecting" indicator, Leave game / End game controls outside the lobby
-ReplayApp.svelte    offline replay viewer: opens an exported bundle file and steps through it with the phase screens
 screens/            one component per screen: Welcome, WaitingRoom, JoinNextRound, CategoryVote, Prompting,
                     MatchupVote, MatchupReveal, HonorVote, TieBreakerPrompting, TieBreakerVote, TieBreakerReveal, Results
-components/         WitClash-only pieces: MatchupCard, Scoreboard, ProgressBadges, VoteBoard, AnswerBox, NextUpBar, ScreenTitle
+components/         WitClash-only pieces: MatchupCard, Scoreboard, AnswerBox
 viewmodels/         one viewmodel per game screen (the name field, welcome, waiting room, lobby settings come from `@partygame/game-ui`), plus Scoreboard (ranks via `rankRows`), MatchupRecap, AnswerProgress and TypingReporter helpers
 ```
 
@@ -285,17 +285,17 @@ viewmodels/         one viewmodel per game screen (the name field, welcome, wait
   (`votesCast`/`votesExpected`, also in CategorySelection), eligibility (`mine.canVote`) and limits (`minPlayers`, `maxPlayers`, `options`) are published by the server.
 - Results shows a podium (top three places; tied players share a step, leavers are marked, `wonTieBreaker` gets a badge), the best-answer award (`state.bestAnswers`; several entries read "Shared best answer"), the Highlights section (`state.highlights`: biggest margin, closest match and fastest voted answer, one card per tied winner) when any highlight was picked, then the scoreboard. Prompting shows the winning category and tells a player who was dealt no prompt that they sit this round out and vote. Prompting and TieBreakerPrompting list each answering player's `n/answersPerPlayer`, a done tick and a "typing…" marker; the answer boxes send `SET_TYPING` once on the first keystroke and once after 2.5 s idle or on submit. All of it renders large in the TV layout.
 - Votes stay hidden while voting: only `votesCast`/`votesExpected` and your own highlighted vote show. Counts and authors appear in `MatchupReveal`.
-- Shared components (StatusPanel, Timer, PlayerSticker, QrCode, ActionBar, NameInput, LobbySettings, GameControls, Podium) come from `@partygame/game-ui/components` and take their look from the CSS variables and classes in `ui/app.css`. Results passes the "Won the tie-breaker" chip to `Podium` through its `extra` snippet.
+- Shared components (StatusPanel, Timer, PlayerSticker, QrCode, ActionBar, NameInput, LobbySettings, GameControls, Podium, ScreenTitle, ProgressStrip, ChoiceBoard) come from `@partygame/game-ui/components` and take their look from the CSS variables and classes in `ui/app.css`. Results passes the "Won the tie-breaker" chip to `Podium` through its `extra` snippet.
 - Add a phase screen: a viewmodel, a screen component and one `PHASE_SCREENS` entry in `ui/screens/index.ts`.
-- Replay viewer: open the client with `?replay` in the URL to get `ReplayApp` instead of the game — no manager is built, so no server connection is ever opened. Pick an exported bundle file (the JSON the host downloads from Results) and step through it with previous/next, play/pause auto-advance or the scrubber; each snapshot renders that phase's own screen read-only (`isSpectator`, no seat). The snapshot is the final state of the phase being left, so its timer counts down from at most 1s and reads 0 almost immediately. A malformed file shows the viewer's error instead of a screen, and a phase without a `PHASE_SCREENS` entry gets a fallback line.
+- Replay viewer: open the client with `?replay` in the URL to get the shared `ReplayViewer` (from `@partygame/game-ui/components`, mounted by `mountReplayIfRequested`) instead of the game — no manager is built, so no server connection is ever opened. It takes `PHASE_SCREENS`, `WitClashState` and the title "WitClash replay". Pick an exported bundle file (the JSON the host downloads from Results) and step through it with previous/next, play/pause auto-advance or the scrubber; each snapshot renders that phase's own screen read-only (`isSpectator`, no seat). The snapshot is the final state of the phase being left, so its timer counts down from at most 1s and reads 0 almost immediately. A malformed file shows the viewer's error instead of a screen, and a phase without a `PHASE_SCREENS` entry gets a fallback line.
 - On Results, the host sees an **Export replay** button (mid-round and final): it sends the host-only `EXPORT_REPLAY` request through `manager.exportReplay()` and downloads the bundle as `<game>-replay.json`. A non-host's refusal is remembered in `lastServerError` like any rejected action.
 
 ## Accessibility
 
-- Contrast: every `color`/`background` pair set in `ui/` meets WCAG AA (4.5:1 for text, 3:1 for large text), computed from the tokens of `ui/app.css` over the game-ui theme contract — enforced by `tests/contrast.test.ts`. Scope: only pairs declared within the same rule are checked (no cascade), and values that do not resolve statically are skipped — nested variables, gradients, undefined custom properties. That is why the pre-existing `var(--pink)` in `ui/ReplayApp.svelte` (an undefined token) is not flagged. `--wordmark` passes as large text: white on `#f04f9a` is about 3.3:1, which requires the wordmark to stay at or above 24px (`--fs-4`); shrink it below that and the test fails.
+- Contrast: every `color`/`background` pair set in `ui/` meets WCAG AA (4.5:1 for text, 3:1 for large text), computed from the tokens of `ui/app.css` over the game-ui theme contract — enforced by `tests/contrast.test.ts`. Scope: only pairs declared within the same rule are checked (no cascade), and values that do not resolve statically are skipped — nested variables, gradients, undefined custom properties. `--wordmark` passes as large text: white on `#f04f9a` is about 3.3:1, which requires the wordmark to stay at or above 24px (`--fs-4`); shrink it below that and the test fails.
 - Reduced motion: no `transition` or `animation` exists outside a `prefers-reduced-motion: no-preference` block anywhere in `ui/`, and the phase banner is hidden entirely under `reduce` — enforced by `tests/reducedMotion.test.ts`. Scope: CSS declarations in `<style>` blocks; Svelte transition directives and `scroll-behavior` are not checked (neither exists in `ui/` today).
 - Screen readers: phase changes are announced through a persistent `aria-live="polite"` region carrying the phase banner text; the visual banner stays `aria-hidden` (`tests/App.test.ts`).
-- Focus: when the screen changes, focus moves to the new screen's main heading (each carries `tabindex="-1"`), except on the initial mount and while a form field (`input`, `textarea` or `select`) holds its own focus — e.g. the answer box (`tests/screens/Round.test.ts`).
+- Focus: when the screen changes, focus moves to the new screen's first heading (`h1` or `h2`); every phase screen renders one with `tabindex="-1"` (MatchupReveal has one in both its active and waiting states — the "Matchup N of M" chip, or the visible StatusPanel "Revealing..." heading while it waits; on the tie-breaker screens it is `ScreenTitle`'s), except on the initial mount and while a form field (`input`, `textarea` or `select`) holds its own focus — e.g. the answer box (`tests/screens/Round.test.ts`).
 
 ## Tests
 

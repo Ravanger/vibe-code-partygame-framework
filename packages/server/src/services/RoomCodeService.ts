@@ -31,8 +31,24 @@ export class RoomCodeService {
     );
   }
 
-  /** Binds a code to a room. Called by the server; game code should not. */
+  /**
+   * Binds a code to a room. Refuses to rebind: a code already bound to another room, or a room
+   * that already has a different code, throws instead of silently orphaning the old entry; the
+   * identical pair is accepted as a no-op. Called by the server; game code should not.
+   */
   register(code: string, roomId: string): void {
+    const boundRoom = this.codeToRoomId.get(code);
+    if (boundRoom !== undefined && boundRoom !== roomId) {
+      throw new Error(
+        `register: room code ${code} is already bound to room ${boundRoom}, not ${roomId}`,
+      );
+    }
+    const boundCode = this.roomIdToCode.get(roomId);
+    if (boundCode !== undefined && boundCode !== code) {
+      throw new Error(
+        `register: room ${roomId} is already bound to room code ${boundCode}, not ${code}`,
+      );
+    }
     this.codeToRoomId.set(code, roomId);
     this.roomIdToCode.set(roomId, code);
   }

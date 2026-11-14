@@ -1,4 +1,4 @@
-import { OptionsReader, PhaseClock } from "@partygame/game-ui";
+import { OptionsReader, PhaseClock, roundLabel } from "@partygame/game-ui";
 import { ACTION } from "../../src/actionNames.js";
 import { DEFAULT_OPTIONS, type WitClashOptions, WitClashOptionsSchema } from "../../src/options.js";
 import type { WitClashManager } from "../manager.js";
@@ -11,7 +11,7 @@ export interface CategoryChoice {
 }
 
 export class CategoryVoteViewModel {
-  private readonly clock: PhaseClock;
+  readonly clock: PhaseClock;
 
   constructor(private readonly manager: WitClashManager) {
     const options = new OptionsReader<WitClashOptions>(
@@ -49,30 +49,10 @@ export class CategoryVoteViewModel {
 
   get roundLabel(): string {
     const state = this.manager.state;
-    return `Round ${state?.roundNumber ?? 0} of ${state?.totalRounds ?? 0}`;
-  }
-
-  get secondsLeft(): number {
-    return this.clock.secondsLeft;
-  }
-
-  get isUrgent(): boolean {
-    return this.clock.isUrgent;
-  }
-
-  get announcement(): string {
-    return this.clock.announcement;
-  }
-
-  get totalSeconds(): number {
-    return this.clock.totalSeconds;
+    return roundLabel(state?.roundNumber ?? 0, state?.totalRounds ?? 0);
   }
 
   async vote(categoryId: string): Promise<void> {
     await this.manager.sendAction(ACTION.VOTE_CATEGORY, { categoryId });
-  }
-
-  destroy(): void {
-    this.clock.destroy();
   }
 }

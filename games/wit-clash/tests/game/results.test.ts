@@ -225,7 +225,7 @@ describe("PLAY_AGAIN", () => {
     expect(t.state.progress.size).toBe(0);
     expect(t.state.activeMatchupIndex).toBe(-1);
     expect(t.priv.scores).toEqual({});
-    expect(t.priv.names).toEqual({});
+    expect(t.priv.roster.rememberedNames).toEqual({});
     expect(t.state.totalRounds).toBe(1);
     expect(t.host.views.filter((v) => v.op === "hide").length).toBe(4);
   });

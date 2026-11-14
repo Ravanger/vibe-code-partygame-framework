@@ -1,15 +1,12 @@
 <script lang="ts">
-import { StatusPanel, Timer } from "@partygame/game-ui/components";
+import { ChoiceBoard, PhaseTimer, StatusPanel } from "@partygame/game-ui/components";
 import { untrack } from "svelte";
-import VoteBoard from "../components/VoteBoard.svelte";
 import type { WitClashManager } from "../manager.js";
 import { MatchupVoteViewModel } from "../viewmodels/MatchupVoteViewModel.js";
 
 const { manager }: { manager: WitClashManager } = $props();
 
 const vm = untrack(() => new MatchupVoteViewModel(manager));
-
-$effect(() => () => vm.destroy());
 </script>
 
 <div class="matchup-vote">
@@ -18,7 +15,7 @@ $effect(() => () => vm.destroy());
   {:else}
     <div class="top">
       <span class="chip chip--paper">{`Matchup ${vm.matchupNumber} of ${vm.totalMatchups}`}</span>
-      <Timer seconds={vm.secondsLeft} total={vm.totalSeconds} announcement={vm.announcement} />
+      <PhaseTimer clock={vm.clock} />
     </div>
 
     <div class="question card taped">
@@ -37,7 +34,7 @@ $effect(() => () => vm.destroy());
       <p class="how hand">Tap the funnier answer</p>
     {/if}
 
-    <VoteBoard choices={vm.choices} canVote={vm.canVote} onvote={(id) => vm.vote(id)} />
+    <ChoiceBoard choices={vm.choices} canVote={vm.canVote} onvote={(id) => vm.vote(id)} versus="VS" />
 
     <p class="turnout"><span class="chip chip--paper">{`${vm.votesCast} of ${vm.votesExpected} voted`}</span></p>
   {/if}

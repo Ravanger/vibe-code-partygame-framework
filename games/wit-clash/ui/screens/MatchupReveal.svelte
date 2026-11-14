@@ -1,25 +1,22 @@
 <script lang="ts">
-import { StatusPanel } from "@partygame/game-ui/components";
+import { PhaseBar, StatusPanel } from "@partygame/game-ui/components";
 import { untrack } from "svelte";
 import MatchupCard from "../components/MatchupCard.svelte";
-import NextUpBar from "../components/NextUpBar.svelte";
 import type { WitClashManager } from "../manager.js";
 import { MatchupRevealViewModel } from "../viewmodels/MatchupRevealViewModel.js";
 
 const { manager }: { manager: WitClashManager } = $props();
 
 const vm = untrack(() => new MatchupRevealViewModel(manager));
-
-$effect(() => () => vm.destroy());
 </script>
 
 <div class="reveal-screen">
   {#if vm.matchup}
-    <p class="count"><span class="chip chip--paper">{`Matchup ${vm.matchupNumber} of ${vm.totalMatchups}`}</span></p>
+    <h2 class="count" tabindex="-1"><span class="chip chip--paper">{`Matchup ${vm.matchupNumber} of ${vm.totalMatchups}`}</span></h2>
     <MatchupCard matchup={vm.matchup} myVoteId={vm.myVoteId} flip />
-    <NextUpBar seconds={vm.secondsLeft} total={vm.totalSeconds} />
+    <PhaseBar clock={vm.clock} />
   {:else}
-    <StatusPanel tone="wait" title="Revealing..." />
+    <StatusPanel tone="wait" title="Revealing..." heading />
   {/if}
 </div>
 

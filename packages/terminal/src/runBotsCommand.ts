@@ -1,4 +1,4 @@
-import { type BotKit, type BotOptions, type BotPlayer, joinBots } from "@partygame/bots";
+import { type BotKit, type BotOptions, type BotPlayer, joinKitBots } from "@partygame/bots";
 import type { BaseGameState } from "@partygame/shared/schema";
 import { parseBotsArgs } from "./args.js";
 
@@ -24,6 +24,9 @@ export interface BotsCommandHandle {
   leave(): Promise<void>;
 }
 
+/** Thrown by {@link runBotsCommand} when its argv does not parse; callers map it to their bad-arguments exit code. */
+export class BadBotsArgsError extends Error {}
+
 const messageOf = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
@@ -35,12 +38,11 @@ export const runBotsCommand = async <TState extends BaseGameState>(
   const parsed = parseBotsArgs(options.argv, { maxBots, usage });
   if (!parsed.ok) {
     err(parsed.error);
-    throw new Error(parsed.error);
+    throw new BadBotsArgsError(parsed.error);
   }
   const { code, count, endpoint, apiPort } = parsed.value;
-  const seating = joinBots({
-    stateClass: kit.stateClass,
-    strategy: kit.strategy,
+  const seating = joinKitBots({
+    kit,
     code,
     count,
     endpoint,

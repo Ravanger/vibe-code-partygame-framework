@@ -29,12 +29,13 @@ describe("gamePackage", () => {
     expect(canon.all().length).toBeGreaterThanOrEqual(3);
   });
 
-  it("narrates and audits the demo through one narrator", () => {
+  it("narrates and audits each demo run through one fresh narrator", () => {
     const demo = gamePackage.demo;
-    if (demo?.narrate === undefined || demo.problems === undefined)
-      throw new Error("expected demo narrate and problems");
+    if (demo?.commentator === undefined) throw new Error("expected a demo commentator");
+    const comment = demo.commentator();
     const state = new WitClashState();
-    expect(demo.narrate(state)).toEqual(expect.any(Array));
-    expect(demo.problems(state)).toEqual(["The scoreboard is empty"]);
+    expect(comment.narrate(state)).toEqual(expect.any(Array));
+    if (comment.problems === undefined) throw new Error("expected problems");
+    expect(comment.problems(state)).toEqual(["The scoreboard is empty"]);
   });
 });

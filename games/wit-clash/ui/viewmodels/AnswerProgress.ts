@@ -1,14 +1,5 @@
+import type { ProgressRow } from "@partygame/game-ui";
 import type { WitClashManager } from "../manager.js";
-
-export interface ProgressRow {
-  playerId: string;
-  name: string;
-  answered: number;
-  expected: number;
-  done: boolean;
-  typing: boolean;
-  isMe: boolean;
-}
 
 /** How many answers each answering player has handed in, and who is typing right now. */
 export class AnswerProgress {

@@ -1,8 +1,7 @@
 <script lang="ts">
-import { ActionBar, StatusPanel, Timer } from "@partygame/game-ui/components";
+import { ActionBar, DraftBox, PhaseTimer, ProgressStrip, StatusPanel } from "@partygame/game-ui/components";
 import { untrack } from "svelte";
-import AnswerBox from "../components/AnswerBox.svelte";
-import ProgressBadges from "../components/ProgressBadges.svelte";
+import { ANSWER_MAX_LENGTH } from "../../src/actionNames.js";
 import type { WitClashManager } from "../manager.js";
 import { PromptingViewModel } from "../viewmodels/PromptingViewModel.svelte.js";
 
@@ -24,25 +23,25 @@ $effect(() => () => vm.destroy());
         <span class="chip">{vm.moderationLine}</span>
       {/if}
     </div>
-    <Timer seconds={vm.secondsLeft} total={vm.totalSeconds} announcement={vm.announcement} />
+    <PhaseTimer clock={vm.clock} />
   </div>
 
   {#if vm.isSpectator}
     <p class="tv-count">{`${vm.answersIn} of ${vm.answersExpected} answers in`}</p>
-    <ProgressBadges rows={vm.progress.rows} />
+    <ProgressStrip rows={vm.progress.rows} label="Answer progress" />
   {:else if vm.isSittingOut}
     <StatusPanel tone="info" title="You're sitting this round out — you'll vote on the answers." />
-    <ProgressBadges rows={vm.progress.rows} />
+    <ProgressStrip rows={vm.progress.rows} label="Answer progress" />
   {:else if !vm.showForm}
     <StatusPanel
       tone="done"
       title="All answers in!"
       detail={`Waiting for the others: ${vm.answersIn} of ${vm.answersExpected} answers in`}
     />
-    <ProgressBadges rows={vm.progress.rows} />
+    <ProgressStrip rows={vm.progress.rows} label="Answer progress" />
     <button type="button" class="btn btn--ghost edit" onclick={() => vm.startEditing()}>Edit answers</button>
   {:else}
-    <ProgressBadges rows={vm.progress.rows} />
+    <ProgressStrip rows={vm.progress.rows} label="Answer progress" />
 
     <div class="tabs">
       {#each vm.prompts as prompt, index (prompt.matchupId)}
@@ -70,15 +69,14 @@ $effect(() => () => vm.destroy());
     {/key}
     <p class="how hand">Write the funniest answer you can</p>
 
-    {#if vm.rejectionReason}
-      <p class="reject-reason">{vm.rejectionReason}</p>
-    {/if}
-
-    <AnswerBox
+    <DraftBox
       value={vm.draft}
+      label="Your answer"
+      maxLength={ANSWER_MAX_LENGTH}
       remaining={vm.charsRemaining}
       oninput={(value) => vm.setDraft(value)}
       onsubmit={() => vm.submit()}
+      rejection={vm.rejectionReason}
     />
 
     <ActionBar>
@@ -147,13 +145,6 @@ $effect(() => () => vm.destroy());
   .how {
     margin: 0;
     color: var(--ink-soft);
-    font-size: var(--fs-3);
-    text-align: center;
-  }
-
-  .reject-reason {
-    margin: 0;
-    color: var(--danger);
     font-size: var(--fs-3);
     text-align: center;
   }

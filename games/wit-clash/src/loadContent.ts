@@ -1,11 +1,11 @@
-import { fileURLToPath } from "node:url";
+import { contentDirFrom } from "@partygame/content";
 import { type CategoryRepository, loadCategoriesFromDir } from "./content/CategoryRepository.js";
 
 export const MIN_CATEGORIES = 3;
 
 /** `WITCLASH_CONTENT_DIR`, or `content/categories` next to `entryUrl` (the entry file's `import.meta.url`). */
 export function contentDir(env: Record<string, string | undefined>, entryUrl: string): string {
-  return env.WITCLASH_CONTENT_DIR ?? fileURLToPath(new URL("./content/categories", entryUrl));
+  return contentDirFrom(env.WITCLASH_CONTENT_DIR, entryUrl, "./content/categories");
 }
 
 /** Loads the category files and refuses to start with fewer than {@link MIN_CATEGORIES} offerable
@@ -31,5 +31,5 @@ export async function loadContent(dir: string): Promise<CategoryRepository> {
 /** The canon: the category files shipped in the repo next to `entryUrl`, always. Daily mode must
  * not see a host's `WITCLASH_CONTENT_DIR`. */
 export async function loadCanonContent(entryUrl: string): Promise<CategoryRepository> {
-  return loadContent(fileURLToPath(new URL("./content/categories", entryUrl)));
+  return loadContent(contentDirFrom(undefined, entryUrl, "./content/categories"));
 }

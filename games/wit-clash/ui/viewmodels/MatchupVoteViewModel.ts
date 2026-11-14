@@ -8,12 +8,12 @@ import type { WitClashManager } from "../manager.js";
 export interface VoteChoice {
   id: string;
   text: string;
-  isMine: boolean;
+  picked: boolean;
 }
 
 /** Voting on the active matchup. Who wrote what, and the counts, stay hidden until the reveal. */
 export class MatchupVoteViewModel {
-  private readonly clock: PhaseClock;
+  readonly clock: PhaseClock;
 
   constructor(private readonly manager: WitClashManager) {
     const options = new OptionsReader<WitClashOptions>(
@@ -50,11 +50,11 @@ export class MatchupVoteViewModel {
   }
 
   get choices(): VoteChoice[] {
-    const picked = this.mine?.matchupVote;
+    const myVote = this.mine?.matchupVote;
     return [...(this.matchup?.answers ?? [])].map((a) => ({
       id: a.id,
       text: a.text,
-      isMine: a.id === picked,
+      picked: a.id === myVote,
     }));
   }
 
@@ -78,28 +78,8 @@ export class MatchupVoteViewModel {
     return this.manager.state?.votesExpected ?? 0;
   }
 
-  get secondsLeft(): number {
-    return this.clock.secondsLeft;
-  }
-
-  get isUrgent(): boolean {
-    return this.clock.isUrgent;
-  }
-
-  get announcement(): string {
-    return this.clock.announcement;
-  }
-
-  get totalSeconds(): number {
-    return this.clock.totalSeconds;
-  }
-
   async vote(answerId: string): Promise<void> {
     const payload: CastVotePayload = { answerId };
     if (this.canVote) await this.manager.sendAction(ACTION.CAST_VOTE, payload);
-  }
-
-  destroy(): void {
-    this.clock.destroy();
   }
 }

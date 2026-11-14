@@ -1,3 +1,4 @@
+import { ServerMessage } from "@partygame/shared";
 import { describe, expect, it } from "vitest";
 import { seedFromNumber, sfc32 } from "../../src/index.js";
 import { FakeHost } from "../../src/testing/index.js";
@@ -80,6 +81,13 @@ describe("FakeHost", () => {
     expect(host.activations).toBe(1);
     expect(host.kicked).toEqual(["b", "nobody"]);
     expect(host.players().map((p) => p.id)).toEqual(["a"]);
+  });
+
+  it("errorsTo finds messages sent as ServerMessage.ERROR", () => {
+    const host = new FakeHost();
+    host.send("p1", ServerMessage.ERROR, { code: "X" });
+    host.send("p2", ServerMessage.ERROR, { code: "Y" });
+    expect(host.errorsTo("p1")).toEqual([{ code: "X" }]);
   });
 
   it("records every applied phase transition", () => {

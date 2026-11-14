@@ -45,12 +45,22 @@ describe("defaultUiStrings and the table", () => {
     expect(strings.qrCode).toBe("QR code that opens the join link");
     expect(strings.sound).toBe("Sound");
     expect(strings.done).toBe("Done");
+    expect(strings.typing).toBe("typing…");
+    expect(strings.pickedStamp).toBe("VOTED!");
+    expect(strings.switchHint).toBe("psst… tap the other one to switch");
+    expect(strings.yours).toBe("yours");
+    expect(strings.charsLeft(195)).toBe("195 chars left");
     expect(strings.secondsRemaining(5)).toBe("5 seconds remaining");
     expect(strings.podiumPlace(1)).toBe("1st");
     expect(strings.podiumPlace(2)).toBe("2nd");
     expect(strings.podiumPlace(3)).toBe("3rd");
     expect(strings.codeCopied).toBe("Copied!");
     expect(strings.codeCopyFailed).toBe("Copy failed, read the code out");
+    expect(strings.howToPlay).toBe("How to play");
+    expect(strings.closeSheet).toBe("Close");
+    expect(strings.previousStep).toBe("Back");
+    expect(strings.nextStep).toBe("Next");
+    expect(strings.stepLabel(2, 3)).toBe("Step 2 of 3");
   });
 
   it("lets setStrings and getStrings work outside a component", () => {

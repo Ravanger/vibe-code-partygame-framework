@@ -1,5 +1,6 @@
-import { fireEvent, render, screen } from "@testing-library/svelte";
+import { fireEvent, render, screen, within } from "@testing-library/svelte";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ANSWER_MAX_LENGTH } from "../../src/actionNames.js";
 import Writing from "../../ui/screens/Writing.svelte";
 import { addSeat, connectedClient } from "../helpers/client.js";
 
@@ -21,12 +22,14 @@ describe("Writing screen", () => {
       screen.getByRole("heading", { name: "What is the capital of Australia?" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Round 2 of 3")).toBeInTheDocument();
-    const rows = screen.getAllByRole("listitem");
-    expect(rows).toHaveLength(2);
-    expect(rows[0]).toHaveTextContent("Me");
-    expect(rows[0]).not.toHaveTextContent("wrote it");
-    expect(rows[1]).toHaveTextContent("Ann");
-    expect(rows[1]).toHaveTextContent("wrote it");
+    const writers = screen.getByLabelText("Writers");
+    expect(within(writers).getAllByRole("listitem")).toHaveLength(2);
+    const me = screen.getByRole("listitem", { name: /me/i });
+    expect(me).toHaveTextContent("0/1");
+    expect(within(me).queryByRole("img")).not.toBeInTheDocument();
+    const ann = screen.getByRole("listitem", { name: /ann/i });
+    expect(ann).toHaveTextContent("1/1");
+    expect(within(ann).getByRole("img", { name: "Done" })).toBeInTheDocument();
   });
 
   it("submits a fake on click and clears the box", async () => {
@@ -43,6 +46,34 @@ describe("Writing screen", () => {
       payload: { text: "Sydney", type: "SUBMIT_FAKE" },
     });
     await screen.findByDisplayValue("");
+  });
+
+  it("gives the textarea an accessible name and caps it at the answer limit", () => {
+    const c = connectedClient({}, "Writing");
+    render(Writing, { manager: c.manager });
+    const box = screen.getByLabelText("Your answer");
+    expect(box).toHaveAttribute("maxlength", String(ANSWER_MAX_LENGTH));
+    expect(screen.getByPlaceholderText("Write a fake answer…")).toBe(box);
+  });
+
+  it("keeps the draft and shows the filter's reason after a refusal, then clears on success", async () => {
+    const c = connectedClient({}, "Writing");
+    render(Writing, { manager: c.manager });
+    const box = screen.getByPlaceholderText("Write a fake answer…");
+    await fireEvent.input(box, { target: { value: "a rude line" } });
+    c.room.reply = {
+      ok: false,
+      error: { code: "CONTENT_REJECTED", message: "That text was not allowed" },
+    };
+    await fireEvent.click(screen.getByRole("button", { name: /lock it in/i }));
+    await vi.waitFor(() => expect(c.manager.lastServerError?.code).toBe("CONTENT_REJECTED"));
+    expect(box).toHaveValue("a rude line");
+    expect(screen.getByRole("alert")).toHaveTextContent("That text was not allowed");
+
+    c.room.reply = { ok: true };
+    await fireEvent.click(screen.getByRole("button", { name: /lock it in/i }));
+    await screen.findByDisplayValue("");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("submits on Enter but not on Shift+Enter or other keys", async () => {

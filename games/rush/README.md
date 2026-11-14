@@ -1,6 +1,6 @@
 # Rush
 
-A real-time tap-race party game (headless rules spike for M6 · Archetypes, #159): a target bounces around a 10×10 grid and players TAP while it is in the center zone. The round is driven by many small client actions plus a server tick — the spike that motivated the framework's `onTick` phase hook.
+A real-time tap-race party game: a target bounces around a 10×10 grid and players TAP while it is in the center zone. The round is driven by many small client actions plus a server tick.
 
 ## Rules
 
@@ -14,4 +14,4 @@ Options (host-tunable in the lobby): `raceSeconds` (5–30, default 10). Tick ra
 
 Framework feature exercised: `PhaseDefinition.onTick` at a fixed rate, with deterministic replay through the action log. No kits used.
 
-Part of the M6 archetypes milestone: headless spike only; a UI, bots and a terminal client are out of scope.
+Headless: rules only — no server, launch, bot or UI entries.

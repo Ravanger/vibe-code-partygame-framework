@@ -1,9 +1,10 @@
 import {
   awardPoints,
   composeLeaderboard,
-  departedIds,
-  isBelowMinimum,
+  ensureMine,
+  pruneMine,
   required,
+  resetMine,
   shuffle,
 } from "@partygame/core";
 import {
@@ -19,47 +20,23 @@ import { type BluffContext, FAKE_SLOT } from "./private.js";
 import { settleRound } from "./scoring.js";
 import { BluffOption, PlayerPrivate, RevealEntry, ScoreEntry } from "./state.js";
 
+/** The lobby notice when a departure drops the room below its minimum. */
+export const TOO_FEW_PLAYERS_NOTICE = `Fewer than ${META.minPlayers} players were left, so the game ended.`;
+
+/** A fresh private entry for a player; the create callback every `ensureMine` call site shares. */
+export const newPlayerPrivate = (): PlayerPrivate => new PlayerPrivate();
+
 /** Writes the shared rules' results into the synced state. One per hook call; holds no state of its own. */
 export class Round {
   constructor(private readonly ctx: BluffContext) {}
 
-  remember(): void {
-    for (const player of this.ctx.players()) {
-      if (player.name) this.ctx.priv.names[player.id] = player.name;
-      if (player.isActive && player.isReady) this.ctx.priv.participants.add(player.id);
-    }
-  }
-
-  nameOf(playerId: string): string {
-    return this.ctx.player(playerId)?.name ?? this.ctx.priv.names[playerId] ?? "";
-  }
-
-  /** Returns the player's private entry, creating and revealing it when missing. */
-  mineOf(playerId: string): PlayerPrivate {
-    const existing = this.ctx.state.mine.get(playerId);
-    if (existing) return existing;
-    const created = new PlayerPrivate();
-    this.ctx.state.mine.set(playerId, created);
-    this.ctx.showTo(playerId, created);
-    return created;
-  }
-
-  resetMine(): void {
-    for (const [playerId, entry] of this.ctx.state.mine) this.ctx.hideFrom(playerId, entry);
-    this.ctx.state.mine.clear();
-  }
-
   /** Drops the data of players who left for good; a dropped connection is not a departure. */
   pruneDeparted(): void {
     const { state, priv } = this.ctx;
-    const departed = new Set(
-      departedIds([...state.mine.keys(), ...state.progress.keys()], this.ctx),
-    );
-    for (const [playerId, entry] of [...state.mine]) {
-      if (!departed.has(playerId)) continue;
-      this.ctx.hideFrom(playerId, entry);
-      state.mine.delete(playerId);
-    }
+    const departed = pruneMine(this.ctx, state.mine, [
+      ...state.mine.keys(),
+      ...state.progress.keys(),
+    ]);
     for (const playerId of departed) {
       state.progress.delete(playerId);
       priv.fakes.delete(playerId);
@@ -78,7 +55,7 @@ export class Round {
 
   startRound(): void {
     const { state, priv } = this.ctx;
-    this.remember();
+    priv.roster.remember(this.ctx);
     if (state.roundNumber === 0) state.totalRounds = this.ctx.options.rounds;
     ++state.roundNumber;
     priv.clearRound();
@@ -88,7 +65,7 @@ export class Round {
     state.votesExpected = 0;
     state.progress.clear();
     state.results.clear();
-    this.resetMine();
+    resetMine(this.ctx, state.mine);
     this.drawPrompt();
   }
 
@@ -137,7 +114,7 @@ export class Round {
     }
     for (const playerId of this.activeIds()) {
       const own = state.choices.find((o) => priv.optionAuthor.get(o.id) === playerId);
-      this.mineOf(playerId).myOptionId = own?.id ?? "";
+      ensureMine(this.ctx, state.mine, playerId, newPlayerPrivate).myOptionId = own?.id ?? "";
     }
   }
 
@@ -154,12 +131,12 @@ export class Round {
   /** Reveals the truth and authorship, settles the round's points and writes the scoreboard. */
   writeReveal(): void {
     const { state, priv } = this.ctx;
-    this.remember();
+    priv.roster.remember(this.ctx);
     const counts = tallyVotes([...priv.votes.keys()], priv.votes);
     for (const option of state.choices) {
       option.votes = counts.get(option.id) ?? 0;
       const authorId = required(priv.optionAuthor.get(option.id), "option author");
-      option.authorName = authorId === "" ? "The game" : this.nameOf(authorId);
+      option.authorName = authorId === "" ? "The game" : priv.roster.nameOf(this.ctx, authorId);
     }
     state.truthRevealedId = priv.truthOptionId;
     state.results.clear();
@@ -168,7 +145,7 @@ export class Round {
       state.results.push(
         Object.assign(new RevealEntry(), {
           playerId: award.playerId,
-          name: this.nameOf(award.playerId),
+          name: priv.roster.nameOf(this.ctx, award.playerId),
           roundPoints: award.points,
           fooledCount: award.fooledCount,
           guessedTruth: award.guessedTruth,
@@ -180,13 +157,13 @@ export class Round {
 
   writeScoreboard(): void {
     const { state, priv } = this.ctx;
-    this.remember();
+    priv.roster.remember(this.ctx);
     const seated = this.ctx.players();
     const rows = composeLeaderboard({
       scores: priv.scores,
       seatedNames: new Map(seated.map((p) => [p.id, p.name])),
-      rememberedNames: priv.names,
-      ids: [...priv.participants],
+      rememberedNames: priv.roster.rememberedNames,
+      ids: priv.roster.participantIds,
     });
     state.scoreboard.clear();
     for (const row of rows) {
@@ -201,18 +178,11 @@ export class Round {
     }
   }
 
-  endIfTooFewPlayers(): boolean {
-    if (!isBelowMinimum(this.ctx, META.minPlayers)) return false;
-    this.ctx.state.notice = `Fewer than ${META.minPlayers} players were left, so the game ended.`;
-    this.ctx.returnToLobby();
-    return true;
-  }
-
   /** Clears everything for a fresh game after returning to the lobby. */
   clearGame(): void {
     const { state } = this.ctx;
     this.ctx.priv.clearGame();
-    this.resetMine();
+    resetMine(this.ctx, state.mine);
     state.promptText = "";
     state.roundNumber = 0;
     state.totalRounds = this.ctx.options.rounds;

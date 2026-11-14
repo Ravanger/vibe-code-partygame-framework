@@ -3,14 +3,13 @@ import { isUrgent } from "@partygame/game-client";
 
 const {
   seconds,
-  total,
+  fraction,
   announcement = "",
-}: { seconds: number; total: number; announcement?: string } = $props();
+}: { seconds: number; fraction: number; announcement?: string } = $props();
 
 const STICK_START = 6;
 const STICK_LENGTH = 92;
 
-const fraction = $derived(total > 0 ? Math.min(1, Math.max(0, seconds / total)) : 0);
 const tip = $derived(STICK_START + STICK_LENGTH * fraction);
 </script>
 
@@ -19,7 +18,7 @@ const tip = $derived(STICK_START + STICK_LENGTH * fraction);
   <svg viewBox="0 0 120 40" aria-hidden="true">
     <line class="wire" x1={STICK_START} y1="20" x2={STICK_START + STICK_LENGTH} y2="20" />
     <line class="stick" x1={STICK_START} y1="20" x2={tip} y2="20" />
-    <g class="sparks" transform={`translate(${tip} 20)`}>
+    <g transform={`translate(${tip} 20)`}>
       <path class="spark" d="M0 -12L3 -3L12 0L3 3L0 12L-3 3L-12 0L-3 -3z" />
       <path class="spark spark-2" d="M10 -10L11 -6L15 -5L11 -4L10 0L9 -4L5 -5L9 -6z" />
       <path class="spark spark-3" d="M8 8L9 11L12 12L9 13L8 16L7 13L4 12L7 11z" />

@@ -9,8 +9,6 @@ import { WITCLASH_PUBLIC_FIELDS, WitClashState } from "./src/state.js";
 import { Narrator } from "./terminal/Narrator.js";
 import { witClashTerminal } from "./terminal/witClashTerminal.js";
 
-const narrator = new Narrator();
-
 /** WitClash declared once: content loads from `content/`, the entry files are stubs over this. */
 export const gamePackage = defineGamePackage({
   meta: META,
@@ -36,8 +34,13 @@ export const gamePackage = defineGamePackage({
       revealSeconds: 6,
     },
     bot: { thinkMs: [2000, 9000], reactMs: [1000, 4000] },
-    narrate: (state) => narrator.update(state),
-    problems: (state) => narrator.discrepancies(state),
+    commentator: () => {
+      const narrator = new Narrator();
+      return {
+        narrate: (state) => narrator.update(state),
+        problems: (state) => narrator.discrepancies(state),
+      };
+    },
     passMessage: "PASS: scores match the reveals, no action was rejected",
   },
 });

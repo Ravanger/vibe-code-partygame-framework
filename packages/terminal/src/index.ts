@@ -3,6 +3,8 @@ export {
   type BotsArgs,
   DEFAULT_API_PORT,
   DEFAULT_ENDPOINT,
+  type DemoArgs,
+  type DemoArgsLimits,
   type PlayArgs,
   parseBotsArgs,
   parseDemoArgs,
@@ -13,6 +15,7 @@ export { GameClient, type GameRoomOf } from "./GameClient.js";
 export { PlaySession, type PlaySessionOptions, type SessionPlayer } from "./PlaySession.js";
 export { type Prompter, ReadlinePrompter } from "./Prompter.js";
 export {
+  BadBotsArgsError,
   type BotsCommandHandle,
   type BotsCommandOptions,
   runBotsCommand,

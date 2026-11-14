@@ -1,5 +1,10 @@
-import { OptionsReader, PhaseClock, TypingReporter } from "@partygame/game-ui";
-import { ErrorCode } from "@partygame/shared";
+import {
+  OptionsReader,
+  PhaseClock,
+  roundLabel,
+  TextDraft,
+  TypingReporter,
+} from "@partygame/game-ui";
 import { ACTION, ANSWER_MAX_LENGTH } from "../../src/actionNames.js";
 import type { SubmitAnswerPayload } from "../../src/actions.js";
 import { DEFAULT_OPTIONS, type WitClashOptions, WitClashOptionsSchema } from "../../src/options.js";
@@ -15,8 +20,8 @@ export interface PromptView {
 export class PromptingViewModel {
   currentIndex = $state(0);
   private editing = $state(false);
-  private readonly drafts = $state<Record<string, string>>({});
-  private readonly clock: PhaseClock;
+  private readonly drafts: TextDraft;
+  readonly clock: PhaseClock;
   private readonly typing: TypingReporter;
   private readonly options: OptionsReader<WitClashOptions>;
   readonly progress: AnswerProgress;
@@ -27,6 +32,12 @@ export class PromptingViewModel {
       WitClashOptionsSchema,
       DEFAULT_OPTIONS,
     );
+    this.drafts = new TextDraft(manager, {
+      maxLength: ANSWER_MAX_LENGTH,
+      filterLevel: () => this.options.current.filterLevel,
+      rejectedCount: () => manager.state?.rejectedTexts,
+      noun: "answer",
+    });
     this.clock = new PhaseClock(manager, () => this.options.current.promptSeconds);
     this.typing = new TypingReporter((typing) => {
       void this.manager.sendAction(ACTION.SET_TYPING, { typing });
@@ -63,16 +74,20 @@ export class PromptingViewModel {
     return this.prompts[this.currentIndex];
   }
 
+  private get currentKey(): string {
+    return this.current?.matchupId ?? "";
+  }
+
   get draft(): string {
-    return this.drafts[this.current?.matchupId ?? ""] ?? "";
+    return this.drafts.draft(this.currentKey);
   }
 
   get charsRemaining(): number {
-    return ANSWER_MAX_LENGTH - this.draft.length;
+    return this.drafts.charsRemaining(this.currentKey);
   }
 
   get canSubmit(): boolean {
-    return this.draft.trim().length > 0 && this.draft.length <= ANSWER_MAX_LENGTH;
+    return this.drafts.canSubmit(this.currentKey);
   }
 
   get allSubmitted(): boolean {
@@ -85,17 +100,11 @@ export class PromptingViewModel {
   }
 
   get rejectionReason(): string {
-    const error = this.manager.lastServerError;
-    return error?.code === ErrorCode.CONTENT_REJECTED ? error.message : "";
+    return this.drafts.rejectionReason;
   }
 
   get moderationLine(): string {
-    const state = this.manager.state;
-    if (!state || !this.manager.isHost) return "";
-    const level = this.options.current.filterLevel;
-    if (level === "off") return "";
-    const count = state.rejectedTexts;
-    return `${count} ${count === 1 ? "answer" : "answers"} rejected, level ${level}`;
+    return this.drafts.moderationLine;
   }
 
   get answersIn(): number {
@@ -109,29 +118,13 @@ export class PromptingViewModel {
 
   get roundLabel(): string {
     const state = this.manager.state;
-    return `Round ${state?.roundNumber ?? 0} of ${state?.totalRounds ?? 0}`;
-  }
-
-  get secondsLeft(): number {
-    return this.clock.secondsLeft;
-  }
-
-  get isUrgent(): boolean {
-    return this.clock.isUrgent;
-  }
-
-  get announcement(): string {
-    return this.clock.announcement;
-  }
-
-  get totalSeconds(): number {
-    return this.clock.totalSeconds;
+    return roundLabel(state?.roundNumber ?? 0, state?.totalRounds ?? 0);
   }
 
   setDraft(value: string): void {
     const { current } = this;
     if (!current) return;
-    this.drafts[current.matchupId] = value;
+    this.drafts.setDraft(current.matchupId, value);
     this.typing.keystroke();
   }
 
@@ -162,6 +155,5 @@ export class PromptingViewModel {
 
   destroy(): void {
     this.typing.stop();
-    this.clock.destroy();
   }
 }

@@ -1,6 +1,6 @@
 import { ROOM_CODE_LENGTH } from "@partygame/shared";
 import type { BaseGameState } from "@partygame/shared/schema";
-import { parseBotsArgs, runBotsCommand } from "@partygame/terminal";
+import { BadBotsArgsError, runBotsCommand } from "@partygame/terminal";
 import { defaultIo } from "./io.js";
 import type { GameDeclaration, GameKitIo, GameMeta } from "./types.js";
 
@@ -13,16 +13,16 @@ export async function botsCli<TState extends BaseGameState, TContent>(
   pkg: GameDeclaration<TState, TContent>,
   io: GameKitIo = defaultIo(),
 ): Promise<void> {
-  const usage = botsUsage(pkg.meta);
-  const parsed = parseBotsArgs(io.argv, { maxBots: pkg.meta.maxPlayers - 1, usage });
-  if (!parsed.ok) {
-    io.error(parsed.error);
-    io.exit(2);
+  const kit = pkg.botKit;
+  if (kit === undefined) {
+    io.error("This game declares no bots.");
+    io.exit(1);
     return;
   }
+  const usage = botsUsage(pkg.meta);
   try {
     await runBotsCommand({
-      kit: pkg.botKit,
+      kit,
       maxBots: pkg.meta.maxPlayers - 1,
       argv: io.argv,
       out: io.log,
@@ -31,7 +31,7 @@ export async function botsCli<TState extends BaseGameState, TContent>(
       bot: { log: io.log },
       onInterrupt: (stop) => io.onSignal("SIGINT", () => void stop().finally(() => io.exit(0))),
     });
-  } catch {
-    io.exit(1);
+  } catch (error) {
+    io.exit(error instanceof BadBotsArgsError ? 2 : 1);
   }
 }

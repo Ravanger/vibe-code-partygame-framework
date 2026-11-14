@@ -1,6 +1,5 @@
-import { readFile } from "node:fs/promises";
-import { stripJsonComments } from "@partygame/content";
-import { prettifyError, z } from "zod";
+import { loadJsoncDirWithFiles } from "@partygame/content";
+import { z } from "zod";
 
 const PromptSchema = z.object({
   id: z.string().regex(/^[a-z0-9-]+$/, "id must be lowercase kebab-case"),
@@ -10,7 +9,8 @@ const PromptSchema = z.object({
 
 export type Prompt = z.infer<typeof PromptSchema>;
 
-const PromptsFileSchema = z.object({
+const PromptPackSchema = z.object({
+  id: z.string().regex(/^[a-z0-9-]+$/, "id must be lowercase kebab-case"),
   prompts: z.array(PromptSchema).min(1, "prompts must not be empty"),
 });
 
@@ -33,30 +33,25 @@ export function promptsFromArray(prompts: Prompt[]): PromptRepository {
 
 /**
  * Server-side only: touches node:fs. Clients receive the prompt through synced room state.
- * Reads one JSONC file shaped `{ "prompts": [...] }`; a missing file, invalid JSON, a schema
- * failure or a duplicate id throws.
+ * Reads the directory's `.jsonc` pack files, each shaped `{ "id", "prompts": [...] }`; a missing
+ * directory, invalid JSON, a schema failure, a duplicate pack id or a duplicate prompt id throws.
  */
-export async function loadPrompts(file: string): Promise<PromptRepository> {
-  let text: string;
-  try {
-    text = await readFile(file, "utf-8");
-  } catch {
-    throw new Error(`Prompt file not found: ${file}`);
+export async function loadPrompts(dir: string): Promise<PromptRepository> {
+  const packs = await loadJsoncDirWithFiles(dir, PromptPackSchema, {
+    idOf: (pack) => pack.id,
+    label: "Pack",
+  });
+  const seenIn = new Map<string, string>();
+  for (const pack of packs) {
+    for (const prompt of pack.value.prompts) {
+      const earlier = seenIn.get(prompt.id);
+      if (earlier !== undefined) {
+        throw new Error(
+          `Duplicate Prompt id "${prompt.id}" in ${pack.file}; already used in ${earlier}`,
+        );
+      }
+      seenIn.set(prompt.id, pack.file);
+    }
   }
-  let json: unknown;
-  try {
-    json = JSON.parse(stripJsonComments(text));
-  } catch (error) {
-    throw new Error(`[Prompt] Invalid JSON in ${file}: ${String(error)}`);
-  }
-  const parsed = PromptsFileSchema.safeParse(json);
-  if (!parsed.success) {
-    throw new Error(`[Prompt] ${file} failed validation: ${prettifyError(parsed.error)}`);
-  }
-  const seen = new Set<string>();
-  for (const prompt of parsed.data.prompts) {
-    if (seen.has(prompt.id)) throw new Error(`Duplicate Prompt id "${prompt.id}" in ${file}`);
-    seen.add(prompt.id);
-  }
-  return new PromptRepository(parsed.data.prompts);
+  return new PromptRepository(packs.flatMap((pack) => pack.value.prompts));
 }

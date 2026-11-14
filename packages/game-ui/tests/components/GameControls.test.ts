@@ -5,6 +5,7 @@ import { userEvent } from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { GameControls } from "../../src/components/index.js";
 import { GameControlsViewModel } from "../../src/GameControlsViewModel.svelte.js";
+import GameControlsHowToProvider from "../fixtures/GameControlsHowToProvider.svelte";
 import { expectNoViolations } from "../support/a11y.js";
 
 const setup = (role: "host" | "player" = "player", phase = "Play") => {
@@ -193,5 +194,18 @@ describe("GameControls", () => {
     c.state.players.delete(c.manager.playerId);
     render(GameControls, { vm });
     expect(ruleCss(/leave-small/)).toMatch(SCALED_FS_1);
+  });
+
+  it("renders an optional howToPlay snippet inside the controls, and nothing without it", async () => {
+    const { vm } = setup();
+    const plain = render(GameControls, { vm });
+    expect(plain.container.querySelector(".how-to-play-slot")).not.toBeInTheDocument();
+    plain.unmount();
+
+    const withSlot = render(GameControlsHowToProvider, { vm });
+    const slot = withSlot.container.querySelector<HTMLElement>(".how-to-play-slot");
+    expect(slot).not.toBeNull();
+    expect(slot?.querySelector("button")?.textContent).toBe("How to play");
+    await expectNoViolations(withSlot.container, "GameControls");
   });
 });

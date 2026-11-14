@@ -5,6 +5,7 @@ Scaffolds a new game into this monorepo from the built-in template.
 ```sh
 bun run new <slug>                       # root script
 bun packages/cli/src/cli.ts create <slug>   # direct
+bun run new <slug> --headless            # rules, bots and terminal only; no browser UI
 ```
 
 The `partygame` bin in `package.json` is for publishing this package; inside the monorepo it is never linked,
@@ -12,8 +13,8 @@ so use one of the two forms above.
 
 ## `create`
 
-`create <slug> [--name "Display Name"]` writes a complete, working, fully-tested game to `games/<slug>/` and
-runs `bun install` at the repo root so it is ready to play.
+`create <slug> [--name "Display Name"] [--headless]` writes a complete, working, fully-tested game to
+`games/<slug>/` and runs `bun install` at the repo root so it is ready to play.
 
 - The slug must be kebab-case starting with a letter (`[a-z][a-z0-9]*(-[a-z0-9]+)*`), not a reserved name, and
   there must be no existing `games/<slug>/`.
@@ -25,6 +26,10 @@ runs `bun install` at the repo root so it is ready to play.
   trimmed and must not be empty. The display name may contain any characters (HTML, quotes, backslashes,
   newlines): code contexts render it as an escaped string literal, HTML placeholders as entities, and Markdown
   placeholders as entities with doubled backslashes and line breaks collapsed to spaces.
+- `--headless` scaffolds a rules-only game without a browser UI: the Svelte client, its tests and the Vite/Svelte
+  tooling are not emitted; the game's vitest config takes over the auto-discovered name (`vitest.config.ts`,
+  project `<slug>-game`) so `cd games/<slug> && bun run test` works; and the manifest keeps only what the server,
+  bots and terminal entries need (no `dev`/`build` scripts, typecheck without `svelte-check`).
 - The repo root is found by walking up to the nearest `package.json` whose `workspaces` include `games/*`;
   anything else fails with a clear error (this targets this monorepo only).
 - When rendering or formatting fails, the incomplete `games/<slug>/` is removed and the command can simply be
@@ -38,4 +43,6 @@ the reference game; `tests/templateVersions.test.ts` enforces it.
 
 ## Smoke test
 
-`bun run smoke:template` renders the template into a test game, installs it, runs its tests and typecheck to ensure the template is ready for use; CI runs this on every pull request.
+`bun run smoke:template` renders the template into two throwaway games — a full UI game and a headless one —
+installs them, runs their tests (including the headless game's local `bun run test`) and typecheck to ensure the
+template is ready for use; CI runs this on every pull request.

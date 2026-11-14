@@ -18,6 +18,12 @@
       "svelte": "./src/components/index.ts",
       "default": "./src/components/index.ts"
     },
+    "./testing": {
+      "types": "./testing.ts",
+      "svelte": "./testing.ts",
+      "default": "./testing.ts"
+    },
+    "./base.css": "./base.css",
     "./theme-contract.css": "./theme-contract.css"
   },
   "scripts": {

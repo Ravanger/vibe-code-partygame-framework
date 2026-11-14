@@ -213,14 +213,14 @@ describe("pickRandom", () => {
   it("never returns duplicates", async () => {
     for (const id of ["a", "b", "c", "d"]) await writeFile(join(dir, `${id}.json`), valid(id, id));
     const repo = await loadCategoriesFromDir(dir);
-    const ids = repo.pickRandom(3).map((c) => c.id);
+    const ids = repo.pickRandom(3, () => 0.5).map((c) => c.id);
     expect(new Set(ids).size).toBe(3);
   });
 
   it("returns everything when asked for more than exist", async () => {
     await writeFile(join(dir, "a.json"), valid("a", "A"));
     const repo = await loadCategoriesFromDir(dir);
-    expect(repo.pickRandom(3)).toHaveLength(1);
+    expect(repo.pickRandom(3, () => 0.5)).toHaveLength(1);
   });
 });
 

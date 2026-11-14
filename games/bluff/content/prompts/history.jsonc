@@ -1,0 +1,25 @@
+{
+  "id": "history",
+  "prompts": [
+    {
+      "id": "shortest-war",
+      "question": "How long did the shortest war in history last?",
+      "truth": "about 38 minutes"
+    },
+    {
+      "id": "paper-money",
+      "question": "In which country was paper money first used?",
+      "truth": "China"
+    },
+    {
+      "id": "first-best-picture",
+      "question": "What was the first film to win the Academy Award for Best Picture?",
+      "truth": "Wings"
+    },
+    {
+      "id": "moon-walkers",
+      "question": "How many people have walked on the Moon?",
+      "truth": "twelve"
+    }
+  ]
+}

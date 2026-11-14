@@ -22,15 +22,87 @@ describe("ResultsViewModel", () => {
     expect(vm.isHost).toBe(false);
   });
 
-  it("reads the scoreboard as the server wrote it", () => {
+  it("reads the scoreboard as the server wrote it, ranked", () => {
     const c = connectedClient({}, "Results");
     addScore(c, "ann-12345", "Ann", 5);
     addScore(c, c.me.id, "Me", 3);
     const vm = new ResultsViewModel(c.manager);
     expect(vm.rows).toEqual([
-      { playerId: "ann-12345", name: "Ann", score: 5, hasLeft: false },
-      { playerId: c.me.id, name: "Me", score: 3, hasLeft: false },
+      { playerId: "ann-12345", name: "Ann", score: 5, hasLeft: false, rank: 1, isMe: false },
+      { playerId: c.me.id, name: "Me", score: 3, hasLeft: false, rank: 2, isMe: true },
     ]);
+    expect(vm.headline).toBe("Ann wins with 5 points!");
+  });
+
+  it("shares a rank across ties and skips the next one", () => {
+    const c = connectedClient({}, "Results");
+    addScore(c, "ann-12345", "Ann", 5);
+    addScore(c, "ben-12345", "Ben", 5);
+    addScore(c, c.me.id, "Me", 3);
+    const vm = new ResultsViewModel(c.manager);
+    expect(vm.rows.map((row) => row.rank)).toEqual([1, 1, 3]);
+  });
+
+  it("ranks leavers after seated players", () => {
+    const c = connectedClient({}, "Results");
+    addScore(c, "ann-12345", "Ann", 5);
+    addScore(c, c.me.id, "Me", 4);
+    c.state.scoreboard.push(
+      Object.assign(new ScoreEntry(), {
+        playerId: "ben-12345",
+        name: "Ben",
+        score: 9,
+        hasLeft: true,
+      }),
+    );
+    const vm = new ResultsViewModel(c.manager);
+    expect(vm.rows.map((row) => [row.name, row.rank])).toEqual([
+      ["Ann", 1],
+      ["Me", 2],
+      ["Ben", 3],
+    ]);
+  });
+
+  it("builds podium steps for the top three seated rank groups", () => {
+    const c = connectedClient({}, "Results");
+    addScore(c, "ann-12345", "Ann", 5);
+    addScore(c, "ben-12345", "Ben", 3);
+    addScore(c, c.me.id, "Me", 1);
+    const vm = new ResultsViewModel(c.manager);
+    expect(vm.podiumSteps.map((step) => [step.tier, step.players.map((p) => p.name)])).toEqual([
+      [2, ["Ben"]],
+      [1, ["Ann"]],
+      [3, ["Me"]],
+    ]);
+  });
+
+  it("keeps leavers off the podium", () => {
+    const c = connectedClient({}, "Results");
+    addScore(c, "ann-12345", "Ann", 5);
+    c.state.scoreboard.push(
+      Object.assign(new ScoreEntry(), {
+        playerId: "ben-12345",
+        name: "Ben",
+        score: 9,
+        hasLeft: true,
+      }),
+    );
+    const vm = new ResultsViewModel(c.manager);
+    expect(vm.podiumSteps.map((step) => step.players.map((p) => p.name))).toEqual([["Ann"]]);
+  });
+
+  it("ignores a leaver tied with the top seated score", () => {
+    const c = connectedClient({}, "Results");
+    addScore(c, "ann-12345", "Ann", 5);
+    c.state.scoreboard.push(
+      Object.assign(new ScoreEntry(), {
+        playerId: "ben-12345",
+        name: "Ben",
+        score: 5,
+        hasLeft: true,
+      }),
+    );
+    const vm = new ResultsViewModel(c.manager);
     expect(vm.headline).toBe("Ann wins with 5 points!");
   });
 

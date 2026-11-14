@@ -1,6 +1,7 @@
-import { isBelowMinimum } from "@partygame/core";
-import { ACTION, defineAction, NoPayloadSchema } from "../actions.js";
+import { EmptyPayloadSchema, endIfBelowMinimum } from "@partygame/core";
+import { ACTION, defineAction } from "../actions.js";
 import { META } from "../meta.js";
+import { PHASE } from "../phaseNames.js";
 import type { RushPhase } from "../private.js";
 import { dealTarget, inZone, stepTarget } from "../target.js";
 
@@ -25,16 +26,18 @@ export const Race: RushPhase = {
     ctx.priv.vx = next.vx;
     ctx.priv.vy = next.vy;
   },
-  onTimeout: (ctx) => ctx.transition("Results"),
+  onTimeout: (ctx) => ctx.transition(PHASE.Results),
   onRosterChange: (ctx) => {
-    if (!isBelowMinimum(ctx, META.minPlayers)) return;
-    ctx.state.notice = "Fewer than 2 players were left, so the race ended.";
-    ctx.returnToLobby();
+    endIfBelowMinimum(
+      ctx,
+      META.minPlayers,
+      `Fewer than ${META.minPlayers} players were left, so the race ended.`,
+    );
   },
   actions: {
     [ACTION.TAP]: defineAction({
       from: "player",
-      payload: NoPayloadSchema,
+      payload: EmptyPayloadSchema,
       handler: (ctx) => {
         const taps = ctx.state.taps;
         taps.set(ctx.playerId, (taps.get(ctx.playerId) ?? 0) + 1);

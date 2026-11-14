@@ -1,8 +1,7 @@
-import { getActionLog } from "@partygame/core";
+import { getActionLog, utcDay } from "@partygame/core";
 import { replayLog } from "@partygame/core/testing";
 import { describe, expect, it } from "vitest";
 import { categoriesFromArray } from "../../src/content/CategoryRepository.js";
-import { utcDay } from "../../src/dailySeed.js";
 import { createWitClashGame } from "../../src/game.js";
 import { WitClashOptionsSchema } from "../../src/options.js";
 import { WitClashState } from "../../src/state.js";

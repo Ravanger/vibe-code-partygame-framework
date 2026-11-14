@@ -168,7 +168,7 @@ export class GameConnectionManager<
     return this.state?.players.get(this.playerId);
   }
 
-  /** A ticking countdown to the current phase's `phaseEndsAt`, corrected for client clock skew. Call `destroy()` when done. */
+  /** A ticking countdown to the current phase's `phaseEndsAt`, corrected for client clock skew; it ticks only while read in a Svelte effect. */
   countdown(): Countdown {
     return new Countdown(
       () => this.state?.phaseEndsAt ?? 0,

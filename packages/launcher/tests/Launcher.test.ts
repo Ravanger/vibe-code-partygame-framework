@@ -194,7 +194,7 @@ describe("Launcher", () => {
         },
       });
       await expect(launcher.start({ mode: "prod", openBrowser: true })).rejects.toThrow(
-        "Building client failed (exit code 3)",
+        "Building client failed (code 3)",
       );
       expect(await isFree(ports.game)).toBe(true);
     },

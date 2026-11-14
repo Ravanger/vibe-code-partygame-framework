@@ -6,7 +6,7 @@ import { type BluffOptions, BluffOptionsSchema } from "../../src/options.js";
 import type { BluffPrivate } from "../../src/private.js";
 import { BluffState } from "../../src/state.js";
 
-const FIXTURE_PROMPTS: Prompt[] = [
+export const FIXTURE_PROMPTS: Prompt[] = [
   { id: "p1", question: "What is the capital of Australia?", truth: "Canberra" },
   { id: "p2", question: "Which ocean is the largest on Earth?", truth: "Pacific Ocean" },
   { id: "p3", question: "How many bones are in the adult human body?", truth: "206" },

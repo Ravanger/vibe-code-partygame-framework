@@ -6,8 +6,9 @@ Ships Svelte source; consumers need the Svelte plugin — Vite with `@sveltejs/v
 
 | Import | What |
 |---|---|
-| `@partygame/game-ui` | `createAppRouter`, `AppRouter`, `WelcomeViewModel`, `WaitingRoomViewModel`, `LobbySettingsViewModel`, `OptionsReader`, `PhaseClock`, `TypingReporter`, `GameControlsViewModel`, `NameField`, `ReplayViewModel`, `snapshotManager`, `SoundPolicy`; `OptionFields`, `qrCode`, `playerSticker`, `rankRows`, `podiumSteps`; `setStrings`, `defaultUiStrings`, `UiStrings`; types `RouterScreen`, `LobbySettingsConfig`, `SoundPolicyOptions`, `StickerShape` |
-| `@partygame/game-ui/components` | Svelte 5 source: `StatusPanel`, `Timer`, `PlayerSticker`, `QrCode`, `ActionBar`, `NameInput`, `SoundToggle`, `LobbySettings`, `GameControls`, `Podium` |
+| `@partygame/game-ui` | `createAppRouter`, `AppRouter`, `WelcomeViewModel`, `WaitingRoomViewModel`, `LobbySettingsViewModel`, `OptionsReader`, `PhaseClock`, `TypingReporter`, `GameControlsViewModel`, `HowToPlayViewModel`, `JoinNextRoundViewModel`, `NameField`, `ReplayViewModel`, `snapshotManager`, `replayManager`, `SoundPolicy`, `Spotlight`, `TextDraft`; `OptionFields`, `qrCode`, `playerSticker`, `rankRows`, `leaders`, `podiumSteps`, `roundLabel`, `plural`, `downloadReplay`, `mountReplayIfRequested`; `setStrings`, `defaultUiStrings`, `UiStrings`; types `RouterScreen`, `LobbySettingsConfig`, `HowToPlayStep`, `HowToPlayStorage`, `HowToPlayTimer`, `HowToPlayViewModelOptions`, `SoundPolicyOptions`, `StickerShape`, `TextDraftConfig`, `ProgressRow`, `ReplayManager` |
+| `@partygame/game-ui/components` | Svelte 5 source: `GameShell`, `WelcomeScreen`, `StatusPanel`, `Timer`, `PhaseTimer`, `PhaseBar`, `PlayerSticker`, `QrCode`, `ActionBar`, `NameInput`, `SoundToggle`, `LobbySettings`, `GameControls`, `HowToPlay`, `HowToPlayButton`, `Podium`, `Confetti`, `ScreenTitle`, `ProgressStrip`, `ChoiceBoard`, `ExportReplayButton`, `ReplayViewer` |
+| `@partygame/game-ui/testing` | Test-only CSS audits for a game's `ui/` directory: `auditContrast({ uiDir, minChecked, pairs? })` (WCAG AA over same-rule colour/background pairs plus explicit cross-rule pairs; fails on a colour variable defined nowhere and throws when fewer than `minChecked` pairs were checked), `auditReducedMotion({ uiDir, minGuarded, allow? })` (every transition/animation/`scroll-behavior: smooth` inside a no-preference block, no Svelte motion directives outside the allow list; throws below `minGuarded`) and the walkers `cssFiles`, `rules`, `stripComments` |
 
 Viewmodels are typed on `GameConnectionManager<TState>` and read its state reactively. Import through the `svelte` export condition (Vite with the Svelte plugin). Build one in a component with `untrack(() => new Vm(manager))`.
 
@@ -43,6 +44,57 @@ Viewmodels are typed on `GameConnectionManager<TState>` and read its state react
 ```
 
 A `RouterScreen` is one entry of that table: `component` and an optional `banner`. The router also exposes `banner`, `phase`, `isSpectator`, `isReconnecting`, `roomCode`, `error`, `dismissError()`.
+
+## App shell
+
+`GameShell` (from `@partygame/game-ui/components`) is the chrome every screen sits in: the header (wordmark, room code, `GameControls`), a reconnecting bar that dims and `inert`s the game view, a dismissible error toast, the routed screen inside `.screen`, and the phase banner. Pass your router and controls, and give it one snippet per route kind — `welcome`, `joinNextRound`, `phase(phase)` (the phase name, for indexing your own screen table) and `wordmark`:
+
+```svelte
+<script lang="ts">
+  import { GameControlsViewModel, createAppRouter } from "@partygame/game-ui";
+  import { GameShell } from "@partygame/game-ui/components";
+  import { untrack } from "svelte";
+  import { isGameOver } from "../src/isGameOver.js";
+  import JoinNextRound from "./screens/JoinNextRound.svelte";
+  import { PHASE_SCREENS } from "./screens/index.js";
+  import Welcome from "./screens/Welcome.svelte";
+
+  const { manager }: { manager: GameConnectionManager<ButtonState> } = $props();
+  const router = untrack(() => createAppRouter(manager, PHASE_SCREENS));
+  const controls = untrack(() => new GameControlsViewModel(manager, isGameOver));
+</script>
+
+<GameShell router={router} controls={controls}>
+  {#snippet wordmark()}MyGame{/snippet}
+  {#snippet welcome()}<Welcome {manager} />{/snippet}
+  {#snippet joinNextRound()}<JoinNextRound {manager} />{/snippet}
+  {#snippet phase(phase)}
+    {@const Screen = PHASE_SCREENS[phase].component}
+    <Screen {manager} />
+  {/snippet}
+</GameShell>
+```
+
+On every screen change (never on the initial mount) it moves focus to the first heading matching `headingSelector` (default `.screen h1, .screen h2`) inside the new screen — unless a form field that just mounted already took its own focus — sets `tabindex="-1"` on a heading that lacks one, and falls back to focusing the `.screen` container when no heading matches. The focused heading and the polite live region are both announced by design: the heading names the screen, the banner announces the phase moment.
+
+The shell renders structure; it carries no game look. Its stable class names — `header`, `.wordmark`, `.room-chip`, `.reconnecting`, `.game-view`, `.screen`, `.phase-banner` — are styled by global rules in your `app.css` (a component's scoped `<style>` cannot reach the snippet content you pass it). Keep those rules in ascending specificity order, e.g. `.screen .wordmark` before `main.tv header .wordmark`.
+
+`WelcomeScreen` is the entry screen: a wordmark `title` and `tagline` (or a `hero` snippet replacing both), the host button, a join-by-code input, a watch-on-a-TV button, an optional `howToPlay` snippet at the bottom and a dismissible local error. It owns the `$effect(() => { void vm.autoJoinIfRequested(); })`, so share links (`?code=`) and TV links (`?tv=`) connect without a click:
+
+```svelte
+<script lang="ts">
+  import { readUrlCode, readUrlTvCode } from "@partygame/game-client";
+  import { WelcomeViewModel } from "@partygame/game-ui";
+  import { WelcomeScreen } from "@partygame/game-ui/components";
+  import { untrack } from "svelte";
+
+  const vm = untrack(() => new WelcomeViewModel(manager, readUrlCode(), readUrlTvCode()));
+</script>
+
+<WelcomeScreen vm={vm} title="MyGame" tagline="One line about the game." />
+```
+
+The wordmark face (font, tape) is themed by your global `.screen .wordmark` rule.
 
 ## Welcome and waiting room
 
@@ -86,11 +138,31 @@ Any viewmodel that needs the published options reads them through `OptionsReader
 
 `GameControlsViewModel(manager, isGameOver?)` is leave plus a host-only end-game menu outside the lobby; subclass it with `super(manager, (state) => state.phase === "Done")`. Members: `isVisible` (connected and outside the lobby), `canEndGame` (host, controls visible, game not over), `toggleMenu()`/`closeMenu()` (both drop a pending end confirmation), `askEnd()`, `confirmEnd()` (closes the menu and sends `END_GAME`; no-op unless `canEndGame`) and `cancelEnd()`.
 
+`JoinNextRoundViewModel(manager, screens)` is the base for the screen a late joiner sees while waiting for their first round or game: `needsName` (the seat has no confirmed name yet), `heading`, `hint`, `phaseLabel` (the current phase's screen `waitingLabel`, or the raw phase name when it has none) and `nameField`; call `destroy()` on teardown. Subclass it with `super(manager, PHASE_SCREENS)` to add game-specific content (a scoreboard, a round label) and override `heading`/`hint`.
+
 ## Phase clock and typing
 
-`PhaseClock(manager, totalSeconds, announceAt?)` wraps `manager.countdown()`: `secondsLeft`, `isUrgent` (the last ten seconds), `announcement` ("N seconds remaining" at 30/10/5 by default) and your `totalSeconds` getter — e.g. `() => options.current.promptSeconds` from an `OptionsReader`.
+`PhaseClock(manager, totalSeconds, announceAt?)` wraps `manager.countdown()`: `secondsLeft`, `isUrgent` (the last ten seconds), `announcement` ("N seconds remaining" at 30/10/5 by default), `fraction` (the share of the phase still running, 0 to 1) and your `totalSeconds` getter — e.g. `() => options.current.promptSeconds` from an `OptionsReader`.
+
+`roundLabel(round, total)` is the shared "Round 2 of 3" label for round-based screens; pass it the state's `roundNumber` and `totalRounds` (zeros before the first round).
 
 `TypingReporter(send, idleMs = 2500)` calls `send(true)` on the first keystroke and `send(false)` after `idleMs` of quiet or on `stop()` — one message per change. Call `keystroke()` per key and `stop()` on submit or teardown.
+
+## Spotlight and confetti
+
+`Spotlight(count, periodMs = 8000)` cycles a reactive `current` index through `count()` panels every `periodMs`, wrapping around; while `count() <= 1` it stays at zero (`isActive` is false). Call `destroy()` when the screen unmounts. Use it to alternate what a results screen shows (e.g. podium vs best answers for spectators):
+
+```ts
+const spotlight = new Spotlight(() => (isSpectator && bestAnswers.length > 0 ? 2 : 1));
+// show panel one while spotlight.current === 1 and spotlight.isActive
+$effect(() => () => spotlight.destroy());
+```
+
+`Confetti` (from `@partygame/game-ui/components`) rains `count` deterministic pieces from the top of the screen, coloured by the theme palette (`--color-1` to `--color-4`, `--accent`); the pieces are hidden and the fall animation runs only under `prefers-reduced-motion: no-preference`. Render it inside an `{#if}` so it exists only while celebrating.
+
+## Text draft
+
+`TextDraft(manager, config)` holds the shared rules of a free-text answer field: one draft per key (`draft(key)`, `setDraft(key, value)`), `charsRemaining(key)` and `canSubmit(key)` (non-blank and within `config.maxLength`), `rejectionReason` (the server's message for a `CONTENT_REJECTED` error, else "") and `moderationLine` — host only, hidden while the filter level is "off", e.g. "3 answers rejected, level moderate" (`config.noun` is the singular noun, pluralised by appending "s"). `config.filterLevel()` and `config.rejectedCount()` are getters into your state, so the class stays game-agnostic; a screen with one field uses one key, a screen with several fields uses one key per field.
 
 ## Sound
 
@@ -125,6 +197,30 @@ const sound = new SoundPolicy({ storage: localStorage, storagePrefix: "my-game",
 <SoundToggle policy={sound} />
 ```
 
+## How to play
+
+`HowToPlayViewModel(manager, { storage, storagePrefix, intervalMs? = 8000, timer? }, stepCount?)` (`@experimental`) is the open state, step index and timers of a how-to-play sheet. The game owns the content — `steps: readonly HowToPlayStep[]`, each `{ title, body }` plus optional `illustration` and `example` snippets that must be able to read without — and the package owns the chrome:
+
+- **Seated players** get a dialog (`HowToPlay`): auto-opened once per browser (the seen flag under `${storagePrefix}.howToPlaySeen`; a throwing or blocked storage never throws and degrades to once per page load), focus-trapped with the background inert, closed by Escape or the close button, focus returned to the opener.
+- **Seatless viewers** (TV) get an auto-advancing carousel instead: it starts on mount, advances every `intervalMs`, wraps around, never takes focus or blocks the lobby, and stops for good on user input (`stopCarousel()`; `pauseCarousel()` is the unmount variant).
+
+Navigation is next/back plus a dot row (all wrapping within `stepCount()`); without steps the component renders nothing. The step cross-fade runs only under `prefers-reduced-motion: no-preference`. Every label comes from the `UiStrings` table (`howToPlay`, `closeSheet`, `previousStep`, `nextStep`, `stepLabel(current, total)`).
+
+```svelte
+<script lang="ts">
+  import { HowToPlayViewModel } from "@partygame/game-ui";
+  import { HowToPlay, HowToPlayButton } from "@partygame/game-ui/components";
+  import { untrack } from "svelte";
+
+  const howTo = untrack(() => new HowToPlayViewModel(manager, { storage: localStorage, storagePrefix }, () => STEPS.length));
+</script>
+
+<HowToPlay vm={howTo} steps={STEPS} />
+<HowToPlayButton vm={howTo} /> <!-- or pass it as the howToPlay snippet of GameControls / WelcomeScreen -->
+```
+
+`GameControls` and `WelcomeScreen` take an optional `howToPlay` snippet rendered in their bar (and at the bottom of the welcome screen), so a game can offer the sheet from anywhere without changing the layout for games that do not pass one.
+
 ## Replay viewer
 
 `ReplayViewModel(bundleText, { intervalMs?, timer? })` loads a replay bundle file (the JSON the host exports) and steps through its snapshots as a read-only spectator — no game runtime, no server connection. `snapshots`, `index`, `current` (the snapshot's synced state as plain JSON) and `phase` are reactive; `next()`, `previous()` and `goTo(i)` clamp at the ends. A file that is not valid JSON, not a bundle of the supported format version, or with malformed snapshots sets `error` and leaves no snapshots. `play()`/`pause()` auto-advance every `intervalMs` (default 1000) on an injectable timer, stopping at the last snapshot.
@@ -149,13 +245,37 @@ const sound = new SoundPolicy({ storage: localStorage, storagePrefix: "my-game",
 {/if}
 ```
 
+`replayManager(viewModel, stateClass)` extends the snapshot manager with the other members screens read while mounting in replay mode: `me()` is always `undefined`, `leave()` is a no-op, and `countdown()` is rebuilt from the snapshot's own `phaseEndsAt`/`serverNow` fields (the recorded phase is over, so it reads 0 almost immediately). A screen may read only these members; where a screen demands the game's manager type, cast the result at the use site.
+
+The viewer itself ships as components: `ReplayViewer` (from `@partygame/game-ui/components`) takes `screens` (a phase-name-to-`{ component }` record — the same shape as the game's `PHASE_SCREENS`), the game's synced `stateClass` and a `title` for the header wordmark (whose face is themed by the game's global `header .wordmark` rule). Each screen receives the `replayManager` adapter in place of the game's manager (the viewer narrows the screen's prop to it with an unchecked cast, so a screen may only read what `ReplayManager` provides); screens typed for the full manager pass through unchanged. It provides a file picker, previous/next/play controls and a scrubber over the bundle's snapshots; an invalid bundle shows its error, and a snapshot whose phase is missing from `screens` falls back to a message. `mountReplayIfRequested(ReplayViewer, target, props)` mounts it only when the URL carries a `?replay` parameter and returns whether it mounted, so a game's entry point never inlines the query check:
+
+```ts
+// ui/main.ts
+import { mountReplayIfRequested } from "@partygame/game-ui";
+import { ReplayViewer } from "@partygame/game-ui/components";
+import { PHASE_SCREENS } from "./screens/index.js";
+import { MyState } from "../src/state.js";
+
+if (
+  !mountReplayIfRequested(ReplayViewer, target, {
+    screens: PHASE_SCREENS,
+    stateClass: MyState,
+    title: "MyGame replay",
+  })
+) {
+  mount(App, { target, props: { manager } });
+}
+```
+
+`ExportReplayButton` (from `@partygame/game-ui/components`) is the host's Results-screen button: it sends the host-only `EXPORT_REPLAY` request through `manager.exportReplay()` and downloads the answer as `<name>-replay.json` — the bundle's game name lower-cased, or `replay` when it has none; a refusal downloads nothing. `downloadReplay(response, doc?)` is the download itself (the document is injectable for tests).
+
 ## Components
 
-Props (all render in plain markup, e.g. `<Timer seconds={12} total={30} />`): `LobbySettings` and `GameControls` take `vm`; `NameInput` takes `field` (`vm.nameField`) and `focus?`; `PlayerSticker` takes `name`, `playerId`, `size?`, `ghost?`; `QrCode` takes `text`; `SoundToggle` takes `policy` (a `SoundPolicy`); `StatusPanel` takes `title`, `detail?`, `tone` (`"wait"`, `"done"`, `"info"`); `Timer` takes `seconds`, `total`, `announcement?`.
+Props (all render in plain markup, e.g. `<Timer seconds={12} fraction={0.4} />`): `LobbyScreen` takes `vm` (`WaitingRoomViewModel`) and optionally `settings` (`LobbySettingsViewModel`, rendered below the players) and an `extra` snippet; it renders notice, name card (first while unnamed), room code with copy button and QR for host and spectators, the waiting panel for named guests, the player list with badges and kick confirmation, leave and — for the host — the start button; the chips (`chip`, `chip--sky`, `chip--paper`) are styled by the game. `LobbySettings` takes `vm`; `GameControls` takes `vm` and an optional `howToPlay` snippet; `HowToPlay` takes `vm` (`HowToPlayViewModel`) and `steps` (`readonly HowToPlayStep[]`, each `{ title, body }` plus optional `illustration` and `example` snippets) — a dialog for seated players and an auto-advancing carousel for seatless viewers (see "How to play"); `HowToPlayButton` takes `vm` and opens the sheet; `NameInput` takes `field` (`vm.nameField`) and `focus?`; `PlayerSticker` takes `name`, `playerId`, `size?`, `ghost?`; `QrCode` takes `text`; `SoundToggle` takes `policy` (a `SoundPolicy`); `StatusPanel` takes `title`, `detail?`, `tone` (`"wait"`, `"done"`, `"info"`) and `heading?` (renders the title as a focusable `h2` instead of a paragraph, so the panel itself can be the screen's heading); `Timer` takes `seconds`, `fraction` (0 to 1, from `PhaseClock.fraction`) and `announcement?`; `PhaseTimer` and `PhaseBar` take a `clock` (`PhaseClock`) — `PhaseTimer` renders the `Timer` from the clock's seconds, fraction and announcement, and `PhaseBar` renders a "next up in Ns" label over a draining track. `ScreenTitle` takes `title` and an optional `hint`: a focusable heading (the `h1` carries `tabindex="-1"`) with a wavy underline. `ProgressStrip` takes `rows` (`ProgressRow[]`) and a required `label`, the strip's accessible name; each row shows its sticker, name, an `answered/expected` count and — from `UiStrings` — the done mark or the typing mark and label. `ChoiceBoard` takes `choices` (objects with `id`, `text` and optional `picked`, `own`, `label`), `canVote`, `onvote(id)` and an optional `versus` string rendered as a divider before the second choice; the picked choice is marked with a stamp and `aria-pressed`, the own one stays disabled with its chip, and a switch hint shows while the pick can still change. `DraftBox` takes `value`, `label` (the textarea's accessible name), `maxLength`, `remaining`, `oninput(value)`, `onsubmit()`, an optional `placeholder` and an optional `rejection`: Enter submits (Shift+Enter inserts a newline; the textarea carries `enterkeyhint="send"`), a counter chip shows `charsLeft(remaining)` from `UiStrings` and turns low below 20, and a non-empty `rejection` renders as a `role="alert"` line above the box.
 
 ## Podium and ranking
 
-`STICKER_SHAPES` lists the shapes a player sticker can take (`StickerShape` is one of them). `rankRows` adds competition ranks (1, 1, 3) to rows in leaderboard order; `podiumSteps` keeps the top three rank groups among seated rows; `Podium` takes `steps` and an optional `extra` snippet per occupant. The place on each block comes from the `UiStrings.podiumPlace(tier)` table entry (default "1st"/"2nd"/"3rd"), so it can be translated; `PodiumStep.label` keeps the English default for uses that render steps without the component. Block heights come from `--podium-block-height-1` to `--podium-block-height-3` (the contract's fallbacks are scaled by `--scale`); set them in your own context for a different scale, e.g. inside a `main.tv` rule.
+`STICKER_SHAPES` lists the shapes a player sticker can take (`StickerShape` is one of them). `rankRows` adds competition ranks (1, 1, 3) to rows in leaderboard order; `leaders` picks the seated rows sharing the best seated score — empty when nobody is seated or the best seated score is 0; leavers never count, even at the top; `podiumSteps` keeps the top three rank groups among seated rows; `Podium` takes `steps` and an optional `extra` snippet per occupant. The place on each block comes from the `UiStrings.podiumPlace(tier)` table entry (default "1st"/"2nd"/"3rd"), so it can be translated; `PodiumStep.label` keeps the English default for uses that render steps without the component. Block heights come from `--podium-block-height-1` to `--podium-block-height-3` (the contract's fallbacks are scaled by `--scale`); set them in your own context for a different scale, e.g. inside a `main.tv` rule.
 
 ```svelte
 <script lang="ts">
@@ -173,7 +293,7 @@ Props (all render in plain markup, e.g. `<Timer seconds={12} total={30} />`): `L
 
 ## Localisation
 
-Every label the generic components render (the GameControls menu and dialog, the LobbySettings summary, NameInput, Podium — places through its `podiumPlace(tier)` function entry —, QrCode, the SoundToggle label, the StatusPanel done sticker, the waiting room's copy status (`codeCopied`, `codeCopyFailed`) and the `PhaseClock` announcement through its `secondsRemaining(n)` function entry) comes from `defaultUiStrings`. Call `setStrings(partial)` once at the app root to replace any of them; unspecified keys keep the English default.
+Every label the generic components render (the GameControls menu and dialog, the LobbyScreen — room code, badges, kick confirmation and start button, several through function entries such as `playersHeading(ready, min, max)` and `startGame(ready, min)` —, the LobbySettings summary, NameInput, Podium — places through its `podiumPlace(tier)` function entry —, QrCode, the SoundToggle label, the StatusPanel and ProgressStrip done mark (`done`), the ProgressStrip typing label (`typing`), the ChoiceBoard stamp (`pickedStamp`), switch hint (`switchHint`) and own-item chip (`yours`), the DraftBox counter through its `charsLeft(n)` function entry, the waiting room's copy status (`codeCopied`, `codeCopyFailed`), the `PhaseClock` announcement through its `secondsRemaining(n)` function entry, the PhaseBar label through its `nextUpIn(n)` function entry and the HowToPlay sheet (heading, close, back/next and the step dots through its `stepLabel(current, total)` function entry) comes from `defaultUiStrings`. Call `setStrings(partial)` once at the app root to replace any of them; unspecified keys keep the English default.
 
 ```svelte
 <script lang="ts">
@@ -187,22 +307,40 @@ The table also carries a `clientStrings` field (`Partial<ClientStrings>` from `@
 
 ## Theme
 
-The package ships `theme-contract.css`: a baseline for every contract variable (the `CONTRACT_VARIABLES` list in `src/themeContract.ts`) plus the `.sr-only` utility. Import it first in your game's `app.css`, then override any variable you want to change:
+The package ships two stylesheets. `theme-contract.css` is a baseline for every contract variable (the `CONTRACT_VARIABLES` list in `src/themeContract.ts`), the `main.tv` base sizes for TV displays and the `.sr-only` utility; `base.css` is the look every framework component needs — page baseline, cards, tape, chips, stickers, buttons, notices, the hand font class and the reduced-motion guards — all on those tokens. Import both at the top of your game's `app.css`, then override any variable you want to change:
 
 ```css
 @import "@partygame/game-ui/theme-contract.css";
+@import "@partygame/game-ui/base.css";
 ```
 
-- Custom properties: `--ink`, `--ink-soft`, `--white`, `--paper`, `--color-1` to `--color-4`, `--accent`, `--danger`, `--disabled`, `--tape-1` to `--tape-4`, `--fs-1` to `--fs-5`, `--font-display`, `--outline`, `--radius-card`, `--radius-btn`, `--scrap-shadow`, `--podium-block-height-1`, `--podium-block-height-2`, `--podium-block-height-3`, `--scale`, `--timer-size`.
+- Custom properties: `--ink`, `--ink-soft`, `--white`, `--paper`, `--color-1` to `--color-4`, `--accent`, `--danger`, `--disabled`, `--tape-1` to `--tape-4`, `--fs-1` to `--fs-6`, `--font-display`, `--font-hand`, `--font-body`, `--outline`, `--radius-card`, `--radius-btn`, `--radius-pill`, `--scrap-shadow`, `--podium-block-height-1`, `--podium-block-height-2`, `--podium-block-height-3`, `--scale`, `--timer-size`, `--screen-pad-x`, `--screen-pad-y`.
+- TV displays: the `main.tv` rule sets `--scale: 1.6` (every `calc(var(--fs-*) * var(--scale, 1))` declaration scales with it), lifts `--fs-1` to the 24px minimum and raises the base font size; games may further tune `--podium-block-height-*` in their own `main.tv` rule.
 - Sticker colours: `PlayerSticker` sets `data-color` to a palette index (0–3); the contract maps `[data-color="0"]` to `--color-1` through `[data-color="3"]` to `--color-4`.
-- Global classes: `card`, `taped`, `sticker`, `hand`, `sr-only` (shipped with the contract), `btn` (`btn--ghost`, `btn--danger`); `action-bar` is rendered by `ActionBar`, which styles nothing.
+- Global classes: `card`, `taped`, `sticker`, `hand`, `chip` and its variants, the `btn` family, `notice`, `sr-only` ship with the stylesheets; the game still defines the app-shell faces `wordmark` and `room-chip`. `ActionBar` styles its own bar (hidden on TV displays).
 - Chrome vs artwork: chrome — the framework components' look (lobby, join overlays, scoreboard/podium, game controls, timer) — is themed through these variables; artwork — your screens and cards — is yours to design.
 
 ## Accessibility
 
-Every component is checked by axe in the jsdom tests via `expectNoViolations(container, "Component")` from `tests/support/a11y.ts`; zero violations is the gate. `color-contrast` is disabled there because jsdom cannot compute it — contrast stays a game-level test (#57). Interactive components are also driven with `userEvent` for tab order and Escape handling, and `tests/reducedMotion.test.ts` fails on any `transition`/`animation` declaration outside an `@media (prefers-reduced-motion: no-preference)` block.
+Every component is checked by axe in the jsdom tests via `expectNoViolations(container, "Component")` from `tests/support/a11y.ts`; zero violations is the gate. `color-contrast` is disabled there because jsdom cannot compute it — contrast stays a game-level test (the `auditContrast` below). Interactive components are also driven with `userEvent` for tab order and Escape handling, and `tests/reducedMotion.test.ts` fails on any `transition`/`animation` declaration outside an `@media (prefers-reduced-motion: no-preference)` block.
 
 A violation that cannot be fixed yet goes into `tests/support/a11yAllowList.ts`: one entry per rule and component, each with a comment explaining why it is acceptable and the issue that tracks the fix.
+
+## Testing (CSS audits)
+
+`@partygame/game-ui/testing` audits a game's `ui/` directory from its test suite — every game with a `ui/` runs both:
+
+```ts
+import { auditContrast, auditReducedMotion } from "@partygame/game-ui/testing";
+
+const report = auditContrast({ uiDir: UI_DIR, minChecked: 17 });
+expect(report.unresolved).toEqual([]);
+expect(report.failures).toEqual([]);
+```
+
+- `auditContrast({ uiDir, minChecked, pairs? })` checks WCAG AA for every same-rule `color`/`background` pair (4.5:1, or 3:1 when the font size statically resolves to at least 24px — 18.66px bold); a pair that only reaches the large-text ratio with an unresolvable size fails. Tokens come from the theme contract plus every `:root` block under `uiDir`. A `color` or `background` naming a custom property defined nowhere lands in `report.unresolved` (file, selector and variable); a variable assigned in some rule — e.g. a per-card `--tape` — is not "nowhere". `pairs` adds cross-rule checks by selector (`{ color: ".fg", background: ".bg" }`, first resolvable match wins). It throws when fewer than `minChecked` same-rule pairs were checked, so the audit cannot pass vacuously.
+- `auditReducedMotion({ uiDir, minGuarded, allow? })` fails on any `transition*`/`animation*` declaration (a value of exactly `none` is exempt) or `scroll-behavior: smooth` outside a `prefers-reduced-motion: no-preference` block, and on `.svelte` files using `transition:`, `in:`, `out:` or `animate:` directives unless the file is in `allow`. It throws below `minGuarded` guarded declarations.
+- The walkers `cssFiles(uiDir)` (every `.css`/`.svelte` style block, comments stripped), `rules(css)` (top-level rules with their media conditions) and `stripComments(css)` are exported for tests that need the raw walk.
 
 Depends on: `@partygame/client-utils`, `@partygame/game-client`, `@partygame/shared`, `svelte`, `uqr`, `zod`
 

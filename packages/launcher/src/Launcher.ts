@@ -7,12 +7,20 @@ import type { BaseGameState } from "@partygame/shared/schema";
 import type { LaunchArgs, LaunchMode } from "./LaunchArgs.js";
 import { type BrowserSpawner, lanUrls, openBrowser } from "./network.js";
 import { ProcessGroup } from "./ProcessGroup.js";
+import { DEFAULT_PORTS } from "./ports.js";
 import { StaticSite } from "./StaticSite.js";
 import type { LaunchBots, LaunchCommands, LaunchConfig, LaunchDemo, LaunchPorts } from "./types.js";
 
 const DEFAULT_READY_TIMEOUT_MS = 30_000;
 const POLL_MS = 200;
 const LEAVE_TIMEOUT_MS = 1000;
+
+/** The child-process commands the launcher runs by default; Vite is pinned to the dev client port next to `--strictPort`. */
+export const defaultCommands = (ports: LaunchPorts): LaunchCommands => ({
+  server: [process.execPath, "server.ts"],
+  dev: [process.execPath, "run", "dev", "--strictPort", "--port", String(ports.clientDev)],
+  build: [process.execPath, "run", "build"],
+});
 
 /** Runs a game's server, API and client, and optionally a bot table, from one config. */
 export class Launcher<TState extends BaseGameState> {
@@ -34,13 +42,8 @@ export class Launcher<TState extends BaseGameState> {
     onFailure: (message: string) => void,
     spawnFn: BrowserSpawner = spawn,
   ) {
-    this.ports = { game: 2567, api: 3001, clientDev: 5173, production: 3000, ...config.ports };
-    this.commands = {
-      server: [process.execPath, "server.ts"],
-      dev: [process.execPath, "run", "dev", "--strictPort"],
-      build: [process.execPath, "run", "build"],
-      ...config.commands,
-    };
+    this.ports = { ...DEFAULT_PORTS, ...config.ports };
+    this.commands = { ...defaultCommands(this.ports), ...config.commands };
     this.readyTimeoutMs = config.readyTimeoutMs ?? DEFAULT_READY_TIMEOUT_MS;
     this.log = config.log ?? ((line) => console.log(`[Launch] ${line}`));
     this.open =

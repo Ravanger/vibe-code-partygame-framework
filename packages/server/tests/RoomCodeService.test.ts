@@ -112,4 +112,26 @@ describe("RoomCodeService", () => {
       "Could not generate a unique room code after 10 attempts; too many open rooms",
     );
   });
+
+  it("refuses to rebind a code that is already bound to another room", () => {
+    service.register("AAAA", "room-1");
+    expect(() => service.register("AAAA", "room-2")).toThrow(/AAAA/);
+    expect(service.resolve("AAAA")).toBe("room-1");
+    expect(service.resolveByRoomId("room-2")).toBeUndefined();
+  });
+
+  it("refuses to bind a room that already has a different code", () => {
+    service.register("AAAA", "room-1");
+    expect(() => service.register("BBBB", "room-1")).toThrow(/room-1/);
+    expect(service.resolveByRoomId("room-1")).toBe("AAAA");
+    expect(service.resolve("BBBB")).toBeUndefined();
+  });
+
+  it("accepts registering the identical code and room twice without changing the maps", () => {
+    service.register("AAAA", "room-1");
+    expect(() => service.register("AAAA", "room-1")).not.toThrow();
+    expect(service.size).toBe(1);
+    expect(service.resolve("AAAA")).toBe("room-1");
+    expect(service.resolveByRoomId("room-1")).toBe("AAAA");
+  });
 });

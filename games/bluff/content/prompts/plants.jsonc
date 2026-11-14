@@ -1,0 +1,15 @@
+{
+  "id": "plants",
+  "prompts": [
+    {
+      "id": "banana-plant",
+      "question": "A banana plant is actually what kind of plant?",
+      "truth": "a giant herb"
+    },
+    {
+      "id": "largest-flower",
+      "question": "What plant produces the largest single flower in the world?",
+      "truth": "rafflesia"
+    }
+  ]
+}

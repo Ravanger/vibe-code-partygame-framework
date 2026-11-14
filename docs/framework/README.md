@@ -68,7 +68,9 @@ The envelope is flat and capped at 32 top-level keys (more is `INVALID_ACTION`).
 action name: do not declare it in a payload schema, and `sendAction` refuses to send a payload that carries a
 `type` field. Write payload schemas that keep unknown keys out of your handler: plain `z.object` strips them
 (the default — dispatch parses the whole envelope, so a strict schema would also reject the reserved `type`),
-while `z.looseObject` passes them through and should be avoided.
+while `z.looseObject` passes them through and should be avoided. An action with no fields uses
+`EmptyPayloadSchema` from `@partygame/core` instead of writing `z.object({})`; and to end the game back in
+the lobby, put `playAgainAction()` (host-only, empty payload) in your own end phase under your own action name.
 Every rejection is sent only to the sender as `ERROR { code, message, action }`:
 
 | Code | Cause |
@@ -124,6 +126,7 @@ The handler receives an `AudienceActionContext`: like `ActionContext` without `p
 single method, `once(scope)`. It returns `true` the first time that key uses that scope and `false` afterwards — count one vote per
 audience member per option without any per-member state (write the counts into synced state as plain counters). The host clears
 every scope when the phase changes (`RuntimeHost.audienceOnce`, cleared in `notifyTransition`), so a new round accepts fresh votes.
+The host-side implementation is the exported `AudienceScopes` class (from `@partygame/core`): `once(audienceKey, scope)` and `clear()`, shared by `FakeHost`, `ReplayHost` and the server room.
 
 Refusals mirror the player path: a seated player who sends an audience action gets `NOT_ALLOWED`; an audience key that sends
 anything but an audience action gets `UNAUTHORIZED`. Payload validation, middleware and the failure policy are identical to
@@ -160,7 +163,7 @@ Migration runs before the phase's `onRosterChange`, so the hook sees the new rol
 ### Roster changes and mid-game joiners
 Joins, leaves, disconnects, reconnects and ready changes call the current phase's `onRosterChange(ctx)`.
 Use it to re-check completion ("everyone has answered") so a leaver cannot stall the game.
-For minimum-player guards use `seatedCount(ctx)` / `isBelowMinimum(ctx, min)` — they count active and ready seats including briefly disconnected ones, so a dropped connection does not end the game — and `departedIds(ids, ctx)` for the ids that lost their seat; all three only report, so you write the notice and decide to end.
+For minimum-player guards use `seatedCount(ctx)` / `isBelowMinimum(ctx, min)` — they count active and ready seats including briefly disconnected ones, so a dropped connection does not end the game — and `departedIds(ids, ctx)` for the ids that lost their seat; all three only report. `endIfBelowMinimum(ctx, min, notice)` is the standard reaction: below the minimum it sets `state.notice` to your message and queues the return to the lobby (applied when the current dispatch drains). For per-player entries in a synced map use `ensureMine(ctx, mine, playerId, create)` (creates and reveals a missing entry), `resetMine(ctx, mine)` (hides every entry and empties the map) and `pruneMine(ctx, mine, ids)` (hides and removes the entries whose ids lost their seat; returns those ids). To keep names across rounds hold a `RosterLedger` in your private state: `ledger.remember(ctx)` records every seat's name and adds active ready players to the participants, `ledger.nameOf(ctx, id)` is the seat's current name else the remembered one, and `ledger.participantIds` / `ledger.rememberedNames` read both lists; leavers stay until you call `ledger.drop(id)`, or `ledger.clear()` for a fresh game.
 Someone who joins mid-game is seated but not active, so they spectate and their actions get `NOT_ACTIVE`.
 Call `ctx.activateWaitingPlayers()` at a natural break in your game to let them in. It activates only ready seats (seats that have set a name);
 an unnamed seat stays waiting, and in the Lobby a seat that sets its name is activated at once.
@@ -327,6 +330,11 @@ positionally to `p1..pN`, so every recorded sender re-dispatches against the mat
   so published ids do not reveal the stream. `ReplayHost`, `FakeHost`/`TestTable` accept a `Seed` or a
   number (expanded by `seedFromNumber`); an unseeded host is `seedFromNumber(0)`, so even unseeded test
   rooms are replayable by seed (and their ids from `ctx.newId()` stay unique).
+- **Daily content.** A mode in which every room on the same day deals the same orderings draws from
+  `dailyRng(day, salt)` instead of the room RNG: the FNV-1a hash of `${day}:${salt}` seeds `mulberry32`,
+  so all servers (and replays) draw the identical sequence per day and salt, without consuming the room's
+  stream. `utcDay(ctx.now())` yields the UTC date as `YYYY-MM-DD`; record it in `ctx.priv` once per game
+  and use a distinct salt per use (e.g. one for orderings, the round number for dealing).
 - **Clock.** Replay scripts the fake clock: it advances to each entry's `t` before applying the entry, and
   logged timeouts are authoritative — when replay enters a timed phase, its timer is made to expire at the
   time recorded in the log. A live room's phase timers run on Colyseus's tick-quantized clock (a ~17 ms
@@ -376,8 +384,9 @@ when a logged transition or enter contradicts what the replayed runtime actually
 its own consequence run, so a tampered log throws naming the mismatch.
 
 `ActionLogSchema` (from `@partygame/core`) is the zod schema behind that validation: strict objects over
-the exact log shape. It is also the gate for untrusted logs — replay bundles and spectators (#19) parse
-with it before anything else runs. `ReplayHost` (from `@partygame/core/replay`) is the host `replayLog`
+the exact log shape, with `ACTION_LOG_ENTRY_KINDS` as the single list of entry kinds behind the schema's
+`kind` enum and the replay walk. It is also the gate for untrusted logs — replay bundles and spectators (#19)
+parse with it before anything else runs. `ReplayHost` (from `@partygame/core/replay`) is the host `replayLog`
 drives: a minimal `RuntimeHost` with a manual clock (`advance(ms)`), seats and the given seed, and no
 recording or assertion helpers — client traffic is dropped. Build one directly to drive a `GameRuntime`
 over a log yourself.
@@ -438,9 +447,15 @@ missing or malformed snapshots set its `error` and leave no snapshots) and steps
 `state` is a fresh `stateClass` instance filled from the current snapshot (via `syncedStateFromJson`, the
 inverse of `syncedJsonOf`, from `@partygame/shared/schema`), and `isSpectator` is always true — so a game's
 existing screens render a replay read-only. Snapshots hold synced state only: no private or per-client data,
-and player ids are the live ones (no `p1..pN` remapping). A game wires its own viewer on top (WitClash ships
-one at the `?replay` URL parameter — see its README); screens that read manager members beyond `state` and
-`isSpectator` while mounting (for example a countdown or the seat) need those supplied by the game's adapter.
+and player ids are the live ones (no `p1..pN` remapping). `replayManager(viewModel, stateClass)` extends the
+snapshot manager with the other members screens read while mounting in replay mode — `me()` is empty,
+`leave()` is a no-op and `countdown()` is rebuilt from the snapshot's own clock fields; a screen may read only
+those, and where a screen demands the game's manager type the adapter is cast at the use site. The framework
+ships the viewer itself: `ReplayViewer` (from `@partygame/game-ui/components`) takes the game's
+`PHASE_SCREENS`-shaped table, its synced state class and a title; `mountReplayIfRequested(ReplayViewer,
+target, props)` mounts it only when the URL carries a `?replay` parameter (WitClash wires exactly this in its
+entry point — see its README); and `ExportReplayButton`/`downloadReplay` give the host an "Export replay"
+button that downloads the bundle as `<name>-replay.json`.
 
 **Limitations in v1.** Mid-game roster changes are not replayed: `replayLog` throws naming the first such
 entry. Lobby-phase roster changes are skipped — the table is already seated — except the one that
@@ -622,7 +637,7 @@ number. Both live in `packages/shared/src/errors.ts`, the single source for the 
 
 The protocol does not change: errors keep their `ErrorCode` and English `message`, and the text is decided on the client. `GameConnectionManager` takes an optional `strings` table (`Partial<ClientStrings>`, defaults in `defaultClientStrings`, both from `@partygame/game-client`) that replaces every client-owned message — the room-code validation text, the client-side codes `NOT_CONNECTED`, `INVALID_ACTION`, `BAD_REPLY`, `CONNECTION_LOST`, `ROOM_NOT_FOUND`, and the two state-sync rejection messages (`syncDisconnected`, `syncTimedOut`). In addition, `strings.errors[code]` overrides the text of any code that lands in `lastServerError`; the server's own `message` is used only as a fallback when the table has no entry for the code.
 
-The generic `@partygame/game-ui` components read their labels from one more table, `defaultUiStrings`, set with `setStrings(partial)` at the app root (GameControls menu and dialog, LobbySettings summary, NameInput, Podium, QrCode, the SoundToggle label, the StatusPanel done sticker, and the `PhaseClock` announcement through its `secondsRemaining(n)` function entry). The table carries a `clientStrings` field: pass the same object to both the manager's `strings` option and `setStrings`, and one table localises both layers. Server error text resolves as `clientStrings.errors[code] ?? message`, so codes you do not translate keep the server's own message.
+The generic `@partygame/game-ui` components read their labels from one more table, `defaultUiStrings`, set with `setStrings(partial)` at the app root (GameControls menu and dialog, LobbySettings summary, NameInput, Podium, QrCode, the SoundToggle label, the StatusPanel and ProgressStrip done mark, the ProgressStrip typing label, the ChoiceBoard stamp, switch hint and own-item chip, the DraftBox counter through its `charsLeft(n)` function entry, the `PhaseClock` announcement through its `secondsRemaining(n)` function entry, and the HowToPlay sheet (heading, close, back/next, and the step dots through its `stepLabel(current, total)` function entry). The table carries a `clientStrings` field: pass the same object to both the manager's `strings` option and `setStrings`, and one table localises both layers. Server error text resolves as `clientStrings.errors[code] ?? message`, so codes you do not translate keep the server's own message.
 
 On the server side, every message the core runtime owns (the lobby built-ins' refusals, the failure notice in `state.notice`, the stopped-runtime error, the text-filter rejection, and the dispatch pipeline's refusal log messages) comes from `defaultCoreStrings` (`@partygame/core`). Pass a partial table as the definition's `strings` field — it lives on the game definition, so replays and tests see it; `defineGame` fills in the defaults:
 
@@ -653,8 +668,7 @@ Log lines are structured: `{ ts, level, event, roomId, ...fields }`, where field
 ## Minimal game: first to press the button
 
 ```ts
-import { actionFactory, defineGame } from "@partygame/core";
-import { z } from "zod";
+import { actionFactory, defineGame, EmptyPayloadSchema } from "@partygame/core";
 
 interface State { phase: string; phaseEndsAt: number; canStart: boolean; winner: string }
 interface Priv { presses: string[] }
@@ -676,7 +690,7 @@ export const ButtonGame = defineGame<State, Priv>({
       actions: {
         PRESS: action({
           from: "player",
-          payload: z.object({}),
+          payload: EmptyPayloadSchema,
           handler: (ctx) => {
             ctx.priv.presses.push(ctx.playerId);
             ctx.state.winner = ctx.priv.presses[0] ?? "";
@@ -822,7 +836,7 @@ handed to the server. A state class with no own fields beyond `BaseGameState` ne
 
 ### Testing a game
 ```ts
-import { bootTestServer, waitUntil, collectMessages, seatPlayers, stateOf } from "@partygame/server/testing";
+import { bootTestServer, waitUntil, collectMessages, seatPlayers, stateOf, waitForOwnEntry } from "@partygame/server/testing";
 
 const t = await bootTestServer({ games });            // free port, default transport, short reconnect window
 const room = await t.createRoom("button");            // server-side Room: inspect room.state
@@ -844,6 +858,7 @@ bob.errors;                                            // every well-formed ERRO
 ```
 `joinPlayer(t, room, n, stateClass)` joins one player without a name; `TestPlayer.setName(name?)` readies it.
 Every join sends a seat secret: `t.seatSecretFor(playerId)` returns the stable per-player-id value, so a test reconnect presents the same one.
+`waitForOwnEntry(state, playerId, pick)` polls until the client's decoded state holds exactly one `.view()` entry keyed by `playerId`, and fails with a label when another player's entry shows up (an isolation violation).
 A runnable example is the fixture in `packages/server/tests/fixtures/buzzer.ts`.
 
 ## Client SDK
@@ -881,7 +896,7 @@ const result = await manager.sendAction("PRESS", { power: 3 });
 | `sendAction(type, payload?)` | `Promise<ActionResult>`, see below |
 | `lastServerError`, `dismissError()` | last rejected action or pushed `ERROR` (`$state`), for a toast. A kick arrives as `KICKED`, after which `status` is `"disconnected"` |
 | `onMessage(type, cb)` | returns an unsubscribe function; survives room changes. Pass a second generic, `GameConnectionManager<State, Events>`, with `Events` mapping message names to payload types, and `type` is limited to those names and `cb` gets the matching payload; the default accepts any name with an `unknown` payload |
-| `countdown()` | a `Countdown` (`secondsLeft`, `isUrgent`, `isExpired`) to `phaseEndsAt`, corrected for client clock skew; ticks only while read in a Svelte effect. `destroy()` is a deprecated no-op. The urgent rule (more than 0 and at most 10 seconds left) is also exported as `isUrgent(secondsLeft)` from `@partygame/game-client` |
+| `countdown()` | a `Countdown` (`secondsLeft`, `isUrgent`, `isExpired`) to `phaseEndsAt`, corrected for client clock skew; ticks only while read in a Svelte effect. The urgent rule (more than 0 and at most 10 seconds left) is also exported as `isUrgent(secondsLeft)` from `@partygame/game-client` |
 | `dispose()` | stop listening and close without forgetting the session |
 
 ### Browser-safe state classes
@@ -955,6 +970,7 @@ vitest `setupFiles`: it shims the storages and makes the SDK use `ws` under jsdo
 |---|---|
 | `NameField` | A text draft that sends `setName` after a pause in typing (`new NameField(manager, debounceMs = 250)`). |
 | `GameControlsViewModel` | Leave and host-only end-game menu, visible in every phase except the lobby. |
+| `HowToPlayViewModel` | `(@experimental)` The how-to-play sheet: open state, step index (next/back/goTo wrap within `stepCount()`), once-per-browser auto-open (the seen flag under `${storagePrefix}.howToPlaySeen`, a throwing storage degrades to once per page load) and the seatless carousel timer (`new HowToPlayViewModel(manager, { storage, storagePrefix, intervalMs? = 8000, timer? }, stepCount?)`). |
 | `WelcomeViewModel` | The join screen: host, join by room code, watch as a TV, and auto-join from a `?code=` or `?tv=` link (`new WelcomeViewModel(manager, urlCode?, urlTvCode?)`). |
 | `LobbySettingsViewModel` | The host's options form, generated from the game's options schema (`OptionFields` builds the fields). |
 | `OptionsReader` | The published options, parsed once per state change: `new OptionsReader(manager, schema, defaults?)` exposes reactive `current`, falling back to `defaults` or the schema's `.default()`s. |
@@ -996,33 +1012,42 @@ export class LobbySettingsViewModel extends LobbySettingsBase<ButtonState> {
 
 `createAppRouter(manager, screens)` is the app shell's router. `screens` maps each phase name to your component and an optional `banner` (shown for a moment when the room enters the phase). `router.screen` is a `Route`: `welcome` (not connected), `connecting` (a phase missing from the table), `join-next-round` (a seat marked inactive outside the lobby) or `phase`. A client with no seat (the TV) passes through to the phase screen; `reconnecting` keeps the current screen. Also exposed: `screenKey`, `banner`, `phase`, `isSpectator`, `isReconnecting`, `roomCode`, `error` and `dismissError()`.
 
+The router drives `GameShell` (from `@partygame/game-ui/components`), the chrome every screen sits in: header (wordmark, room code, `GameControls`), a reconnecting bar that dims and `inert`s the game view, a dismissible error toast, the routed screen inside `.screen`, and the phase banner. It takes one snippet per route kind — `welcome`, `joinNextRound`, `phase(phase)` (the phase name, for indexing your own table) and `wordmark`:
+
 ```svelte
 <script lang="ts">
   import { LOBBY_PHASE } from "@partygame/shared";
-  import { createAppRouter } from "@partygame/game-ui";
+  import { GameControlsViewModel, createAppRouter } from "@partygame/game-ui";
+  import { GameShell } from "@partygame/game-ui/components";
+  import { untrack } from "svelte";
+  import JoinNextRound from "./JoinNextRound.svelte";
   import Lobby from "./Lobby.svelte";
   import Round from "./Round.svelte";
   import Welcome from "./Welcome.svelte";
   import { manager } from "./manager.js";
+  import { isGameOver } from "../src/isGameOver.js";
 
   const SCREENS = {
-    [LOBBY_PHASE]: { component: Lobby, banner: "" },
-    Round: { component: Round, banner: "GO!" },
-  } satisfies Record<string, { component: unknown; banner?: string }>;
+    [LOBBY_PHASE]: { component: Lobby, waitingLabel: "Waiting in the lobby", banner: "" },
+    Round: { component: Round, waitingLabel: "Playing a round", banner: "GO!" },
+  } satisfies Record<string, { component: unknown; waitingLabel: string; banner?: string }>;
 
-  const router = createAppRouter(manager, SCREENS);
-  const route = $derived(router.screen);
+  const router = untrack(() => createAppRouter(manager, SCREENS));
+  const controls = untrack(() => new GameControlsViewModel(manager, isGameOver));
 </script>
 
-{#if route.kind === "phase"}
-  {@const Screen = SCREENS[route.phase].component}
-  <Screen {manager} />
-{:else if route.kind === "welcome"}
-  <Welcome {manager} />
-{:else}
-  <p>Connecting...</p>
-{/if}
+<GameShell router={router} controls={controls}>
+  {#snippet wordmark()}MyGame{/snippet}
+  {#snippet welcome()}<Welcome {manager} />{/snippet}
+  {#snippet joinNextRound()}<JoinNextRound {manager} />{/snippet}
+  {#snippet phase(phase)}
+    {@const Screen = SCREENS[phase].component}
+    <Screen {manager} />
+  {/snippet}
+</GameShell>
 ```
+
+On every screen change (never on the initial mount) the shell moves focus to the first heading matching `headingSelector` (default `.screen h1, .screen h2`) inside the new screen — unless a form field that just mounted already took its own focus — and falls back to the `.screen` container. The shell renders structure only; style its stable class names (`header .wordmark`, `.room-chip`, `.phase-banner span`, `.screen .wordmark`) with global rules in `app.css`, in ascending specificity order (a component's scoped `<style>` cannot reach your snippet content).
 
 To change a rule, subclass it and override a member, for example `banner`: `class AppViewModel extends AppRouter<ButtonState, typeof SCREENS> { override get banner() { ... } }` (`manager` and `screens` are `protected`).
 
@@ -1030,12 +1055,21 @@ Write text that mixes literals and values as one template literal, `{`${choice.n
 
 ### Components
 
-`@partygame/game-ui/components` ships Svelte 5 source (no build step; import through the `svelte` export condition). `PlayerSticker` and `QrCode` have helpers on the main entry: `playerSticker`, `stickerLetter`, `qrCode`. `Podium` takes steps from `podiumSteps(rankRows(rows))`: `rankRows` adds competition ranks (1, 1, 3) to rows already in leaderboard order (a new rank group starts where `hasLeft` changes); `podiumSteps` keeps the top three rank groups among seated rows, labelled "1st"/"2nd"/"3rd", in display order second, first, third. Rows are `PodiumRow` (`playerId`, `name`, `score`, `rank`, `hasLeft`, `isMe`).
+`@partygame/game-ui/components` ships Svelte 5 source (no build step; import through the `svelte` export condition). `PlayerSticker` and `QrCode` have helpers on the main entry: `playerSticker`, `stickerLetter`, `qrCode`. Round-based screens share the "Round 2 of 3" label from the main entry's `roundLabel(round, total)`. `Podium` takes steps from `podiumSteps(rankRows(rows))`: `rankRows` adds competition ranks (1, 1, 3) to rows already in leaderboard order (a new rank group starts where `hasLeft` changes); `leaders` picks the seated rank-1 rows — empty when the list is empty or the top score is 0, so a leaver tied on score never counts as a co-leader; `podiumSteps` keeps the top three rank groups among seated rows, labelled "1st"/"2nd"/"3rd", in display order second, first, third. Rows are `PodiumRow` (`playerId`, `name`, `score`, `rank`, `hasLeft`, `isMe`). Count words come from `plural(count, one, other?)`: `one` for 1, `other` (default `${one}s`) otherwise.
 
 | Component | Props |
 |---|---|
-| `StatusPanel` | `title: string`, `detail?: string`, `tone: "wait" \| "done" \| "info"` |
-| `Timer` | `seconds: number`, `total: number`, `announcement?: string` (polite live region text) |
+| `GameShell` | `router: AppRouter<TState, TScreens>`, `controls: GameControlsViewModel<TState>`, `headingSelector?: string`; snippets `wordmark`, `welcome`, `joinNextRound`, `phase(phase)` |
+| `WelcomeScreen` | `vm: WelcomeViewModel<TState>`, `title: string`, `tagline: string`, `hero?: Snippet` (replaces the wordmark and tagline), `howToPlay?: Snippet` (rendered at the bottom of the screen); owns the `autoJoinIfRequested()` effect for share links |
+| `LobbyScreen` | `vm: WaitingRoomViewModel<TState>`, `settings?: LobbySettingsViewModel<TState>` (rendered below the players), `extra?: Snippet` (rendered below the settings); every label from the `UiStrings` table, chips styled by the game |
+| `StatusPanel` | `title: string`, `detail?: string`, `tone: "wait" \| "done" \| "info"`, `heading?: boolean` (renders the title as a focusable `h2` for screen-change focus) |
+| `Timer` | `seconds: number`, `fraction: number` (0 to 1; from `PhaseClock.fraction`), `announcement?: string` (polite live region text) |
+| `PhaseTimer` | `clock: PhaseClock` — renders the `Timer` from the clock's seconds, fraction and announcement |
+| `PhaseBar` | `clock: PhaseClock` — a "next up in Ns" label (from `UiStrings.nextUpIn`) over a draining track |
+| `ScreenTitle` | `title: string`, `hint?: string` — a focusable heading (the `h1` carries `tabindex="-1"`) with a wavy underline |
+| `ProgressStrip` | `rows: ProgressRow[]` (`playerId`, `name`, `answered`, `expected`, `done`, `typing`, `isMe`), `label: string` (the list's accessible name); done and typing marks from `UiStrings` |
+| `ChoiceBoard` | `choices: { id, text, picked?, own?, label? }[]`, `canVote: boolean`, `onvote(id)`, `versus?: string` (a divider before the second choice); stamp and `aria-pressed` on the picked one, disabled chip on the own one, switch hint while the pick can still change |
+| `DraftBox` | `value: string`, `label: string` (the textarea's accessible name), `maxLength: number`, `remaining: number`, `oninput(value)`, `onsubmit()`, `placeholder?: string`, `rejection?: string` (a non-empty value renders as a `role="alert"` line above the box); Enter submits (Shift+Enter inserts a newline, `enterkeyhint="send"`), counter chip from `UiStrings.charsLeft` |
 | `PlayerSticker` | `name: string`, `playerId: string`, `size?: number` (default 44), `ghost?: boolean` |
 | `Podium` | `steps: PodiumStep<TRow>[]` (from `podiumSteps`), `extra?: Snippet<[TRow]>` (rendered per occupant, e.g. a chip) |
 | `QrCode` | `text: string` |
@@ -1043,24 +1077,42 @@ Write text that mixes literals and values as one template literal, `{`${choice.n
 | `NameInput` | `field: NameField`, `focus?: boolean` |
 | `SoundToggle` | `policy: SoundPolicy`, `on?: string`, `off?: string` (labels, default "Sound on"/"Sound off"); a native `type="button"` with `aria-pressed` |
 | `LobbySettings` | `vm: LobbySettingsViewModel<TState>` |
-| `GameControls` | `vm: GameControlsViewModel<TState>` |
+| `GameControls` | `vm: GameControlsViewModel<TState>`, `howToPlay?: Snippet` (rendered inside the controls bar) |
+| `HowToPlay` | `(@experimental)` `vm: HowToPlayViewModel`, `steps: readonly { title, body, illustration?: Snippet, example?: Snippet }[]`; a dialog for seated players (auto-opened once per browser, focus-trapped, background inert, Escape or the close button) and an auto-advancing carousel for seatless viewers that stops for good on user input; renders nothing without steps |
+| `HowToPlayButton` | `(@experimental)` `vm: HowToPlayViewModel` — the "How to play" button that opens the sheet |
 
 `LobbySettings` and `GameControls` render a viewmodel the game builds and passes in (`untrack(() => new GameControlsViewModel(manager, isGameOver))`).
+
+### How to play
+
+The how-to-play sheet is one `HowToPlayViewModel` per game plus two components. The game owns the content — an array of steps, each `{ title, body }` that must read without its optional `illustration` and `example` snippets — and the package owns the chrome: a focus-trapped dialog with a dot row and next/back for seated players (auto-opened once per browser, the seen flag under `${storagePrefix}.howToPlaySeen`, closed by Escape or the close button, focus returned to the opener, the background inert while open), and an auto-advancing carousel for seatless viewers that never takes focus or blocks the lobby and stops for good on user input. The step cross-fade runs only under `prefers-reduced-motion: no-preference`.
+
+```svelte
+<script lang="ts">
+  import { HowToPlayViewModel } from "@partygame/game-ui";
+  import { HowToPlay, HowToPlayButton } from "@partygame/game-ui/components";
+
+  const howTo = untrack(() => new HowToPlayViewModel(manager, { storage: localStorage, storagePrefix }, () => STEPS.length));
+</script>
+
+<HowToPlay vm={howTo} steps={STEPS} />
+<HowToPlayButton vm={howTo} /> <!-- or pass it as the howToPlay snippet of GameControls / WelcomeScreen -->
+```
 
 ```svelte
 <script lang="ts">
   import { ActionBar, StatusPanel, Timer } from "@partygame/game-ui/components";
 </script>
 
-<Timer seconds={12} total={30} />
+<Timer seconds={12} fraction={0.4} />
 <StatusPanel title="Waiting for players" tone="wait" />
 <ActionBar><button type="button" class="btn">Go</button></ActionBar>
 ```
 
-Theming contract: the package ships `@partygame/game-ui/theme-contract.css`. Import it first in your `app.css` for a working baseline of every variable below (plus `.sr-only`), then override what you want to change. Chrome — the framework components' look (lobby, join overlays, scoreboard/podium, game controls, timer) — is themed through these variables; artwork — your screens and cards — is yours to design.
+Theming contract: the package ships two stylesheets — `@partygame/game-ui/theme-contract.css`, a working baseline of every variable below (plus `.sr-only`), and `@partygame/game-ui/base.css`, the look every framework component needs (cards, tape, chips, stickers, buttons, notices, the hand font class, reduced-motion guards) built on those tokens. Import both first in your `app.css`, then override what you want to change. Chrome — the framework components' look (lobby, join overlays, scoreboard/podium, game controls, timer) — is themed through these variables; artwork — your screens and cards — is yours to design.
 
-- Custom properties: `--ink`, `--ink-soft`, `--white`, `--paper`, `--color-1` to `--color-4`, `--accent`, `--danger`, `--disabled`, `--tape-1` to `--tape-4` (`StatusPanel` sets `--tape` itself), `--fs-1` to `--fs-5`, `--font-display`, `--outline`, `--radius-card`, `--radius-btn`, `--scrap-shadow`, `--podium-block-height-1`, `--podium-block-height-2`, `--podium-block-height-3`, `--scale`, `--timer-size`.
-- Global classes: `card`, `taped`, `sticker`, `hand` (`StatusPanel`); `sr-only` (`Timer`); `action-bar` (`ActionBar` renders it and styles nothing, so the game styles the bar, e.g. `.action-bar > .btn` and `main.tv .action-bar`).
+- Custom properties: `--ink`, `--ink-soft`, `--white`, `--paper`, `--color-1` to `--color-4`, `--accent`, `--danger`, `--disabled`, `--tape-1` to `--tape-4` (`StatusPanel` sets `--tape` itself), `--fs-1` to `--fs-6`, `--font-display`, `--font-hand`, `--font-body`, `--outline`, `--radius-card`, `--radius-btn`, `--radius-pill`, `--scrap-shadow`, `--podium-block-height-1`, `--podium-block-height-2`, `--podium-block-height-3`, `--scale`, `--timer-size`, `--screen-pad-x`, `--screen-pad-y` (`ActionBar` reads the padding tokens to bleed its sticky bar into the screen).
+- Global classes: `card`, `taped`, `sticker`, `hand`, `chip` and its variants, the `btn` family, `notice`, `sr-only` ship with the stylesheets; the game still defines the app-shell faces `wordmark` and `room-chip`. `ActionBar` styles its own bar (hidden on TV displays).
 
 ## Bots
 
@@ -1109,10 +1161,11 @@ await demo.leave();
 Overridable: `BotOptions` `thinkMs` (default `[2000, 6000]`), `reactMs` (`[500, 2500]`), `rng`, `schedule(run, ms) => cancel`,
 `log`, `onOutcome`, `host.expectedPlayers`; `joinBots` `nameFor(n)` (default `Bot n`, taken names skipped), `playerIds`,
 `timeoutMs` (`BotTable` and `DemoTable` also take `nameFor` and `timeoutMs`); `DemoTable` `hostName`, `roomOptions`, `isFinished`. Every failure leaves the seats it took.
+`joinKitBots({ kit, ... })` is the same seating with the kit passed as `kit` instead of spread.
 
 Every entry point opens rooms through a `RoomConnector` (the interface and option types live in `@partygame/client-utils`):
-pass `connector` to any of them, or let it default to this package's `ColyseusConnector`, which holds the join flow (`joinById`,
-wait for the state sync, claim a name) over one Colyseus client. The room code is resolved to an id once per batch — by default
+pass `connector` to any of them, or let it default to `defaultConnector(endpoint, { roomName?, stateClass })`, a
+`ColyseusConnector` that holds the join flow (`joinById`, wait for the state sync, claim a name) over one Colyseus client. The room code is resolved to an id once per batch — by default
 `resolveRoomCode` against `apiBaseOf(endpoint, apiPort)` (injectable as `resolveCode`) — and the id goes to every join. A table
 reuses its connector for the bots it seats. Example: `games/wit-clash/bots/witClashBot.ts`.
 
@@ -1125,7 +1178,7 @@ the bots in a room made elsewhere (usage bounded by `meta.maxPlayers - 1`) and r
 `@partygame/terminal` lets a human play at a prompt. You write a `TerminalStrategy` (what to ask in each stage); the kit's `play`
 entry drives it through a `TerminalPlayer` that keeps the lobby, the countdown, action replies and quitting, and a `PlaySession` that
 finds or starts a server, creates or joins a room and seats bots. Rooms are opened through `GameClient`, a thin wrapper over
-`ColyseusConnector` (Bots). The samples here and in Launcher reuse `buttonKit`, `ButtonState` and `ButtonGame` from Bots and Minimal game.
+the bots package's default connector (`defaultConnector`, Bots). The samples here and in Launcher reuse `buttonKit`, `ButtonState` and `ButtonGame` from Bots and Minimal game.
 
 ```ts
 import { type TerminalStrategy } from "@partygame/terminal";
@@ -1187,7 +1240,7 @@ Optional strategy members: `narrate(state)` returns lines to print on every stat
 
 The `demo` entry plays one game by itself on its own server (free ports): a host bot, N more bots and a narrating spectator, then prints
 `PASS` or `FAIL`. It is the regression check for a game's bot strategy: the run fails when the game does not finish in the timeout
-(default 180 s), when any bot action is refused, or when `problems(state)` reports something about the final state.
+(default 180 s), when any bot action is refused, or when the commentator's `problems(state)` reports something about the final state.
 
 Declare what the demo needs on the declaration's `demo` field; `terminal/demo.ts` is a stub calling `demoCli(gamePackage)`:
 
@@ -1195,20 +1248,23 @@ Declare what the demo needs on the declaration's `demo` field; `terminal/demo.ts
 // gamePackage.ts — the `demo` field of the declaration
 demo: {
   bot: { thinkMs: [200, 900], reactMs: [100, 500] },   // pacing; kit, roomOptions and hostName also go here
-  narrate: (state) => (state.phase === "Done" ? [`${state.winner} won`] : []),
-  problems: (state) => (state.winner === "" ? ["nobody won"] : []),
+  commentator: () => ({
+    narrate: (state) => (state.phase === "Done" ? [`${state.winner} won`] : []),
+    problems: (state) => (state.winner === "" ? ["nobody won"] : []),
+  }),
 },
 
 // terminal/demo.ts
 import { demoCli } from "@partygame/game-kit";
 import { buttonPackage } from "../gamePackage.js";
 
-await demoCli(buttonPackage);   // bun run demo [--bots=1..7]
+await demoCli(buttonPackage);   // bun run demo [--bots=1..7]; from the repo root: bun run demo <game>
 ```
 
-`--bots=N` sets the bot count (default 3, bounded by `meta`; parsed by `parseDemoArgs`, so `--bots 4`, `--bots=` and unknown flags print the usage and exit 2). The field's extras are all optional: `kit` (a demo-specific kit),
-`roomOptions`, `hostName`, `bot` (pacing and outcome logging), `narrate(state)`, `problems(state)` and `passMessage`. Under the hood
-`demoCli` drives a `DemoRun` from `@partygame/terminal`. Example: `games/wit-clash/gamePackage.ts` (the Narrator narrates and checks).
+`--bots N` (both the space and `=` forms) sets the bot count (default 3, bounded by `meta`; parsed by `parseDemoArgs`, so an empty value, a non-integer or an out-of-range count prints the usage and exits 2). The field's extras are all optional: `kit` (a demo-specific kit),
+`roomOptions`, `hostName`, `bot` (pacing and outcome logging), `commentator` (a factory created once per run, returning
+`narrate(state)` lines and optional `problems(state)` checks — a narrator with state stays fresh between runs) and `passMessage`.
+Under the hood `demoCli` drives a `DemoRun` from `@partygame/terminal`. Example: `games/wit-clash/gamePackage.ts` (the Narrator narrates and checks).
 
 ## Launcher
 
@@ -1226,7 +1282,8 @@ await launch(buttonPackage, { gameDir: fileURLToPath(new URL(".", import.meta.ur
 `launch` builds the config from the declaration (`buildLaunchConfig`) and runs it with `runLauncher`: `name` is `displayName` (or
 `meta.roomName`), `bots` is the declaration's `botKit` capped at `maxPlayers - 1`, and the demo tables run `minPlayers - 1` to
 `maxPlayers - 1` bots plus a host bot, finished by `isFinished`, with the declaration's `demo` extras (kit, room options, host name,
-bot pacing) merged in.
+bot pacing) merged in. The port defaults live in one place — `DEFAULT_PORTS` of `@partygame/launcher`; a test fails if the Vite
+preset's copy drifts — and `launch` forwards an optional `ports` (a partial of it), which the launcher pins Vite to with `--port`.
 
 `gameDir` holds `server.ts` (run with env `PORT` and `API_PORT`), a `package.json` with `dev` and `build` scripts, and the built `dist/`.
 
@@ -1239,10 +1296,11 @@ bot pacing) merged in.
 
 The launcher refuses to start when a port is taken, stops everything on Ctrl+C or a closed terminal (SIGHUP), kills every spawned process if it crashes or the process exits, and exits 1 if a service dies. Its full config
 (`ports`, `commands`, `readyTimeoutMs`, `openBrowser`, `log`) and pieces (`Launcher`, `parseLaunchArgs`, `ProcessGroup`, `StaticSite`,
-`lanUrls`, `openBrowser`) are documented in `packages/launcher/README.md` for tests and custom launchers.
+`lanUrls`, `openBrowser`, `DEFAULT_PORTS`, `defaultCommands`) are documented in `packages/launcher/README.md` for tests and custom launchers.
 
 The repo root has no game code. `scripts/game.ts <command> [game] [...args]` runs `games/<game>/<entry>.ts` by convention:
-`launch` runs `launch.ts`, `play` runs `terminal/play.ts`, `bots` runs `bots/cli.ts`. A game is a folder under `games/` with a
+`launch` runs `launch.ts`, `play` runs `terminal/play.ts`, `bots` runs `bots/cli.ts`, `demo` runs `terminal/demo.ts`. The one-shot
+commands (`play`, `demo`) run to completion and the dispatcher exits with their exit code; `launch` and `bots` stay up until Ctrl+C. A game is a folder under `games/` with a
 `package.json`. It is picked by the first argument when that names a game folder; otherwise the only game is used; with several games
 and a terminal it asks (`Pick a game [1-N]:`; empty input or end of input exits 2), and without a terminal it prints the list and exits 2.
 `bun run games` lists every game and the commands it has an entry for.
@@ -1323,13 +1381,13 @@ export { svelteConfig as default } from "@partygame/config/svelte";
 |---|---|
 | `@partygame/shared` | `NAME_MAX_LENGTH`: the cap `SET_NAME` enforces on player names; `MAX_SEATS`: the most playerIds a room's `seats` option may list; `MAX_OPTIONS_JSON_LENGTH`: the cap on serialized options at room creation and in `SET_OPTIONS`; `ROOM_CODE_LENGTH` and `ROOM_CODE_ALPHABET`: the shape of a room code; `sanitizeRoomCode(raw)`: uppercases, drops other characters and cuts to the code length (for a code input); `FRAMEWORK_VERSION`: recorded in exported replay bundles |
 | `@partygame/client-utils` | `Parsed<T>` (`{ ok: true, value } \| { ok: false, error }`) and `between(value, min, max)` for argument parsing; `waitFor(predicate, what, timeoutMs)` poll loop; `resolveRoomCode(apiBase, code)` (rejects with `RoomCodeError`, `reason` `"not-found"` or `"bad-reply"`); `joinUrl(base, code)` / `tvUrl(base, code)` share links; `claimName(room, playerId, name, timeoutMs?)` (type `SeatRoom`), `apiBaseOf(endpoint, apiPort)` |
-| `@partygame/core` | `shuffle(items, rng)`, `required(value, what)`; roster guards: `seatedCount(ctx)` (active and ready seats, counting briefly disconnected ones), `isBelowMinimum(ctx, min)`, `departedIds(ids, ctx)` — they only report; the game writes its own notice and decides to end |
+| `@partygame/core` | `EmptyPayloadSchema` (the payload of an action with no fields), `playAgainAction()` (host-only return-to-lobby action for a game's own end phase); `shuffle(items, rng)`, `weightedSample(items, count, rng, weightOf)` (a weighted draw without replacement: a weight of 0 is never picked, equal weights deal a uniform shuffle, and there is no default rng), `required(value, what)`; roster guards: `seatedCount(ctx)` (active and ready seats, counting briefly disconnected ones), `isBelowMinimum(ctx, min)`, `departedIds(ids, ctx)` — they only report; `endIfBelowMinimum(ctx, min, notice)` sets the notice and queues the return to the lobby instead; `RosterLedger` (a private-state ledger: `remember(ctx)`, `nameOf(ctx, id)`, `participantIds`, `rememberedNames`, `drop(id)`, `clear()`); synced per-player entry helpers `ensureMine(ctx, mine, playerId, create)`, `resetMine(ctx, mine)`, `pruneMine(ctx, mine, ids)` |
 | `@partygame/core/kits` | Phase kits (`@experimental`). collectResponses: `allResponded(slots, responses, presentIds)` (complete when every present author responded to every slot), `entriesFor(slotId, slots, responses)` (one entry per author, `text` undefined when unanswered); types `Slots`, `Responses`. voteAndTally: `tallyVotes(voterIds, votes)`, `allHaveVoted(voterIds, votes)`, `countVoted(voterIds, votes)`, `eligibleVoters(activeIds, excludedIds)` (an empty exclusion list allows self-vote), `leaders(counts)` → `{ top, ids }` (a tie shows up as `ids.length > 1`). drawPool: `drawPool(items, usedIds, needed)` → `{ items, exhausted }` — the unused items when at least `needed` remain, otherwise all items with their ids cleared from the mutable `usedIds` set |
 | `@partygame/server/node` | `startNodeServer({ games, port?, apiPort? })` (a game server and its API in this process; `.stop()`), `serveApi(codes, { port, host? })`: the code API on Node's `http` (the Bun entry serves its own) |
 | `@partygame/server/probe` | `ServerProbe` (`isGameServer(port, apiPort, host?)` — `host` defaults to `localhost` and is used for both the TCP check and the code-API fetch; `canConnect(port)`, `answers(url)`), `freePort()`, `closeHttpServer(server)` (resolves when the server already stopped): port probing without Colyseus |
-| `@partygame/content` | `loadJsoncDir(dir, schema, { idOf, label, onInvalid?, maxFiles?, maxFileBytes? })`: a folder of commented JSON files (symlinks ignored), validated; bad files throw by default (`onInvalid: "skip"` warns and skips), caps at 256 files / 1 MiB per file; `stripJsonComments` |
+| `@partygame/content` | `loadJsoncDir(dir, schema, { idOf, label, onInvalid?, maxFiles?, maxFileBytes? })`: a folder of commented JSON files (symlinks ignored), validated; bad files throw by default (`onInvalid: "skip"` warns and skips), caps at 256 files / 1 MiB per file; `loadJsoncFile(file, schema, { label, maxFileBytes? })`: one such file with the same messages — a game's single-file content loader; `stripJsonComments` |
 | `@partygame/content/filter` | `createTextFilter()`: a `TextFilter` over the English obscenity dataset — `check(text, "off" \| "moderate" \| "strict")` returns `{ ok: true }` or `{ ok: false, reason }`; moderate blocks slurs and profanity, strict adds mild terms; the reason is a fixed per-level string that never names the matched word |
-| `@partygame/game-client` | `resolveEndpoints(overrides, pageHost)`, `readCodeParam(search, "code" \| "tv")` |
+| `@partygame/game-client` | `clientConfig(env?)`: a `main.ts`-ready `resolveEndpoints()` from the `VITE_*` keys of `env` (type `ClientEnv`) plus `readUrlCode(search?)` / `readUrlTvCode(search?)`; lower-level `resolveEndpoints(overrides, pageHost)`, `readCodeParam(search, "code" \| "tv")` |
 | `@partygame/game-client/test-setup` | vitest `setupFiles` entry for jsdom: storage shims, SDK on `ws` (repo-internal, raw `.ts`) |
 | `@partygame/game-kit` | types: `GameMeta` (`roomName`, `minPlayers`, `maxPlayers`), `ServeOptions` (`games`, `port?`, `apiPort?`), `GameDemoOptions` (the declaration's `demo` field, see All-bot demo run) |
 

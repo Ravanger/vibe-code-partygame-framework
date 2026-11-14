@@ -37,6 +37,8 @@ The launcher refuses to start if one of its ports is already in use.
 | 5173 | Vite dev server (`launch`, `launch:dev`, `launch:host`) |
 | 3000 | Built client (`launch:prod`) |
 
+The defaults are defined once, in `DEFAULT_PORTS` of `@partygame/launcher`; a test fails if the Vite preset's copy drifts. A game can move them by passing `ports` to its launch (the launcher then pins Vite to the dev client port with `--port`).
+
 ## Playing Over LAN
 
 Players on the same network open `http://<YOUR-LAN-IP>:5173` (`:3000` with `launch:prod`). The client talks to the game server and the API
@@ -82,7 +84,7 @@ bun run launch wit-clash --demo   # watch-only room: bots play one game, the bro
 ```bash
 bun run play wit-clash              # host a room; 3 bots join; uses the server on 2567/3001 or starts its own
 bun run play wit-clash --join=ABCD  # join a room as a normal player
-bun run --cwd games/wit-clash demo  # all-bot game, narrated; prints PASS/FAIL (--bots=N bots, 2 to 7, default 3) — WitClash-only
+bun run demo wit-clash              # all-bot game, narrated; prints PASS/FAIL (--bots N bots, 2 to 7, default 3) — WitClash-only
 ```
 
 `play` needs a game with a terminal entry: WitClash has one, the other bundled games do not. You are the host in `play`; browser players can join the same room with the printed code while Vite runs.
@@ -206,3 +208,15 @@ Locally the pre-commit hook runs the same check on staged files. To commit an in
 ## Maintainer: a change that needs no test
 
 `gates` also fails a PR that changes `packages/*/src/` or `games/*/src/` without changing a `*.test.ts` in the same package or game (`d.ts` files, pure renames and removals are exempt). For a change with nothing to test, such as a comment or type-only edit, a maintainer adds the `no-test-needed` label. It overrides only this rule; `gate-change` does not. The pre-commit hook skips this rule, so tests can be committed separately. Create the label once in the repository settings.
+
+## Knip configuration hints on headless games
+
+`bun run check:unused` matches every game against one `games/*` workspace block in `knip.json`, which lists the entry and project patterns of a full game (`server.ts`, `launch.ts`, `bots/cli.ts`, `terminal/*.ts`, `ui/**`, `bots/**`, `terminal/**`, `**/*.svelte`). A game that lacks some of those files prints one line per pattern that matches nothing, under "Configuration hints":
+
+```text
+Refine entry pattern (no matches)
+Refine project pattern (no matches)
+Extension in project not registered as a compiler   (for **/*.svelte, when the game has no Svelte files)
+```
+
+The hints are expected noise: they never fail the gate — `unused` fails only on genuinely unused files, exports and dependencies. Knip has no way to mark a pattern optional per game; silencing them means editing `knip.json` (a per-game workspace block with just the patterns that match) or adding the global `--no-config-hints` flag to the gate script — both are gate config that needs the `gate-change` label (see "Maintainer: changing a gate"). Until then, ignore the lines when the rest of the run is clean.

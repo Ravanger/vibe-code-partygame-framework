@@ -1,18 +1,23 @@
 <script lang="ts">
-import { ActionBar, PlayerSticker, Podium, StatusPanel } from "@partygame/game-ui/components";
+import { plural, Spotlight } from "@partygame/game-ui";
+import {
+  ActionBar,
+  Confetti,
+  ExportReplayButton,
+  PlayerSticker,
+  Podium,
+  StatusPanel,
+} from "@partygame/game-ui/components";
 import { untrack } from "svelte";
 import MatchupCard from "../components/MatchupCard.svelte";
 import Scoreboard from "../components/Scoreboard.svelte";
-import { confettiPieces } from "../confetti.js";
 import type { WitClashManager } from "../manager.js";
 import { ResultsViewModel } from "../viewmodels/ResultsViewModel.js";
 import type { ScoreRow } from "../viewmodels/Scoreboard.js";
-import { Spotlight } from "../viewmodels/Spotlight.svelte.js";
 
 const { manager }: { manager: WitClashManager } = $props();
 
 const vm = untrack(() => new ResultsViewModel(manager));
-const pieces = confettiPieces(40);
 const spotlight = new Spotlight(() => (vm.isSpectator && vm.bestAnswers.length > 0 ? 2 : 1));
 const showBest = $derived(spotlight.isActive && spotlight.current === 1);
 
@@ -21,17 +26,7 @@ $effect(() => () => spotlight.destroy());
 
 <div class="results" class:final={vm.isFinalRound}>
   {#if vm.isFinalRound}
-    <div class="confetti" aria-hidden="true">
-      {#each pieces as piece}
-        <i
-          style:left={`${piece.left}%`}
-          style:animation-delay={`${piece.delay}s`}
-          style:animation-duration={`${piece.duration}s`}
-          style:--drift={`${piece.drift}vw`}
-          style:background={piece.color}
-        ></i>
-      {/each}
-    </div>
+    <Confetti count={40} />
   {/if}
 
   <div class="head">
@@ -70,7 +65,7 @@ $effect(() => () => spotlight.destroy());
             <blockquote class="best-text">{best.text}</blockquote>
             <div class="best-meta">
               <span class="best-author">{`by ${best.authorName}${best.isMine ? " (you)" : ""}`}</span>
-              <span class="chip">{`${best.votes} vote${best.votes !== 1 ? "s" : ""}`}</span>
+              <span class="chip">{`${best.votes} ${plural(best.votes, "vote")}`}</span>
             </div>
           </figure>
         {/each}
@@ -105,7 +100,7 @@ $effect(() => () => spotlight.destroy());
               <blockquote class="highlight-text">{answer.text}</blockquote>
               <div class="highlight-meta">
                 <span class="highlight-author">{`by ${answer.authorName}`}</span>
-                <span class="chip">{`${answer.votes} vote${answer.votes !== 1 ? "s" : ""}`}</span>
+                <span class="chip">{`${answer.votes} ${plural(answer.votes, "vote")}`}</span>
               </div>
             {/each}
           </div>
@@ -129,18 +124,14 @@ $effect(() => () => spotlight.destroy());
     {/if}
   </div>
 
-  {#snippet exportButton()}
-    <button type="button" class="btn" onclick={() => vm.exportReplay()}>Export replay</button>
-  {/snippet}
-
   {#if vm.showNextRound}
     <ActionBar>
-      {@render exportButton()}
+      <ExportReplayButton manager={manager} />
       <button type="button" class="btn btn--primary btn--big" onclick={() => vm.nextRound()}>Next Round</button>
     </ActionBar>
   {:else if vm.showPlayAgain}
     <ActionBar>
-      {@render exportButton()}
+      <ExportReplayButton manager={manager} />
       <button type="button" class="btn btn--primary btn--big" onclick={() => vm.playAgain()}>Play Again</button>
     </ActionBar>
   {/if}
@@ -289,10 +280,10 @@ $effect(() => () => spotlight.destroy());
   }
 
   .highlight {
-    --tape: var(--tape-pink);
+    --tape: var(--tape-1);
     width: 100%;
     margin: 0;
-    background: var(--sun);
+    background: var(--color-2);
     text-align: center;
     display: flex;
     flex-direction: column;
@@ -342,41 +333,6 @@ $effect(() => () => spotlight.destroy());
     flex-direction: column;
     gap: 1rem;
     margin-top: 0.75rem;
-  }
-
-  .confetti {
-    position: fixed;
-    inset: 0;
-    overflow: hidden;
-    pointer-events: none;
-    z-index: 20;
-  }
-
-  .confetti i {
-    display: none;
-    position: absolute;
-    top: -3vh;
-    width: 10px;
-    height: 16px;
-    border: 2px solid var(--ink);
-  }
-
-  @keyframes fall {
-    from {
-      transform: translate(0, 0) rotate(0deg);
-      opacity: 1;
-    }
-    to {
-      transform: translate(var(--drift), 108vh) rotate(720deg);
-      opacity: 1;
-    }
-  }
-
-  @media (prefers-reduced-motion: no-preference) {
-    .confetti i {
-      display: block;
-      animation: fall linear 1 both;
-    }
   }
 
   :global(main.tv) .results {

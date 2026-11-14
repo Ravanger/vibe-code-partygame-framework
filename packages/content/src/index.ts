@@ -1,7 +1,17 @@
 import type { Dirent } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { prettifyError, type z } from "zod";
+
+/** The content directory of a game entry: `override` when set (an empty string counts as set, `??` semantics), else the absolute folder `relative` next to `entryUrl` (the entry file's `import.meta.url`). */
+export function contentDirFrom(
+  override: string | undefined,
+  entryUrl: string,
+  relative: string,
+): string {
+  return override ?? fileURLToPath(new URL(relative, entryUrl));
+}
 
 /**
  * Remove // and /* *\/ comments from JSON text WITHOUT touching comment-like
@@ -88,6 +98,49 @@ export interface ContentFile<T> {
   value: T;
 }
 
+/** How {@link loadJsoncFile} labels and caps the file it loads. */
+export interface LoadJsoncFileOptions {
+  /** Used in errors, e.g. `"Item"`. */
+  label: string;
+  /** Largest single content file in bytes (default 1 MiB). */
+  maxFileBytes?: number;
+}
+
+/**
+ * Reads one JSONC file, strips comments, parses it and validates it against `schema`, returning
+ * the validated value. A missing file, a file above `maxFileBytes`, invalid JSON or a schema
+ * failure throws, each naming the file — with the same messages as {@link loadJsoncDir}.
+ */
+export async function loadJsoncFile<S extends z.ZodType>(
+  file: string,
+  schema: S,
+  options: LoadJsoncFileOptions,
+): Promise<z.output<S>> {
+  const maxFileBytes = options.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES;
+  let text: string;
+  try {
+    text = await readFile(file, "utf-8");
+  } catch {
+    throw new Error(`[${options.label}] File not found: ${file}`);
+  }
+  if ((await stat(file)).size > maxFileBytes) {
+    throw new Error(
+      `[${options.label}] ${file} is larger than the maximum of ${maxFileBytes} bytes`,
+    );
+  }
+  let json: unknown;
+  try {
+    json = JSON.parse(stripJsonComments(text));
+  } catch (error) {
+    throw new Error(`[${options.label}] Invalid JSON in ${file}: ${String(error)}`);
+  }
+  const parsed = schema.safeParse(json);
+  if (!parsed.success) {
+    throw new Error(`[${options.label}] ${file} failed validation: ${prettifyError(parsed.error)}`);
+  }
+  return parsed.data;
+}
+
 /**
  * Every regular `.json`/`.jsonc` file in `dir`, in name order, parsed with `schema`. Symlinks and
  * subdirectories are ignored. A missing directory, a duplicate id, more files than `maxFiles` or a
@@ -131,35 +184,29 @@ export async function loadJsoncDirWithFiles<S extends z.ZodType>(
   const loaded: ContentFile<z.output<S>>[] = [];
   const seen = new Set<string>();
   for (const file of files) {
+    // Pre-checked outside the skip below: an oversized file throws even when onInvalid is "skip".
     if ((await stat(join(dir, file))).size > maxFileBytes) {
       throw new Error(
         `[${options.label}] ${file} is larger than the maximum of ${maxFileBytes} bytes`,
       );
     }
-    let json: unknown;
+    let value: z.output<S>;
     try {
-      json = JSON.parse(stripJsonComments(await readFile(join(dir, file), "utf-8")));
+      value = await loadJsoncFile(join(dir, file), schema, {
+        label: options.label,
+        maxFileBytes,
+      });
     } catch (error) {
       if (onInvalid === "skip") {
         console.warn(`[${options.label}] Skipping ${file}: ${String(error)}`);
         continue;
       }
-      throw new Error(`[${options.label}] Invalid JSON in ${file}: ${String(error)}`);
+      throw error;
     }
-    const parsed = schema.safeParse(json);
-    if (!parsed.success) {
-      if (onInvalid === "skip") {
-        console.warn(`[${options.label}] Skipping ${file}: ${prettifyError(parsed.error)}`);
-        continue;
-      }
-      throw new Error(
-        `[${options.label}] ${file} failed validation: ${prettifyError(parsed.error)}`,
-      );
-    }
-    const id = options.idOf(parsed.data);
+    const id = options.idOf(value);
     if (seen.has(id)) throw new Error(`Duplicate ${options.label} id "${id}" in ${file}`);
     seen.add(id);
-    loaded.push({ file, value: parsed.data });
+    loaded.push({ file, value });
   }
   return loaded;
 }

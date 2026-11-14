@@ -1,4 +1,4 @@
-import { OptionsReader, PhaseClock } from "@partygame/game-ui";
+import { OptionsReader, PhaseClock, roundLabel } from "@partygame/game-ui";
 import { type BluffOptions, BluffOptionsSchema, DEFAULT_OPTIONS } from "../../src/options.js";
 import type { BluffManager } from "../manager.js";
 
@@ -20,7 +20,7 @@ export interface RoundResultRow {
 
 /** The revealed options with their authors and votes, plus who scored this round. */
 export class RevealViewModel {
-  private readonly clock: PhaseClock;
+  readonly clock: PhaseClock;
 
   constructor(private readonly manager: BluffManager) {
     const options = new OptionsReader<BluffOptions>(manager, BluffOptionsSchema, DEFAULT_OPTIONS);
@@ -29,7 +29,7 @@ export class RevealViewModel {
 
   get roundLabel(): string {
     const state = this.manager.state;
-    return `Round ${state?.roundNumber ?? 0} of ${state?.totalRounds ?? 0}`;
+    return roundLabel(state?.roundNumber ?? 0, state?.totalRounds ?? 0);
   }
 
   get choices(): RevealChoiceRow[] {
@@ -54,13 +54,5 @@ export class RevealViewModel {
       fooledCount: entry.fooledCount,
       guessedTruth: entry.guessedTruth,
     }));
-  }
-
-  get secondsLeft(): number {
-    return this.clock.secondsLeft;
-  }
-
-  get totalSeconds(): number {
-    return this.clock.totalSeconds;
   }
 }

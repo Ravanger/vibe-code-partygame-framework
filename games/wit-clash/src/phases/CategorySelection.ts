@@ -1,12 +1,19 @@
-import { required, shuffle } from "@partygame/core";
+import {
+  dailyRng,
+  endIfBelowMinimum,
+  ensureMine,
+  required,
+  shuffle,
+  utcDay,
+} from "@partygame/core";
 import { allHaveVoted, countVoted, tallyVotes } from "@partygame/core/kits";
 import { ErrorCode } from "@partygame/shared";
 import { ACTION, defineAction, VoteCategorySchema } from "../actions.js";
 import { resolveCategoryVote } from "../categoryVote.js";
-import { dailyRng, utcDay } from "../dailySeed.js";
+import { META } from "../meta.js";
 import { PHASE } from "../phaseNames.js";
 import type { WitClashContext, WitClashPhase } from "../private.js";
-import { Round } from "../round.js";
+import { newPlayerPrivate, Round, TOO_FEW_PLAYERS_NOTICE } from "../round.js";
 import { CategoryOption } from "../state.js";
 
 const OPTION_COUNT = 3;
@@ -46,9 +53,9 @@ export const CategorySelection: WitClashPhase = {
     ctx.activateWaitingPlayers();
     const { state } = ctx;
     const round = new Round(ctx);
-    if (round.endIfTooFewPlayers()) return;
+    if (endIfBelowMinimum(ctx, META.minPlayers, TOO_FEW_PLAYERS_NOTICE)) return;
     round.clearRound();
-    round.remember();
+    ctx.priv.roster.remember(ctx);
     ++state.roundNumber;
     state.totalRounds = ctx.options.totalRounds;
     if (ctx.options.mode === "daily") {
@@ -71,14 +78,15 @@ export const CategorySelection: WitClashPhase = {
       option.emoji = category.emoji;
       state.categoryOptions.push(option);
     }
-    for (const player of ctx.activePlayers()) round.mineOf(player.id);
+    for (const player of ctx.activePlayers())
+      ensureMine(ctx, ctx.state.mine, player.id, newPlayerPrivate);
     publishProgress(ctx);
   },
   onTimeout: resolve,
   onRosterChange: (ctx) => {
     const round = new Round(ctx);
-    if (round.endIfTooFewPlayers()) return;
-    round.remember();
+    if (endIfBelowMinimum(ctx, META.minPlayers, TOO_FEW_PLAYERS_NOTICE)) return;
+    ctx.priv.roster.remember(ctx);
     round.pruneDeparted();
     recount(ctx);
     publishProgress(ctx);
@@ -99,7 +107,7 @@ export const CategorySelection: WitClashPhase = {
           return;
         }
         ctx.priv.categoryVotes.set(ctx.playerId, categoryId);
-        new Round(ctx).mineOf(ctx.playerId).categoryVote = categoryId;
+        ensureMine(ctx, ctx.state.mine, ctx.playerId, newPlayerPrivate).categoryVote = categoryId;
         recount(ctx);
         publishProgress(ctx);
         if (everyoneVoted(ctx)) resolve(ctx);

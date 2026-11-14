@@ -1,10 +1,9 @@
 import { apiBaseOf, claimName, type RoomConnector, resolveRoomCode } from "@partygame/client-utils";
 import type { BaseGameState } from "@partygame/shared/schema";
 import { BotPlayer } from "./BotPlayer.js";
-import { ColyseusConnector } from "./ColyseusConnector.js";
+import { defaultConnector } from "./ColyseusConnector.js";
+import { DEFAULT_TIMEOUT_MS } from "./timeouts.js";
 import type { BotConnection, BotKit } from "./types.js";
-
-const DEFAULT_TIMEOUT_MS = 5000;
 
 /** Connection, kit, room code and bot count for {@link joinBots}. */
 export interface JoinBotsOptions<TState extends BaseGameState>
@@ -28,8 +27,7 @@ class BotJoiner<TState extends BaseGameState> {
 
   constructor(private readonly options: JoinBotsOptions<TState>) {
     this.connector =
-      options.connector ??
-      new ColyseusConnector(options.endpoint, { stateClass: options.stateClass });
+      options.connector ?? defaultConnector(options.endpoint, { stateClass: options.stateClass });
   }
 
   async join(): Promise<BotPlayer<TState>[]> {
@@ -78,3 +76,18 @@ class BotJoiner<TState extends BaseGameState> {
 export const joinBots = <TState extends BaseGameState>(
   options: JoinBotsOptions<TState>,
 ): Promise<BotPlayer<TState>[]> => new BotJoiner(options).join();
+
+/** {@link JoinBotsOptions} with the state class and strategy taken from `kit`. */
+export interface JoinKitBotsOptions<TState extends BaseGameState>
+  extends Omit<JoinBotsOptions<TState>, "stateClass" | "strategy"> {
+  /** The bot kit whose state class and strategy the bots use. */
+  kit: BotKit<TState>;
+}
+
+/** {@link joinBots} with the state class and strategy taken from `kit`. */
+export const joinKitBots = <TState extends BaseGameState>(
+  options: JoinKitBotsOptions<TState>,
+): Promise<BotPlayer<TState>[]> => {
+  const { kit, ...rest } = options;
+  return joinBots({ ...rest, stateClass: kit.stateClass, strategy: kit.strategy });
+};

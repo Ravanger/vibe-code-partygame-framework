@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/svelte";
+import { fireEvent, render, screen, within } from "@testing-library/svelte";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import Lobby from "../../ui/screens/Lobby.svelte";
 import { addSeat, connectedClient } from "../helpers/client.js";
@@ -8,14 +8,14 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("Waiting room", () => {
-  function lobby(role: "host" | "player", others = 2) {
-    const c = connectedClient({ role, name: "Me" });
-    c.state.canStart = others + 1 >= c.state.minPlayers;
-    for (let i = 0; i < others; ++i) addSeat(c.state, `friend-${i}-1234`, { name: `Friend ${i}` });
-    return c;
-  }
+function lobby(role: "host" | "player", others = 2) {
+  const c = connectedClient({ role, name: "Me" });
+  c.state.canStart = others + 1 >= c.state.minPlayers;
+  for (let i = 0; i < others; ++i) addSeat(c.state, `friend-${i}-1234`, { name: `Friend ${i}` });
+  return c;
+}
 
+describe("Waiting room", () => {
   it("shows the players and tells a named guest to wait for the host", () => {
     const c = lobby("player");
     render(Lobby, { manager: c.manager });
@@ -82,5 +82,51 @@ describe("Waiting room", () => {
     render(Lobby, { manager: c.manager });
     expect(screen.getByText("ABCD", { selector: ".room-code" })).toBeInTheDocument();
     expect(screen.queryByLabelText("Your name")).not.toBeInTheDocument();
+  });
+});
+
+describe("Lobby settings", () => {
+  it("lets the host tune every option within the schema limits", async () => {
+    const c = lobby("host");
+    render(Lobby, { manager: c.manager });
+    const rounds = screen.getByLabelText("Rounds");
+    expect(rounds).toHaveValue(3);
+    expect(rounds).toHaveAttribute("min", "1");
+    expect(rounds).toHaveAttribute("max", "10");
+    expect(screen.getByLabelText("Writing seconds")).toHaveAttribute("min", "10");
+    expect(screen.getByLabelText("Writing seconds")).toHaveAttribute("max", "300");
+    expect(screen.getByLabelText("Voting seconds")).toHaveAttribute("min", "5");
+    expect(screen.getByLabelText("Voting seconds")).toHaveAttribute("max", "120");
+    expect(screen.getByLabelText("Reveal seconds")).toHaveAttribute("min", "1");
+    expect(screen.getByLabelText("Reveal seconds")).toHaveAttribute("max", "60");
+    await fireEvent.input(rounds, { target: { value: "5" } });
+    await fireEvent.change(rounds);
+    expect(c.room.requests).toContainEqual({
+      type: "ACTION",
+      payload: { rounds: 5, type: "SET_OPTIONS" },
+    });
+  });
+
+  it("lets the host pick the filter level", async () => {
+    const c = lobby("host");
+    render(Lobby, { manager: c.manager });
+    const choices = screen.getByRole("group", { name: "Filter level" });
+    expect(within(choices).getByRole("button", { name: "moderate" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await fireEvent.click(within(choices).getByRole("button", { name: "strict" }));
+    expect(c.room.requests).toContainEqual({
+      type: "ACTION",
+      payload: { filterLevel: "strict", type: "SET_OPTIONS" },
+    });
+  });
+
+  it("shows the options read-only to a guest", () => {
+    const c = lobby("player");
+    render(Lobby, { manager: c.manager });
+    expect(screen.getByText("Rounds")).toBeInTheDocument();
+    expect(screen.getByText("moderate")).toBeInTheDocument();
+    expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
   });
 });

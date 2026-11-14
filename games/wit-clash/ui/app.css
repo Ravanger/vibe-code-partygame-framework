@@ -1,14 +1,15 @@
 @import "@partygame/game-ui/theme-contract.css";
+@import "@partygame/game-ui/base.css";
+
+/* WitClash look: local tokens (grain, doodles, hand font, danger red) and the app-shell faces.
+   The base look (cards, tape, chips, stickers, buttons, notices) comes from base.css. */
 
 :root {
   color-scheme: light;
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .17 0 0 0 0 .13 0 0 0 0 .21 0 0 0 .1 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
   --doodles: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260' fill='none' stroke='%232b2235' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' opacity='.08'%3E%3Cpath d='M40 40l4 9 10 1-7 7 2 10-9-5-9 5 2-10-7-7 10-1z'/%3E%3Cpath d='M150 60q8-12 16 0t16 0t16 0'/%3E%3Cpath d='M200 180c-10-9-20-16-10-24 6-4 10 0 10 4 0-4 4-8 10-4 10 8 0 15-10 24z'/%3E%3Cpath d='M50 190q10-14 20 0t20 0'/%3E%3Cpath d='M130 140l2 5 5 1-4 4 1 5-4-3-4 3 1-5-4-4 5-1z'/%3E%3C/svg%3E");
-  --fs-6: 2.75rem;
   --fs-7: 3.5rem;
-  --radius-pill: 999px;
   --font-hand: "Gochi Hand", "Segoe Print", "Comic Sans MS", cursive;
-  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --danger: #c62828;
   --wordmark: #f04f9a;
 }
@@ -20,12 +21,7 @@
 }
 
 body {
-  margin: 0;
-  padding: 0;
-  font-family: var(--font-body);
-  background-color: var(--paper);
   background-image: var(--grain), var(--doodles);
-  color: var(--ink);
 }
 
 h1,
@@ -35,194 +31,16 @@ h3 {
   font-weight: 400;
 }
 
-.hand {
-  font-family: var(--font-hand);
+main.tv {
+  /* the theme contract scales TV text; the podium blocks get viewport-relative heights instead */
+  --podium-block-height-1: 17dvh;
+  --podium-block-height-2: 12dvh;
+  --podium-block-height-3: 8dvh;
 }
 
-:where(button, a, input, textarea, select, summary, [tabindex]):focus-visible {
-  outline: 3px dashed var(--accent);
-  outline-offset: 3px;
-}
-
-.stack {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap, 1rem);
-}
-
-.card {
-  position: relative;
-  padding: 1rem 1.25rem;
-  border: var(--outline);
-  border-radius: var(--radius-card);
-  background: var(--white);
-  color: var(--ink);
-  box-shadow: var(--scrap-shadow);
-}
-
-.taped {
-  --tape: var(--tape-1);
-  --tilt: -1deg;
-  transform: rotate(var(--tilt));
-}
-
-.taped:nth-child(even) {
-  --tilt: 1deg;
-  --tape: var(--tape-2);
-}
-
-.taped::before {
-  content: "";
-  position: absolute;
-  top: -13px;
-  left: 50%;
-  width: 84px;
-  height: 24px;
-  background: var(--tape);
-  transform: translateX(-50%) rotate(-3deg);
-  clip-path: polygon(0 8%, 4% 0, 8% 10%, 12% 0, 100% 0, 96% 50%, 100% 100%, 4% 100%, 0 90%, 3% 50%);
-}
-
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.1rem 0.7rem;
-  border: 2px solid var(--ink);
-  border-radius: var(--radius-pill);
-  background: var(--color-2);
-  color: var(--ink);
-  font-family: var(--font-display);
-  font-size: calc(var(--fs-1) * var(--scale, 1));
-  line-height: 1.6;
-}
-
-.chip--paper {
-  background: var(--white);
-}
-
-.chip--mint {
-  background: var(--color-3);
-}
-
-.chip--sky {
-  background: var(--color-4);
-}
-
-.chip--pink {
-  background: var(--color-1);
-}
-
-.sticker {
-  display: inline-block;
-  padding: 0.1rem 0.8rem;
-  border: 3px solid var(--ink);
-  border-radius: var(--radius-btn);
-  background: var(--color-2);
-  color: var(--ink);
-  box-shadow:
-    0 0 0 3px var(--white),
-    3px 4px 0 3px var(--ink);
-  font-family: var(--font-display);
-  font-size: calc(var(--fs-3) * var(--scale, 1));
-  line-height: 1.4;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  transform: rotate(-4deg);
-}
-
-.notice {
-  padding: 0.75rem 1rem;
-  border: var(--outline);
-  border-radius: var(--radius-card);
-  background: var(--color-2);
-  color: var(--ink);
-  box-shadow: var(--scrap-shadow);
-  font-weight: 600;
-  text-align: center;
-}
-
-.notice--danger {
-  background: var(--danger);
-  color: var(--white);
-}
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  min-height: 44px;
-  padding: 0.4rem 1.1rem;
-  border: var(--outline);
-  border-radius: var(--radius-btn);
-  background: var(--white);
-  color: var(--ink);
-  box-shadow: 0 4px 0 var(--ink);
-  font-family: var(--font-display);
-  font-size: calc(var(--fs-2) * var(--scale, 1));
-  letter-spacing: 0.02em;
-  cursor: pointer;
-}
-
-.btn:active:not(:disabled) {
-  transform: translateY(4px);
-  box-shadow: 0 0 0 var(--ink);
-}
-
-.btn:disabled {
-  background: var(--disabled);
-  color: var(--ink-soft);
-  box-shadow: none;
-  cursor: not-allowed;
-}
-
-.btn--primary {
-  min-height: 48px;
-  background: var(--color-1);
-  font-size: calc(var(--fs-3) * var(--scale, 1));
-}
-
-.btn--secondary {
-  background: var(--color-2);
-}
-
-.btn--danger {
-  background: var(--danger);
-  color: var(--white);
-}
-
-.btn--ghost {
-  border-style: dashed;
-  border-color: var(--ink-soft);
-  background: transparent;
-  color: var(--ink);
-  box-shadow: none;
-}
-
-.btn--ghost:disabled {
-  background: transparent;
-  color: var(--ink-soft);
-  opacity: 0.7;
-}
-
-.btn--big {
-  min-height: 56px;
-  padding: 0.5rem 1.75rem;
-  font-size: calc(var(--fs-4) * var(--scale, 1));
-}
-
+/* the shared bar gets the wit-clash torn edge and grain */
 .action-bar {
-  position: sticky;
-  bottom: 0;
-  display: flex;
-  justify-content: center;
-  gap: 0.75rem;
-  margin: auto -16px -24px;
-  padding: 1.1rem 16px calc(0.9rem + env(safe-area-inset-bottom));
-  background-color: var(--paper);
   background-image: var(--grain);
-  border-top: 3px solid var(--ink);
   clip-path: polygon(
     0 6px,
     3% 0,
@@ -264,61 +82,107 @@ h3 {
   );
 }
 
-.action-bar > .btn {
-  flex: 1;
-  max-width: 420px;
+/* App shell faces: GameShell renders the structure, these give it the wit-clash look. */
+header .wordmark {
+  position: relative;
+  padding: 0 0.7rem;
+  border: var(--outline);
+  border-radius: var(--radius-card);
+  background: var(--wordmark);
+  color: var(--white);
+  -webkit-text-stroke: 1.5px var(--ink);
+  paint-order: stroke fill;
+  box-shadow: var(--scrap-shadow);
+  font-family: var(--font-display);
+  font-size: var(--fs-4);
+  letter-spacing: 0.05em;
+  line-height: 1.6;
+  text-transform: uppercase;
+  transform: rotate(-2deg);
 }
 
-main.tv {
-  --scale: 1.6;
-  --fs-1: 0.9375rem;
-  font-size: 1.6rem;
-  --podium-block-height-1: 17dvh;
-  --podium-block-height-2: 12dvh;
-  --podium-block-height-3: 8dvh;
+header .wordmark::before {
+  content: "";
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  width: 44px;
+  height: 16px;
+  background: var(--tape-2);
+  transform: translateX(-50%) rotate(4deg);
 }
 
-main.tv .action-bar {
-  display: none;
+.screen .wordmark {
+  position: relative;
+  display: inline-block;
+  margin: 0;
+  padding: 0.1em 0.5em;
+  border: var(--outline);
+  border-radius: var(--radius-card);
+  background: var(--wordmark);
+  color: var(--white);
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
+  box-shadow: var(--scrap-shadow);
+  font-size: var(--fs-7);
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+  text-transform: uppercase;
+  transform: rotate(-2deg);
 }
 
-@keyframes pop-in {
-  from {
-    opacity: 0;
-    transform: translateY(14px) rotate(-1deg);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+.screen .wordmark::before {
+  content: "";
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  width: 96px;
+  height: 26px;
+  background: var(--tape-2);
+  transform: translateX(-50%) rotate(3deg);
 }
 
-@keyframes slap {
-  0% {
-    opacity: 0;
-    transform: scale(1.5) rotate(-12deg);
-  }
-  60% {
-    opacity: 1;
-    transform: scale(0.94) rotate(-2deg);
-  }
-  100% {
-    transform: scale(1) rotate(-4deg);
-  }
+main.tv header .wordmark {
+  font-size: var(--fs-5);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .btn {
-    transition:
-      transform 0.08s,
-      box-shadow 0.08s;
-  }
+.room-chip {
+  padding: 0.1rem 0.7rem;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--white);
+  color: var(--ink);
+  font-family: var(--font-display);
+  letter-spacing: 3px;
+}
 
-  .screen {
-    animation: pop-in 0.25s ease-out;
-  }
+main.tv .room-chip {
+  font-size: var(--fs-6);
+  letter-spacing: 8px;
+}
 
-  .sticker {
-    animation: slap 0.28s ease-out;
-  }
+.phase-banner span {
+  position: relative;
+  padding: 0.4rem 2.5rem;
+  border: var(--outline);
+  border-radius: var(--radius-card);
+  background: var(--white);
+  color: var(--ink);
+  box-shadow: var(--scrap-shadow);
+  font-family: var(--font-display);
+  font-size: calc(var(--fs-6) * var(--scale, 1));
+  letter-spacing: 0.04em;
+  text-align: center;
+  transform: rotate(-2deg);
+}
+
+.phase-banner span::before {
+  content: "";
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  width: 90px;
+  height: 26px;
+  background: var(--tape-1);
+  transform: translateX(-50%) rotate(-3deg);
 }

@@ -1,13 +1,7 @@
-import type {
-  Logger,
-  LogLevel,
-  LogLine,
-  PlayerInfo,
-  RuntimeHost,
-  TimerHandle,
-} from "../runtime/types.js";
-import { MAX_TIMER_FIRES_PER_ADVANCE, TimerLimitError, TimerQueue } from "../timers.js";
-import { type Seed, seedFromNumber, sfc32 } from "../utils.js";
+import { ServerMessage } from "@partygame/shared";
+import { ManualHost } from "../runtime/ManualHost.js";
+import type { Logger, LogLevel, LogLine, RuntimeHost, TimerHandle } from "../runtime/types.js";
+import { MAX_TIMER_FIRES_PER_ADVANCE, TimerLimitError } from "../timers.js";
 
 /** A message `FakeHost` recorded as sent to one player. */
 export interface Sent {
@@ -17,11 +11,9 @@ export interface Sent {
 }
 
 /** A recording {@link RuntimeHost} with a manual clock, for driving the runtime in tests without a server. */
-export class FakeHost implements RuntimeHost {
-  readonly seats: PlayerInfo[] = [];
+export class FakeHost extends ManualHost implements RuntimeHost {
   readonly sent: Sent[] = [];
   readonly broadcasts: Array<{ type: string; payload: unknown }> = [];
-  time = 1_000_000;
   activations = 0;
   readonly views: Array<{ op: "show" | "hide"; playerId: string; ref: object }> = [];
   readonly kicked: string[] = [];
@@ -43,33 +35,6 @@ export class FakeHost implements RuntimeHost {
       else if (seat.role === "host") seat.role = "player";
     }
   };
-  /** The room RNG seed; an unseeded host is `seedFromNumber(0)`, a deterministic stream. */
-  readonly seed: Seed;
-  private rngFn: () => number;
-  private queue = new TimerQueue();
-  private nextId = 1;
-  /** Scopes each audience key has already used; cleared on every transition. */
-  private readonly audienceScopes = new Map<string, Set<string>>();
-
-  constructor(seed: Seed | number = 0) {
-    this.seed = typeof seed === "number" ? seedFromNumber(seed) : seed;
-    this.rngFn = sfc32(this.seed);
-  }
-
-  /** Adds a seat, the first one as host, with `overrides` applied over the connected, ready, active defaults. */
-  seat(id: string, overrides: Partial<PlayerInfo> = {}): PlayerInfo {
-    const info: PlayerInfo = {
-      id,
-      name: id,
-      role: this.seats.length === 0 ? "host" : "player",
-      isConnected: true,
-      isReady: true,
-      isActive: true,
-      ...overrides,
-    };
-    this.seats.push(info);
-    return info;
-  }
 
   /** The number of timers scheduled and not yet fired or cleared. */
   get pendingTimers(): number {
@@ -79,7 +44,7 @@ export class FakeHost implements RuntimeHost {
   /** The payloads of every `ERROR` message sent to `playerId`. */
   errorsTo(playerId: string): unknown[] {
     return this.sent
-      .filter((s) => s.playerId === playerId && s.type === "ERROR")
+      .filter((s) => s.playerId === playerId && s.type === ServerMessage.ERROR)
       .map((s) => s.payload);
   }
 
@@ -103,18 +68,9 @@ export class FakeHost implements RuntimeHost {
     this.time = target;
   }
 
-  /** {@inheritDoc RuntimeHost.players} */
-  players(): PlayerInfo[] {
-    return this.seats;
-  }
-
   activateWaitingPlayers(): void {
+    super.activateWaitingPlayers();
     ++this.activations;
-    for (const seat of this.seats) if (seat.isReady) seat.isActive = true;
-  }
-
-  benchUnreadyPlayers(): void {
-    for (const seat of this.seats) if (!seat.isReady) seat.isActive = false;
   }
 
   /** {@inheritDoc RuntimeHost.send} */
@@ -129,18 +85,7 @@ export class FakeHost implements RuntimeHost {
 
   notifyTransition(from: string, to: string): void {
     this.transitions.push({ from, to });
-    this.audienceScopes.clear();
-  }
-
-  audienceOnce(audienceKey: string, scope: string): boolean {
-    const scopes = this.audienceScopes.get(audienceKey);
-    if (scopes === undefined) {
-      this.audienceScopes.set(audienceKey, new Set([scope]));
-      return true;
-    }
-    if (scopes.has(scope)) return false;
-    scopes.add(scope);
-    return true;
+    super.notifyTransition(from, to);
   }
 
   /** {@inheritDoc RuntimeHost.showTo} */
@@ -155,34 +100,16 @@ export class FakeHost implements RuntimeHost {
 
   kick(playerId: string): void {
     this.kicked.push(playerId);
-    const index = this.seats.findIndex((s) => s.id === playerId);
-    if (index >= 0) this.seats.splice(index, 1);
+    super.kick(playerId);
   }
 
   publishOptions(options: unknown): void {
     this.published.push(options);
   }
 
-  /** {@inheritDoc RuntimeHost.now} */
-  now(): number {
-    return this.time;
-  }
-
-  /** {@inheritDoc RuntimeHost.rng} */
-  rng(): number {
-    return this.rngFn();
-  }
-
   /** {@inheritDoc RuntimeHost.setTimeout} */
   setTimeout(callback: () => void, ms: number): TimerHandle {
-    const id = this.nextId++;
-    this.queue.push({ id, at: this.time + ms + this.timerLatenessMs, callback });
-    return id as TimerHandle;
-  }
-
-  /** {@inheritDoc RuntimeHost.clearTimeout} */
-  clearTimeout(handle: TimerHandle): void {
-    this.queue.remove((t) => t.id === handle);
+    return super.setTimeout(callback, ms + this.timerLatenessMs);
   }
 
   private record(level: LogLevel, event: string, fields?: LogLine["fields"]): void {

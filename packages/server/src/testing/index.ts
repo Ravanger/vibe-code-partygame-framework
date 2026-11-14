@@ -159,4 +159,5 @@ export {
   TestPlayer,
   testPlayerId,
 } from "./players.js";
+export { waitForOwnEntry } from "./views.js";
 export { waitUntil } from "./waitUntil.js";

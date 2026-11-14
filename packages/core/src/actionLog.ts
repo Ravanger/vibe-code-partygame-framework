@@ -31,8 +31,17 @@ export class DuplicateActionLogMiddlewareError extends Error {
 /** The most entries one log may hold; `ActionLogSchema` rejects longer logs. */
 export const MAX_ACTION_LOG_ENTRIES = 100_000;
 
+/** Every kind of event an {@link ActionLogEntry} may record; the single source for the entry schema and the replay walk. */
+export const ACTION_LOG_ENTRY_KINDS = [
+  "action",
+  "transition",
+  "enter",
+  "timeout",
+  "roster-change",
+] as const;
+
 /** The kind of event an {@link ActionLogEntry} records. */
-export type ActionLogEntryKind = "action" | "transition" | "enter" | "timeout" | "roster-change";
+export type ActionLogEntryKind = (typeof ACTION_LOG_ENTRY_KINDS)[number];
 
 /** One recorded event, in append order. */
 export interface ActionLogEntry {
@@ -96,15 +105,6 @@ export interface ActionLogHeader {
   startedAt: number;
 }
 
-/** One recorded seat at START_GAME time: the id plus the flags replay restores when pre-seating. */
-export interface RosterSeat {
-  /** The seat's playerId (a client-generated UUID in real rooms). */
-  id: string;
-  isConnected: boolean;
-  isReady: boolean;
-  isActive: boolean;
-}
-
 /** The complete record of one room session. JSON-serializable. */
 export interface ActionLog {
   header: ActionLogHeader;
@@ -119,11 +119,15 @@ export interface ActionLog {
 
 /** One recorded seat: the id plus the flags replay restores when pre-seating. */
 const RosterSeatSchema = z.strictObject({
+  /** The seat's playerId (a client-generated UUID in real rooms). */
   id: z.string(),
   isConnected: z.boolean(),
   isReady: z.boolean(),
   isActive: z.boolean(),
 });
+
+/** One recorded seat at START_GAME time: the id plus the flags replay restores when pre-seating. */
+export type RosterSeat = z.infer<typeof RosterSeatSchema>;
 
 /** A non-negative safe integer — the bound every recorded timestamp obeys. */
 const nonNegativeSafeInt = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
@@ -135,7 +139,7 @@ function isPlainObjectPayload(value: unknown): boolean {
 
 /** One recorded event. Field order decides which field a shape error names first; numeric fields are bounded and `payload` must be a plain object when present. */
 const ActionLogEntrySchema = z.strictObject({
-  kind: z.enum(["action", "transition", "enter", "timeout", "roster-change"]),
+  kind: z.enum(ACTION_LOG_ENTRY_KINDS),
   t: nonNegativeSafeInt,
   seq: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER),
   phase: z.string(),

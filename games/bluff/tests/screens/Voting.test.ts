@@ -44,7 +44,7 @@ describe("Voting screen", () => {
     });
   });
 
-  it("shows the waiting state when the synced private state holds a vote", () => {
+  it("keeps the choices visible after a vote with the pick marked", () => {
     const c = connectedClient({}, "Voting");
     addChoice(c, "o1", "Canberra");
     addChoice(c, "o2", "Sydney");
@@ -54,8 +54,10 @@ describe("Voting screen", () => {
     );
     render(Voting, { manager: c.manager });
 
-    expect(screen.getByText(/vote locked in/i)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /sydney/i })).not.toBeInTheDocument();
+    const picked = screen.getByRole("button", { name: /sydney/i });
+    expect(picked).toHaveAttribute("aria-pressed", "true");
+    expect(picked).toBeDisabled();
+    expect(screen.getByRole("button", { name: /canberra/i })).toBeDisabled();
   });
 
   it("shows the running vote count", () => {

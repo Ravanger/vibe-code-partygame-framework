@@ -12,9 +12,11 @@ const board = (state: __PascalName__State): string =>
     .map((player) => `${player.name}: ${state.waves.get(player.id) ?? 0}`)
     .join(", ");
 
-let announcedResults = false;
-
-/** The wave game declared once: the server, launch and terminal entries are stubs over this. */
+/**
+ * The wave game declared once: the server, launch and terminal entries are stubs over this.
+ * `botKit` is optional: a game without bots drops it (and its `bots/` folder) and keeps serving
+ * and launching; the bot entries then refuse with "This game declares no bots."
+ */
 export const gamePackage = defineGamePackage({
   meta: META,
   displayName: __DisplayNameJson__,
@@ -27,24 +29,33 @@ export const gamePackage = defineGamePackage({
   demo: {
     roomOptions: { waveGoal: 5 },
     bot: { thinkMs: [300, 900], reactMs: [200, 700] },
-    narrate: (state) => {
-      if (state.phase === PHASE.Waving) return [`Waves — ${board(state)}`];
-      if (state.phase === PHASE.Results && !announcedResults) {
-        announcedResults = true;
-        const winner = state.winnerName;
-        return [
-          winner === "" ? "Nobody waved." : `${winner} wins with ${state.winnerWaves} waves!`,
-        ];
-      }
-      return [];
-    },
-    problems: (state) => {
-      if (state.winnerName === "") return ["no winner was crowned"];
-      const winner = [...state.players.values()].find((player) => player.name === state.winnerName);
-      if (winner === undefined || state.waves.get(winner.id) !== state.winnerWaves) {
-        return ["the winner's wave count does not match the board"];
-      }
-      return [];
+    commentator: () => {
+      let announcedResults = false;
+      return {
+        narrate: (state) => {
+          if (state.phase !== PHASE.Results) {
+            // leaving Results starts a new game (or the lobby), so the last announcement is stale
+            announcedResults = false;
+            return state.phase === PHASE.Waving ? [`Waves — ${board(state)}`] : [];
+          }
+          if (announcedResults) return [];
+          announcedResults = true;
+          const winner = state.winnerName;
+          return [
+            winner === "" ? "Nobody waved." : `${winner} wins with ${state.winnerWaves} waves!`,
+          ];
+        },
+        problems: (state) => {
+          if (state.winnerName === "") return ["no winner was crowned"];
+          const winner = [...state.players.values()].find(
+            (player) => player.name === state.winnerName,
+          );
+          if (winner === undefined || state.waves.get(winner.id) !== state.winnerWaves) {
+            return ["the winner's wave count does not match the board"];
+          }
+          return [];
+        },
+      };
     },
     passMessage: "PASS: a winner was crowned and no action was rejected",
   },

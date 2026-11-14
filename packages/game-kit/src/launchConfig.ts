@@ -1,7 +1,21 @@
-import { type BotConnection, DemoTable, type DemoTableOptions } from "@partygame/bots";
-import type { LaunchConfig } from "@partygame/launcher";
+import {
+  type BotConnection,
+  type BotOptions,
+  DemoTable,
+  type DemoTableOptions,
+} from "@partygame/bots";
+import type { LaunchConfig, LaunchPorts } from "@partygame/launcher";
 import type { BaseGameState } from "@partygame/shared/schema";
 import type { GameDeclaration } from "./types.js";
+
+/** Merges one demo run's bot options: the launcher connection wins over the declaration, which wins over `defaults`. */
+export function demoBotOptions(
+  defaults: BotOptions,
+  declared?: BotOptions,
+  connection?: BotOptions,
+): BotOptions {
+  return { ...defaults, ...declared, ...connection };
+}
 
 /** The `DemoTable` options the launch demo builds for one connection. */
 export function demoTableOptions<TState extends BaseGameState, TContent>(
@@ -9,6 +23,7 @@ export function demoTableOptions<TState extends BaseGameState, TContent>(
   connection: BotConnection & { bots: number },
 ): DemoTableOptions<TState> {
   const kit = pkg.demo?.kit ?? pkg.botKit;
+  if (kit === undefined) throw new Error("demoTableOptions: the declaration has no bot kit");
   return {
     ...connection,
     ...kit,
@@ -17,25 +32,36 @@ export function demoTableOptions<TState extends BaseGameState, TContent>(
     ...(pkg.demo?.roomOptions !== undefined ? { roomOptions: pkg.demo.roomOptions } : {}),
     ...(pkg.demo?.hostName !== undefined ? { hostName: pkg.demo.hostName } : {}),
     ...(connection.bot !== undefined || pkg.demo?.bot !== undefined
-      ? { bot: { ...pkg.demo?.bot, ...connection.bot } }
+      ? { bot: demoBotOptions({}, pkg.demo?.bot, connection.bot) }
       : {}),
   };
 }
 
-/** The `LaunchConfig` a game's `launch.ts` runs. */
+/**
+ * The `LaunchConfig` a game's `launch.ts` runs. The bot and demo sections are omitted when the
+ * declaration resolves no kit (`botKit`, or `demo.kit` for the demo); asking the launcher for
+ * `--bots`/`--demo` then fails with "<name> has no bots"/"has no demo". `ports` (a partial of the
+ * launcher's `DEFAULT_PORTS`) is forwarded when given.
+ */
 export function buildLaunchConfig<TState extends BaseGameState, TContent>(
   pkg: GameDeclaration<TState, TContent>,
-  options: { gameDir: string },
+  options: { gameDir: string; ports?: Partial<LaunchPorts> },
 ): LaunchConfig<TState> {
   const { meta } = pkg;
+  const kit = pkg.botKit;
   return {
     name: pkg.displayName ?? meta.roomName,
     gameDir: options.gameDir,
-    bots: { kit: pkg.botKit, max: meta.maxPlayers - 1 },
-    demo: {
-      min: meta.minPlayers - 1,
-      max: meta.maxPlayers - 1,
-      create: (connection) => new DemoTable(demoTableOptions(pkg, connection)),
-    },
+    ...(options.ports !== undefined ? { ports: options.ports } : {}),
+    ...(kit !== undefined ? { bots: { kit, max: meta.maxPlayers - 1 } } : {}),
+    ...((pkg.demo?.kit ?? kit) !== undefined
+      ? {
+          demo: {
+            min: meta.minPlayers - 1,
+            max: meta.maxPlayers - 1,
+            create: (connection) => new DemoTable(demoTableOptions(pkg, connection)),
+          },
+        }
+      : {}),
   };
 }

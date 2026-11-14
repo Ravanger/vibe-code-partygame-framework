@@ -1,3 +1,4 @@
+import { DEFAULT_PORTS } from "@partygame/launcher";
 import type { BaseGameState } from "@partygame/shared/schema";
 import {
   PlaySession,
@@ -8,6 +9,7 @@ import {
 import { failWith } from "./fail.js";
 import { hostedGame } from "./hostedGame.js";
 import { defaultIo } from "./io.js";
+import { parseOrExit } from "./parseOrExit.js";
 import { startsServer } from "./startsServer.js";
 import type { GameDeclaration, GameKitIo } from "./types.js";
 
@@ -18,28 +20,32 @@ export async function play<TState extends BaseGameState, TContent>(
 ): Promise<void> {
   const meta = pkg.meta;
   const usage = `Usage: bun run play [--bots=0..${meta.maxPlayers - 1}] [--name=You] [--join=ABCD] [--endpoint=ws://host:2567 --api-port=3001]`;
-  const parsed = parsePlayArgs(io.argv, { maxBots: meta.maxPlayers - 1, usage });
-  if (!parsed.ok) {
-    io.error(parsed.error);
-    io.exit(2);
-    return;
-  }
+  const args = parseOrExit(io, () =>
+    parsePlayArgs(io.argv, { maxBots: meta.maxPlayers - 1, usage }),
+  );
+  if (args === undefined) return;
   const terminal = pkg.terminal;
   if (terminal === undefined) {
     io.error("This game has no terminal strategy.");
     io.exit(1);
     return;
   }
+  const kit = pkg.botKit;
+  if (kit === undefined) {
+    io.error("This game declares no bots.");
+    io.exit(1);
+    return;
+  }
   let session: PlaySession<TState> | undefined;
   try {
     const options: PlaySessionOptions<TState> = {
-      ...parsed.value,
-      startServer: startsServer(parsed.value),
-      kit: pkg.botKit,
+      ...args,
+      startServer: startsServer(args),
+      kit,
       games: [hostedGame(pkg, await pkg.load?.(io.env))],
       player: (room, playerId, prompter) =>
         new TerminalPlayer(room, playerId, prompter, terminal()),
-      clientUrl: "http://localhost:5173",
+      clientUrl: `http://localhost:${DEFAULT_PORTS.clientDev}`,
     };
     const stop = () => session?.stop();
     session = new PlaySession(options, io.prompter(stop));

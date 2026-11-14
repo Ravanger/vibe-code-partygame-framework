@@ -8,7 +8,7 @@ Generic Colyseus server: host any game defined with `@partygame/core`.
 | `@partygame/server/bun` | `startServer`: Bun entry point (WebSocket on 2567, API on 3001); options `StartServerOptions` (the `GameServerOptions` minus `transport`, plus the listening ports) |
 | `@partygame/server/node` | `startNodeServer`, `serveApi`: in-process Node hosting (game server plus code API); options `NodeServerOptions` (`GameServerOptions` minus `transport`, plus ports and API access), `ServeApiOptions` |
 | `@partygame/server/probe` | `ServerProbe` (`isGameServer`, `canConnect`, `answers`), `freePort`, `closeHttpServer`: port probing, no Colyseus |
-| `@partygame/server/testing` | `bootTestServer`, `seatPlayers`, `joinPlayer`, `stateOf`, `waitUntil`, `testPlayerId`, `TestServer` for room tests; options `SeatPlayersOptions` (how many players to join, whether to start), `TestJoinOptions` (join as one player or spectator) |
+| `@partygame/server/testing` | `bootTestServer`, `seatPlayers`, `joinPlayer`, `stateOf`, `waitUntil`, `waitForOwnEntry`, `testPlayerId`, `TestServer` for room tests; options `SeatPlayersOptions` (how many players to join, whether to start), `TestJoinOptions` (join as one player or spectator) |
 
 ## Host a game
 

@@ -49,4 +49,15 @@ describe("Reveal screen", () => {
     expect(screen.getByText("+2")).toBeInTheDocument();
     expect(screen.getByText("2 fooled")).toBeInTheDocument();
   });
+
+  it("renders the round label as a focusable heading", () => {
+    const c = connectedClient({}, "Reveal");
+    c.state.roundNumber = 1;
+    c.state.totalRounds = 3;
+    render(Reveal, { manager: c.manager });
+
+    const heading = screen.getByRole("heading", { name: "Round 1 of 3" });
+    expect(heading.tagName).toBe("H2");
+    expect(heading).toHaveAttribute("tabindex", "-1");
+  });
 });

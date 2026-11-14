@@ -1,5 +1,5 @@
 import { type ContentFile, loadJsoncDirWithFiles } from "@partygame/content";
-import { shuffle } from "@partygame/core";
+import { weightedSample } from "@partygame/core";
 import { z } from "zod";
 
 const PromptSchema = z.object({ id: z.string().min(1), text: z.string().min(1) }).strict();
@@ -33,26 +33,21 @@ export class CategoryRepository {
   }
 
   /**
-   * `count` distinct categories from the candidates (weight > 0, and passing `filter` when given).
-   * Equal weights deal a uniform shuffle; differing weights
-   * use Efraimidis–Spirakis sampling, where each candidate draws a key of `rng() ** (1 / weight)`
-   * and the highest keys win, so a category's share of picks tracks its weight. A weight of 0
-   * means never offered.
+   * `count` distinct categories from the candidates (weight > 0, and passing `filter` when given),
+   * drawn with core's `weightedSample`: equal weights deal a uniform shuffle, differing weights use
+   * Efraimidis–Spirakis sampling. A weight of 0 means never offered.
    */
   pickRandom(
     count: number,
-    rng: () => number = Math.random,
+    rng: () => number,
     filter?: (category: Category) => boolean,
   ): Category[] {
-    const candidates = this.categories.filter((c) => c.weight > 0 && (filter?.(c) ?? true));
-    if (new Set(candidates.map((c) => c.weight)).size <= 1) {
-      return shuffle(candidates, rng).slice(0, Math.min(count, candidates.length));
-    }
-    return candidates
-      .map((category) => ({ category, key: rng() ** (1 / category.weight) }))
-      .sort((a, b) => b.key - a.key)
-      .slice(0, count)
-      .map(({ category }) => category);
+    return weightedSample(
+      this.categories.filter((c) => filter?.(c) ?? true),
+      count,
+      rng,
+      (c) => c.weight,
+    );
   }
 }
 

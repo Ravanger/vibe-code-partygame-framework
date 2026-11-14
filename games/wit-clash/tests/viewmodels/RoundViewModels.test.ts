@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ANSWER_MAX_LENGTH } from "../../src/actionNames.js";
 import { CategoryVoteViewModel } from "../../ui/viewmodels/CategoryVoteViewModel.js";
 import { MatchupRevealViewModel } from "../../ui/viewmodels/MatchupRevealViewModel.js";
 import { MatchupVoteViewModel } from "../../ui/viewmodels/MatchupVoteViewModel.js";
@@ -52,20 +53,16 @@ describe("CategoryVoteViewModel", () => {
     expect(vm.votesExpected).toBe(4);
     expect(vm.roundLabel).toBe("Round 2 of 3");
     expect(c.manager.me()).toBeDefined();
-    vm.destroy();
   });
 
   it("counts down and announces only at 30, 10 and 5 seconds", () => {
     const { c, vm } = voting();
-    expect(vm.secondsLeft).toBe(30);
-    expect(vm.totalSeconds).toBe(60);
-    expect(vm.announcement).toBe("30 seconds remaining");
-    expect(vm.isUrgent).toBe(false);
+    expect(vm.clock.secondsLeft).toBe(30);
+    expect(vm.clock.totalSeconds).toBe(60);
+    expect(vm.clock.announcement).toBe("30 seconds remaining");
     c.state.phaseEndsAt = 1_000_000 + 7000;
     c.patch();
-    expect(vm.announcement).toBe("");
-    expect(vm.isUrgent).toBe(true);
-    vm.destroy();
+    expect(vm.clock.announcement).toBe("");
   });
 
   it("votes through the action protocol", async () => {
@@ -74,7 +71,6 @@ describe("CategoryVoteViewModel", () => {
     expect(c.room.requests).toEqual([
       { type: "ACTION", payload: { categoryId: "a", type: "VOTE_CATEGORY" } },
     ]);
-    vm.destroy();
   });
 
   it("is empty without a room", () => {
@@ -87,7 +83,6 @@ describe("CategoryVoteViewModel", () => {
       0,
       "Round 0 of 0",
     ]);
-    vm.destroy();
   });
 });
 
@@ -110,9 +105,8 @@ describe("PromptingViewModel", () => {
     expect(vm.prompts.map((p) => p.promptText)).toEqual(["First prompt", "Second prompt"]);
     expect(vm.current?.matchupId).toBe("m1");
     expect(vm.roundLabel).toBe("Round 1 of 3");
-    expect(vm.secondsLeft).toBe(90);
-    expect(vm.isUrgent).toBe(false);
-    expect(vm.totalSeconds).toBe(90);
+    expect(vm.clock.secondsLeft).toBe(90);
+    expect(vm.clock.totalSeconds).toBe(90);
     expect(vm.answersIn).toBe(1);
     expect(vm.answersExpected).toBe(4);
     vm.destroy();
@@ -263,10 +257,10 @@ describe("PromptingViewModel", () => {
 
   it("announces the countdown at 30, 10 and 5 seconds", () => {
     const { c, vm } = writing();
-    expect(vm.announcement).toBe("");
+    expect(vm.clock.announcement).toBe("");
     countdownTo(c, 10);
     c.patch();
-    expect(vm.announcement).toBe("10 seconds remaining");
+    expect(vm.clock.announcement).toBe("10 seconds remaining");
     vm.destroy();
   });
 
@@ -276,6 +270,7 @@ describe("PromptingViewModel", () => {
     expect(vm.prompts).toEqual([]);
     expect(vm.allSubmitted).toBe(false);
     expect(vm.isSittingOut).toBe(true);
+    expect([vm.draft, vm.charsRemaining, vm.canSubmit]).toEqual(["", ANSWER_MAX_LENGTH, false]);
     expect(vm.categoryLabel).toBe("");
     c.manager.dispose();
     expect([vm.answersIn, vm.answersExpected, vm.roundLabel]).toEqual([0, 0, "Round 0 of 0"]);
@@ -306,22 +301,19 @@ describe("MatchupVoteViewModel", () => {
     expect(vm.matchupNumber).toBe(2);
     expect(vm.totalMatchups).toBe(2);
     expect(vm.choices).toEqual([
-      { id: "a1", text: "Mango", isMine: false },
-      { id: "a2", text: "Kiwi", isMine: false },
+      { id: "a1", text: "Mango", picked: false },
+      { id: "a2", text: "Kiwi", picked: false },
     ]);
     expect(vm.votesCast).toBe(1);
     expect(vm.votesExpected).toBe(3);
-    expect(vm.secondsLeft).toBe(20);
-    expect(vm.isUrgent).toBe(false);
-    expect(vm.totalSeconds).toBe(20);
-    expect(vm.announcement).toBe("");
-    vm.destroy();
+    expect(vm.clock.secondsLeft).toBe(20);
+    expect(vm.clock.totalSeconds).toBe(20);
+    expect(vm.clock.announcement).toBe("");
   });
 
   it("highlights only my own vote", () => {
     const { vm } = voting({ canVote: true, isOwnMatchup: false, matchupVote: "a2" });
-    expect(vm.choices.map((c) => c.isMine)).toEqual([false, true]);
-    vm.destroy();
+    expect(vm.choices.map((c) => c.picked)).toEqual([false, true]);
   });
 
   it("casts a vote when allowed", async () => {
@@ -330,7 +322,6 @@ describe("MatchupVoteViewModel", () => {
     expect(c.room.requests).toEqual([
       { type: "ACTION", payload: { answerId: "a1", type: "CAST_VOTE" } },
     ]);
-    vm.destroy();
   });
 
   it("does not offer a vote to the author of the matchup", async () => {
@@ -339,7 +330,6 @@ describe("MatchupVoteViewModel", () => {
     expect(vm.canVote).toBe(false);
     await vm.vote("a1");
     expect(c.room.requests).toEqual([]);
-    vm.destroy();
   });
 
   it("does not offer a vote on a forfeit", () => {
@@ -348,7 +338,6 @@ describe("MatchupVoteViewModel", () => {
     if (active) active.isForfeit = true;
     expect(vm.isForfeit).toBe(true);
     expect(vm.canVote).toBe(false);
-    vm.destroy();
   });
 
   it("is empty before a matchup and without my private entry", () => {
@@ -365,7 +354,6 @@ describe("MatchupVoteViewModel", () => {
     expect([vm.matchupNumber, vm.totalMatchups, vm.votesCast, vm.votesExpected]).toEqual([
       0, 0, 0, 0,
     ]);
-    vm.destroy();
   });
 });
 
@@ -423,9 +411,8 @@ describe("MatchupRevealViewModel and Results recap", () => {
     });
     expect(vm.matchupNumber).toBe(1);
     expect(vm.totalMatchups).toBe(2);
-    expect(vm.secondsLeft).toBe(5);
-    expect(vm.totalSeconds).toBe(5);
-    vm.destroy();
+    expect(vm.clock.secondsLeft).toBe(5);
+    expect(vm.clock.totalSeconds).toBe(5);
   });
 
   it("remembers who I voted for", () => {
@@ -435,7 +422,6 @@ describe("MatchupRevealViewModel and Results recap", () => {
     expect(vm.myVoteId).toBe("a2");
     c.manager.dispose();
     expect(vm.myVoteId).toBe("");
-    vm.destroy();
   });
 
   it("shows nothing until the matchup is revealed or when there is none", () => {
@@ -446,7 +432,6 @@ describe("MatchupRevealViewModel and Results recap", () => {
     expect(vm.matchup).toBeUndefined();
     c.manager.dispose();
     expect([vm.matchup, vm.matchupNumber, vm.totalMatchups]).toEqual([undefined, 0, 0]);
-    vm.destroy();
   });
 
   it("lists only revealed matchups in the results", () => {
@@ -516,5 +501,53 @@ describe("ResultsViewModel", () => {
       [],
       [],
     ]);
+  });
+
+  describe("exportReplay", () => {
+    class TestURL extends URL {
+      static createObjectURL = vi.fn((_blob: unknown) => "blob:test");
+      static revokeObjectURL = vi.fn((_url: string) => {});
+    }
+
+    function clickedAnchors(): HTMLAnchorElement[] {
+      const anchors: HTMLAnchorElement[] = [];
+      vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+        this: HTMLAnchorElement,
+      ) {
+        anchors.push(this);
+      });
+      return anchors;
+    }
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+      vi.unstubAllGlobals();
+      TestURL.createObjectURL.mockReset();
+      TestURL.revokeObjectURL.mockReset();
+    });
+
+    it("sends the host-only request and downloads the answer as JSON", async () => {
+      const anchors = clickedAnchors();
+      vi.stubGlobal("URL", TestURL);
+      const { c, vm } = results("host", true);
+      c.room.reply = { bundleVersion: 1, name: "WitClash", snapshots: [] };
+      await vm.exportReplay();
+      expect(c.room.requests).toEqual([{ type: "EXPORT_REPLAY", payload: undefined }]);
+      expect(TestURL.createObjectURL).toHaveBeenCalledOnce();
+      const blob = TestURL.createObjectURL.mock.calls[0]?.[0] as Blob;
+      expect(JSON.parse(await blob.text())).toMatchObject({ name: "WitClash" });
+      expect(anchors).toHaveLength(1);
+      expect(anchors[0]?.download).toBe("witclash-replay.json");
+    });
+
+    it("sends nothing when the server refuses", async () => {
+      const anchors = clickedAnchors();
+      vi.stubGlobal("URL", TestURL);
+      const { c, vm } = results("player", true);
+      c.room.reply = { ok: false, error: { code: "UNAUTHORIZED", message: "no" } };
+      await vm.exportReplay();
+      expect(TestURL.createObjectURL).not.toHaveBeenCalled();
+      expect(anchors).toHaveLength(0);
+    });
   });
 });

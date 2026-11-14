@@ -1,6 +1,6 @@
 # Crew
 
-An asymmetric cooperative party game (headless rules spike for M6 · Archetypes, #158): every player is dealt a public role and a private signal (1–9). The crew shares one goal — after the share/hold rounds, guess the sum of all starting players' signals. Each round every player chooses to SHARE their signal publicly or HOLD it; the crew gets three guesses in the verdict. Everyone wins or loses together.
+An asymmetric cooperative party game: every player is dealt a public role and a private signal (1–9). The crew shares one goal — after the share/hold rounds, guess the sum of all starting players' signals. Each round every player chooses to SHARE their signal publicly or HOLD it; the crew gets three guesses in the verdict. Everyone wins or loses together.
 
 ## Rules
 
@@ -11,8 +11,8 @@ An asymmetric cooperative party game (headless rules spike for M6 · Archetypes,
 
 A departure mid-game reveals that player's signal publicly (the target stays locked at start); dropping below 3 players ends the game back in the lobby. A dropped connection is not a departure.
 
-Options (host-tunable in the lobby): `rounds` (1–5, default 2). Phase durations are constants in the phase files (headless spike).
+Options (host-tunable in the lobby): `rounds` (1–5, default 2). Phase durations are constants in the phase files.
 
 Kits: `collectResponses` (`allResponded`) from `@partygame/core/kits` for the per-round share/hold collection.
 
-Part of the M6 archetypes milestone: headless spike only; a UI, bots and a terminal client are out of scope.
+Headless: rules only — no server, launch, bot or UI entries.
