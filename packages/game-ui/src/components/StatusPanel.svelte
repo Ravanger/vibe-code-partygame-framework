@@ -5,7 +5,8 @@ const {
   title,
   detail = "",
   tone,
-}: { title: string; detail?: string; tone: "wait" | "done" | "info" } = $props();
+  heading = false,
+}: { title: string; detail?: string; tone: "wait" | "done" | "info"; heading?: boolean } = $props();
 const strings = getStrings();
 </script>
 
@@ -13,7 +14,11 @@ const strings = getStrings();
   {#if tone === "done"}
     <span class="sticker done-sticker" aria-hidden="true">{strings.done}</span>
   {/if}
-  <p class="title">{title}</p>
+  {#if heading}
+    <h2 class="title" tabindex="-1">{title}</h2>
+  {:else}
+    <p class="title">{title}</p>
+  {/if}
   {#if detail}
     <p class="detail hand">{detail}</p>
   {/if}

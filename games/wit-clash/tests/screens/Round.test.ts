@@ -357,7 +357,7 @@ describe("Matchup reveal screen", () => {
 
   it("waits until the matchup is revealed", () => {
     render(MatchupReveal, { manager: connectedClient({}, "MatchupReveal").manager });
-    expect(screen.getByText("Revealing...", { selector: "p" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Revealing..." })).toBeInTheDocument();
   });
 });
 

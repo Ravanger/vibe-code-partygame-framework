@@ -28,6 +28,25 @@ describe("StatusPanel", () => {
     await expectNoViolations(info.container, "StatusPanel");
   });
 
+  it("keeps the title a paragraph by default", () => {
+    const { container } = render(StatusPanel, { title: "Hold on", tone: "wait" });
+    expect(screen.queryByRole("heading")).not.toBeInTheDocument();
+    expect(container.querySelector("p.title")).toBeInTheDocument();
+  });
+
+  it("renders the title as a focusable heading when heading is set", async () => {
+    const { container } = render(StatusPanel, {
+      title: "Revealing...",
+      tone: "wait",
+      heading: true,
+    });
+    const heading = screen.getByRole("heading", { name: "Revealing..." });
+    expect(heading.tagName).toBe("H2");
+    expect(heading).toHaveClass("title");
+    expect(heading).toHaveAttribute("tabindex", "-1");
+    await expectNoViolations(container, "StatusPanel");
+  });
+
   it("takes the done sticker text from the UiStrings table", () => {
     setStrings({ done: "Fertig" });
     const { container } = render(StatusPanel, { title: "T", tone: "done" });

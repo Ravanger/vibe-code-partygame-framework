@@ -16,8 +16,7 @@ const vm = untrack(() => new MatchupRevealViewModel(manager));
     <MatchupCard matchup={vm.matchup} myVoteId={vm.myVoteId} flip />
     <PhaseBar clock={vm.clock} />
   {:else}
-    <h2 class="sr-only" tabindex="-1">Revealing...</h2>
-    <StatusPanel tone="wait" title="Revealing..." />
+    <StatusPanel tone="wait" title="Revealing..." heading />
   {/if}
 </div>
 
