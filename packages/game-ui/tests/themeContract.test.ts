@@ -153,7 +153,7 @@ function globalClassTokens(source: string): Set<string> {
       if (token !== "" && !token.includes("${")) tokens.add(token);
     }
   }
-  for (const match of markup.matchAll(/\bclass:([a-zA-Z][\w-]*)\s*=/g)) {
+  for (const match of markup.matchAll(/\bclass:([a-zA-Z][\w-]*)(?=\s|>|\/|=)/g)) {
     tokens.add(match[1] as string);
   }
   for (const match of style.matchAll(/\.([a-zA-Z][\w-]*)/g)) {
@@ -161,6 +161,19 @@ function globalClassTokens(source: string): Set<string> {
   }
   return tokens;
 }
+
+describe("globalClassTokens", () => {
+  it("captures the bare class: shorthand as well as the value form", () => {
+    expect(globalClassTokens(`<div class:x /><span class:y={cond} />`)).toEqual(
+      new Set(["x", "y"]),
+    );
+  });
+
+  it("drops a bare class: token that the component styles itself", () => {
+    const source = `<div class:x />\n<style>.x { color: red; }</style>`;
+    expect(globalClassTokens(source)).toEqual(new Set());
+  });
+});
 
 describe("REQUIRED_GLOBAL_CLASSES", () => {
   const componentsDir = join(pkgDir, "src", "components");
